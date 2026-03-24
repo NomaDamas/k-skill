@@ -12,11 +12,19 @@
 
 ## v1 skills
 
+- `k-skill-setup`: 모든 credential-bearing skill이 공통으로 따르는 `sops + age` 설치/세팅/검증
 - `srt-booking`: SRT 조회, 예매, 예약 확인, 취소
 - `ktx-booking`: KTX/Korail 조회, 예매, 예약 확인, 취소
 - `kbo-results`: 특정 날짜 KBO 경기 결과 조회
 - `lotto-results`: 로또 최신 회차, 특정 회차, 번호 대조
 - `seoul-subway-arrival`: 서울 지하철 실시간 도착 정보 조회
+
+## Start here
+
+credential이 필요한 스킬을 쓰기 전에 먼저 `k-skill-setup`부터 본다.
+
+- setup skill: [`k-skill-setup/SKILL.md`](/Users/jeffrey/Projects/k-skill/k-skill-setup/SKILL.md)
+- 공통 보안 정책: [`docs/security-and-secrets.md`](/Users/jeffrey/Projects/k-skill/docs/security-and-secrets.md)
 
 ## Install
 
@@ -40,12 +48,12 @@ npx --yes skills add . --list
 
 ## Security policy
 
-인증이 필요한 스킬은 평문 비밀번호, 직접 입력, `.env` 평문 파일을 금지한다.
+인증이 필요한 스킬은 평문 비밀번호, 직접 입력, git에 올리는 plaintext `.env` 파일을 금지한다.
 
-- 필수: `1Password CLI (op)`
-- 권장 실행 방식: `op run --env-file=.env.op -- <command>`
+- 필수: `sops + age`
+- 권장 실행 방식: `SOPS_AGE_KEY_FILE=... sops exec-env <encrypted-secrets-file> '<command>'`
 - 상세 정책: [`docs/security-and-secrets.md`](/Users/jeffrey/Projects/k-skill/docs/security-and-secrets.md)
-- 예시 템플릿: [`examples/.env.op.example`](/Users/jeffrey/Projects/k-skill/examples/.env.op.example)
+- 예시 템플릿: [`examples/secrets.env.example`](/Users/jeffrey/Projects/k-skill/examples/secrets.env.example), [`examples/.sops.yaml.example`](/Users/jeffrey/Projects/k-skill/examples/.sops.yaml.example)
 
 ## Development
 
@@ -53,6 +61,12 @@ npx --yes skills add . --list
 
 ```bash
 bash scripts/validate-skills.sh
+```
+
+공통 setup 점검:
+
+```bash
+bash scripts/check-setup.sh
 ```
 
 ## Roadmap

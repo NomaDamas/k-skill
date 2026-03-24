@@ -31,8 +31,8 @@ metadata:
 
 - Python 3.10+
 - `python -m pip install koreantrain`
-- `op` installed and signed in
-- SRT credential stored in 1Password
+- `sops` and `age` installed
+- common setup reviewed in `../k-skill-setup/SKILL.md`
 - secret policy reviewed in `../docs/security-and-secrets.md`
 
 ## Required secrets
@@ -40,7 +40,7 @@ metadata:
 - `KSKILL_SRT_ID`
 - `KSKILL_SRT_PASSWORD`
 
-평문 비밀번호는 금지한다. 항상 `op run --env-file=.env.op -- ...` 패턴을 사용한다.
+평문 비밀번호는 금지한다. 항상 `sops exec-env ...` 패턴을 사용한다.
 
 ## Inputs
 
@@ -55,14 +55,15 @@ metadata:
 
 ### 1. Validate secrets path
 
-비밀번호를 직접 받지 않는다. 필요한 경우 `.env.op`의 secret reference만 확인한다.
+비밀번호를 직접 받지 않는다. 필요한 경우 encrypted secrets file 경로와 변수 이름만 확인한다.
 
 ### 2. Search first
 
 먼저 조회해서 후보를 요약한다.
 
 ```bash
-op run --env-file=.env.op -- python - <<'PY'
+SOPS_AGE_KEY_FILE="$HOME/.config/k-skill/age/keys.txt" \
+sops exec-env "$HOME/.config/k-skill/secrets.env" 'python - <<'"'"'PY'"'"'
 import os
 from koreantrain import SRTService
 
@@ -72,6 +73,7 @@ trains = svc.search("수서", "부산", "20260328", "080000", time_limit="120000
 for idx, train in enumerate(trains[:5], start=1):
     print(idx, train)
 PY
+'
 ```
 
 ### 3. Summarize options before side effects
@@ -87,7 +89,8 @@ PY
 예약은 부작용이 있으므로 정확한 열차를 고른 뒤에만 진행한다.
 
 ```bash
-op run --env-file=.env.op -- python - <<'PY'
+SOPS_AGE_KEY_FILE="$HOME/.config/k-skill/age/keys.txt" \
+sops exec-env "$HOME/.config/k-skill/secrets.env" 'python - <<'"'"'PY'"'"'
 import os
 from koreantrain import Passenger, SRTService, SeatType
 
@@ -100,6 +103,7 @@ reservation = svc.reserve(
 )
 print(reservation)
 PY
+'
 ```
 
 ### 5. Inspect or cancel

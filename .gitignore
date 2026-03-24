@@ -3,6 +3,7 @@ node_modules/
 .omx/
 .env
 .env.*
-!examples/.env.op.example
+*.dec
+*.plaintext
 .venv/
 __pycache__/

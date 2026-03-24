@@ -23,7 +23,8 @@ metadata:
 ## Prerequisites
 
 - 서울 열린데이터 광장 API key
-- `op` installed and signed in
+- `sops` and `age` installed
+- common setup reviewed in `../k-skill-setup/SKILL.md`
 - secret policy reviewed in `../docs/security-and-secrets.md`
 - optional: `jq`
 
@@ -43,7 +44,8 @@ metadata:
 평문 key를 붙여 넣지 않는다.
 
 ```bash
-op run --env-file=.env.op -- bash -lc 'test -n "$SEOUL_OPEN_API_KEY"'
+SOPS_AGE_KEY_FILE="$HOME/.config/k-skill/age/keys.txt" \
+sops exec-env "$HOME/.config/k-skill/secrets.env" 'test -n "$SEOUL_OPEN_API_KEY"'
 ```
 
 ### 2. Query the official station arrival endpoint
@@ -51,8 +53,9 @@ op run --env-file=.env.op -- bash -lc 'test -n "$SEOUL_OPEN_API_KEY"'
 서울 실시간 지하철 API는 역명 기준 실시간 도착 정보를 JSON/XML로 제공한다. 기본 질의 예시는 다음 패턴을 쓴다.
 
 ```bash
-op run --env-file=.env.op -- curl -s \
-  "http://swopenAPI.seoul.go.kr/api/subway/${SEOUL_OPEN_API_KEY}/json/realtimeStationArrival/0/8/강남"
+SOPS_AGE_KEY_FILE="$HOME/.config/k-skill/age/keys.txt" \
+sops exec-env "$HOME/.config/k-skill/secrets.env" \
+  'curl -s "http://swopenAPI.seoul.go.kr/api/subway/${SEOUL_OPEN_API_KEY}/json/realtimeStationArrival/0/8/강남"'
 ```
 
 ### 3. Summarize the response

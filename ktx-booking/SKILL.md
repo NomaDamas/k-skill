@@ -31,8 +31,8 @@ metadata:
 
 - Python 3.10+
 - `python -m pip install koreantrain`
-- `op` installed and signed in
-- Korail credential stored in 1Password
+- `sops` and `age` installed
+- common setup reviewed in `../k-skill-setup/SKILL.md`
 - secret policy reviewed in `../docs/security-and-secrets.md`
 
 ## Required secrets
@@ -54,7 +54,8 @@ metadata:
 ### 1. Search first
 
 ```bash
-op run --env-file=.env.op -- python - <<'PY'
+SOPS_AGE_KEY_FILE="$HOME/.config/k-skill/age/keys.txt" \
+sops exec-env "$HOME/.config/k-skill/secrets.env" 'python - <<'"'"'PY'"'"'
 import os
 from koreantrain import KorailService
 
@@ -68,6 +69,7 @@ trains = svc.search("서울", "부산", "20260328", "090000", time_limit="130000
 for idx, train in enumerate(trains[:5], start=1):
     print(idx, train)
 PY
+'
 ```
 
 ### 2. Present the shortlist
@@ -82,7 +84,8 @@ PY
 ### 3. Reserve only after the target train is unambiguous
 
 ```bash
-op run --env-file=.env.op -- python - <<'PY'
+SOPS_AGE_KEY_FILE="$HOME/.config/k-skill/age/keys.txt" \
+sops exec-env "$HOME/.config/k-skill/secrets.env" 'python - <<'"'"'PY'"'"'
 import os
 from koreantrain import KorailService, Passenger, SeatType
 
@@ -99,6 +102,7 @@ reservation = svc.reserve(
 )
 print(reservation)
 PY
+'
 ```
 
 ### 4. Inspect or cancel

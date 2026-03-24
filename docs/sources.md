@@ -7,4 +7,5 @@
 - `kbo-game`: https://github.com/vkehfdl1/kbo-game
 - `korean-lotto`: https://github.com/hs85jeong/korean-lotto
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
-- 1Password CLI: https://developer.1password.com/docs/cli/reference/
+- SOPS docs: https://getsops.io/docs/
+- age: https://github.com/FiloSottile/age
