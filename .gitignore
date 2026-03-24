@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+.omx/
+.env
+.env.*
+!examples/.env.op.example
+.venv/
+__pycache__/
