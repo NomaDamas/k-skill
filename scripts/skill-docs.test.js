@@ -9,6 +9,12 @@ function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
+test("root npm test script includes the skill docs regression suite", () => {
+  const packageJson = JSON.parse(read("package.json"));
+
+  assert.match(packageJson.scripts.test, /node --test scripts\/skill-docs\.test\.js/);
+});
+
 test("hwp skill documents environment-aware routing and supported operations", () => {
   const skillPath = path.join(repoRoot, "hwp", "SKILL.md");
 
@@ -52,4 +58,32 @@ test("repository docs advertise the hwp skill", () => {
   assert.match(featureDoc, /(data:|base64)/);
   assert.match(featureDoc, /Markdown 출력.*(data:|base64)/);
   assert.doesNotMatch(featureDoc, /Markdown 출력.*이미지 (파일 )?경로 생성 여부 확인/);
+});
+
+test("repository docs advertise the kakaotalk-mac skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "kakaotalk-mac.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/kakaotalk-mac.md to exist");
+  assert.match(readme, /\| 카카오톡 Mac CLI \|/);
+  assert.match(readme, /\[카카오톡 Mac CLI\]\(docs\/features\/kakaotalk-mac\.md\)/);
+  assert.match(install, /--skill kakaotalk-mac/);
+});
+
+test("kakaotalk-mac skill documents safe macOS kakaocli usage", () => {
+  const skillPath = path.join(repoRoot, "kakaotalk-mac", "SKILL.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected kakaotalk-mac/SKILL.md to exist");
+
+  const skill = read(path.join("kakaotalk-mac", "SKILL.md"));
+
+  assert.match(skill, /^name: kakaotalk-mac$/m);
+  assert.match(skill, /kakaocli/);
+  assert.match(skill, /macOS/i);
+  assert.match(skill, /KakaoTalk/i);
+  assert.match(skill, /Full Disk Access/i);
+  assert.match(skill, /Accessibility/i);
+  assert.match(skill, /--me/);
+  assert.match(skill, /confirm before sending/i);
 });

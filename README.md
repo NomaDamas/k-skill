@@ -18,6 +18,7 @@ Claude code, codex, opencode 등 각종 코딩 에이전트 지원합니다.
 | --- | --- | --- | --- |
 | SRT 예매 | 열차 조회, 예약, 예약 확인, 취소 | 필요 | [SRT 예매 가이드](docs/features/srt-booking.md) |
 | KTX 예매 | 현재 작동하지 않음. KTX/Korail 열차 조회, 예약, 예약 확인, 취소 지원을 목표로 함 | 필요 | [KTX 예매 가이드](docs/features/ktx-booking.md) |
+| 카카오톡 Mac CLI | macOS에서 kakaocli로 대화 조회, 검색, 테스트 전송, 확인 후 실제 전송 | 불필요 | [카카오톡 Mac CLI 가이드](docs/features/kakaotalk-mac.md) |
 | 서울 지하철 도착정보 조회 | 역 기준 실시간 도착 예정 열차 확인 | 필요 | [서울 지하철 도착정보 가이드](docs/features/seoul-subway-arrival.md) |
 | KBO 경기 결과 조회 | 날짜별 경기 일정, 결과, 팀별 필터링 | 불필요 | [KBO 결과 가이드](docs/features/kbo-results.md) |
 | 로또 당첨 확인 | 최신 회차, 특정 회차, 번호 대조 | 불필요 | [로또 결과 가이드](docs/features/lotto-results.md) |
@@ -48,6 +49,7 @@ Claude code, codex, opencode 등 각종 코딩 에이전트 지원합니다.
 
 - [SRT 예매](docs/features/srt-booking.md)
 - [KTX 예매](docs/features/ktx-booking.md)
+- [카카오톡 Mac CLI](docs/features/kakaotalk-mac.md)
 - [서울 지하철 도착정보 조회](docs/features/seoul-subway-arrival.md)
 - [KBO 경기 결과 조회](docs/features/kbo-results.md)
 - [로또 당첨 확인](docs/features/lotto-results.md)
