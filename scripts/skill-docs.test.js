@@ -186,3 +186,22 @@ test("delivery-tracking skill documents official CJ and ePost flows with extensi
   assert.match(featureDoc, /JSON/);
   assert.match(featureDoc, /HTML/);
 });
+
+test("delivery-tracking docs avoid raw CJ personal fields in published examples", () => {
+  const skill = read(path.join("delivery-tracking", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "delivery-tracking.md"));
+
+  assert.doesNotMatch(skill, /"message":\s*latest\.get\("crgNm"\)/);
+  assert.doesNotMatch(
+    featureDoc,
+    /print\(json\.dumps\(payload\["parcelDetailResultMap"\]\["resultList"\]\[-1\],\s*ensure_ascii=False,\s*indent=2\)\)/,
+  );
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /"status_code":\s*latest\.get\("crgSt"\)/);
+    assert.match(doc, /"status":\s*status_map\.get\(latest\.get\("crgSt"\),/);
+    assert.match(doc, /"timestamp":\s*latest\.get\("dTime"\)/);
+    assert.match(doc, /"location":\s*latest\.get\("regBranNm"\)/);
+    assert.match(doc, /"event_count":\s*len\(events\)/);
+  }
+});

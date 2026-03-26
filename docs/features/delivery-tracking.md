@@ -64,14 +64,38 @@ curl -sS -L -b "$tmp_cookie" \
 python3 - <<'PY' "$tmp_json"
 import json
 import sys
+
+status_map = {
+    "11": "상품인수",
+    "21": "상품이동중",
+    "41": "상품이동중",
+    "42": "배송지도착",
+    "44": "상품이동중",
+    "82": "배송출발",
+    "91": "배달완료",
+}
+
 payload = json.load(open(sys.argv[1], encoding="utf-8"))
-print(json.dumps(payload["parcelDetailResultMap"]["resultList"][-1], ensure_ascii=False, indent=2))
+events = payload["parcelDetailResultMap"]["resultList"]
+if not events:
+    raise SystemExit("조회 결과가 없습니다.")
+
+latest = events[-1]
+print(json.dumps({
+    "carrier": "cj",
+    "invoice": payload["parcelDetailResultMap"]["paramInvcNo"],
+    "status_code": latest.get("crgSt"),
+    "status": status_map.get(latest.get("crgSt"), latest.get("scanNm") or "알수없음"),
+    "timestamp": latest.get("dTime"),
+    "location": latest.get("regBranNm"),
+    "event_count": len(events),
+}, ensure_ascii=False, indent=2))
 PY
 
 rm -f "$tmp_body" "$tmp_cookie" "$tmp_json"
 ```
 
-CJ는 JSON 응답이므로 `parcelDetailResultMap.resultList` 를 기준으로 상태를 읽는 편이 가장 안정적이다.
+CJ는 JSON 응답이므로 `parcelDetailResultMap.resultList` 를 기준으로 상태를 읽는 편이 가장 안정적이다. 문서 예시는 `crgSt` / `scanNm` / `dTime` / `regBranNm` / `event_count` 만 정리하고, 담당자 이름이나 휴대폰 번호가 포함될 수 있는 `crgNm` 원문은 그대로 출력하지 않는다.
 
 ## 우체국 예시
 

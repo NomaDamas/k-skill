@@ -137,7 +137,6 @@ print(json.dumps({
     "status": status_map.get(latest.get("crgSt"), latest.get("scanNm") or "알수없음"),
     "timestamp": latest.get("dTime"),
     "location": latest.get("regBranNm"),
-    "message": latest.get("crgNm"),
     "event_count": len(events),
 }, ensure_ascii=False, indent=2))
 PY
@@ -147,7 +146,7 @@ rm -f "$tmp_body" "$tmp_cookie" "$tmp_json"
 
 추가 smoke test 로는 `000000000000` 도 사용할 수 있다.
 
-CJ 응답은 `parcelResultMap.resultList` 가 비어 있어도 `parcelDetailResultMap.resultList` 쪽에 이벤트가 들어올 수 있으므로, 상세 이벤트 배열을 우선 본다.
+CJ 응답은 `parcelResultMap.resultList` 가 비어 있어도 `parcelDetailResultMap.resultList` 쪽에 이벤트가 들어올 수 있으므로, 상세 이벤트 배열을 우선 본다. 예시 출력은 `crgSt` / `scanNm` / `dTime` / `regBranNm` / 이벤트 수처럼 비식별 필드만 요약하고, 담당자 이름·연락처가 섞일 수 있는 `crgNm` 원문은 그대로 보여주지 않는다.
 
 ### 2. 우체국: official HTML flow
 
