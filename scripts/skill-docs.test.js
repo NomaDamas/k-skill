@@ -44,11 +44,15 @@ function findRecentEventsBlock(doc, carrier) {
 }
 
 function findJsonFenceAfterLabel(doc, label) {
+  return JSON.parse(findJsonFenceTextAfterLabel(doc, label));
+}
+
+function findJsonFenceTextAfterLabel(doc, label) {
   const escaped = escapeRegex(label);
   const match = doc.match(new RegExp(`${escaped}[\\s\\S]*?\\\`\\\`\\\`json\\n([\\s\\S]*?)\\n\\\`\\\`\\\``));
 
   assert.ok(match, `expected JSON example after "${label}"`);
-  return JSON.parse(match[1]);
+  return match[1];
 }
 
 function assertSampleProvenance(doc, sectionLabel, expected, docLabel) {
@@ -386,6 +390,21 @@ test("delivery-tracking docs publish aligned sample normalized outputs for both 
   const epostSkillOutput = findJsonFenceAfterLabel(skill, "우체국 공개 출력 예시");
   const epostFeatureOutput = findJsonFenceAfterLabel(featureDoc, "우체국 공개 출력 예시");
 
+  for (const [docLabel, doc] of [
+    ["skill doc", skill],
+    ["feature doc", featureDoc],
+  ]) {
+    for (const [carrier, label] of [
+      ["cj", "CJ 공개 출력 예시"],
+      ["epost", "우체국 공개 출력 예시"],
+    ]) {
+      assert.equal(
+        findJsonFenceTextAfterLabel(doc, label),
+        JSON.stringify(expectedSamples[carrier], null, 2),
+        `${docLabel} ${carrier} sample JSON block must stay byte-for-byte aligned with the checked-in public fixture`,
+      );
+    }
+  }
   assert.deepEqual(cjSkillOutput, cjFeatureOutput, "CJ sample output must stay aligned across docs");
   assert.deepEqual(epostSkillOutput, epostFeatureOutput, "ePost sample output must stay aligned across docs");
   assert.deepEqual(cjSkillOutput, expectedSamples.cj, "CJ sample output must stay pinned to the verified public fixture");
