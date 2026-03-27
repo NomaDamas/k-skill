@@ -17,6 +17,8 @@
 - 블루리본 지역 검색: https://www.bluer.co.kr/search/zone
 - 블루리본 주변 맛집 JSON: https://www.bluer.co.kr/restaurants/map
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
+- 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do
+- 에어코리아 측정소정보: https://www.data.go.kr/data/15073877/openapi.do
 - 우체국 도로명주소 검색: https://parcel.epost.go.kr/parcel/comm/zipcode/comm_newzipcd_list.jsp
 - CJ대한통운 배송조회: https://www.cjlogistics.com/ko/tool/parcel/tracking
 - CJ대한통운 배송상세 JSON: https://www.cjlogistics.com/ko/tool/parcel/tracking-detail

@@ -126,6 +126,7 @@ KSKILL_SRT_PASSWORD=replace-me
 KSKILL_KTX_ID=replace-me
 KSKILL_KTX_PASSWORD=replace-me
 SEOUL_OPEN_API_KEY=replace-me
+AIR_KOREA_OPEN_API_KEY=replace-me
 EOF
 ```
 
@@ -156,6 +157,7 @@ sops 로 ~/.config/k-skill/secrets.env 로 암호화해 주세요.
 - SRT: `KSKILL_SRT_ID`, `KSKILL_SRT_PASSWORD`
 - KTX: `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD`
 - 서울 지하철: `SEOUL_OPEN_API_KEY`
+- 사용자 위치 미세먼지 조회: `AIR_KOREA_OPEN_API_KEY`
 
 시크릿이 비어 있다는 이유로 다른 서비스나 비공식 우회 경로를 자동 선택하지 않는다.
 
@@ -164,7 +166,7 @@ sops 로 ~/.config/k-skill/secrets.env 로 암호화해 주세요.
 ```bash
 SOPS_AGE_KEY_FILE="$HOME/.config/k-skill/age/keys.txt" \
 sops exec-env "$HOME/.config/k-skill/secrets.env" \
-  'test -n "$KSKILL_SRT_ID" || test -n "$KSKILL_KTX_ID" || test -n "$SEOUL_OPEN_API_KEY"'
+  'test -n "$KSKILL_SRT_ID" || test -n "$KSKILL_KTX_ID" || test -n "$SEOUL_OPEN_API_KEY" || test -n "$AIR_KOREA_OPEN_API_KEY"'
 ```
 
 또는 저장소에 들어있는 점검 스크립트를 쓴다.

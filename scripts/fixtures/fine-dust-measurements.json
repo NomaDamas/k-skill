@@ -1,0 +1,35 @@
+{
+  "response": {
+    "body": {
+      "items": [
+        {
+          "stationName": "중구",
+          "dataTime": "2026-03-27 21:00",
+          "pm10Value": "42",
+          "pm10Grade": "2",
+          "pm25Value": "19",
+          "pm25Grade": "2",
+          "khaiGrade": "2"
+        },
+        {
+          "stationName": "종로구",
+          "dataTime": "2026-03-27 21:00",
+          "pm10Value": "57",
+          "pm10Grade": "2",
+          "pm25Value": "31",
+          "pm25Grade": "2",
+          "khaiGrade": "2"
+        },
+        {
+          "stationName": "강남구",
+          "dataTime": "2026-03-27 21:00",
+          "pm10Value": "81",
+          "pm10Grade": "3",
+          "pm25Value": "44",
+          "pm25Grade": "3",
+          "khaiGrade": "3"
+        }
+      ]
+    }
+  }
+}
