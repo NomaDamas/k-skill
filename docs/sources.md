@@ -21,6 +21,9 @@
 - 다이소몰 상품 요약 목록: https://www.daisomall.co.kr/ssn/search/GoodsMummResult
 - 다이소몰 매장 픽업 재고: https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck
 - 다이소몰 온라인 재고: https://www.daisomall.co.kr/api/pdo/selOnlStck
+- 블루리본 메인: https://www.bluer.co.kr/
+- 블루리본 지역 검색: https://www.bluer.co.kr/search/zone
+- 블루리본 주변 맛집 JSON: https://www.bluer.co.kr/restaurants/map
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
 - 우체국 도로명주소 검색: https://parcel.epost.go.kr/parcel/comm/zipcode/comm_newzipcd_list.jsp
 - CJ대한통운 배송조회: https://www.cjlogistics.com/ko/tool/parcel/tracking

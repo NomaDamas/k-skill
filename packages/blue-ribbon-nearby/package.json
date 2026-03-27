@@ -1,0 +1,28 @@
+{
+  "name": "blue-ribbon-nearby",
+  "version": "0.1.0",
+  "description": "Official Blue Ribbon Survey nearby restaurant client for asking a user's location and finding nearby ribbon picks",
+  "license": "MIT",
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "restaurant",
+    "blue-ribbon",
+    "bluer"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/parse.js && node --check test/index.test.js",
+    "test": "node --test"
+  }
+}

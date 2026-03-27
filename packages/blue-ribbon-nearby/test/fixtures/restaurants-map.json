@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "id": 29209,
+      "name": "유유안",
+      "ribbonType": "RIBBON_TWO",
+      "ribbonCount": 2,
+      "bookYear": "2026",
+      "latitude": 37.570539,
+      "longitude": 126.975391,
+      "redRibbon": true,
+      "seoul": true,
+      "address": "서울특별시 종로구 새문안로 97",
+      "foodTypes": ["중식", "광동식중식", "북경오리", "딤섬"],
+      "foodDetailTypes": ["광동식중식", "북경오리", "딤섬"]
+    },
+    {
+      "id": 30509,
+      "name": "무교동유정낙지",
+      "ribbonType": "RIBBON_TWO",
+      "ribbonCount": 2,
+      "bookYear": "2026",
+      "latitude": 37.56762919252033,
+      "longitude": 126.97604409036988,
+      "redRibbon": true,
+      "seoul": true,
+      "address": "서울특별시 중구 세종대로21길 22",
+      "foodTypes": ["한식(어패류)", "낙지"],
+      "foodDetailTypes": ["낙지"]
+    },
+    {
+      "id": 99999,
+      "name": "정통삼계탕",
+      "ribbonType": "NOT_RECORD",
+      "ribbonCount": 0,
+      "bookYear": "2026",
+      "latitude": 37.573100,
+      "longitude": 126.978000,
+      "redRibbon": false,
+      "seoul": true,
+      "address": "서울특별시 종로구 종로5길 95",
+      "foodTypes": ["한식(가금류)", "닭백숙"],
+      "foodDetailTypes": ["닭백숙"]
+    }
+  ],
+  "total": 3,
+  "capped": false
+}

@@ -547,3 +547,62 @@ test("root pack:dry-run script covers the daiso-product-search workspace", () =>
 
   assert.match(packageJson.scripts["pack:dry-run"], /workspace daiso-product-search/);
 });
+
+test("repository docs advertise the blue-ribbon-nearby skill across the documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "blue-ribbon-nearby.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/blue-ribbon-nearby.md to exist");
+  assert.match(readme, /\| 근처 블루리본 맛집 \|/);
+  assert.match(readme, /\[근처 블루리본 맛집 가이드\]\(docs\/features\/blue-ribbon-nearby\.md\)/);
+  assert.match(install, /--skill blue-ribbon-nearby/);
+  assert.match(roadmap, /근처 블루리본 맛집 스킬 출시/);
+  assert.match(sources, /블루리본 지역 검색: https:\/\/www\.bluer\.co\.kr\/search\/zone/);
+  assert.match(sources, /블루리본 주변 맛집 JSON: https:\/\/www\.bluer\.co\.kr\/restaurants\/map/);
+});
+
+test("blue-ribbon-nearby skill documents mandatory location prompting and official Blue Ribbon nearby search flow", () => {
+  const skillPath = path.join(repoRoot, "blue-ribbon-nearby", "SKILL.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected blue-ribbon-nearby/SKILL.md to exist");
+
+  const skill = read(path.join("blue-ribbon-nearby", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "blue-ribbon-nearby.md"));
+
+  assert.match(skill, /^name: blue-ribbon-nearby$/m);
+  assert.match(skill, /^description: .*근처 맛집.*블루리본.*$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /반드시.*현재 위치/u);
+    assert.match(doc, /맛집.*기본적으로.*blue-ribbon-nearby|맛집.*기본적으로.*블루리본/u);
+    assert.match(doc, /https:\/\/www\.bluer\.co\.kr\/search\/zone/);
+    assert.match(doc, /https:\/\/www\.bluer\.co\.kr\/restaurants\/map/);
+    assert.match(doc, /zone2Lat/);
+    assert.match(doc, /zone2Lng/);
+    assert.match(doc, /isAround=true/);
+    assert.match(doc, /ribbon=true/);
+    assert.match(doc, /위도|경도|동네|역명/u);
+    assert.match(doc, /blue-ribbon-nearby|근처 블루리본 맛집/u);
+  }
+});
+
+test("blue-ribbon-nearby package README stays aligned with the location-first and official-surface guidance", () => {
+  const packageReadme = read(path.join("packages", "blue-ribbon-nearby", "README.md"));
+
+  assert.match(packageReadme, /먼저 현재 위치를 묻/u);
+  assert.match(packageReadme, /코엑스.*삼성동\/대치동/u);
+  assert.match(packageReadme, /https:\/\/www\.bluer\.co\.kr\/search\/zone/);
+  assert.match(packageReadme, /https:\/\/www\.bluer\.co\.kr\/restaurants\/map/);
+  assert.match(packageReadme, /searchNearbyByLocationQuery/);
+});
+
+test("root pack:dry-run script covers all publishable workspaces", () => {
+  const packageJson = readJson("package.json");
+
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace k-lotto/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace daiso-product-search/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
+});
