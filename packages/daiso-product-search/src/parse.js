@@ -35,6 +35,38 @@ function toNumberOrNull(value) {
   return Number.isFinite(normalized) ? normalized : null
 }
 
+function firstPresentValue(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== "") {
+      return value
+    }
+  }
+
+  return null
+}
+
+function normalizeProductIdentifier(value) {
+  const normalized = String(value ?? "").trim()
+
+  if (!normalized || normalized === "0" || normalized.toLowerCase() === "null") {
+    return null
+  }
+
+  return normalized
+}
+
+function firstPresentProductIdentifier(...values) {
+  for (const value of values) {
+    const normalized = normalizeProductIdentifier(value)
+
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return null
+}
+
 function normalizeDistanceKm(value) {
   const normalized = toNumberOrNull(value)
 
@@ -174,9 +206,22 @@ function buildSearchGoodsParams(query, options = {}) {
 
 function normalizeProductItem(item) {
   const brand = splitBrandPath(item.brndNm)
+  const onldPdNo =
+    firstPresentProductIdentifier(
+      item.onldPdNo,
+      item.onlPdNo,
+      item.masterPdNo,
+      item.mappBoxPdNo,
+      item.MASTER_PD_NO,
+      item.MAPP_BOX_PD_NO,
+      item.pdNo
+    ) || String(item.pdNo)
+  const quickOrPsblYn = firstPresentValue(item.quickOrPsblYn, item.QUICK_OR_PSBL_YN)
+  const smallCategoryName = firstPresentValue(item.exhSmallCtgrNm, item.exhCtgrNm)
 
   return {
     pdNo: String(item.pdNo),
+    onldPdNo,
     name: item.pdNm || "",
     displayName: item.exhPdNm || item.pdNm || "",
     price: Number(item.pdPrc || 0),
@@ -185,13 +230,13 @@ function normalizeProductItem(item) {
     reviewCount: Number(item.revwCnt || 0),
     pickupAvailable: item.pkupOrPsblYn === "Y",
     parcelAvailable: item.pdsOrPsblYn === "Y",
-    quickAvailable: item.quickOrPsblYn === "Y",
+    quickAvailable: quickOrPsblYn === "Y",
     massOrderAvailable: item.massOrPsblYn === "Y",
     isNew: item.newPdYn === "Y",
     totalSales: Number(item.totOrQy || 0),
     largeCategoryName: item.exhLargeCtgrNm || null,
     middleCategoryName: item.exhMiddleCtgrNm || null,
-    smallCategoryName: item.exhCtgrNm || null,
+    smallCategoryName,
     raw: item
   }
 }
@@ -310,7 +355,8 @@ function normalizeOnlineStockResponse(payload, request) {
 
   return {
     pdNo: String(item.pdNo || request.pdNo),
-    onldPdNo: String(item.onldPdNo || request.onldPdNo || request.pdNo),
+    onldPdNo:
+      firstPresentProductIdentifier(item.onldPdNo, request.onldPdNo, request.pdNo) || String(request.pdNo),
     quantity,
     inStock: quantity > 0,
     raw: item
@@ -324,6 +370,7 @@ module.exports = {
   STORE_EMPTY_RESULT_ERROR,
   buildSearchGoodsParams,
   normalizeOnlineStockResponse,
+  normalizeProductIdentifier,
   normalizeProductItem,
   normalizeSearchGoodsResponse,
   normalizeStoreItem,

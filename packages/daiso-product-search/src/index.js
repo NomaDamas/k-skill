@@ -3,6 +3,7 @@ const {
   BASE_SEARCH_URL,
   buildSearchGoodsParams,
   normalizeOnlineStockResponse,
+  normalizeProductIdentifier,
   normalizeSearchGoodsResponse,
   normalizeStorePickupStockResponse,
   normalizeStoreSearchResponse
@@ -103,7 +104,7 @@ async function getStorePickupStock(request, options = {}) {
 async function getOnlineStock(request, options = {}) {
   const normalizedRequest = {
     pdNo: String(request.pdNo),
-    onldPdNo: String(request.onldPdNo || request.pdNo)
+    onldPdNo: normalizeProductIdentifier(request.onldPdNo) || String(request.pdNo)
   }
   const payload = await requestJson(`${BASE_API_URL}/pdo/selOnlStck`, {
     ...options,
@@ -146,7 +147,13 @@ async function lookupStoreProductAvailability(options = {}) {
     getStorePickupStock({ pdNo: selectedProduct.pdNo, strCd: selectedStore.strCd }, options),
     options.includeOnlineStock === false
       ? Promise.resolve(null)
-      : getOnlineStock({ pdNo: selectedProduct.pdNo }, options)
+      : getOnlineStock(
+          {
+            pdNo: selectedProduct.pdNo,
+            onldPdNo: selectedProduct.onldPdNo
+          },
+          options
+        )
   ])
 
   return {

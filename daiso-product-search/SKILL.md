@@ -102,6 +102,7 @@ console.log(productResult.items)
 - 정확히 일치하는 이름
 - 브랜드 + 용량/호수까지 포함된 이름
 - 리뷰 수/검색 점수가 높은 후보
+- 온라인 재고 교차 확인이 필요하면 후보의 `onldPdNo` 를 함께 보존한다
 
 ### 3. Check the store pickup stock
 

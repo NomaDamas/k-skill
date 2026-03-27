@@ -74,6 +74,7 @@ main().catch((error) => {
 - `searchStores(query, options?)`
 - `getStoreDetail(strCd, options?)`
 - `searchProducts(query, options?)`
+  - 반환되는 각 상품 후보는 `pdNo` 와 함께 `onldPdNo` 를 포함할 수 있습니다. 다이소몰 온라인 재고 표면이 별도 마스터 상품 번호를 요구하는 경우 이 값을 그대로 `getOnlineStock()` 에 넘기면 됩니다.
 - `getStorePickupStock({ pdNo, strCd }, options?)`
 - `getOnlineStock({ pdNo, onldPdNo? }, options?)`
 - `lookupStoreProductAvailability({ storeQuery, productQuery, ...options })`
