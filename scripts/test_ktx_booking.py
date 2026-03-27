@@ -54,6 +54,9 @@ class FakeTrain:
     def has_waiting_list(self):
         return self._has_waiting_list
 
+    def has_general_waiting_list(self):
+        return self._has_waiting_list
+
     def __str__(self):
         return self.label
 
@@ -81,11 +84,16 @@ class FakeReservation:
 
 
 class FakeClient:
-    def __init__(self, trains):
+    def __init__(self, trains, search_handler=None):
         self._trains = trains
+        self._search_handler = search_handler
+        self.search_calls = []
         self.reserved_train = None
 
     def search_train(self, *args, **kwargs):
+        self.search_calls.append(kwargs)
+        if self._search_handler is not None:
+            return list(self._search_handler(*args, **kwargs))
         return list(self._trains)
 
     def reserve(self, train, **kwargs):
@@ -164,6 +172,32 @@ class KtxBookingTests(unittest.TestCase):
                     ktx_booking.command_reserve(self.make_args(train_id))
 
         self.assertIn("train_id", str(exc.exception))
+
+    def test_command_reserve_try_waiting_replays_search_with_waiting_list_enabled(self):
+        waiting_only = FakeTrain(
+            train_no="003",
+            dep_time="070000",
+            arr_time="093000",
+            has_general_seat=False,
+            has_special_seat=False,
+            has_waiting_list=True,
+            label="waiting-only",
+        )
+        train_id = ktx_booking.normalize_train(waiting_only, index=1)["train_id"]
+        client = FakeClient(
+            [],
+            search_handler=lambda *args, **kwargs: [waiting_only] if kwargs.get("include_waiting_list") else [],
+        )
+        args = self.make_args(train_id)
+        args.try_waiting = True
+
+        with patch.object(ktx_booking, "build_client", return_value=client):
+            with redirect_stdout(io.StringIO()):
+                ktx_booking.command_reserve(args)
+
+        self.assertTrue(client.search_calls)
+        self.assertTrue(client.search_calls[-1]["include_waiting_list"])
+        self.assertIs(client.reserved_train, waiting_only)
 
 
 if __name__ == "__main__":

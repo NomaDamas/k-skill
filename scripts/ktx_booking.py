@@ -572,6 +572,7 @@ def command_search(args: argparse.Namespace) -> None:
 def command_reserve(args: argparse.Namespace) -> None:
     client = build_client()
     passengers = parse_passengers(args)
+    include_waiting_list = args.include_waiting_list or args.try_waiting
     trains = client.search_train(
         args.dep,
         args.arr,
@@ -580,7 +581,7 @@ def command_reserve(args: argparse.Namespace) -> None:
         train_type=TrainType.KTX,
         passengers=passengers,
         include_no_seats=args.include_no_seats,
-        include_waiting_list=args.include_waiting_list,
+        include_waiting_list=include_waiting_list,
     )
     selected_train = find_train_by_id(trains, args.train_id)
     if selected_train is None:
@@ -641,7 +642,11 @@ def build_parser() -> argparse.ArgumentParser:
     reserve_parser.add_argument("--seat-option", choices=sorted(RESERVE_OPTION_MAP), default="general-first")
     reserve_parser.add_argument("--include-no-seats", action="store_true", help="검색 시 매진 열차도 포함")
     reserve_parser.add_argument("--include-waiting-list", action="store_true", help="검색 시 예약대기 열차도 포함")
-    reserve_parser.add_argument("--try-waiting", action="store_true", help="좌석이 없으면 예약대기를 시도")
+    reserve_parser.add_argument(
+        "--try-waiting",
+        action="store_true",
+        help="좌석이 없으면 예약대기를 시도 (reserve 재조회 시 예약대기 열차 자동 포함)",
+    )
     reserve_parser.set_defaults(func=command_reserve)
 
     reservations_parser = subparsers.add_parser("reservations", help="현재 예약 목록을 조회합니다")
