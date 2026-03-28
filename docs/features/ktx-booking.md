@@ -11,7 +11,7 @@
 ## 먼저 필요한 것
 
 - Python 3.10+
-- `python3 -m pip install korail2`
+- `python3 -m pip install korail2 pycryptodome`
 - [공통 설정 가이드](../setup.md) 완료
 - [보안/시크릿 정책](../security-and-secrets.md) 확인
 
@@ -43,7 +43,7 @@
 
 ## 기본 흐름
 
-1. `korail2` 패키지가 없으면 다른 방법으로 우회하지 말고 먼저 전역 설치한다.
+1. `korail2` 또는 `pycryptodome` 패키지가 없으면 다른 방법으로 우회하지 말고 먼저 전역 설치한다.
 2. `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD` 가 없으면 채팅에 붙여 넣게 하지 말고 로컬 secrets 등록 절차를 안내한다.
 3. helper 로 먼저 열차를 조회한다.
 4. 후보 열차의 `index`, `train_id`, 출발/도착 시각, KTX 여부, 좌석 여부를 보여준다.

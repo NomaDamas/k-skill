@@ -1,0 +1,38 @@
+{
+  "message": null,
+  "data": [
+    {
+      "strCd": "10001",
+      "strNm": "강남역점",
+      "strAddr": "서울특별시 강남구 강남대로 100",
+      "strDtlAddr": null,
+      "strTno": "1522-4400",
+      "opngTime": "10:00",
+      "clsngTime": "22:00",
+      "pkupYn": "Y",
+      "useYn": "Y",
+      "pntUseYn": "Y",
+      "pntAcmYn": "Y",
+      "strLitd": 127.027,
+      "strLttd": 37.497,
+      "km": "0.3"
+    },
+    {
+      "strCd": "10224",
+      "strNm": "강남역2호점",
+      "strAddr": "서울특별시 강남구 테헤란로 109 (역삼동)",
+      "strDtlAddr": null,
+      "strTno": "1522-4400",
+      "opngTime": "10:00",
+      "clsngTime": "22:00",
+      "pkupYn": "Y",
+      "useYn": "Y",
+      "pntUseYn": "Y",
+      "pntAcmYn": "Y",
+      "strLitd": 127.028991200366,
+      "strLttd": 37.4988240219594,
+      "km": "0.1"
+    }
+  ],
+  "success": true
+}

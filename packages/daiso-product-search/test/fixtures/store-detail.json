@@ -1,0 +1,19 @@
+{
+  "message": null,
+  "data": {
+    "strCd": "10224",
+    "strNm": "강남역2호점",
+    "strZip": "06134",
+    "strAddr": "서울특별시 강남구 테헤란로 109 (역삼동)",
+    "strDtlAddr": null,
+    "onlStrYn": "Y",
+    "opngTime": "1000",
+    "clsngTime": "2200",
+    "strLitd": "127.02899120036600000000",
+    "strLttd": "37.49882402195940000000",
+    "todayHldyYn": "N",
+    "pkupStTm": "20260328",
+    "pkupEdTm": "20260330"
+  },
+  "success": true
+}

@@ -216,7 +216,11 @@ test("ktx-booking helper python regression tests pass", () => {
   const result = childProcess.spawnSync(
     "python3",
     ["-m", "unittest", "discover", "-s", "scripts", "-p", "test_ktx_booking.py"],
-    { cwd: repoRoot, encoding: "utf8" },
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: { ...process.env, PYTHONNOUSERSITE: "1" },
+    },
   );
 
   assert.equal(
@@ -490,6 +494,64 @@ test("delivery-tracking docs pin sample provenance to the verified smoke-test da
     assertSampleProvenance(doc, "CJ 공개 출력 예시", expectedProvenance.cj, docLabel);
     assertSampleProvenance(doc, "우체국 공개 출력 예시", expectedProvenance.epost, docLabel);
   }
+});
+
+test("repository docs advertise the daiso-product-search skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "daiso-product-search.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/daiso-product-search.md to exist");
+  assert.match(readme, /\| 다이소 상품 조회 \|/);
+  assert.match(readme, /\[다이소 상품 조회 가이드\]\(docs\/features\/daiso-product-search\.md\)/);
+  assert.match(install, /--skill daiso-product-search/);
+});
+
+test("daiso-product-search skill documents the official Daiso Mall lookup flow", () => {
+  const skillPath = path.join(repoRoot, "daiso-product-search", "SKILL.md");
+  const featureDoc = read(path.join("docs", "features", "daiso-product-search.md"));
+
+  assert.ok(fs.existsSync(skillPath), "expected daiso-product-search/SKILL.md to exist");
+
+  const skill = read(path.join("daiso-product-search", "SKILL.md"));
+
+  assert.match(skill, /^name: daiso-product-search$/m);
+  assert.match(skill, /다이소몰/i);
+  assert.match(skill, /매장명/);
+  assert.match(skill, /상품명|검색어/);
+  assert.match(skill, /https:\/\/www\.daisomall\.co\.kr\/api\/ms\/msg\/selStr/);
+  assert.match(skill, /https:\/\/www\.daisomall\.co\.kr\/ssn\/search\/SearchGoods/);
+  assert.match(skill, /https:\/\/www\.daisomall\.co\.kr\/api\/pd\/pdh\/selStrPkupStck/);
+  assert.match(skill, /공식 표면이 매장 내 진열 위치를 주지 않으면 재고 중심/);
+  assert.match(featureDoc, /SearchGoods/);
+  assert.match(featureDoc, /selStrPkupStck/);
+});
+
+test("daiso-product-search package exposes reusable store, product, and stock helpers", () => {
+  const pkg = require(path.join(repoRoot, "packages", "daiso-product-search", "src", "index.js"));
+
+  assert.equal(typeof pkg.searchStores, "function");
+  assert.equal(typeof pkg.searchProducts, "function");
+  assert.equal(typeof pkg.getStorePickupStock, "function");
+  assert.equal(typeof pkg.lookupStoreProductAvailability, "function");
+});
+
+test("daiso-product-search docs record the shipped feature and official sources", () => {
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+
+  assert.match(roadmap, /다이소 상품 조회 스킬 출시/);
+  assert.match(sources, /https:\/\/www\.daisomall\.co\.kr\/api\/ms\/msg\/selStr/);
+  assert.match(sources, /https:\/\/www\.daisomall\.co\.kr\/ssn\/search\/SearchGoods/);
+  assert.match(sources, /https:\/\/www\.daisomall\.co\.kr\/api\/pd\/pdh\/selStrPkupStck/);
+});
+
+test("root pack:dry-run script covers all publishable workspaces", () => {
+  const packageJson = readJson("package.json");
+
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace k-lotto/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace daiso-product-search/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
 });
 
 test("repository docs advertise the blue-ribbon-nearby skill across the documented surfaces", () => {

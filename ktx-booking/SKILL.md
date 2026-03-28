@@ -1,6 +1,6 @@
 ---
 name: ktx-booking
-description: Search, reserve, inspect, and cancel KTX or Korail tickets in Korea with the korail2 Python package. Use when the user asks for KTX seats, Korail bookings, train changes, or reservation status.
+description: Search, reserve, inspect, and cancel KTX or Korail tickets in Korea with the korail2 + pycryptodome Python packages. Use when the user asks for KTX seats, Korail bookings, train changes, or reservation status.
 license: MIT
 metadata:
   category: travel
@@ -32,7 +32,7 @@ metadata:
 ## Prerequisites
 
 - Python 3.10+
-- `python3 -m pip install korail2`
+- `python3 -m pip install korail2 pycryptodome`
 - `sops` and `age` installed
 - common setup reviewed in `../k-skill-setup/SKILL.md`
 - secret policy reviewed in `../docs/security-and-secrets.md`
@@ -56,10 +56,10 @@ metadata:
 
 ### 0. Install the package globally when missing
 
-`python3 -c 'import korail2'` 가 실패하면 다른 구현으로 우회하지 말고 전역 Python 패키지 설치를 먼저 시도한다.
+`python3 -c 'import korail2, Crypto'` 가 실패하면 다른 구현으로 우회하지 말고 전역 Python 패키지 설치를 먼저 시도한다.
 
 ```bash
-python3 -m pip install korail2
+python3 -m pip install korail2 pycryptodome
 ```
 
 ### 1. Stop for secure registration when secrets are missing

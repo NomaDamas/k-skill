@@ -1,0 +1,72 @@
+{
+  "version": 43,
+  "returnCode": 1,
+  "status": 200,
+  "resultSet": {
+    "result": [
+      {
+        "data": {
+          "relationKeyword": "리들,앰플,브이티"
+        },
+        "totalSize": 25,
+        "realSize": 3,
+        "resultDocuments": [
+          {
+            "pdNo": "1049275",
+            "pdNm": "VT 리들샷 100 페이셜 부스팅 퍼스트 앰플 2ml*6개입",
+            "exhPdNm": "VT 리들샷 100 페이셜 부스팅 퍼스트 앰플 2ml*6개입",
+            "pdPrc": "3000",
+            "brndNm": "VT>00044>VT",
+            "avgStscVal": "4.8",
+            "revwCnt": "14138",
+            "newPdYn": "N",
+            "massOrPsblYn": "Y",
+            "pdsOrPsblYn": "Y",
+            "pkupOrPsblYn": "Y",
+            "quickOrPsblYn": "N",
+            "totOrQy": "219485",
+            "exhLargeCtgrNm": "뷰티/위생",
+            "exhMiddleCtgrNm": "스킨케어",
+            "exhCtgrNm": "에센스/세럼/앰플"
+          },
+          {
+            "pdNo": "1049277",
+            "pdNm": "VT 리들샷 300 페이셜 부스팅 퍼스트 앰플 2ml*6개입",
+            "exhPdNm": "VT 리들샷 300 페이셜 부스팅 퍼스트 앰플 2ml*6개입",
+            "pdPrc": "3000",
+            "brndNm": "VT>00044>VT",
+            "avgStscVal": "4.9",
+            "revwCnt": "9999",
+            "newPdYn": "N",
+            "massOrPsblYn": "Y",
+            "pdsOrPsblYn": "Y",
+            "pkupOrPsblYn": "Y",
+            "quickOrPsblYn": "Y",
+            "totOrQy": "180000",
+            "exhLargeCtgrNm": "뷰티/위생",
+            "exhMiddleCtgrNm": "스킨케어",
+            "exhCtgrNm": "에센스/세럼/앰플"
+          },
+          {
+            "pdNo": "1075311",
+            "pdNm": "VT 리들샷에센스립플럼퍼(03소프트핑크)",
+            "exhPdNm": "[03 소프트핑크]VT 리들샷 에센스 립플럼퍼",
+            "pdPrc": "5000",
+            "brndNm": "VT>00044>VT",
+            "avgStscVal": "4.7",
+            "revwCnt": "281",
+            "newPdYn": "Y",
+            "massOrPsblYn": "Y",
+            "pdsOrPsblYn": "Y",
+            "pkupOrPsblYn": "Y",
+            "quickOrPsblYn": "Y",
+            "totOrQy": "18340",
+            "exhLargeCtgrNm": "뷰티/위생",
+            "exhMiddleCtgrNm": "메이크업",
+            "exhCtgrNm": "립메이크업"
+          }
+        ]
+      }
+    ]
+  }
+}

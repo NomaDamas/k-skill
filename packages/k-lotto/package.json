@@ -14,6 +14,10 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
   "keywords": [
     "k-skill",
     "korea",

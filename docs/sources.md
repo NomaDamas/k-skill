@@ -13,6 +13,14 @@
 - KakaoTalk Mac 설치 참고(`mas`): https://velog.io/@bonjugi/%EB%A7%A5%EB%B6%81-M1%EC%97%90-homebrew%EB%A1%9C-node-vscode-%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0
 - 동행복권 로또 결과 페이지: https://www.dhlottery.co.kr/lt645/result
 - 동행복권 지난 회차 JSON 표면: https://www.dhlottery.co.kr/lt645/selectPstLt645InfoNew.do
+- 다이소몰 매장 검색: https://www.daisomall.co.kr/api/ms/msg/selStr
+- 다이소몰 매장 검색어 목록: https://www.daisomall.co.kr/api/ms/msg/selStrSrchKeyword
+- 다이소몰 매장 상세: https://www.daisomall.co.kr/api/dl/dla-api/selStrInfo
+- 다이소몰 상품 검색 요약: https://www.daisomall.co.kr/ssn/search/Search
+- 다이소몰 상품 검색 목록: https://www.daisomall.co.kr/ssn/search/SearchGoods
+- 다이소몰 상품 요약 목록: https://www.daisomall.co.kr/ssn/search/GoodsMummResult
+- 다이소몰 매장 픽업 재고: https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck
+- 다이소몰 온라인 재고: https://www.daisomall.co.kr/api/pdo/selOnlStck
 - 블루리본 메인: https://www.bluer.co.kr/
 - 블루리본 지역 검색: https://www.bluer.co.kr/search/zone
 - 블루리본 주변 맛집 JSON: https://www.bluer.co.kr/restaurants/map

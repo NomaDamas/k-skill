@@ -1,0 +1,13 @@
+{
+  "message": "success",
+  "data": [
+    {
+      "pdNo": "1049275",
+      "strCd": "10224",
+      "sleStsCd": "1",
+      "stck": "3"
+    }
+  ],
+  "returnCode": "success",
+  "success": true
+}

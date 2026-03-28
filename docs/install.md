@@ -49,6 +49,7 @@ npx --yes skills add <owner/repo> \
   --skill lotto-results \
   --skill kakaotalk-mac \
   --skill fine-dust-location \
+  --skill daiso-product-search \
   --skill blue-ribbon-nearby \
   --skill zipcode-search \
   --skill delivery-tracking
@@ -114,7 +115,7 @@ brew install silver-flight-group/tap/kakaocli
 ### Python 패키지
 
 ```bash
-python3 -m pip install SRTrain korail2
+python3 -m pip install SRTrain korail2 pycryptodome
 ```
 
 운영체제 정책이나 권한 때문에 전역 설치가 막히면, 임의의 대체 구현으로 넘어가지 말고 그 차단 사유를 사용자에게 설명한 뒤 다음 설치 단계를 정합니다.

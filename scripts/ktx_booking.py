@@ -6,29 +6,97 @@ import base64
 import json
 import os
 import random
+import re
 import string
 import sys
 import time
 from functools import reduce
 
-import requests
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
-from korail2 import (
-    AdultPassenger,
-    ChildPassenger,
-    Korail,
-    KorailError,
-    NeedToLoginError,
-    NoResultsError,
-    Passenger,
-    ReserveOption,
-    SeniorPassenger,
-    SoldOutError,
-    ToddlerPassenger,
-    TrainType,
-)
-import korail2.korail2 as korail_mod
+try:
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import pad
+except ModuleNotFoundError as exc:
+    AES = None
+    pad = None
+    _CRYPTO_IMPORT_ERROR = exc
+else:
+    _CRYPTO_IMPORT_ERROR = None
+
+try:
+    from korail2 import (
+        AdultPassenger,
+        ChildPassenger,
+        Korail,
+        KorailError,
+        NeedToLoginError,
+        NoResultsError,
+        Passenger,
+        ReserveOption,
+        SeniorPassenger,
+        SoldOutError,
+        ToddlerPassenger,
+        TrainType,
+    )
+    import korail2.korail2 as korail_mod
+except ModuleNotFoundError as exc:
+    _KORAIL_IMPORT_ERROR = exc
+
+    class KorailError(Exception):
+        pass
+
+    class NeedToLoginError(KorailError):
+        pass
+
+    class NoResultsError(KorailError):
+        pass
+
+    class SoldOutError(KorailError):
+        pass
+
+    class Passenger:
+        def __init__(self, count: int = 1):
+            self.count = count
+
+        @staticmethod
+        def reduce(passengers):
+            return passengers
+
+        def get_dict(self, _: int) -> dict[str, str]:
+            return {}
+
+    class AdultPassenger(Passenger):
+        pass
+
+    class ChildPassenger(Passenger):
+        pass
+
+    class ToddlerPassenger(Passenger):
+        pass
+
+    class SeniorPassenger(Passenger):
+        pass
+
+    class ReserveOption:
+        GENERAL_FIRST = "GENERAL_FIRST"
+        GENERAL_ONLY = "GENERAL_ONLY"
+        SPECIAL_FIRST = "SPECIAL_FIRST"
+        SPECIAL_ONLY = "SPECIAL_ONLY"
+
+    class TrainType:
+        ALL = "ALL"
+        KTX = "KTX"
+
+    class Korail:
+        def __init__(self, *args, **kwargs):
+            raise ModuleNotFoundError("korail2")
+
+    class _FallbackKorailModule:
+        EMAIL_REGEX = re.compile(r".+@.+")
+        PHONE_NUMBER_REGEX = re.compile(r"^\d+$")
+
+    korail_mod = _FallbackKorailModule()
+else:
+    _KORAIL_IMPORT_ERROR = None
 
 DEFAULT_USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 13; SM-S928N Build/UP1A.231005.007)"
 DYNAPATH_PATHS = [
@@ -59,6 +127,20 @@ TRAIN_ID_FIELDS = (
     "dep_code",
     "arr_code",
 )
+
+
+def ensure_runtime_dependencies() -> None:
+    missing: list[str] = []
+    if _KORAIL_IMPORT_ERROR is not None:
+        missing.append("korail2")
+    if _CRYPTO_IMPORT_ERROR is not None:
+        missing.append("pycryptodome")
+    if missing:
+        install_command = f"python3 -m pip install {' '.join(missing)}"
+        raise SystemExit(
+            "scripts/ktx_booking.py requires additional Python packages "
+            f"({', '.join(missing)}). Install them before running this helper: {install_command}"
+        )
 
 
 class DynaPathMasterEngine:
@@ -178,6 +260,8 @@ class PatchedKorail(Korail):
     _device_id = "558a4f02041657ea"
 
     def __init__(self, korail_id: str, korail_pw: str, auto_login: bool = True, want_feedback: bool = False):
+        import requests
+
         self._session = requests.session()
         self._session.headers.update({"User-Agent": DEFAULT_USER_AGENT})
         self._engine = DynaPathMasterEngine()
@@ -187,6 +271,7 @@ class PatchedKorail(Korail):
             self.login(korail_id, korail_pw)
 
     def _generate_sid(self, timestamp_ms: int) -> str:
+        ensure_runtime_dependencies()
         plaintext = f"{self._device}{timestamp_ms}".encode("utf-8")
         cipher = AES.new(self._sid_key, AES.MODE_CBC, iv=self._sid_key)
         return base64.b64encode(cipher.encrypt(pad(plaintext, 16))).decode("utf-8") + "\n"
@@ -535,6 +620,7 @@ def print_json(payload: dict[str, object]) -> None:
 
 
 def build_client() -> PatchedKorail:
+    ensure_runtime_dependencies()
     korail_id = os.environ.get("KSKILL_KTX_ID")
     korail_pw = os.environ.get("KSKILL_KTX_PASSWORD")
     if not korail_id or not korail_pw:

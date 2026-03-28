@@ -1,7 +1,7 @@
 {
-  "name": "blue-ribbon-nearby",
+  "name": "daiso-product-search",
   "version": "0.1.0",
-  "description": "Official Blue Ribbon Survey nearby restaurant client for asking a user's location and finding nearby ribbon picks",
+  "description": "Official Daiso Mall store/product search and pickup-stock client",
   "license": "MIT",
   "main": "src/index.js",
   "files": [
@@ -21,9 +21,9 @@
   "keywords": [
     "k-skill",
     "korea",
-    "restaurant",
-    "blue-ribbon",
-    "bluer"
+    "daiso",
+    "inventory",
+    "pickup-stock"
   ],
   "scripts": {
     "lint": "node --check src/index.js && node --check src/parse.js && node --check test/index.test.js",
