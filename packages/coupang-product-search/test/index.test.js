@@ -10,6 +10,9 @@ const {
   detectBlockedAccess,
   getProductDetail,
   getProductReviews,
+  parseProductDetailHtml: parseProductDetailHtmlFromEntrypoint,
+  parseReviewsHtml: parseReviewsHtmlFromEntrypoint,
+  parseSearchResultsHtml: parseSearchResultsHtmlFromEntrypoint,
   probeAutomation,
   searchProducts
 } = require("../src/index")
@@ -74,6 +77,12 @@ test("parseSearchResultsHtml normalizes official search cards into ranked produc
     badges: ["로켓배송", "무료배송"]
   })
   assert.equal(result.items[1].sellerName, "쿠팡")
+})
+
+test("package entrypoint re-exports the parser helpers documented in the public API", () => {
+  assert.equal(parseSearchResultsHtmlFromEntrypoint, parseSearchResultsHtml)
+  assert.equal(parseProductDetailHtmlFromEntrypoint, parseProductDetailHtml)
+  assert.equal(parseReviewsHtmlFromEntrypoint, parseReviewsHtml)
 })
 
 test("parseProductDetailHtml extracts product facts, price, review summary, and inline reviews", () => {

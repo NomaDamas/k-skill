@@ -235,6 +235,9 @@ module.exports = {
   detectBlockedAccess,
   getProductDetail,
   getProductReviews,
+  parseProductDetailHtml,
+  parseReviewsHtml,
+  parseSearchResultsHtml,
   probeAutomation,
   searchProducts
 }

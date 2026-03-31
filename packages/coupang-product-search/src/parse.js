@@ -52,22 +52,6 @@ function extractAttribute(block, name) {
   return match ? decodeHtmlEntities(match[1]) : null
 }
 
-function buildClassPattern(className) {
-  return `(?:^|\\s)${escapeRegex(className)}(?:\\s|$)`
-}
-
-function extractTextsByTagAndClass(block, tagName, className) {
-  const tagPattern = escapeRegex(tagName)
-  const classPattern = buildClassPattern(className).replace("(?:^|\\s)", "(?:^|[^\"'\\S]|\\s)")
-
-  return [...String(block || "").matchAll(
-    new RegExp(
-      `<${tagPattern}[^>]*class=["'][^"']*${classPattern}[^"']*["'][^>]*>([\\s\\S]*?)<\\/${tagPattern}>`,
-      "gi"
-    )
-  )].map(([, content]) => stripTags(content)).filter(Boolean)
-}
-
 function extractTextByClass(block, className) {
   const match = String(block || "").match(
     new RegExp(
@@ -89,9 +73,11 @@ function extractTextsByClass(block, className) {
 }
 
 function extractTextsByTagAndClass(block, tagName, className) {
+  const tagPattern = escapeRegex(tagName)
+
   return [...String(block || "").matchAll(
     new RegExp(
-      `<${tagName}[^>]*class=["'][^"']*${escapeRegex(className)}[^"']*["'][^>]*>([\\s\\S]*?)<\\/${tagName}>`,
+      `<${tagPattern}[^>]*class=["'][^"']*${escapeRegex(className)}[^"']*["'][^>]*>([\\s\\S]*?)<\\/${tagPattern}>`,
       "gi"
     )
   )].map((match) => stripTags(match[1])).filter(Boolean)
