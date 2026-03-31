@@ -78,7 +78,7 @@ console.log(probe)
 ```
 
 - `blocked: true` 면 direct fetch / headless browser 가 막힌 것이다.
-- `browserFetchHtml` 을 주입하지 않은 clean checkout 에서는 `browser === null` 이고, `browser` 값은 `browserFetchHtml` 을 주입했을 때만 채워진다.
+- `browserFetchHtml` 을 주입하지 않은 clean checkout 에서는 `browser === null` 이고, `browser` 값은 수동/외부 Playwright-core runner 같은 `browserFetchHtml` 주입 경로를 붙였을 때만 채워진다.
 - 이 경우 **브라우저 세션에서 캡처한 HTML** 또는 사용자가 제공한 쿠팡 상품 URL/HTML 이 필요하다고 설명한다.
 
 ### 3. Search products when browser HTML is available

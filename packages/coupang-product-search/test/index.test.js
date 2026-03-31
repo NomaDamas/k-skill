@@ -251,3 +251,15 @@ test("repo docs explain that probeAutomation leaves browser null without browser
     )
   }
 })
+
+test("repo docs label populated browser probe results as injected manual or external verification", () => {
+  for (const file of coupangDocsFiles) {
+    const contents = fs.readFileSync(file, "utf8")
+
+    assert.match(
+      contents,
+      /browserFetchHtml[^.\n]*(manual|external|수동|외부)|(?:manual|external|수동|외부)[^.\n]*browserFetchHtml/i,
+      file
+    )
+  }
+})
