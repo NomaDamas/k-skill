@@ -1061,6 +1061,12 @@ test("korean-law-search skill keeps korean-law-mcp-only lookups while separating
     assert.doesNotMatch(doc, /python-packages\/korean-law-search/);
   }
 
+  assert.doesNotMatch(
+    featureDoc,
+    /[ \t]+$/m,
+    "expected docs/features/korean-law-search.md to avoid trailing whitespace so git diff --check stays clean",
+  );
+
   assert.match(examplesSecrets, /^LAW_OC=replace-me$/m);
   assert.ok(
     !packageJson.workspaces.some((workspace) => workspace.includes("korean-law")),
