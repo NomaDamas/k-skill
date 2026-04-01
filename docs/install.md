@@ -74,6 +74,9 @@ npx --yes skills add <owner/repo> \
 
 `korean-law-search` 는 skill 설치 후 upstream CLI/MCP도 준비해야 한다.
 
+- 로컬 CLI/MCP 경로는 `LAW_OC` 를 채운다.
+- remote endpoint는 `LAW_OC` 없이 `url`만 등록한다.
+
 ```bash
 npm install -g korean-law-mcp
 export LAW_OC=your-api-key

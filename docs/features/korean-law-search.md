@@ -16,10 +16,13 @@
 
 - 인터넷 연결
 - `node` 18+
-- `npm install -g korean-law-mcp`
-- `LAW_OC` 환경변수
+- `npm install -g korean-law-mcp` (로컬 CLI/로컬 MCP server 경로일 때)
+- remote MCP endpoint를 쓸 MCP 클라이언트
 
 무료 API key 발급처: `https://open.law.go.kr`
+
+로컬 CLI 또는 로컬 MCP server 경로는 `LAW_OC` 가 필요하다.
+remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결한다.
 
 ```bash
 npm install -g korean-law-mcp
@@ -58,6 +61,8 @@ remote endpoint 예시:
 }
 ```
 
+위 remote 예시는 upstream 문서 기준으로 사용자 `LAW_OC` 를 따로 넣지 않는다. 사용자 쪽에서 준비할 것은 `url` 등록뿐이다.
+
 ## 기본 흐름
 
 1. 질의가 법령/판례/행정해석/자치법규 중 어디에 가까운지 분류한다.
@@ -79,7 +84,8 @@ korean-law search_precedents --query "부당해고"
 
 - `화관법` 같은 약칭은 `search_law` / `search_all` 로 정식 법령명을 먼저 확인한다.
 - 조문 번호가 헷갈리면 `get_law_text` 전에 법령 식별자부터 다시 확인한다.
-- `LAW_OC` 가 없으면 credential resolution order에 따라 확보를 안내하고, 다른 검색 경로로 우회하지 않는다.
+- 로컬 CLI/MCP 경로를 쓰는데 `LAW_OC` 가 없으면 credential resolution order에 따라 확보를 안내하고, 다른 검색 경로로 우회하지 않는다.
+- remote MCP endpoint를 쓰면 사용자 `LAW_OC` 없이 `url` 등록 상태만 확인한다.
 - 요약은 할 수 있지만 법률 자문처럼 단정적으로 결론을 내리지는 않는다.
 
 ## 라이브 확인 메모
@@ -89,4 +95,4 @@ korean-law search_precedents --query "부당해고"
 - `korean-law list`
 - `korean-law help search_law`
 
-즉, `korean-law-mcp` CLI 설치와 기본 명령 진입은 검증했다. 실제 법령 검색은 `LAW_OC` 가 준비된 환경에서 바로 이어서 사용할 수 있다.
+즉, `korean-law-mcp` CLI 설치와 기본 명령 진입은 검증했다. 실제 법령 검색은 로컬 CLI/MCP 경로라면 `LAW_OC` 가 준비된 환경에서 바로 이어서 사용할 수 있고, remote MCP endpoint는 사용자 `LAW_OC` 없이 URL 등록만으로 붙일 수 있다.

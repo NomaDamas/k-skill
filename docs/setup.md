@@ -1,6 +1,6 @@
 # 공통 설정 가이드
 
-`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(SRT 예매, KTX 예매, 한국 법령 검색용 `LAW_OC`, self-host 프록시 운영용 서울 지하철/미세먼지 upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다.
+`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(SRT 예매, KTX 예매, 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC`, self-host 프록시 운영용 서울 지하철/미세먼지 upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다.
 
 ## Credential resolution order
 
@@ -35,7 +35,9 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 서울 지하철 도착정보는 hosted public route rollout 이 끝나기 전까지 `KSKILL_PROXY_BASE_URL` 을 self-host 또는 배포 확인이 끝난 proxy URL 로 채워야 한다. 미세먼지만 쓴다면 이 값을 비워 두고 skill 기본 hosted path를 그대로 써도 된다.
 
-한국 법령 검색은 `korean-law-mcp` 를 전제로 하므로 `LAW_OC` 를 채운 뒤 `npm install -g korean-law-mcp` 와 `korean-law list` 로 설치 상태를 확인한다.
+한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC` 는 `korean-law-mcp` 로컬 실행에 쓴다. 로컬 CLI/MCP 경로는 `LAW_OC` 를 채운 뒤 `npm install -g korean-law-mcp` 와 `korean-law list` 로 설치 상태를 확인한다.
+
+remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결한다. 이 경우에도 다른 구현으로 우회하지 않고 `korean-law-mcp` endpoint만 사용한다.
 
 ## 확인
 
@@ -56,7 +58,8 @@ bash scripts/check-setup.sh
 | --- | --- |
 | SRT 예매 | `KSKILL_SRT_ID`, `KSKILL_SRT_PASSWORD` |
 | KTX 예매 | `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD` |
-| 한국 법령 검색 | `LAW_OC` |
+| 한국 법령 검색 (로컬 CLI/MCP) | `LAW_OC` |
+| 한국 법령 검색 (remote MCP endpoint) | 사용자 시크릿 불필요 (`url`만 등록) |
 | 서울 지하철 도착정보 조회 | self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL` |
 | 사용자 위치 미세먼지 조회 | `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY` |
 
