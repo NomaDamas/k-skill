@@ -24,6 +24,7 @@ KSKILL_SRT_ID=replace-me
 KSKILL_SRT_PASSWORD=replace-me
 KSKILL_KTX_ID=replace-me
 KSKILL_KTX_PASSWORD=replace-me
+LAW_OC=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
 KSKILL_PROXY_BASE_URL=https://your-proxy.example.com
 ```
@@ -59,9 +60,10 @@ KSKILL_PROXY_BASE_URL=https://your-proxy.example.com
 - `KSKILL_SRT_PASSWORD`
 - `KSKILL_KTX_ID`
 - `KSKILL_KTX_PASSWORD`
+- `LAW_OC`
 - `AIR_KOREA_OPEN_API_KEY`
 - `KSKILL_PROXY_BASE_URL`
 
-프록시 운영자 문맥에서는 upstream 환경변수 `SEOUL_OPEN_API_KEY` 도 사용할 수 있다. 다만 일반 사용자/client 쪽 기본 secrets 파일에는 넣지 않는다. `KSKILL_PROXY_BASE_URL` 도 서울 지하철 route가 실제 배포된 proxy URL 로만 넣는다.
+`LAW_OC` 는 `korean-law-mcp` 가 법제처 Open API 를 호출할 때 쓰는 표준 변수명이다. 프록시 운영자 문맥에서는 upstream 환경변수 `SEOUL_OPEN_API_KEY` 도 사용할 수 있다. 다만 일반 사용자/client 쪽 기본 secrets 파일에는 넣지 않는다. `KSKILL_PROXY_BASE_URL` 도 서울 지하철 route가 실제 배포된 proxy URL 로만 넣는다.
 
 이 레포의 credential-bearing skill은 전부 이 정책을 전제로 작성한다. 자세한 공통 설치 절차는 [공통 설정 가이드](setup.md)를 본다.

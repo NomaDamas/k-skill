@@ -50,6 +50,7 @@ npx --yes skills add <owner/repo> \
   --skill toss-securities \
   --skill lotto-results \
   --skill kakaotalk-mac \
+  --skill korean-law-search \
   --skill fine-dust-location \
   --skill daiso-product-search \
   --skill blue-ribbon-nearby \
@@ -66,9 +67,20 @@ npx --yes skills add <owner/repo> \
   --skill k-skill-setup \
   --skill srt-booking \
   --skill ktx-booking \
+  --skill korean-law-search \
   --skill seoul-subway-arrival \
   --skill fine-dust-location
 ```
+
+`korean-law-search` 는 skill 설치 후 upstream CLI/MCP도 준비해야 한다.
+
+```bash
+npm install -g korean-law-mcp
+export LAW_OC=your-api-key
+korean-law list
+```
+
+로컬 설치가 막히면 `https://korean-law-mcp.fly.dev/mcp` remote endpoint를 MCP 클라이언트에 등록한다. 이 경우에도 한국 법령 조회는 `korean-law-mcp`만 사용한다.
 
 로컬 저장소에서 바로 전체 설치 테스트:
 
@@ -104,7 +116,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g @ohah/hwpjs kbo-game kleague-results toss-securities k-lotto coupang-product-search
+npm install -g @ohah/hwpjs kbo-game kleague-results toss-securities k-lotto coupang-product-search korean-law-mcp
 export NODE_PATH="$(npm root -g)"
 ```
 
@@ -142,6 +154,7 @@ python3 -m pip install SRTrain korail2 pycryptodome
 - `ktx-booking`
 - `seoul-subway-arrival`
 - `fine-dust-location`
+- `korean-law-search`
 
 관련 문서:
 

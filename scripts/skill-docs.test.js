@@ -998,3 +998,62 @@ test("package-lock captures the toss-securities workspace metadata for npm ci", 
   assert.equal(packageLock.packages["packages/toss-securities"].license, "MIT");
   assert.equal(packageLock.packages["packages/toss-securities"].engines.node, ">=18");
 });
+
+test("repository docs advertise the korean-law-search skill and its korean-law-mcp dependency", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const setup = read(path.join("docs", "setup.md"));
+  const security = read(path.join("docs", "security-and-secrets.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const setupSkill = read(path.join("k-skill-setup", "SKILL.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-law-search.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-law-search.md to exist");
+  assert.match(readme, /\| 한국 법령 검색 \|/);
+  assert.match(readme, /\[한국 법령 검색 가이드\]\(docs\/features\/korean-law-search\.md\)/);
+  assert.match(install, /--skill korean-law-search/);
+
+  for (const doc of [setup, security, setupSkill]) {
+    assert.match(doc, /LAW_OC/);
+    assert.match(doc, /korean-law-mcp/);
+  }
+
+  assert.match(sources, /korean-law-mcp: https:\/\/github\.com\/chrisryugj\/korean-law-mcp/);
+  assert.match(roadmap, /한국 법령 검색 스킬 출시/);
+});
+
+test("korean-law-search skill requires korean-law-mcp for Korean law lookups without adding a repo package", () => {
+  const skillPath = path.join(repoRoot, "korean-law-search", "SKILL.md");
+  const featureDoc = read(path.join("docs", "features", "korean-law-search.md"));
+  const examplesSecrets = read(path.join("examples", "secrets.env.example"));
+  const packageJson = readJson("package.json");
+
+  assert.ok(fs.existsSync(skillPath), "expected korean-law-search/SKILL.md to exist");
+
+  const skill = read(path.join("korean-law-search", "SKILL.md"));
+
+  assert.match(skill, /^name: korean-law-search$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /반드시 .*korean-law-mcp|korean-law-mcp.*반드시/u);
+    assert.match(doc, /npm install -g korean-law-mcp/);
+    assert.match(doc, /LAW_OC/);
+    assert.match(doc, /open\.law\.go\.kr/);
+    assert.match(doc, /search_law/);
+    assert.match(doc, /get_law_text/);
+    assert.match(doc, /search_precedents/);
+    assert.match(doc, /https:\/\/korean-law-mcp\.fly\.dev\/mcp/);
+    assert.match(doc, /MCP/i);
+    assert.match(doc, /CLI/i);
+    assert.doesNotMatch(doc, /packages\/korean-law-search/);
+    assert.doesNotMatch(doc, /python-packages\/korean-law-search/);
+  }
+
+  assert.match(examplesSecrets, /^LAW_OC=replace-me$/m);
+  assert.ok(
+    !packageJson.workspaces.some((workspace) => workspace.includes("korean-law")),
+    "expected no repo workspace to be added for korean-law-search",
+  );
+  assert.equal(fs.existsSync(path.join(repoRoot, "packages", "korean-law-search")), false);
+});

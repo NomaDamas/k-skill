@@ -1,6 +1,6 @@
 # 공통 설정 가이드
 
-`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(SRT 예매, KTX 예매, self-host 프록시 운영용 서울 지하철/미세먼지 upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다.
+`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(SRT 예매, KTX 예매, 한국 법령 검색용 `LAW_OC`, self-host 프록시 운영용 서울 지하철/미세먼지 upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다.
 
 ## Credential resolution order
 
@@ -24,6 +24,7 @@ KSKILL_SRT_ID=replace-me
 KSKILL_SRT_PASSWORD=replace-me
 KSKILL_KTX_ID=replace-me
 KSKILL_KTX_PASSWORD=replace-me
+LAW_OC=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
 KSKILL_PROXY_BASE_URL=https://your-proxy.example.com
 EOF
@@ -33,6 +34,8 @@ chmod 0600 ~/.config/k-skill/secrets.env
 실제 값을 채운다.
 
 서울 지하철 도착정보는 hosted public route rollout 이 끝나기 전까지 `KSKILL_PROXY_BASE_URL` 을 self-host 또는 배포 확인이 끝난 proxy URL 로 채워야 한다. 미세먼지만 쓴다면 이 값을 비워 두고 skill 기본 hosted path를 그대로 써도 된다.
+
+한국 법령 검색은 `korean-law-mcp` 를 전제로 하므로 `LAW_OC` 를 채운 뒤 `npm install -g korean-law-mcp` 와 `korean-law list` 로 설치 상태를 확인한다.
 
 ## 확인
 
@@ -53,6 +56,7 @@ bash scripts/check-setup.sh
 | --- | --- |
 | SRT 예매 | `KSKILL_SRT_ID`, `KSKILL_SRT_PASSWORD` |
 | KTX 예매 | `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD` |
+| 한국 법령 검색 | `LAW_OC` |
 | 서울 지하철 도착정보 조회 | self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL` |
 | 사용자 위치 미세먼지 조회 | `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY` |
 
@@ -62,6 +66,7 @@ bash scripts/check-setup.sh
 - [KTX 예매 가이드](features/ktx-booking.md)
 - [서울 지하철 도착정보 가이드](features/seoul-subway-arrival.md)
 - [사용자 위치 미세먼지 조회 가이드](features/fine-dust-location.md)
+- [한국 법령 검색 가이드](features/korean-law-search.md)
 - [보안/시크릿 정책](security-and-secrets.md)
 
 설치 기본 흐름은 "전체 스킬 설치 → 개별 기능 사용" 이다.
