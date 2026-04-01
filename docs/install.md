@@ -76,6 +76,7 @@ npx --yes skills add <owner/repo> \
 
 - 로컬 CLI/MCP 경로는 `LAW_OC` 를 채운다.
 - remote endpoint는 `LAW_OC` 없이 `url`만 등록한다.
+- 기존 `korean-law-mcp` 경로가 실패하면 `법망`(`https://api.beopmang.org`) fallback을 사용한다.
 
 ```bash
 npm install -g korean-law-mcp
@@ -83,7 +84,7 @@ export LAW_OC=your-api-key
 korean-law list
 ```
 
-로컬 설치가 막히면 `https://korean-law-mcp.fly.dev/mcp` remote endpoint를 MCP 클라이언트에 등록한다. 이 경우에도 한국 법령 조회는 `korean-law-mcp`만 사용한다.
+로컬 설치가 막히면 `https://korean-law-mcp.fly.dev/mcp` remote endpoint를 MCP 클라이언트에 등록한다. 그 경로도 응답하지 않거나 서비스 장애가 나면 `https://api.beopmang.org/mcp` 또는 `https://api.beopmang.org/api/v4/law?action=search` 를 fallback으로 사용한다.
 
 로컬 저장소에서 바로 전체 설치 테스트:
 

@@ -1,6 +1,6 @@
 ---
 name: korean-law-search
-description: Use korean-law-mcp for Korean law, precedent, ordinance, and interpretation lookups. Always use korean-law-mcp when the user needs Korean legal search or retrieval.
+description: Use korean-law-mcp first for Korean law lookups, and fall back to Beopmang when the primary service is unavailable.
 license: MIT
 metadata:
   category: legal
@@ -12,7 +12,7 @@ metadata:
 
 ## What this skill does
 
-한국 법령/조문/판례/유권해석/자치법규 조회가 필요할 때 **반드시 `korean-law-mcp`를 사용**한다.
+한국 법령/조문/판례/유권해석/자치법규 조회가 필요할 때 기본 경로로 **`korean-law-mcp`를 먼저 사용**하고, 기존 서비스가 동작하지 않을 때는 승인된 fallback 표면인 **`법망`(`https://api.beopmang.org`)** 으로 이어간다.
 
 - 법령명 검색: `search_law`
 - 조문 본문 조회: `get_law_text`
@@ -21,7 +21,7 @@ metadata:
 - 자치법규 검색: `search_ordinance`
 - 여러 카테고리가 섞인 검색: `search_all`
 
-이 스킬은 자체 npm/python 패키지를 만들지 않는다. 한국 법령 관련 조회는 로컬 설치든 remote endpoint든 **항상 `korean-law-mcp` 경로로만 처리**한다.
+이 스킬은 자체 npm/python 패키지를 만들지 않는다. 한국 법령 관련 조회는 기본적으로 `korean-law-mcp` 로 처리하고, 해당 경로가 막히거나 실패가 반복될 때만 승인된 fallback 표면인 `법망`을 사용한다.
 
 ## When to use
 
@@ -43,6 +43,7 @@ metadata:
 - `node` 18+
 - `npm install -g korean-law-mcp` (로컬 CLI/로컬 MCP server 경로일 때)
 - MCP 클라이언트에 remote endpoint를 등록할 수 있는 환경
+- `법망` fallback (`https://api.beopmang.org`) 에 접근할 수 있는 네트워크
 
 무료 API key: `https://open.law.go.kr`
 
@@ -57,7 +58,7 @@ korean-law list
 korean-law help search_law
 ```
 
-로컬 설치가 운영체제 정책이나 권한 때문에 막히면, 대체 구현을 만들지 말고 `korean-law-mcp` 의 remote MCP endpoint(`https://korean-law-mcp.fly.dev/mcp`)를 사용한다. 이 경우에도 **반드시 `korean-law-mcp`를 사용한 것**으로 취급한다.
+로컬 설치가 운영체제 정책이나 권한 때문에 막히면 먼저 `korean-law-mcp` 의 remote MCP endpoint(`https://korean-law-mcp.fly.dev/mcp`)를 사용한다. 그래도 기존 경로가 응답하지 않거나 서비스 장애로 조회가 막히면, 승인된 fallback 표면인 `법망` MCP/REST(`https://api.beopmang.org`)로 전환한다.
 
 ## MCP client setup
 
@@ -86,6 +87,30 @@ Claude Desktop / Cursor / Windsurf 같은 MCP 클라이언트에는 아래처럼
     }
   }
 }
+```
+
+## Fallback workflow (`법망`)
+
+기존 `korean-law-mcp` 경로가 동작하지 않을 때만 아래 fallback을 사용한다.
+
+### 1. MCP fallback
+
+```json
+{
+  "mcpServers": {
+    "beopmang": {
+      "url": "https://api.beopmang.org/mcp"
+    }
+  }
+}
+```
+
+### 2. REST fallback
+
+```bash
+curl "https://api.beopmang.org/api/v4/law?action=search&q=관세법"
+curl "https://api.beopmang.org/api/v4/tools?action=overview&law_id=001706"
+curl "https://api.beopmang.org/api/v4/law?action=get&law_id=001706&article=제750조"
 ```
 
 ## CLI workflow
@@ -123,6 +148,7 @@ korean-law search_all --query "개인정보 처리방침 행정해석"
 ## Response policy
 
 - 한국 법령 관련 요청은 **항상 `korean-law-mcp`를 먼저 사용**한다.
+- 기존 `korean-law-mcp` 경로가 설치/네트워크/서비스 장애로 실패하면 `법망`(`https://api.beopmang.org`)을 fallback으로 사용한다.
 - 약칭(`화관법`)이면 `search_law` / `search_all` 로 정식 법령명을 먼저 확인한다.
 - 조문 요청이면 검색 결과의 식별자(`mst`)를 확인한 뒤 `get_law_text` 로 본문을 가져온다.
 - 판례는 `search_precedents`, 유권해석은 `search_interpretations`, 자치법규는 `search_ordinance` 를 우선 사용한다.
@@ -138,9 +164,11 @@ korean-law search_all --query "개인정보 처리방침 행정해석"
 - 유권해석이면 `search_interpretations`, 자치법규면 `search_ordinance` 까지 명시적으로 연결했다.
 - 로컬 경로라면 `LAW_OC` 확보 방법을 정확한 변수 이름으로 안내했다.
 - remote endpoint라면 사용자 `LAW_OC` 없이 `url` 등록 상태를 확인했다.
+- 기존 경로 장애 시 `법망` fallback(MCP 또는 REST)으로 이어지는 안내가 포함되었다.
 
 ## Notes
 
 - upstream: `https://github.com/chrisryugj/korean-law-mcp`
+- fallback surface: `https://api.beopmang.org`
 - official data source: 법제처 Open API (`https://open.law.go.kr`)
 - 이 저장소 안에는 한국 법령 전용 npm package나 python package를 추가하지 않는다.

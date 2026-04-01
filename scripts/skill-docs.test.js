@@ -1013,7 +1013,8 @@ test("repository docs advertise the korean-law-search skill with mode-specific k
   assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-law-search.md to exist");
   assert.match(readme, /\| 한국 법령 검색 \|/);
   assert.match(readme, /\[한국 법령 검색 가이드\]\(docs\/features\/korean-law-search\.md\)/);
-  assert.match(readme, /로컬 CLI\/MCP면 `LAW_OC` 필요, remote endpoint면 불필요/);
+  assert.match(readme, /로컬 CLI\/MCP면 `LAW_OC` 필요, remote endpoint\/법망 fallback은 불필요/);
+  assert.match(readme, /법망 fallback/i);
   assert.match(install, /--skill korean-law-search/);
   assert.match(install, /로컬 CLI\/MCP 경로는 `LAW_OC`/);
   assert.match(install, /remote endpoint는 `LAW_OC` 없이 `url`만/);
@@ -1030,10 +1031,11 @@ test("repository docs advertise the korean-law-search skill with mode-specific k
   }
 
   assert.match(sources, /korean-law-mcp: https:\/\/github\.com\/chrisryugj\/korean-law-mcp/);
+  assert.match(sources, /beopmang: https:\/\/api\.beopmang\.org/);
   assert.match(roadmap, /한국 법령 검색 스킬 출시/);
 });
 
-test("korean-law-search skill keeps korean-law-mcp-only lookups while separating local LAW_OC setup from remote MCP fallback", () => {
+test("korean-law-search skill keeps korean-law-mcp-first guidance while documenting the approved Beopmang fallback", () => {
   const skillPath = path.join(repoRoot, "korean-law-search", "SKILL.md");
   const featureDoc = read(path.join("docs", "features", "korean-law-search.md"));
   const examplesSecrets = read(path.join("examples", "secrets.env.example"));
@@ -1050,7 +1052,7 @@ test("korean-law-search skill keeps korean-law-mcp-only lookups while separating
   const doneSection = doneSectionMatch[1];
 
   for (const doc of [skill, featureDoc]) {
-    assert.match(doc, /반드시 .*korean-law-mcp|korean-law-mcp.*반드시/u);
+    assert.match(doc, /korean-law-mcp.*먼저|먼저.*korean-law-mcp|항상 `korean-law-mcp`를 먼저 사용/u);
     assert.match(doc, /npm install -g korean-law-mcp/);
     assert.match(doc, /로컬 CLI 또는 로컬 MCP server 경로는 `LAW_OC`/);
     assert.match(doc, /remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결/);
@@ -1061,6 +1063,9 @@ test("korean-law-search skill keeps korean-law-mcp-only lookups while separating
     assert.match(doc, /search_interpretations/);
     assert.match(doc, /search_ordinance/);
     assert.match(doc, /https:\/\/korean-law-mcp\.fly\.dev\/mcp/);
+    assert.match(doc, /법망|Beopmang/i);
+    assert.match(doc, /https:\/\/api\.beopmang\.org/);
+    assert.match(doc, /fallback/i);
     assert.match(doc, /MCP/i);
     assert.match(doc, /CLI/i);
     assert.doesNotMatch(doc, /packages\/korean-law-search/);
@@ -1069,6 +1074,8 @@ test("korean-law-search skill keeps korean-law-mcp-only lookups while separating
 
   assert.match(doneSection, /search_interpretations/);
   assert.match(doneSection, /search_ordinance/);
+  assert.match(doneSection, /법망|Beopmang/i);
+  assert.match(doneSection, /fallback/i);
 
   assert.doesNotMatch(
     featureDoc,

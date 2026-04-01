@@ -37,7 +37,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC` 는 `korean-law-mcp` 로컬 실행에 쓴다. 로컬 CLI/MCP 경로는 `LAW_OC` 를 채운 뒤 `npm install -g korean-law-mcp` 와 `korean-law list` 로 설치 상태를 확인한다.
 
-remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결한다. 이 경우에도 다른 구현으로 우회하지 않고 `korean-law-mcp` endpoint만 사용한다.
+remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결한다. 다만 기존 `korean-law-mcp` 경로가 서비스 장애로 막히면 `법망`(`https://api.beopmang.org`) MCP/REST를 fallback으로 사용할 수 있다.
 
 ## 확인
 
@@ -59,7 +59,7 @@ bash scripts/check-setup.sh
 | SRT 예매 | `KSKILL_SRT_ID`, `KSKILL_SRT_PASSWORD` |
 | KTX 예매 | `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD` |
 | 한국 법령 검색 (로컬 CLI/MCP) | `LAW_OC` |
-| 한국 법령 검색 (remote MCP endpoint) | 사용자 시크릿 불필요 (`url`만 등록) |
+| 한국 법령 검색 (remote MCP endpoint) | 사용자 시크릿 불필요 (`url`만 등록, 장애 시 `법망` fallback 가능) |
 | 서울 지하철 도착정보 조회 | self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL` |
 | 사용자 위치 미세먼지 조회 | `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY` |
 
