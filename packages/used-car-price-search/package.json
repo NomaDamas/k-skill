@@ -1,6 +1,6 @@
 {
   "name": "used-car-price-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SK렌터카 다이렉트 타고BUY 기반 중고차 가격 조회 client",
   "license": "MIT",
   "main": "src/index.js",
