@@ -166,6 +166,44 @@ test("repository docs advertise the kakaotalk-mac skill", () => {
   assert.match(install, /--skill kakaotalk-mac/);
 });
 
+test("repository docs advertise the used-car-price-search skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "used-car-price-search.md");
+  const skillPath = path.join(repoRoot, "used-car-price-search", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/used-car-price-search.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected used-car-price-search/SKILL.md to exist");
+  assert.match(readme, /\| 중고차 가격 조회 \|/);
+  assert.match(readme, /\[중고차 가격 조회 가이드\]\(docs\/features\/used-car-price-search\.md\)/);
+  assert.match(install, /--skill used-car-price-search/);
+});
+
+test("used-car-price-search docs document the provider survey and SK direct surface", () => {
+  const skill = read(path.join("used-car-price-search", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "used-car-price-search.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /SK렌터카|SK렌터카 다이렉트|타고BUY/);
+    assert.match(doc, /롯데렌탈|롯데오토옥션/);
+    assert.match(doc, /레드캡렌터카/);
+    assert.match(doc, /MCP/i);
+    assert.match(doc, /Skill/i);
+    assert.match(doc, /https:\/\/www\.skdirect\.co\.kr\/tb/);
+    assert.match(doc, /__NEXT_DATA__/);
+    assert.match(doc, /인수가/);
+    assert.match(doc, /월\s*렌트료|월\s*요금|월\s*가격/);
+    assert.match(doc, /10회 이상|최소 10회/);
+  }
+
+  assert.match(sources, /https:\/\/www\.skdirect\.co\.kr\/tb/);
+  assert.match(sources, /https:\/\/www\.lotteautoauction\.net\/hp\/pub\/cmm\/viewMain\.do/);
+  assert.match(sources, /https:\/\/biz\.redcap\.co\.kr\/rent\//);
+  assert.match(roadmap, /중고차 가격 조회 스킬 출시/);
+});
+
 test("seoul subway docs require an explicit proxy until the hosted route is live", () => {
   const readme = read("README.md");
   const setup = read(path.join("docs", "setup.md"));
@@ -984,6 +1022,7 @@ test("pack:dry-run includes the toss-securities workspace", () => {
   const packageJson = JSON.parse(read("package.json"));
 
   assert.match(packageJson.scripts["pack:dry-run"], /workspace toss-securities/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace used-car-price-search/);
 });
 
 test("package-lock captures the toss-securities workspace metadata for npm ci", () => {

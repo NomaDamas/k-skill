@@ -57,7 +57,8 @@ npx --yes skills add <owner/repo> \
   --skill kakao-bar-nearby \
   --skill zipcode-search \
   --skill delivery-tracking \
-  --skill coupang-product-search
+  --skill coupang-product-search \
+  --skill used-car-price-search
 ```
 
 인증이 필요한 기능만 부분 설치할 때도 `k-skill-setup` 은 같이 넣는다.

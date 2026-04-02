@@ -1,0 +1,32 @@
+{
+  "name": "used-car-price-search",
+  "version": "0.1.0",
+  "description": "SK렌터카 다이렉트 타고BUY 기반 중고차 가격 조회 client",
+  "license": "MIT",
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "used-car",
+    "sk-rent-a-car",
+    "price"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/parse.js && node --check test/index.test.js",
+    "test": "node --test"
+  }
+}
