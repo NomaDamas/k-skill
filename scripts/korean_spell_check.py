@@ -96,7 +96,7 @@ def split_text_into_chunks(text: str, max_chars: int = DEFAULT_MAX_CHARS) -> lis
         body = unit
         separator_match = PARAGRAPH_SEPARATOR_PATTERN.search(unit)
 
-        if separator_match and separator_match.end() == len(paragraph):
+        if separator_match and separator_match.end() == len(unit):
             separator = separator_match.group(0)
             body = unit[: separator_match.start()]
 
