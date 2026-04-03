@@ -143,7 +143,7 @@ brew install tossctl
 python3 -m pip install SRTrain korail2 pycryptodome
 ```
 
-조선왕조실록 검색 helper도 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
+조선왕조실록 검색 helper는 설치된 `joseon-sillok-search` skill 안의 `scripts/sillok_search.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
 
 ```bash
 python3 scripts/sillok_search.py --query "훈민정음" --king 세종 --year 1443

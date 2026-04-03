@@ -34,6 +34,7 @@ v1 범위는 단순 스크래핑이다.
 - 인터넷 연결
 - `python3`
 - 별도 API 키 없음
+- 설치된 skill payload 안에 `scripts/sillok_search.py` helper가 함께 들어 있다.
 
 ## Inputs
 

@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const childProcess = require("node:child_process");
 
@@ -1141,6 +1142,29 @@ test("repository docs advertise the joseon-sillok-search skill and helper", () =
   assert.match(sources, /https:\/\/sillok\.history\.go\.kr/);
   assert.match(sources, /https:\/\/sillok\.history\.go\.kr\/search\/searchResultList\.do/);
   assert.match(roadmap, /조선왕조실록 검색 스킬 출시/);
+});
+
+test("joseon-sillok-search install payload includes the documented helper command", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "joseon-sillok-"));
+  const installedSkillPath = path.join(tempRoot, "joseon-sillok-search");
+  const bundledHelperPath = path.join(installedSkillPath, "scripts", "sillok_search.py");
+
+  try {
+    fs.cpSync(path.join(repoRoot, "joseon-sillok-search"), installedSkillPath, { recursive: true });
+
+    assert.ok(fs.existsSync(bundledHelperPath), "expected joseon-sillok-search/scripts/sillok_search.py to exist");
+
+    const helpText = childProcess.execFileSync("python3", ["scripts/sillok_search.py", "--help"], {
+      cwd: installedSkillPath,
+      encoding: "utf8",
+    });
+
+    assert.match(helpText, /Search Joseon Sillok records from sillok\.history\.go\.kr/);
+    assert.match(helpText, /--query/);
+    assert.match(helpText, /--king/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test("repository docs do not advertise missing korean-spell-check assets", () => {

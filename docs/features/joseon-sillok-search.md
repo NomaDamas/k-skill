@@ -12,6 +12,7 @@
 
 - 인터넷 연결
 - `python3`
+- 설치된 `joseon-sillok-search` skill 안에 `scripts/sillok_search.py` helper 포함
 
 별도 API 키나 로그인은 필요 없다.
 

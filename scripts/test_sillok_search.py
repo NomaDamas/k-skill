@@ -76,6 +76,44 @@ SAMPLE_DETAIL_HTML = """<!DOCTYPE html>
 </html>
 """
 
+SAMPLE_DETAIL_WITH_FOOTER_HTML = """<!DOCTYPE html>
+<html lang=\"ko\">
+<body>
+  <div class=\"detail-view\">
+    <div class=\"title-head\">
+      <div class=\"title\">
+        <p class=\"date\">세종실록102권, 세종 25년 12월 30일 경술 2/2 기사 <span>/ 1443년 명 정통(正統) 8년</span></p>
+        <h3>훈민정음을 창제하다</h3>
+      </div>
+    </div>
+    <div class=\"view-area\">
+      <div class=\"view-item left\">
+        <h4 class=\"view-title\">국역</h4>
+        <div class=\"view-text\">
+          이달에 임금이 친히 언문(諺文) 28자를 지었다.<br/>
+          〖태백산사고본〗 33책 102권 42장 A면〖국편영인본〗 4책 533면<br/>
+          〖분류〗어문학-어학(語學)<br/>
+          ⓒ 세종대왕기념사업회
+        </div>
+        <ul>
+          <li class=\"view_font02\">〖분류〗 어문학-어학(語學)</li>
+        </ul>
+      </div>
+      <div class=\"view-item right\">
+        <h4 class=\"view-title\">원문</h4>
+        <div class=\"view-text\">
+          ○是月, 上親制諺文二十八字。<br/>
+          世宗莊憲大王實錄卷第一百二終<br/>
+          〖태백산사고본〗 33책 102권 42장 A면〖국편영인본〗 4책 533면<br/>
+          〖분류〗어문학-어학(語學)
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
 
 class ParseResultTitleMetadataTest(unittest.TestCase):
     def test_parses_regnal_and_gregorian_year_from_standard_title(self):
@@ -130,6 +168,13 @@ class ParseDetailPageTest(unittest.TestCase):
         self.assertEqual(detail.header, "세종실록102권, 세종 25년 12월 30일 경술 2/2 기사 / 1443년 명 정통(正統) 8년")
         self.assertEqual(detail.translated_text, "이달에 임금이 친히 언문(諺文) 28자를 지었다.")
         self.assertEqual(detail.original_text, "○是月, 上親制諺文二十八字。")
+        self.assertEqual(detail.classification, "어문학-어학(語學)")
+
+    def test_strips_bibliographic_and_copyright_footer_from_article_text(self):
+        detail = parse_detail_page(SAMPLE_DETAIL_WITH_FOOTER_HTML, article_id="kda_12512030_002")
+
+        self.assertEqual(detail.translated_text, "이달에 임금이 친히 언문(諺文) 28자를 지었다.")
+        self.assertEqual(detail.original_text, "○是月, 上親制諺文二十八字。 世宗莊憲大王實錄卷第一百二終")
         self.assertEqual(detail.classification, "어문학-어학(語學)")
 
 
