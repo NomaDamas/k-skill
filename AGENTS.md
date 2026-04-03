@@ -17,6 +17,10 @@ These rules are repo-specific and apply to everything under this directory.
 - For release or packaging changes, run `npm run ci`.
 - Keep release docs, workflow files, and package metadata aligned in the same change.
 
+## Testing anti-patterns
+
+- **Never write tests that assert `.changeset/*.md` files exist.** Changesets are consumed (deleted) by `changeset version` during the release flow. Any test guarding changeset file presence will break CI on the version-bump commit and block the release pipeline.
+
 ## Development skill install rules
 
 - When testing or developing skills from this repository, install or sync the current skill directories into the user's home-directory global skill locations first.
