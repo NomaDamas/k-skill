@@ -179,8 +179,37 @@ test("repository docs advertise the used-car-price-search skill", () => {
   assert.match(install, /--skill used-car-price-search/);
   assert.match(
     install,
-    /npm install -g @ohah\/hwpjs kbo-game kleague-results toss-securities k-lotto coupang-product-search used-car-price-search korean-law-mcp/,
+    /npm install -g @ohah\/hwpjs kbo-game kleague-results lck-analytics toss-securities k-lotto coupang-product-search used-car-price-search korean-law-mcp/,
   );
+});
+
+test("repository docs advertise the lck-analytics skill and package", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "lck-analytics.md");
+  const skillPath = path.join(repoRoot, "lck-analytics", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/lck-analytics.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected lck-analytics/SKILL.md to exist");
+  assert.match(readme, /\| LCK 경기 분석 \|/);
+  assert.match(readme, /\[LCK 경기 분석 가이드\]\(docs\/features\/lck-analytics\.md\)/);
+  assert.match(install, /--skill lck-analytics/);
+  assert.match(install, /npm install -g .*lck-analytics/);
+});
+
+test("lck-analytics docs and skill credit the original author and reference repo", () => {
+  const skill = read(path.join("lck-analytics", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "lck-analytics.md"));
+  const packageReadme = read(path.join("packages", "lck-analytics", "README.md"));
+  const sources = read(path.join("docs", "sources.md"));
+
+  for (const doc of [skill, featureDoc, packageReadme]) {
+    assert.match(doc, /jerjangmin/);
+    assert.match(doc, /https:\/\/github\.com\/jerjangmin\/share\/tree\/main\/SKILL\/lck-analytics/);
+    assert.match(doc, /Riot|LoL Esports|Oracle(?:'s)? Elixir/i);
+  }
+
+  assert.match(sources, /https:\/\/github\.com\/jerjangmin\/share\/tree\/main\/SKILL\/lck-analytics/);
 });
 
 test("used-car-price-search docs document the provider survey and SK direct surface", () => {
@@ -684,6 +713,7 @@ test("root pack:dry-run script covers all publishable workspaces", () => {
   assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace kakao-bar-nearby/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace kleague-results/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace lck-analytics/);
 });
 
 test("repository docs advertise the kleague-results skill across the documented surfaces", () => {

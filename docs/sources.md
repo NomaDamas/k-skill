@@ -10,6 +10,14 @@
 - tossinvest-cli: https://github.com/JungHoonGhae/tossinvest-cli
 - K League 일정/결과 JSON: https://www.kleague.com/getScheduleList.do
 - K League 팀 순위 JSON: https://www.kleague.com/record/teamRank.do
+- jerjangmin original `lck-analytics` skill pack: https://github.com/jerjangmin/share/tree/main/SKILL/lck-analytics
+- Riot LoL Esports schedule API: https://esports-api.lolesports.com/persisted/gw/getSchedule
+- Riot LoL Esports tournaments API: https://esports-api.lolesports.com/persisted/gw/getTournamentsForLeague
+- Riot LoL Esports standings API: https://esports-api.lolesports.com/persisted/gw/getStandings
+- Riot LoL Esports event details API: https://esports-api.lolesports.com/persisted/gw/getEventDetails
+- Riot LoL Esports live window feed: https://feed.lolesports.com/livestats/v1/window/<gameId>
+- Riot LoL Esports live details feed: https://feed.lolesports.com/livestats/v1/details/<gameId>
+- Oracle's Elixir data glossary: https://oracleselixir.com/tools/downloads
 - `@ohah/hwpjs`: https://github.com/ohah/hwpjs
 - `hwp-mcp`: https://github.com/jkf87/hwp-mcp
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp

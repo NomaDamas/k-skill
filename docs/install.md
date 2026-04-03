@@ -47,6 +47,7 @@ npx --yes skills add <owner/repo> \
   --skill hwp \
   --skill kbo-results \
   --skill kleague-results \
+  --skill lck-analytics \
   --skill toss-securities \
   --skill lotto-results \
   --skill kakaotalk-mac \
@@ -121,7 +122,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g @ohah/hwpjs kbo-game kleague-results toss-securities k-lotto coupang-product-search used-car-price-search korean-law-mcp
+npm install -g @ohah/hwpjs kbo-game kleague-results lck-analytics toss-securities k-lotto coupang-product-search used-car-price-search korean-law-mcp
 export NODE_PATH="$(npm root -g)"
 ```
 

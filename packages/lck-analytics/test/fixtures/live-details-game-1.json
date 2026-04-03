@@ -1,0 +1,88 @@
+{
+  "esportsGameId": "game-1",
+  "esportsMatchId": "match-1",
+  "frames": [
+    {
+      "rfc460Timestamp": "2026-04-01T09:00:00.000Z",
+      "participants": [
+        {
+          "participantId": 1,
+          "level": 12,
+          "kills": 2,
+          "deaths": 0,
+          "assists": 4,
+          "creepScore": 138,
+          "currentGold": 1200
+        },
+        {
+          "participantId": 2,
+          "level": 10,
+          "kills": 0,
+          "deaths": 2,
+          "assists": 1,
+          "creepScore": 112,
+          "currentGold": 800
+        },
+        {
+          "participantId": 6,
+          "level": 11,
+          "kills": 1,
+          "deaths": 1,
+          "assists": 0,
+          "creepScore": 126,
+          "currentGold": 950
+        },
+        {
+          "participantId": 7,
+          "level": 9,
+          "kills": 0,
+          "deaths": 2,
+          "assists": 1,
+          "creepScore": 101,
+          "currentGold": 700
+        }
+      ]
+    },
+    {
+      "rfc460Timestamp": "2026-04-01T09:05:00.000Z",
+      "participants": [
+        {
+          "participantId": 1,
+          "level": 14,
+          "kills": 5,
+          "deaths": 0,
+          "assists": 6,
+          "creepScore": 165,
+          "currentGold": 2100
+        },
+        {
+          "participantId": 2,
+          "level": 12,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 2,
+          "creepScore": 130,
+          "currentGold": 900
+        },
+        {
+          "participantId": 6,
+          "level": 12,
+          "kills": 1,
+          "deaths": 3,
+          "assists": 0,
+          "creepScore": 140,
+          "currentGold": 1100
+        },
+        {
+          "participantId": 7,
+          "level": 11,
+          "kills": 0,
+          "deaths": 3,
+          "assists": 1,
+          "creepScore": 119,
+          "currentGold": 750
+        }
+      ]
+    }
+  ]
+}
