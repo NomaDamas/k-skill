@@ -60,6 +60,13 @@ def split_candidates(value: str | None) -> list[str]:
     return [candidate.strip() for candidate in str(value or "").split("|") if candidate.strip()]
 
 
+def parse_positive_int(raw_value: str) -> int:
+    value = int(raw_value)
+    if value <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return value
+
+
 def split_text_into_chunks(text: str, max_chars: int = DEFAULT_MAX_CHARS) -> list[str]:
     normalized = str(text or "").strip()
     if not normalized:
@@ -203,6 +210,116 @@ def apply_page_corrections(page: dict) -> str:
     return corrected
 
 
+def build_visible_text_index(text: str) -> tuple[str, list[int], list[int | None]]:
+    visible_chars: list[str] = []
+    visible_indices: list[int] = []
+    visible_lookup: list[int | None] = []
+
+    for index, char in enumerate(text):
+        if char.isspace():
+            visible_lookup.append(None)
+            continue
+
+        visible_lookup.append(len(visible_indices))
+        visible_chars.append(char)
+        visible_indices.append(index)
+
+    return "".join(visible_chars), visible_indices, visible_lookup
+
+
+def preserve_multiline_separators(original: str, suggestion: str) -> str:
+    if "\n" not in original:
+        return suggestion
+
+    original_visible, _, _ = build_visible_text_index(original)
+    suggestion_visible, _, _ = build_visible_text_index(suggestion)
+
+    if original_visible != suggestion_visible:
+        return suggestion
+
+    suggestion_chars = [char for char in suggestion if not char.isspace()]
+    merged: list[str] = []
+    suggestion_index = 0
+
+    for char in original:
+        if char.isspace():
+            merged.append(char)
+            continue
+
+        merged.append(suggestion_chars[suggestion_index])
+        suggestion_index += 1
+
+    return "".join(merged)
+
+
+def apply_chunk_corrections(chunk: str, pages: list[dict]) -> str:
+    combined_source = "".join(str(page.get("str", "")) for page in pages)
+    fallback = "".join(apply_page_corrections(page) for page in pages) or chunk
+
+    if not combined_source:
+        return fallback
+
+    chunk_visible, chunk_visible_indices, _ = build_visible_text_index(chunk)
+    source_visible, _, source_visible_lookup = build_visible_text_index(combined_source)
+
+    if chunk_visible != source_visible:
+        return fallback
+
+    replacements: list[tuple[int, int, str, str]] = []
+    page_offset = 0
+
+    for page in pages:
+        for error in page.get("errInfo", []):
+            suggestions = split_candidates(error.get("candWord"))
+            if not suggestions:
+                continue
+
+            start = int(error.get("start", -1))
+            end = int(error.get("end", -1))
+
+            if start < 0 or end < start:
+                continue
+
+            start += page_offset
+            end += page_offset
+
+            visible_ordinals = [
+                source_visible_lookup[index]
+                for index in range(start, min(end + 1, len(source_visible_lookup)))
+                if source_visible_lookup[index] is not None
+            ]
+
+            if not visible_ordinals:
+                continue
+
+            original_start = chunk_visible_indices[visible_ordinals[0]]
+            original_end = chunk_visible_indices[visible_ordinals[-1]]
+            replacements.append((original_start, original_end, suggestions[0], str(error.get("orgStr", ""))))
+
+        page_offset += len(str(page.get("str", "")))
+
+    if not replacements:
+        return fallback
+
+    corrected = chunk
+
+    for start, end, suggestion, original in sorted(replacements, key=lambda item: item[0], reverse=True):
+        slice_end = end + 1
+        if original:
+            while (
+                slice_end > start
+                and corrected[start:slice_end] != original
+                and corrected[start : slice_end - 1] == original
+            ):
+                slice_end -= 1
+
+        original_slice = corrected[start:slice_end]
+        replacement = preserve_multiline_separators(original_slice, suggestion)
+        corrected = f"{corrected[:start]}{replacement}{corrected[slice_end:]}"
+
+    return corrected
+
+
 def build_issue(chunk_index: int, page_index: int, issue_index: int, page: dict, error: dict) -> SpellCheckIssue:
     return SpellCheckIssue(
         chunk_index=chunk_index,
@@ -242,14 +359,14 @@ def check_text(
 
         html = requester(chunk, strong_rules=strong_rules, timeout=timeout)
         pages = extract_result_payload(html)
-        corrected_pages = [apply_page_corrections(page) for page in pages]
+        corrected_chunk = apply_chunk_corrections(chunk, pages)
 
-        corrected_chunks.append("".join(corrected_pages))
+        corrected_chunks.append(corrected_chunk)
         chunk_reports.append(
             {
                 "chunk_index": chunk_index,
                 "original_text": chunk,
-                "corrected_text": "".join(corrected_pages),
+                "corrected_text": corrected_chunk,
                 "page_count": len(pages),
             }
         )
@@ -275,7 +392,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the official Nara/PNU Korean spell checker.")
     parser.add_argument("--text", help="Inline Korean text to inspect.")
     parser.add_argument("--file", help="UTF-8 text/markdown file to inspect.")
-    parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS)
+    parser.add_argument("--max-chars", type=parse_positive_int, default=DEFAULT_MAX_CHARS)
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
     parser.add_argument("--throttle-seconds", type=float, default=DEFAULT_THROTTLE_SECONDS)
     parser.add_argument("--weak-rules", action="store_true", help="Disable the strong-rules checkbox.")

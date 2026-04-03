@@ -1,3 +1,5 @@
+import contextlib
+import io
 import unittest
 
 from scripts.korean_spell_check import (
@@ -5,6 +7,7 @@ from scripts.korean_spell_check import (
     apply_page_corrections,
     check_text,
     extract_result_payload,
+    parse_args,
     split_text_into_chunks,
 )
 
@@ -75,6 +78,67 @@ class CheckTextTest(unittest.TestCase):
         self.assertEqual(report["issues"][0].suggestions[0], "아버지가 방에 들어가신다")
         self.assertEqual(requested_texts[0][0], "아버지가방에들어가신다.")
         self.assertTrue(all(call[1] for call in requested_texts))
+
+    def test_check_text_preserves_blank_lines_when_payload_collapses_them(self):
+        html = """<!DOCTYPE html>
+<html>
+<body>
+<script>
+data = [{"str":"아버지가방에들어가신다.왠지 않되요.","errInfo":[
+  {"help":"띄어쓰기 교정","errorIdx":0,"correctMethod":3,"start":0,"errMsg":"","end":11,"orgStr":"아버지가방에들어가신다","candWord":"아버지가 방에 들어가신다"},
+  {"help":"활용형 교정","errorIdx":1,"correctMethod":3,"start":15,"errMsg":"","end":17,"orgStr":"않되요","candWord":"안 돼요"}
+]}];
+pageIdx = 0;
+</script>
+</body>
+</html>
+"""
+
+        report = check_text(
+            "아버지가방에들어가신다.\n\n왠지 않되요.",
+            max_chars=50,
+            requester=lambda chunk, *, strong_rules, timeout: html,
+            throttle_seconds=0,
+        )
+
+        self.assertEqual(report["corrected_text"], "아버지가 방에 들어가신다.\n\n왠지 안 돼요.")
+        self.assertEqual(report["chunks"][0]["corrected_text"], "아버지가 방에 들어가신다.\n\n왠지 안 돼요.")
+
+    def test_check_text_preserves_blank_lines_when_service_suggests_sentence_spacing(self):
+        html = """<!DOCTYPE html>
+<html>
+<body>
+<script>
+data = [{"str":"아버지가방에들어가신다.왠지 않되요.","errInfo":[
+  {"help":"띄어쓰기 교정","errorIdx":0,"correctMethod":3,"start":0,"errMsg":"","end":11,"orgStr":"아버지가방에들어가신다","candWord":"아버지가 방에 들어가신다"},
+  {"help":"문장 부호 뒤 띄어쓰기","errorIdx":1,"correctMethod":3,"start":11,"errMsg":"","end":14,"orgStr":".왠지","candWord":". 왠지"},
+  {"help":"활용형 교정","errorIdx":2,"correctMethod":1,"start":15,"errMsg":"","end":18,"orgStr":"않되요","candWord":"안 돼요"}
+]}];
+pageIdx = 0;
+</script>
+</body>
+</html>
+"""
+
+        report = check_text(
+            "아버지가방에들어가신다.\n\n왠지 않되요.",
+            max_chars=50,
+            requester=lambda chunk, *, strong_rules, timeout: html,
+            throttle_seconds=0,
+        )
+
+        self.assertEqual(report["corrected_text"], "아버지가 방에 들어가신다.\n\n왠지 안 돼요.")
+
+
+class ParseArgsTest(unittest.TestCase):
+    def test_rejects_non_positive_max_chars(self):
+        for value in ("0", "-1"):
+            with self.subTest(value=value):
+                with contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as ctx:
+                        parse_args(["--text", "테스트", "--max-chars", value])
+
+                self.assertNotEqual(ctx.exception.code, 0)
 
 
 if __name__ == "__main__":
