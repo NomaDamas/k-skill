@@ -245,9 +245,23 @@ def build_opener() -> urllib.request.OpenerDirector:
 
 
 def build_http_client() -> Any:
-    if requests is not None:
-        return None
     return build_opener()
+
+
+def should_fallback_to_opener(error: Exception) -> bool:
+    if requests is None:
+        return False
+
+    exceptions = getattr(requests, "exceptions", None)
+    http_error = getattr(exceptions, "HTTPError", None)
+    if isinstance(http_error, type) and isinstance(error, http_error):
+        return False
+
+    request_exception = getattr(exceptions, "RequestException", None)
+    if isinstance(request_exception, type) and isinstance(error, request_exception):
+        return True
+
+    return isinstance(error, OSError)
 
 
 def fetch_text(
@@ -271,7 +285,8 @@ def fetch_text(
             response.raise_for_status()
             return response.text
         except Exception as error:  # noqa: BLE001
-            raise RuntimeError(f"Sillok request failed for {url}: {error}") from error
+            if opener is None or not should_fallback_to_opener(error):
+                raise RuntimeError(f"Sillok request failed for {url}: {error}") from error
 
     body = urllib.parse.urlencode(data).encode("utf-8") if data is not None else None
     request = urllib.request.Request(url, data=body, headers=headers, method="POST" if body else "GET")

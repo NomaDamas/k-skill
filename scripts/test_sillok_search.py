@@ -1,6 +1,7 @@
 import contextlib
 import io
 import ssl
+import types
 import unittest
 from unittest import mock
 
@@ -8,6 +9,7 @@ from scripts.sillok_search import (
     ArticleDetail,
     SearchReport,
     SearchResult,
+    build_http_client,
     build_opener,
     filter_results,
     fetch_text,
@@ -179,6 +181,18 @@ class ParseDetailPageTest(unittest.TestCase):
 
 
 class NetworkingRegressionTest(unittest.TestCase):
+    def test_build_http_client_keeps_urllib_opener_available_when_requests_is_installed(self):
+        fake_requests = mock.Mock()
+
+        with (
+            mock.patch("scripts.sillok_search.requests", fake_requests),
+            mock.patch("scripts.sillok_search.build_opener", return_value="opener") as build_opener_mock,
+        ):
+            opener = build_http_client()
+
+        self.assertEqual(opener, "opener")
+        build_opener_mock.assert_called_once_with()
+
     def test_build_opener_keeps_default_tls_verification(self):
         fake_context = mock.Mock()
         fake_context.check_hostname = True
@@ -216,6 +230,34 @@ class NetworkingRegressionTest(unittest.TestCase):
 
         self.assertEqual(html_text, "<html></html>")
         self.assertNotIn("verify", fake_requests.post.call_args.kwargs)
+
+    def test_fetch_text_falls_back_to_urllib_when_requests_transport_fails(self):
+        class TransportError(Exception):
+            pass
+
+        class HttpError(TransportError):
+            pass
+
+        response = mock.MagicMock()
+        response.read.return_value = "<html>fallback</html>".encode("utf-8")
+        response.__enter__.return_value = response
+        opener = mock.Mock()
+        opener.open.return_value = response
+
+        fake_requests = mock.Mock()
+        fake_requests.post.side_effect = TransportError("Connection aborted")
+        fake_requests.exceptions = types.SimpleNamespace(RequestException=TransportError, HTTPError=HttpError)
+
+        with mock.patch("scripts.sillok_search.requests", fake_requests):
+            html_text = fetch_text(
+                opener,
+                "https://sillok.history.go.kr/search/searchResultList.do",
+                data={"topSearchWord": "훈민정음"},
+                timeout=20,
+            )
+
+        self.assertEqual(html_text, "<html>fallback</html>")
+        opener.open.assert_called_once()
 
 
 class SearchSillokRegressionTest(unittest.TestCase):
