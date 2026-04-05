@@ -180,7 +180,7 @@ test("repository docs advertise the used-car-price-search skill", () => {
   assert.match(install, /--skill used-car-price-search/);
   assert.match(
     install,
-    /npm install -g @ohah\/hwpjs kbo-game kleague-results toss-securities k-lotto coupang-product-search used-car-price-search korean-law-mcp/,
+    /npm install -g @ohah\/hwpjs kbo-game kleague-results toss-securities k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp/,
   );
 });
 
@@ -1299,4 +1299,50 @@ test("repository docs advertise the shipped korean-spell-check helper assets", (
   assert.equal(fs.existsSync(helperPath), true);
   assert.match(readme, /\[한국어 맞춤법 검사 가이드\]\(docs\/features\/korean-spell-check\.md\)/);
   assert.match(install, /python3 scripts\/korean_spell_check\.py/);
+});
+
+test("repository docs advertise the cheap-gas-nearby skill and Opinet key requirements", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const setup = read(path.join("docs", "setup.md"));
+  const security = read(path.join("docs", "security-and-secrets.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const setupSkill = read(path.join("k-skill-setup", "SKILL.md"));
+  const examplesSecrets = read(path.join("examples", "secrets.env.example"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "cheap-gas-nearby.md");
+  const skillPath = path.join(repoRoot, "cheap-gas-nearby", "SKILL.md");
+
+  assert.equal(fs.existsSync(featureDocPath), true);
+  assert.equal(fs.existsSync(skillPath), true);
+  assert.match(readme, /\| 근처 가장 싼 주유소 찾기 \|/);
+  assert.match(readme, /\[근처 가장 싼 주유소 찾기 가이드\]\(docs\/features\/cheap-gas-nearby\.md\)/);
+  assert.match(install, /--skill cheap-gas-nearby/);
+
+  for (const doc of [setup, security, setupSkill]) {
+    assert.match(doc, /OPINET_API_KEY/);
+    assert.match(doc, /오피넷|Opinet/);
+  }
+
+  assert.match(examplesSecrets, /^OPINET_API_KEY=replace-me$/m);
+  assert.match(sources, /https:\/\/www\.opinet\.co\.kr\/user\/custapi\/openApiInfo\.do/);
+  assert.match(sources, /https:\/\/www\.opinet\.co\.kr\/api\/aroundAll\.do/);
+  assert.match(sources, /https:\/\/www\.opinet\.co\.kr\/api\/detailById\.do/);
+  assert.match(roadmap, /근처 가장 싼 주유소 찾기 스킬 출시/);
+});
+
+test("cheap-gas-nearby skill docs require location-first prompts and official Opinet surfaces", () => {
+  const skill = read(path.join("cheap-gas-nearby", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "cheap-gas-nearby.md"));
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /현재 위치를 알려주세요/);
+    assert.match(doc, /OPINET_API_KEY/);
+    assert.match(doc, /aroundAll\.do/);
+    assert.match(doc, /detailById\.do/);
+    assert.match(doc, /areaCode\.do/);
+    assert.match(doc, /휘발유|경유/);
+    assert.match(doc, /KATEC/);
+    assert.match(doc, /카카오맵|Kakao Map/);
+  }
 });

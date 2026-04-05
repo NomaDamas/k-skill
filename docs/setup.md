@@ -1,6 +1,6 @@
 # 공통 설정 가이드
 
-`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(SRT 예매, KTX 예매, 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC`, 한국 부동산 실거래가 조회의 로컬/self-host 경로용 `DATA_GO_KR_API_KEY`, self-host 프록시 운영용 서울 지하철/미세먼지 upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다.
+`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(SRT 예매, KTX 예매, 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC`, 한국 부동산 실거래가 조회의 로컬/self-host 경로용 `DATA_GO_KR_API_KEY`, 근처 가장 싼 주유소 찾기용 `OPINET_API_KEY`, self-host 프록시 운영용 서울 지하철/미세먼지 upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다.
 
 ## Credential resolution order
 
@@ -26,6 +26,7 @@ KSKILL_KTX_ID=replace-me
 KSKILL_KTX_PASSWORD=replace-me
 LAW_OC=replace-me
 DATA_GO_KR_API_KEY=replace-me
+OPINET_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
 KSKILL_PROXY_BASE_URL=https://your-proxy.example.com
 EOF
@@ -41,6 +42,8 @@ chmod 0600 ~/.config/k-skill/secrets.env
 remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결한다. 다만 기존 `korean-law-mcp` 경로가 서비스 장애로 막히면 `법망`(`https://api.beopmang.org`) MCP/REST를 fallback으로 사용할 수 있다.
 
 한국 부동산 실거래가 조회의 로컬/self-host 경로는 upstream `real-estate-mcp` 가 읽는 `DATA_GO_KR_API_KEY` 를 채운다. 2026-04-05 기준 upstream 문서에는 고정 public endpoint가 없어 self-host를 기본으로 보고, Cloudflare Tunnel/operator secret은 운영자별 값이라 기본 client secrets 파일에는 넣지 않는다.
+
+근처 가장 싼 주유소 찾기는 한국석유공사 Opinet Open API 인증키인 `OPINET_API_KEY` 를 채운다. 이 값이 없으면 공식 nearby 가격 조회를 시작할 수 없으므로 비공식 가격 서비스로 자동 우회하지 않는다.
 
 ## 확인
 
@@ -64,6 +67,7 @@ bash scripts/check-setup.sh
 | 한국 법령 검색 (로컬 CLI/MCP) | `LAW_OC` |
 | 한국 법령 검색 (remote MCP endpoint) | 사용자 시크릿 불필요 (`url`만 등록, 장애 시 `법망` fallback 가능) |
 | 한국 부동산 실거래가 조회 (로컬/stdio/self-host) | `DATA_GO_KR_API_KEY` |
+| 근처 가장 싼 주유소 찾기 | `OPINET_API_KEY` |
 | 한국 부동산 실거래가 조회 (공유 URL) | 사용자 시크릿 불필요, 대신 운영자가 self-host + Cloudflare Tunnel + launchd/systemd 를 준비 |
 | 서울 지하철 도착정보 조회 | self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL` |
 | 사용자 위치 미세먼지 조회 | `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY` |
@@ -76,6 +80,7 @@ bash scripts/check-setup.sh
 - [사용자 위치 미세먼지 조회 가이드](features/fine-dust-location.md)
 - [한국 법령 검색 가이드](features/korean-law-search.md)
 - [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)
+- [근처 가장 싼 주유소 찾기 가이드](features/cheap-gas-nearby.md)
 - [보안/시크릿 정책](security-and-secrets.md)
 
 설치 기본 흐름은 "전체 스킬 설치 → 개별 기능 사용" 이다.

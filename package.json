@@ -12,7 +12,7 @@
     "lint": "node --check scripts/skill-docs.test.js && python3 -m py_compile scripts/fine_dust.py scripts/test_fine_dust.py scripts/ktx_booking.py scripts/test_ktx_booking.py scripts/sillok_search.py scripts/test_sillok_search.py scripts/korean_spell_check.py scripts/test_korean_spell_check.py && npm run lint --workspaces --if-present && ./scripts/validate-skills.sh",
     "typecheck": "tsc --noEmit",
     "test": "node --test scripts/skill-docs.test.js && PYTHONPATH=.:scripts python3 -m unittest scripts.test_fine_dust scripts.test_ktx_booking scripts.test_sillok_search scripts.test_korean_spell_check && npm run test --workspaces --if-present && ./scripts/validate-skills.sh",
-    "pack:dry-run": "npm pack --workspace k-lotto --dry-run && npm pack --workspace daiso-product-search --dry-run && npm pack --workspace blue-ribbon-nearby --dry-run && npm pack --workspace kakao-bar-nearby --dry-run && npm pack --workspace kleague-results --dry-run && npm pack --workspace toss-securities --dry-run && npm pack --workspace used-car-price-search --dry-run",
+    "pack:dry-run": "npm pack --workspace k-lotto --dry-run && npm pack --workspace daiso-product-search --dry-run && npm pack --workspace blue-ribbon-nearby --dry-run && npm pack --workspace kakao-bar-nearby --dry-run && npm pack --workspace cheap-gas-nearby --dry-run && npm pack --workspace kleague-results --dry-run && npm pack --workspace toss-securities --dry-run && npm pack --workspace used-car-price-search --dry-run",
     "ci": "npm run lint && npm run typecheck && npm run test && npm run pack:dry-run",
     "version-packages": "changeset version",
     "release:npm": "changeset publish"

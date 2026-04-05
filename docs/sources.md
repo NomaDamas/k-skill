@@ -45,6 +45,10 @@
 - 조선왕조실록 메인: https://sillok.history.go.kr
 - 조선왕조실록 검색 결과: https://sillok.history.go.kr/search/searchResultList.do
 - 조선왕조실록 기사 상세: https://sillok.history.go.kr/id/kda_12512030_002
+- Opinet 오픈 API 안내: https://www.opinet.co.kr/user/custapi/openApiInfo.do
+- Opinet 반경 내 주유소 API: https://www.opinet.co.kr/api/aroundAll.do
+- Opinet 주유소 상세정보 API: https://www.opinet.co.kr/api/detailById.do
+- Opinet 지역코드 API: https://www.opinet.co.kr/api/areaCode.do
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
 - 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do
 - 에어코리아 측정소정보: https://www.data.go.kr/data/15073877/openapi.do

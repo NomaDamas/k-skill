@@ -1,0 +1,25 @@
+{
+  "RESULT": {
+    "OIL": {
+      "UNI_ID": "A1000001",
+      "POLL_DIV_CO": "SKE",
+      "OS_NM": "서울역셀프주유소",
+      "VAN_ADR": "서울 용산구 동자동 43-205",
+      "NEW_ADR": "서울 용산구 한강대로 405",
+      "TEL": "02-1111-2222",
+      "SIGUNCD": "0101",
+      "LPG_YN": "N",
+      "MAINT_YN": "Y",
+      "CAR_WASH_YN": "Y",
+      "CVS_YN": "N",
+      "KPETRO_YN": "Y",
+      "SELF_YN": "Y",
+      "GIS_X_COOR": "309240.0000",
+      "GIS_Y_COOR": "550790.0000",
+      "OIL_PRICE": [
+        { "PRODCD": "B027", "PRICE": "1635", "TRADE_DT": "20260405", "TRADE_TM": "091501" },
+        { "PRODCD": "D047", "PRICE": "1529", "TRADE_DT": "20260405", "TRADE_TM": "091455" }
+      ]
+    }
+  }
+}
