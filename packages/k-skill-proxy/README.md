@@ -1,16 +1,18 @@
 # k-skill-proxy
 
-`k-skill`용 Fastify 기반 프록시 서버입니다. AirKorea 미세먼지 조회와 서울 지하철 실시간 도착정보를 먼저 감싸고, 이후 무료/공공 API adapter를 추가하는 베이스로 씁니다.
+`k-skill`용 Fastify 기반 프록시 서버입니다. AirKorea 미세먼지 조회, 기상청 단기예보, 서울 지하철 실시간 도착정보를 먼저 감싸고, 이후 무료/공공 API adapter를 추가하는 베이스로 씁니다.
 
 ## 현재 제공 엔드포인트
 
 - `GET /health`
 - `GET /v1/fine-dust/report`
+- `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
 
 ## 환경변수
 
 - `AIR_KOREA_OPEN_API_KEY` — 프록시 서버 쪽 AirKorea upstream key
+- `KMA_OPEN_API_KEY` — 프록시 서버 쪽 기상청 단기예보 upstream key
 - `SEOUL_OPEN_API_KEY` — 프록시 서버 쪽 서울 열린데이터 광장 upstream key
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — 기본 `4020`
@@ -33,6 +35,14 @@ node packages/k-skill-proxy/src/server.js
 ```bash
 curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
   --data-urlencode 'stationName=강남'
+```
+
+한국 날씨 예시:
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/korea-weather/forecast' \
+  --data-urlencode 'lat=37.5665' \
+  --data-urlencode 'lon=126.9780'
 ```
 
 ## PM2 실행

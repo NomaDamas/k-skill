@@ -16,6 +16,7 @@ client/skill -> k-skill-proxy -> upstream public API
 
 - `GET /health`
 - `GET /v1/fine-dust/report`
+- `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
 
@@ -28,6 +29,7 @@ client/skill -> k-skill-proxy -> upstream public API
 프록시 서버 쪽:
 
 - `AIR_KOREA_OPEN_API_KEY=...`
+- `KMA_OPEN_API_KEY=...`
 - `SEOUL_OPEN_API_KEY=...`
 - `KSKILL_PROXY_PORT=4020`
 
@@ -63,6 +65,14 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
   --data-urlencode 'stationName=강남'
 ```
 
+한국 날씨 endpoint:
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/korea-weather/forecast' \
+  --data-urlencode 'lat=37.5665' \
+  --data-urlencode 'lon=126.9780'
+```
+
 AirKorea passthrough endpoint:
 
 ```bash
@@ -79,4 +89,4 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/B552584/ArpltnInforInqireSv
 
 - upstream key는 프록시 서버에서만 관리합니다.
 - client 쪽에는 upstream API key를 배포하지 않습니다.
-- public hosted route rollout 이 끝나기 전에는 서울 지하철 예시를 local/self-host URL 로 검증합니다.
+- public hosted route rollout 이 끝나기 전에는 서울 지하철/한국 날씨 예시를 local/self-host URL 로 검증합니다.
