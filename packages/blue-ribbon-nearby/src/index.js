@@ -22,6 +22,52 @@ const RESTAURANTS_MAP_URL = `${BASE_URL}/restaurants/map`;
 const DEFAULT_DISTANCE_METERS = 1000;
 const DEFAULT_RIBBON_TYPES = "RIBBON_THREE,RIBBON_TWO,RIBBON_ONE";
 
+async function readErrorPayload(response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("json")) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+function createRequestError(response, url, payload) {
+  if (
+    response.status === 403 &&
+    url.startsWith(RESTAURANTS_MAP_URL) &&
+    payload &&
+    payload.error === "PREMIUM_REQUIRED"
+  ) {
+    const error = new Error(
+      "Blue Ribbon nearby results are currently premium-gated by bluer.co.kr. Zone matching still works, but live nearby restaurant data now requires official premium access.",
+    );
+    error.code = "premium_required";
+    error.statusCode = response.status;
+    error.upstreamError = payload.error;
+    error.upstreamUrl = url;
+    return error;
+  }
+
+  const error = new Error(`Blue Ribbon request failed with ${response.status} for ${url}`);
+  error.statusCode = response.status;
+  error.upstreamUrl = url;
+
+  if (payload && typeof payload === "object" && typeof payload.error === "string") {
+    error.upstreamError = payload.error;
+  }
+
+  return error;
+}
+
 async function request(url, options = {}, responseType = "text") {
   const fetchImpl = options.fetchImpl || global.fetch;
 
@@ -39,7 +85,7 @@ async function request(url, options = {}, responseType = "text") {
   });
 
   if (!response.ok) {
-    throw new Error(`Blue Ribbon request failed with ${response.status} for ${url}`);
+    throw createRequestError(response, url, await readErrorPayload(response));
   }
 
   return responseType === "json" ? response.json() : response.text();

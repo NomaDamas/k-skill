@@ -2,10 +2,13 @@
 
 ## 이 기능으로 할 수 있는 일
 
-- 유저가 알려준 현재 위치 근처의 블루리본 맛집 검색
+- 유저가 알려준 현재 위치를 공식 Blue Ribbon zone 으로 매칭
 - 공식 Blue Ribbon zone 목록으로 동네/역명 매칭
-- 좌표 기반 nearby 검색
-- 거리순 상위 결과 정리
+- 좌표 기반 nearby 요청 파라미터 구성
+- live nearby premium gate 감지 및 설명
+
+> [!WARNING]
+> **2026-04-05 기준** `https://www.bluer.co.kr/restaurants/map` 이 공개 요청에 `403 {"error":"PREMIUM_REQUIRED"}` 를 반환합니다. 따라서 현재 이 기능은 zone 매칭까지는 가능하지만, live nearby 결과는 `premium_required` 에러로 종료될 수 있습니다.
 
 ## 먼저 필요한 것
 
@@ -59,7 +62,8 @@
    - 공식 zone 이름이 아닌 대표 랜드마크는 먼저 nearest zone alias 로 확장합니다. 예: `코엑스` → `삼성동/대치동`
 3. 좌표를 받으면 nearby bounding box 를 계산합니다.
 4. 공식 `/restaurants/map` endpoint 를 `isAround=true`, `ribbon=true`, `ribbonType=RIBBON_THREE,RIBBON_TWO,RIBBON_ONE`, `sort=distance` 로 조회합니다.
-5. 거리순 상위 결과를 3~5개 정리합니다.
+5. 현재 upstream 이 `403 {"error":"PREMIUM_REQUIRED"}` 를 반환하면 `premium_required` 도메인 에러로 승격해 원인을 설명합니다.
+6. live nearby 결과가 실제로 열려 있을 때만 거리순 상위 결과를 3~5개 정리합니다.
 
 ## Node.js 예시
 
@@ -67,13 +71,22 @@
 const { searchNearbyByLocationQuery } = require("blue-ribbon-nearby");
 
 async function main() {
-  const result = await searchNearbyByLocationQuery("광화문", {
-    distanceMeters: 1000,
-    limit: 5
-  });
+  try {
+    const result = await searchNearbyByLocationQuery("광화문", {
+      distanceMeters: 1000,
+      limit: 5
+    });
 
-  console.log(result.anchor);
-  console.log(result.items);
+    console.log(result.anchor);
+    console.log(result.items);
+  } catch (error) {
+    if (error.code === "premium_required") {
+      console.error("Blue Ribbon live nearby results are currently premium-only.");
+      return;
+    }
+
+    throw error;
+  }
 }
 
 main().catch((error) => {
@@ -82,9 +95,25 @@ main().catch((error) => {
 });
 ```
 
-## 검증된 live smoke 예시
+## 현재 live 상태
 
-아래 값은 **2026-03-27** 에 `광화문`, `distanceMeters=1000`, `limit=5` 로 실제 호출해 확인한 결과 일부입니다.
+**2026-04-05** 현재 `광화문`, `distanceMeters=1000`, `limit=5` 로 실제 호출하면 아래와 같은 에러가 납니다.
+
+```json
+{
+  "code": "premium_required",
+  "statusCode": 403,
+  "upstreamError": "PREMIUM_REQUIRED"
+}
+```
+
+같은 날짜에 광화문 좌표로 `searchNearbyByCoordinates()` 를 호출해도 동일한 `premium_required` 에러 계약이 확인됩니다.
+
+이 remap 은 `403 {"error":"PREMIUM_REQUIRED"}` 인 nearby 응답에만 적용되며, 다른 upstream 실패는 기존 generic request error 형태를 유지합니다.
+
+## 과거 live smoke 예시
+
+아래 값은 **2026-03-27** 에는 실제 호출로 확인됐던 결과 일부입니다. 현재는 upstream 정책 변경으로 재현되지 않습니다.
 
 ```json
 {
@@ -123,6 +152,6 @@ main().catch((error) => {
 
 ## 주의할 점
 
-- Blue Ribbon 사이트는 browser-like 요청 헤더가 없으면 403 이 나올 수 있습니다.
+- Blue Ribbon 사이트는 현재 browser-like 요청 헤더가 있어도 `/restaurants/map` 에 대해 `403 {"error":"PREMIUM_REQUIRED"}` 를 반환할 수 있습니다.
 - 검색 페이지의 zone 목록이 바뀌면 매칭 결과도 바뀔 수 있습니다.
 - 좌표 없이 너무 넓은 지역명만 받으면 상권 후보가 많아질 수 있습니다.

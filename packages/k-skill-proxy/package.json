@@ -9,7 +9,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "lint": "node --check src/airkorea.js && node --check src/server.js && node --check test/airkorea.test.js && node --check test/server.test.js",
+    "lint": "node --check src/airkorea.js && node --check src/hrfco.js && node --check src/server.js && node --check test/airkorea.test.js && node --check test/hrfco.test.js && node --check test/server.test.js",
     "test": "node --test"
   },
   "dependencies": {

@@ -35,6 +35,12 @@
 - 다이소몰 상품 요약 목록: https://www.daisomall.co.kr/ssn/search/GoodsMummResult
 - 다이소몰 매장 픽업 재고: https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck
 - 다이소몰 온라인 재고: https://www.daisomall.co.kr/api/pdo/selOnlStck
+- olive-young / multi-retail upstream repo (`hmmhmmhm/daiso-mcp`): https://github.com/hmmhmmhm/daiso-mcp
+- olive-young CLI package (`daiso`): https://www.npmjs.com/package/daiso
+- olive-young stores API: https://mcp.aka.page/api/oliveyoung/stores
+- olive-young products API: https://mcp.aka.page/api/oliveyoung/products
+- olive-young inventory API: https://mcp.aka.page/api/oliveyoung/inventory
+- daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
 - coupang-mcp (MCP 서버): https://github.com/uju777/coupang-mcp
 - coupang-mcp endpoint: https://yuju777-coupang-mcp.hf.space/mcp
 - 블루리본 메인: https://www.bluer.co.kr/
@@ -49,6 +55,10 @@
 - 기상청 단기예보 조회서비스: https://www.data.go.kr/data/15084084/openapi.do
 - 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do
 - 에어코리아 측정소정보: https://www.data.go.kr/data/15073877/openapi.do
+- 한강홍수통제소 Open API 레퍼런스: https://www.hrfco.go.kr/web/openapiPage/reference.do
+- 한강홍수통제소 Open API 인증키 안내: https://www.hrfco.go.kr/web/openapiPage/certifyKey.do
+- 한강홍수통제소 Open API 정책: https://www.hrfco.go.kr/web/openapi/policy.do
+- 한강홍수통제소 API base: https://api.hrfco.go.kr
 - 우체국 도로명주소 검색: https://parcel.epost.go.kr/parcel/comm/zipcode/comm_newzipcd_list.jsp
 - CJ대한통운 배송조회: https://www.cjlogistics.com/ko/tool/parcel/tracking
 - CJ대한통운 배송상세 JSON: https://www.cjlogistics.com/ko/tool/parcel/tracking-detail
