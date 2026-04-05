@@ -678,6 +678,64 @@ test("daiso-product-search docs record the shipped feature and official sources"
   assert.match(sources, /https:\/\/www\.daisomall\.co\.kr\/api\/pd\/pdh\/selStrPkupStck/);
 });
 
+test("repository docs advertise the olive-young-search skill across the documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "olive-young-search.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/olive-young-search.md to exist");
+  assert.match(readme, /\| 올리브영 검색 \|/);
+  assert.match(readme, /\[올리브영 검색 가이드\]\(docs\/features\/olive-young-search\.md\)/);
+  assert.match(install, /--skill olive-young-search/);
+  assert.match(install, /npm install -g .* daiso/);
+  assert.match(roadmap, /올리브영 검색 스킬 출시/);
+  assert.match(sources, /https:\/\/github\.com\/hmmhmmhm\/daiso-mcp/);
+  assert.match(sources, /https:\/\/www\.npmjs\.com\/package\/daiso/);
+  assert.match(sources, /https:\/\/mcp\.aka\.page\/api\/oliveyoung\/stores/);
+  assert.match(sources, /https:\/\/mcp\.aka\.page\/api\/oliveyoung\/products/);
+  assert.match(sources, /https:\/\/mcp\.aka\.page\/api\/oliveyoung\/inventory/);
+});
+
+test("olive-young install docs warn about intermittent public endpoint failures and direct users to retry or clone fallback", () => {
+  const install = read(path.join("docs", "install.md"));
+
+  assert.match(install, /olive-young-search/);
+  assert.match(install, /5xx\/503/);
+  assert.match(install, /재시도|retry/i);
+  assert.match(install, /clone fallback|git clone https:\/\/github\.com\/hmmhmmhm\/daiso-mcp\.git/i);
+});
+
+test("olive-young-search skill documents the upstream daiso CLI flow for stores, products, and inventory", () => {
+  const skillPath = path.join(repoRoot, "olive-young-search", "SKILL.md");
+  const featureDoc = read(path.join("docs", "features", "olive-young-search.md"));
+
+  assert.ok(fs.existsSync(skillPath), "expected olive-young-search/SKILL.md to exist");
+
+  const skill = read(path.join("olive-young-search", "SKILL.md"));
+
+  assert.match(skill, /^name: olive-young-search$/m);
+  assert.match(skill, /^description: .*올리브영.*매장.*상품.*재고.*$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /hmmhmmhm\/daiso-mcp/);
+    assert.match(doc, /https:\/\/github\.com\/hmmhmmhm\/daiso-mcp/);
+    assert.match(doc, /npm install -g daiso|npx --yes daiso|npx daiso/);
+    assert.match(doc, /git clone https:\/\/github\.com\/hmmhmmhm\/daiso-mcp\.git/);
+    assert.match(doc, /npm install/);
+    assert.match(doc, /npm run build/);
+    assert.match(doc, /MCP 서버를 .*직접 설치.*않고.*CLI/u);
+    assert.match(doc, /매장 검색/);
+    assert.match(doc, /상품 검색/);
+    assert.match(doc, /재고 확인/);
+    assert.match(doc, /\/api\/oliveyoung\/stores/);
+    assert.match(doc, /\/api\/oliveyoung\/products/);
+    assert.match(doc, /\/api\/oliveyoung\/inventory/);
+    assert.match(doc, /vendoring 하지 않/);
+  }
+});
+
 test("repository docs advertise the coupang-product-search skill", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));

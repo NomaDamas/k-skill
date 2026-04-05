@@ -35,6 +35,12 @@
 - 다이소몰 상품 요약 목록: https://www.daisomall.co.kr/ssn/search/GoodsMummResult
 - 다이소몰 매장 픽업 재고: https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck
 - 다이소몰 온라인 재고: https://www.daisomall.co.kr/api/pdo/selOnlStck
+- olive-young / multi-retail upstream repo (`hmmhmmhm/daiso-mcp`): https://github.com/hmmhmmhm/daiso-mcp
+- olive-young CLI package (`daiso`): https://www.npmjs.com/package/daiso
+- olive-young stores API: https://mcp.aka.page/api/oliveyoung/stores
+- olive-young products API: https://mcp.aka.page/api/oliveyoung/products
+- olive-young inventory API: https://mcp.aka.page/api/oliveyoung/inventory
+- daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
 - coupang-mcp (MCP 서버): https://github.com/uju777/coupang-mcp
 - coupang-mcp endpoint: https://yuju777-coupang-mcp.hf.space/mcp
 - 블루리본 메인: https://www.bluer.co.kr/
