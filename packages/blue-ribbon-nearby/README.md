@@ -1,6 +1,9 @@
 # blue-ribbon-nearby
 
-Blue Ribbon Survey 공식 표면을 사용해 근처 블루리본 맛집을 찾는 Node.js 패키지입니다.
+Blue Ribbon Survey 공식 표면을 사용해 위치 문자열을 공식 zone 으로 매칭하고, 가능할 때 근처 블루리본 맛집을 조회하는 Node.js 패키지입니다.
+
+> [!WARNING]
+> **2026-04-05 기준** Blue Ribbon의 `/restaurants/map` endpoint 가 공개 요청에 `403 {"error":"PREMIUM_REQUIRED"}` 를 반환합니다. 이 패키지는 zone 매칭까지는 계속 지원하지만, live nearby 결과는 현재 `premium_required` 도메인 에러로 명시적으로 실패합니다.
 
 ## 설치
 
@@ -31,19 +34,31 @@ npm install
 
 패키지는 먼저 `search/zone` 에서 가장 가까운 공식 zone 을 찾고, 그다음 `/restaurants/map` nearby 검색으로 블루리본 인증 맛집만 추립니다. 이때 `zone1`, `zone2`, `zone2Lat`, `zone2Lng`, `isAround=true`, `ribbon=true` 를 사용해 주변 결과만 다시 조회합니다.
 
+다만 현재 `/restaurants/map` 는 공개 호출에서 premium gate 가 걸려 있으므로, live nearby 조회는 아래처럼 `premium_required` 에러를 던질 수 있습니다.
+
 ## 사용 예시
 
 ```js
 const { searchNearbyByLocationQuery } = require("blue-ribbon-nearby");
 
 async function main() {
-  const result = await searchNearbyByLocationQuery("광화문", {
-    distanceMeters: 1000,
-    limit: 5
-  });
+  try {
+    const result = await searchNearbyByLocationQuery("광화문", {
+      distanceMeters: 1000,
+      limit: 5
+    });
 
-  console.log(result.anchor);
-  console.log(result.items);
+    console.log(result.anchor);
+    console.log(result.items);
+  } catch (error) {
+    if (error.code === "premium_required") {
+      console.error("Blue Ribbon nearby live results are currently premium-gated.");
+      console.error(error.message);
+      return;
+    }
+
+    throw error;
+  }
 }
 
 main().catch((error) => {
@@ -52,9 +67,21 @@ main().catch((error) => {
 });
 ```
 
-## Live smoke snapshot
+## Current live status
 
-2026-03-27 에 `광화문`, `distanceMeters=1000`, `limit=5` 로 실제 호출했을 때 상위 결과 예시는 아래와 같았습니다.
+**2026-04-05** 에 `광화문`, `distanceMeters=1000`, `limit=5` 로 실제 호출하면 현재는 아래와 같은 도메인 에러가 반환됩니다.
+
+```json
+{
+  "code": "premium_required",
+  "statusCode": 403,
+  "upstreamError": "PREMIUM_REQUIRED"
+}
+```
+
+## Historical snapshot
+
+2026-03-27 에는 아래처럼 live nearby 결과가 내려왔습니다. 현재는 upstream 정책 변경으로 이 스냅샷을 재현할 수 없습니다.
 
 ```json
 {
@@ -78,3 +105,9 @@ main().catch((error) => {
 - `buildNearbySearchParams(options)`
 - `searchNearbyByLocationQuery(locationQuery, options?)`
 - `searchNearbyByCoordinates(options)`
+
+`searchNearbyByLocationQuery()` / `searchNearbyByCoordinates()` 는 `/restaurants/map` 가 `403 {"error":"PREMIUM_REQUIRED"}` 를 반환하면 아래 속성을 가진 에러를 던집니다.
+
+- `error.code === "premium_required"`
+- `error.statusCode === 403`
+- `error.upstreamError === "PREMIUM_REQUIRED"`
