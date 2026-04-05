@@ -463,6 +463,38 @@ test("korea weather endpoint stays publicly callable without proxy auth", async 
   assert.match(calledUrl, /ny=127/);
 });
 
+test("korea weather endpoint rejects out-of-range coordinates before reaching upstream", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("fetch should not be called for invalid coordinates");
+  };
+
+  const app = buildServer({
+    env: {
+      KMA_OPEN_API_KEY: "kma-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/forecast?lat=91&lon=126.978"
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.deepEqual(response.json(), {
+    error: "bad_request",
+    message: "Provide valid lat and lon."
+  });
+  assert.equal(fetchCalls, 0);
+});
+
 test("korea weather endpoint returns 503 when proxy server lacks KMA API key", async (t) => {
   const app = buildServer();
 

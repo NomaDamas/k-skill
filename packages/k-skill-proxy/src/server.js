@@ -243,6 +243,10 @@ function normalizeKmaForecastQuery(query, now = new Date()) {
     throw new Error("Provide both lat and lon.");
   }
 
+  if (hasLatLon && (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180)) {
+    throw new Error("Provide valid lat and lon.");
+  }
+
   const pageNo = parseInteger(query.pageNo ?? query.page_no, 1);
   const numOfRows = parseInteger(query.numOfRows ?? query.num_of_rows, 1000);
   const dataType = trimOrNull(query.dataType ?? query.data_type)?.toUpperCase() || "JSON";
@@ -273,6 +277,10 @@ function normalizeKmaForecastQuery(query, now = new Date()) {
   }
 
   const grid = hasGrid ? { nx: rawNx, ny: rawNy } : convertLatLonToKmaGrid(latitude, longitude);
+
+  if (!Number.isFinite(grid.nx) || !Number.isFinite(grid.ny)) {
+    throw new Error(hasGrid ? "Provide valid nx and ny." : "Provide valid lat and lon.");
+  }
 
   return {
     baseDate,
