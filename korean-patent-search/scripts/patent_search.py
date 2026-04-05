@@ -92,7 +92,7 @@ def parse_positive_int(raw_value: str) -> int:
 def resolve_service_key(explicit_key: str | None = None) -> str:
     candidate = clean_text(explicit_key) or clean_text(os.getenv(SERVICE_KEY_ENV_VAR))
     if candidate:
-        return candidate
+        return urllib.parse.unquote(candidate)
     raise ValueError(
         f"missing {SERVICE_KEY_ENV_VAR}. Export {SERVICE_KEY_ENV_VAR} or pass --service-key "
         "(mapped to the KIPRIS Plus ServiceKey query parameter)."

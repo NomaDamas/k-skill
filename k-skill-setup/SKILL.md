@@ -84,7 +84,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 한국 부동산 실거래가 조회는 upstream `real-estate-mcp` 의 로컬/stdio/self-host 경로를 쓸 때 `DATA_GO_KR_API_KEY` 를 채운다. 2026-04-05 기준 고정 public endpoint는 확인하지 못했으므로 shared URL이 필요하면 self-host + Cloudflare Tunnel + launchd(systemd) 운영을 먼저 설명한다.
 
-한국 특허 정보 검색은 KIPRIS Plus Open API 경로를 쓸 때 `KIPRIS_PLUS_API_KEY` 를 채운다. helper는 이 값을 읽어 실제 요청에서 `ServiceKey` 쿼리 파라미터로 보낸다.
+한국 특허 정보 검색은 KIPRIS Plus Open API 경로를 쓸 때 `KIPRIS_PLUS_API_KEY` 를 채운다. helper는 이 값을 읽어 실제 요청에서 `ServiceKey` 쿼리 파라미터로 보낸다. 공공데이터포털에서 복사한 percent-encoded key도 그대로 넣어도 된다.
 
 ### Missing secret response template
 

@@ -51,7 +51,7 @@ v1 범위:
 
 ## Workflow
 
-1. `KIPRIS_PLUS_API_KEY` 또는 `--service-key` 로 ServiceKey를 확보한다.
+1. `KIPRIS_PLUS_API_KEY` 또는 `--service-key` 로 ServiceKey를 확보한다. 공공데이터포털에서 복사한 percent-encoded 값도 helper가 한 번 정규화해서 그대로 받을 수 있다.
 2. 키워드 검색이면 `getWordSearch` endpoint를 호출한다.
 3. 출원번호 상세 조회면 `getBibliographyDetailInfoSearch` endpoint를 호출한다.
 4. XML 응답의 header/body/items 구조를 파싱한다.

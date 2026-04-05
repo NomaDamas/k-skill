@@ -9,11 +9,13 @@ from scripts.patent_search import (
     PatentSearchResult,
     build_detail_params,
     build_search_params,
+    fetch_xml,
     get_patent_detail,
     main,
     parse_args,
     parse_patent_detail_response,
     parse_patent_search_response,
+    resolve_service_key,
     search_patents,
 )
 
@@ -161,6 +163,49 @@ class RequestBuilderTest(unittest.TestCase):
                 utility=False,
                 service_key="test-key",
             )
+
+
+class ServiceKeyEncodingTest(unittest.TestCase):
+    def test_resolve_service_key_accepts_percent_encoded_portal_value(self):
+        self.assertEqual(resolve_service_key("abc%2Bdef%3D%3D"), "abc+def==")
+
+    def test_resolve_service_key_decodes_percent_encoded_env_value(self):
+        with mock.patch.dict(
+            "scripts.patent_search.os.environ",
+            {"KIPRIS_PLUS_API_KEY": "abc%2Bdef%3D%3D"},
+            clear=True,
+        ):
+            self.assertEqual(resolve_service_key(), "abc+def==")
+
+    def test_fetch_xml_does_not_double_encode_percent_encoded_service_key(self):
+        captured = {}
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return b"<response><header><resultCode>00</resultCode></header></response>"
+
+        def fake_urlopen(request, timeout):
+            captured["url"] = request.full_url
+            captured["timeout"] = timeout
+            return FakeResponse()
+
+        with mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            fetch_xml(
+                "https://example.test/patent",
+                build_search_params(query="배터리", service_key=resolve_service_key("abc%2Bdef%3D%3D")),
+                timeout=7,
+            )
+
+        self.assertEqual(captured["timeout"], 7)
+        self.assertIn("ServiceKey=abc%2Bdef%3D%3D", captured["url"])
+        self.assertNotIn("%252B", captured["url"])
+        self.assertNotIn("%253D", captured["url"])
 
 
 class PatentSearchWorkflowTest(unittest.TestCase):

@@ -27,7 +27,7 @@
 
 ## 기본 흐름
 
-1. `KIPRIS_PLUS_API_KEY` 또는 `--service-key` 로 ServiceKey를 확보한다.
+1. `KIPRIS_PLUS_API_KEY` 또는 `--service-key` 로 ServiceKey를 확보한다. 공공데이터포털에서 복사한 percent-encoded 값이어도 helper가 한 번 정규화한 뒤 요청한다.
 2. 키워드 검색이면 `getWordSearch` 를 호출한다.
 3. 출원번호 상세 조회면 `getBibliographyDetailInfoSearch` 를 호출한다.
 4. XML `response/header/body/items/item` 구조를 파싱한다.
