@@ -69,6 +69,7 @@ KSKILL_KTX_ID=replace-me
 KSKILL_KTX_PASSWORD=replace-me
 LAW_OC=replace-me
 DATA_GO_KR_API_KEY=replace-me
+KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
 KSKILL_PROXY_BASE_URL=https://your-proxy.example.com
 EOF
@@ -83,6 +84,8 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 한국 부동산 실거래가 조회는 upstream `real-estate-mcp` 의 로컬/stdio/self-host 경로를 쓸 때 `DATA_GO_KR_API_KEY` 를 채운다. 2026-04-05 기준 고정 public endpoint는 확인하지 못했으므로 shared URL이 필요하면 self-host + Cloudflare Tunnel + launchd(systemd) 운영을 먼저 설명한다.
 
+한국 특허 정보 검색은 KIPRIS Plus Open API 경로를 쓸 때 `KIPRIS_PLUS_API_KEY` 를 채운다. helper는 이 값을 읽어 실제 요청에서 `ServiceKey` 쿼리 파라미터로 보낸다. 공공데이터포털에서 복사한 percent-encoded key도 그대로 넣어도 된다.
+
 ### Missing secret response template
 
 인증 스킬에서 값이 빠졌을 때는 credential resolution order에 따라 확보한다.
@@ -94,6 +97,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 - 로컬 한국 법령 검색: `LAW_OC` + `korean-law-mcp`
 - 한국 법령 검색 remote endpoint: 사용자 `LAW_OC` 없이 `url`만 등록, 장애 시 `법망` fallback
 - 로컬/stdio 한국 부동산 실거래가 조회: `DATA_GO_KR_API_KEY` + `real-estate-mcp`
+- 한국 특허 정보 검색: `KIPRIS_PLUS_API_KEY`
 - 공유형 한국 부동산 실거래가 조회: 운영자가 self-host + Cloudflare Tunnel + launchd/systemd 준비
 - 서울 지하철: self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`
 - 사용자 위치 미세먼지 조회: `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY`

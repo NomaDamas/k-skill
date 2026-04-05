@@ -1195,6 +1195,79 @@ test("joseon-sillok-search install payload includes the documented helper comman
   }
 });
 
+test("repository docs advertise the korean-patent-search skill and official KIPRIS Plus API setup", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const setup = read(path.join("docs", "setup.md"));
+  const security = read(path.join("docs", "security-and-secrets.md"));
+  const setupSkill = read(path.join("k-skill-setup", "SKILL.md"));
+  const examplesSecrets = read(path.join("examples", "secrets.env.example"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-patent-search.md");
+  const featureDoc = read(path.join("docs", "features", "korean-patent-search.md"));
+  const skillPath = path.join(repoRoot, "korean-patent-search", "SKILL.md");
+  const skill = read(path.join("korean-patent-search", "SKILL.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const packageJson = readJson("package.json");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-patent-search.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-patent-search/SKILL.md to exist");
+
+  assert.match(readme, /\| 한국 특허 정보 검색 \|/);
+  assert.match(readme, /\[한국 특허 정보 검색 가이드\]\(docs\/features\/korean-patent-search\.md\)/);
+  assert.match(install, /--skill korean-patent-search/);
+  assert.match(install, /KIPRIS_PLUS_API_KEY/);
+  assert.match(install, /python3 scripts\/patent_search\.py --query "배터리"/);
+  assert.match(setup, /한국 특허 정보 검색의 KIPRIS Plus 경로용 `KIPRIS_PLUS_API_KEY`/);
+  assert.match(security, /KIPRIS_PLUS_API_KEY/);
+  assert.match(setupSkill, /한국 특허 정보 검색: `KIPRIS_PLUS_API_KEY`/);
+  assert.match(examplesSecrets, /^KIPRIS_PLUS_API_KEY=replace-me$/m);
+  assert.match(skill, /^name: korean-patent-search$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /KIPRIS Plus/i);
+    assert.match(doc, /getWordSearch/);
+    assert.match(doc, /getBibliographyDetailInfoSearch/);
+    assert.match(doc, /ServiceKey/);
+    assert.match(doc, /python3 scripts\/patent_search\.py/);
+    assert.match(doc, /Done when/i);
+    assert.doesNotMatch(doc, /packages\/korean-patent-search/);
+    assert.doesNotMatch(doc, /python-packages\/korean-patent-search/);
+  }
+
+  assert.match(sources, /https:\/\/plus\.kipris\.or\.kr\/portal\/data\/service\/List\.do\?subTab=SC001&entYn=N&menuNo=200100/);
+  assert.match(sources, /https:\/\/www\.data\.go\.kr\/data\/15058788\/openapi\.do/);
+  assert.match(roadmap, /한국 특허 정보 검색 스킬 출시/);
+  assert.ok(
+    !packageJson.workspaces.some((workspace) => workspace.includes("korean-patent-search")),
+    "expected no repo workspace to be added for korean-patent-search",
+  );
+  assert.equal(fs.existsSync(path.join(repoRoot, "packages", "korean-patent-search")), false);
+});
+
+test("korean-patent-search install payload includes the documented helper command", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "korean-patent-search-"));
+  const installedSkillPath = path.join(tempRoot, "korean-patent-search");
+  const bundledHelperPath = path.join(installedSkillPath, "scripts", "patent_search.py");
+
+  try {
+    fs.cpSync(path.join(repoRoot, "korean-patent-search"), installedSkillPath, { recursive: true });
+
+    assert.ok(fs.existsSync(bundledHelperPath), "expected korean-patent-search/scripts/patent_search.py to exist");
+
+    const helpText = childProcess.execFileSync("python3", ["scripts/patent_search.py", "--help"], {
+      cwd: installedSkillPath,
+      encoding: "utf8",
+    });
+
+    assert.match(helpText, /Search Korean patent information via the official KIPRIS Plus Open API/);
+    assert.match(helpText, /--query/);
+    assert.match(helpText, /--application-number/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("repository docs advertise the real-estate-search skill and upstream self-host guidance", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
