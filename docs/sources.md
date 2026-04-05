@@ -13,6 +13,10 @@
 - `@ohah/hwpjs`: https://github.com/ohah/hwpjs
 - `hwp-mcp`: https://github.com/jkf87/hwp-mcp
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
+- real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
+- real-estate-mcp Codex guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-codex-cli.md
+- real-estate-mcp Docker guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-docker.md
+- real-estate-mcp OAuth guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-oauth.md
 - beopmang: https://api.beopmang.org
 - `silver-flight-group/kakaocli`: https://github.com/silver-flight-group/kakaocli
 - KakaoTalk Mac 설치 참고(`mas`): https://velog.io/@bonjugi/%EB%A7%A5%EB%B6%81-M1%EC%97%90-homebrew%EB%A1%9C-node-vscode-%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0

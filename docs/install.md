@@ -51,6 +51,7 @@ npx --yes skills add <owner/repo> \
   --skill lotto-results \
   --skill kakaotalk-mac \
   --skill korean-law-search \
+  --skill real-estate-search \
   --skill joseon-sillok-search \
   --skill fine-dust-location \
   --skill daiso-product-search \
@@ -71,6 +72,7 @@ npx --yes skills add <owner/repo> \
   --skill srt-booking \
   --skill ktx-booking \
   --skill korean-law-search \
+  --skill real-estate-search \
   --skill joseon-sillok-search \
   --skill seoul-subway-arrival \
   --skill fine-dust-location
@@ -89,6 +91,24 @@ korean-law list
 ```
 
 로컬 설치가 막히면 `https://korean-law-mcp.fly.dev/mcp` remote endpoint를 MCP 클라이언트에 등록한다. 그 경로도 응답하지 않거나 서비스 장애가 나면 `https://api.beopmang.org/mcp` 또는 `https://api.beopmang.org/api/v4/law?action=search` 를 fallback으로 사용한다.
+
+`real-estate-search` 는 skill 설치 후 upstream `real-estate-mcp` (`https://github.com/tae0y/real-estate-mcp/tree/main`) 를 따로 clone 해서 붙인다.
+
+- 로컬 stdio/HTTP/self-host 경로는 `DATA_GO_KR_API_KEY` 를 채운다.
+- 2026-04-05 기준 upstream 문서에는 고정 public MCP URL이 없어서, shared HTTP가 필요하면 self-host를 기본으로 본다.
+- Codex CLI 에 붙일 때는 `uv run` 기반 stdio 등록을 먼저 시도한다.
+- self-host는 upstream Docker 문서 + `cloudflared tunnel`(Cloudflare Tunnel) + `launchd` 조합을 권장한다.
+
+```bash
+git clone https://github.com/tae0y/real-estate-mcp.git
+cd real-estate-mcp
+codex mcp add real-estate \
+  --env DATA_GO_KR_API_KEY=your-api-key \
+  -- uv run --directory /path/to/real-estate-mcp \
+  python src/real_estate/mcp_server/server.py
+```
+
+shared HTTP가 필요하면 upstream Docker guide 대로 띄운 뒤 Cloudflare Tunnel 도메인(`https://real-estate-mcp.example.com/mcp`)을 붙이고, macOS에서는 `launchd` 로 서버/터널을 자동 실행한다. 자세한 흐름은 [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)를 본다.
 
 로컬 저장소에서 바로 전체 설치 테스트:
 
@@ -175,6 +195,7 @@ python3 scripts/korean_spell_check.py --text "아버지가방에들어가신다.
 - `seoul-subway-arrival`
 - `fine-dust-location`
 - `korean-law-search`
+- `real-estate-search`
 
 관련 문서:
 
