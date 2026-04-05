@@ -1,7 +1,7 @@
 const crypto = require("node:crypto");
 const Fastify = require("fastify");
 const { fetchFineDustReport } = require("./airkorea");
-const DATA_GO_KR_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
+const DATA_GO_KR_UPSTREAM_BASE_URL = "https://apis.data.go.kr";
 const SEOUL_OPEN_API_BASE_URL = "http://swopenapi.seoul.go.kr";
 const KMA_FORECAST_BASE_TIMES = ["0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300"];
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;

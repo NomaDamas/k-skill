@@ -456,6 +456,7 @@ test("korea weather endpoint stays publicly callable without proxy auth", async 
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().response.header.resultCode, "00");
+  assert.ok(calledUrl.startsWith("https://apis.data.go.kr/"));
   assert.match(calledUrl, /serviceKey=kma-key/);
   assert.match(calledUrl, /base_date=20260405/);
   assert.match(calledUrl, /base_time=0500/);
@@ -532,6 +533,7 @@ test("proxyKmaWeatherRequest injects API key and preserves caller query params",
   });
 
   assert.equal(result.statusCode, 200);
+  assert.ok(calledUrl.startsWith("https://apis.data.go.kr/"));
   assert.match(calledUrl, /\/1360000\/VilageFcstInfoService_2\.0\/getVilageFcst\?/);
   assert.match(calledUrl, /serviceKey=test-kma-key/);
   assert.match(calledUrl, /base_date=20260405/);
