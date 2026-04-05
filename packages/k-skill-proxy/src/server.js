@@ -1,6 +1,7 @@
 const crypto = require("node:crypto");
 const Fastify = require("fastify");
 const { fetchFineDustReport } = require("./airkorea");
+const { fetchWaterLevelReport } = require("./hrfco");
 const AIR_KOREA_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
 const SEOUL_OPEN_API_BASE_URL = "http://swopenapi.seoul.go.kr";
 const ALLOWED_AIRKOREA_ROUTES = new Map([
@@ -42,6 +43,7 @@ function buildConfig(env = process.env) {
     proxyName: env.KSKILL_PROXY_NAME || "k-skill-proxy",
     airKoreaApiKey: trimOrNull(env.AIR_KOREA_OPEN_API_KEY),
     seoulOpenApiKey: trimOrNull(env.SEOUL_OPEN_API_KEY),
+    hrfcoApiKey: trimOrNull(env.HRFCO_OPEN_API_KEY),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -142,6 +144,20 @@ function normalizeSeoulSubwayQuery(query) {
   };
 }
 
+function normalizeHanRiverWaterLevelQuery(query) {
+  const stationName = trimOrNull(query.stationName ?? query.station_name ?? query.station);
+  const stationCode = trimOrNull(query.stationCode ?? query.station_code ?? query.wlobscd);
+
+  if (!stationName && !stationCode) {
+    throw new Error("Provide stationName or stationCode.");
+  }
+
+  return {
+    stationName,
+    stationCode
+  };
+}
+
 function isAllowedAirKoreaRoute(service, operation) {
   return ALLOWED_AIRKOREA_ROUTES.get(service)?.has(operation) || false;
 }
@@ -228,6 +244,54 @@ async function proxySeoulSubwayRequest({
   };
 }
 
+async function proxyHrfcoWaterLevelRequest({
+  stationName = null,
+  stationCode = null,
+  apiKey,
+  fetchImpl = global.fetch
+}) {
+  if (!apiKey) {
+    return {
+      statusCode: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "upstream_not_configured",
+        message: "HRFCO_OPEN_API_KEY is not configured on the proxy server."
+      })
+    };
+  }
+
+  try {
+    const report = await fetchWaterLevelReport({
+      stationName,
+      stationCode,
+      serviceKey: apiKey,
+      fetchImpl
+    });
+
+    return {
+      statusCode: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify(report)
+    };
+  } catch (error) {
+    const payload = {
+      error: error.code || "proxy_error",
+      message: error.message
+    };
+
+    if (Array.isArray(error.candidateStations)) {
+      payload.candidate_stations = error.candidateStations;
+    }
+
+    return {
+      statusCode: error.statusCode && error.statusCode >= 400 ? error.statusCode : 502,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify(payload)
+    };
+  }
+}
+
 function buildServer({ env = process.env, provider = null } = {}) {
   const config = buildConfig(env);
   const cache = createMemoryCache();
@@ -259,7 +323,8 @@ function buildServer({ env = process.env, provider = null } = {}) {
     port: config.port,
     upstreams: {
       airKoreaConfigured: Boolean(config.airKoreaApiKey),
-      seoulOpenApiConfigured: Boolean(config.seoulOpenApiKey)
+      seoulOpenApiConfigured: Boolean(config.seoulOpenApiKey),
+      hrfcoConfigured: Boolean(config.hrfcoApiKey)
     },
     auth: {
       tokenRequired: false
@@ -401,6 +466,67 @@ function buildServer({ env = process.env, provider = null } = {}) {
     return payload;
   });
 
+  app.get("/v1/han-river/water-level", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeHanRiverWaterLevelQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "han-river-water-level",
+      stationName: normalized.stationName?.toLowerCase() || null,
+      stationCode: normalized.stationCode || null
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const upstream = await proxyHrfcoWaterLevelRequest({
+      ...normalized,
+      apiKey: config.hrfcoApiKey
+    });
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+
+    if (!upstream.contentType.includes("json")) {
+      return upstream.body;
+    }
+
+    const payload = JSON.parse(upstream.body);
+    payload.proxy = {
+      name: config.proxyName,
+      cache: {
+        hit: false,
+        ttl_ms: config.cacheTtlMs
+      },
+      requested_at: new Date().toISOString()
+    };
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+
+    return payload;
+  });
+
   app.setErrorHandler((error, request, reply) => {
     request.log.error(error);
     const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
@@ -441,8 +567,10 @@ module.exports = {
   buildConfig,
   buildServer,
   normalizeFineDustQuery,
+  normalizeHanRiverWaterLevelQuery,
   normalizeSeoulSubwayQuery,
   proxyAirKoreaRequest,
+  proxyHrfcoWaterLevelRequest,
   proxySeoulSubwayRequest,
   startServer
 };

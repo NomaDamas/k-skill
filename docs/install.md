@@ -54,6 +54,7 @@ npx --yes skills add <owner/repo> \
   --skill real-estate-search \
   --skill joseon-sillok-search \
   --skill fine-dust-location \
+  --skill han-river-water-level \
   --skill daiso-product-search \
   --skill blue-ribbon-nearby \
   --skill kakao-bar-nearby \

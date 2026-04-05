@@ -1,7 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { buildServer, proxyAirKoreaRequest, proxySeoulSubwayRequest } = require("../src/server");
+const {
+  buildServer,
+  proxyAirKoreaRequest,
+  proxySeoulSubwayRequest,
+  proxyHrfcoWaterLevelRequest
+} = require("../src/server");
 
 test("health endpoint stays public and reports auth/upstream status", async (t) => {
   const app = buildServer({
@@ -321,4 +326,263 @@ test("proxySeoulSubwayRequest injects API key and preserves index/station params
 
   assert.equal(result.statusCode, 200);
   assert.match(calledUrl, /\/api\/subway\/test-seoul-key\/json\/realtimeStationArrival\/2\/5\/%EA%B0%95%EB%82%A8$/);
+});
+
+test("han river water-level endpoint stays publicly callable without proxy auth", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+
+    if (text.endsWith("/waterlevel/info.json")) {
+      return new Response(
+        JSON.stringify({
+          content: [
+            {
+              wlobscd: "1018683",
+              obsnm: "한강대교",
+              agcnm: "한강홍수통제소",
+              addr: "서울특별시 용산구",
+              etcaddr: "한강대교",
+              attwl: "5.5",
+              wrnwl: "8.0",
+              almwl: "10.0",
+              srswl: "11.0",
+              pfh: "13.0",
+              fstnyn: "Y"
+            }
+          ]
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    if (text.includes("/waterlevel/list/10M/1018683.json")) {
+      return new Response(
+        JSON.stringify({
+          content: [
+            {
+              wlobscd: "1018683",
+              ymdhm: "202604051900",
+              wl: "0.66",
+              fw: "208.58"
+            }
+          ]
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      HRFCO_OPEN_API_KEY: "hrfco-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/han-river/water-level?stationName=%ED%95%9C%EA%B0%95%EB%8C%80%EA%B5%90"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().station_name, "한강대교");
+  assert.equal(response.json().water_level.value_m, 0.66);
+  assert.equal(response.json().flow_rate.value_cms, 208.58);
+  assert.equal(response.json().proxy.cache.hit, false);
+  assert.match(fetchCalls[0], /\/waterlevel\/info\.json$/);
+  assert.match(fetchCalls[1], /\/waterlevel\/list\/10M\/1018683\.json$/);
+});
+
+test("han river water-level endpoint caches normalized station queries", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async (url) => {
+    fetchCalls += 1;
+    const text = String(url);
+
+    if (text.endsWith("/waterlevel/info.json")) {
+      return new Response(
+        JSON.stringify({
+          content: [
+            {
+              wlobscd: "1018683",
+              obsnm: "한강대교",
+              agcnm: "한강홍수통제소",
+              addr: "서울특별시 용산구",
+              etcaddr: "한강대교"
+            }
+          ]
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    if (text.includes("/waterlevel/list/10M/1018683.json")) {
+      return new Response(
+        JSON.stringify({
+          content: [
+            {
+              wlobscd: "1018683",
+              ymdhm: "202604051900",
+              wl: "0.66",
+              fw: "208.58"
+            }
+          ]
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      HRFCO_OPEN_API_KEY: "hrfco-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/han-river/water-level?station=%20%ED%95%9C%EA%B0%95%EB%8C%80%EA%B5%90%20"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/han-river/water-level?stationName=%ED%95%9C%EA%B0%95%EB%8C%80%EA%B5%90"
+  });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(fetchCalls, 2);
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+});
+
+test("han river water-level endpoint returns ambiguous candidates for broad station names", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    const text = String(url);
+
+    if (text.endsWith("/waterlevel/info.json")) {
+      return new Response(
+        JSON.stringify({
+          content: [
+            { wlobscd: "1018683", obsnm: "한강대교", agcnm: "한강홍수통제소" },
+            { wlobscd: "1018680", obsnm: "한강철교", agcnm: "한강홍수통제소" }
+          ]
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      HRFCO_OPEN_API_KEY: "hrfco-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/han-river/water-level?stationName=%ED%95%9C%EA%B0%95"
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "ambiguous_station");
+  assert.deepEqual(response.json().candidate_stations, ["한강대교", "한강철교"]);
+});
+
+test("han river water-level endpoint returns 503 when proxy server lacks HRFCO API key", async (t) => {
+  const app = buildServer();
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/han-river/water-level?stationName=%ED%95%9C%EA%B0%95%EB%8C%80%EA%B5%90"
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_not_configured");
+});
+
+test("proxyHrfcoWaterLevelRequest injects API key and resolves station code path", async () => {
+  let calledUrls = [];
+  const result = await proxyHrfcoWaterLevelRequest({
+    stationName: "한강대교",
+    apiKey: "test-hrfco-key",
+    fetchImpl: async (url) => {
+      calledUrls.push(String(url));
+
+      if (String(url).endsWith("/waterlevel/info.json")) {
+        return new Response(
+          JSON.stringify({
+            content: [
+              { wlobscd: "1018683", obsnm: "한강대교", agcnm: "한강홍수통제소" }
+            ]
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json;charset=UTF-8" }
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          content: [
+            { wlobscd: "1018683", ymdhm: "202604051900", wl: "0.66", fw: "208.58" }
+          ]
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(JSON.parse(result.body).station_code, "1018683");
+  assert.match(calledUrls[0], /\/test-hrfco-key\/waterlevel\/info\.json$/);
+  assert.match(calledUrls[1], /\/test-hrfco-key\/waterlevel\/list\/10M\/1018683\.json$/);
 });

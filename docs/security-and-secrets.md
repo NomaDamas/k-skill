@@ -66,6 +66,6 @@ KSKILL_PROXY_BASE_URL=https://your-proxy.example.com
 - `AIR_KOREA_OPEN_API_KEY`
 - `KSKILL_PROXY_BASE_URL`
 
-`LAW_OC` 는 `korean-law-mcp` 가 법제처 Open API 를 호출할 때 쓰는 표준 변수명이다. 이 값은 로컬 CLI/로컬 MCP server 경로에서만 사용자 쪽에 필요하고, upstream remote MCP endpoint 예시는 사용자 `LAW_OC` 없이 `url`만 등록한다. `DATA_GO_KR_API_KEY` 는 upstream `real-estate-mcp` 의 로컬/stdio/self-host 경로에서 쓰는 표준 변수명이다. public 공유용 Cloudflare Tunnel/Auth0/operator secret은 사용자 기본 secrets 파일에 넣지 않는다. 프록시 운영자 문맥에서는 upstream 환경변수 `SEOUL_OPEN_API_KEY` 도 사용할 수 있다. 다만 일반 사용자/client 쪽 기본 secrets 파일에는 넣지 않는다. `KSKILL_PROXY_BASE_URL` 도 서울 지하철 route가 실제 배포된 proxy URL 로만 넣는다.
+`LAW_OC` 는 `korean-law-mcp` 가 법제처 Open API 를 호출할 때 쓰는 표준 변수명이다. 이 값은 로컬 CLI/로컬 MCP server 경로에서만 사용자 쪽에 필요하고, upstream remote MCP endpoint 예시는 사용자 `LAW_OC` 없이 `url`만 등록한다. `DATA_GO_KR_API_KEY` 는 upstream `real-estate-mcp` 의 로컬/stdio/self-host 경로에서 쓰는 표준 변수명이다. public 공유용 Cloudflare Tunnel/Auth0/operator secret은 사용자 기본 secrets 파일에 넣지 않는다. 프록시 운영자 문맥에서는 upstream 환경변수 `SEOUL_OPEN_API_KEY`, `AIR_KOREA_OPEN_API_KEY`, `HRFCO_OPEN_API_KEY` 를 사용할 수 있다. 다만 일반 사용자/client 쪽 기본 secrets 파일에는 넣지 않는다. `KSKILL_PROXY_BASE_URL` 도 서울 지하철/한강 수위 route가 실제 배포된 proxy URL 로만 넣는다.
 
 이 레포의 credential-bearing skill은 전부 이 정책을 전제로 작성한다. 자세한 공통 설치 절차는 [공통 설정 가이드](setup.md)를 본다.

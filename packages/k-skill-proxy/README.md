@@ -1,17 +1,19 @@
 # k-skill-proxy
 
-`k-skill`용 Fastify 기반 프록시 서버입니다. AirKorea 미세먼지 조회와 서울 지하철 실시간 도착정보를 먼저 감싸고, 이후 무료/공공 API adapter를 추가하는 베이스로 씁니다.
+`k-skill`용 Fastify 기반 프록시 서버입니다. AirKorea 미세먼지 조회, 서울 지하철 실시간 도착정보, 한강홍수통제소 수위 정보를 감싸고, 이후 무료/공공 API adapter를 추가하는 베이스로 씁니다.
 
 ## 현재 제공 엔드포인트
 
 - `GET /health`
 - `GET /v1/fine-dust/report`
 - `GET /v1/seoul-subway/arrival`
+- `GET /v1/han-river/water-level`
 
 ## 환경변수
 
 - `AIR_KOREA_OPEN_API_KEY` — 프록시 서버 쪽 AirKorea upstream key
 - `SEOUL_OPEN_API_KEY` — 프록시 서버 쪽 서울 열린데이터 광장 upstream key
+- `HRFCO_OPEN_API_KEY` — 프록시 서버 쪽 한강홍수통제소 upstream key
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — 기본 `4020`
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`
@@ -34,6 +36,15 @@ node packages/k-skill-proxy/src/server.js
 curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
   --data-urlencode 'stationName=강남'
 ```
+
+한강 수위 정보 예시:
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/han-river/water-level' \
+  --data-urlencode 'stationName=한강대교'
+```
+
+프록시는 내부적으로 `waterlevel/info.json` 으로 관측소를 해석하고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 수위/유량을 조회합니다.
 
 ## PM2 실행
 
