@@ -1259,6 +1259,7 @@ test("repository docs advertise the real-estate-search skill and upstream self-h
 
 test("real-estate-search docs keep the upstream Onbid WIP caveat and avoid launchd daemonize loops", () => {
   const featureDoc = read(path.join("docs", "features", "real-estate-search.md"));
+  const installDoc = read(path.join("docs", "install.md"));
   const skill = read(path.join("real-estate-search", "SKILL.md"));
 
   for (const doc of [skill, featureDoc]) {
@@ -1279,6 +1280,13 @@ test("real-estate-search docs keep the upstream Onbid WIP caveat and avoid launc
     assert.match(section, /restart:\s*unless-stopped|Docker (Desktop|Engine).*재기동|Docker.*자동 재시작/i);
     assert.match(section, /cloudflared[\s\S]*tunnel[\s\S]*run[\s\S]*real-estate-mcp/i);
   }
+
+  assert.doesNotMatch(installDoc, /launchd\s*로\s*서버\/터널을?\s*자동 실행/i);
+  assert.match(installDoc, /launchd[\s\S]*(Cloudflare Tunnel|터널).*(만|전용)/i);
+  assert.match(
+    installDoc,
+    /restart:\s*unless-stopped|Docker (Desktop|Engine).*재기동|Docker.*자동 재시작/i,
+  );
 });
 
 test("repository docs advertise the shipped korean-spell-check helper assets", () => {
