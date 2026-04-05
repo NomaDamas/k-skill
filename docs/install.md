@@ -53,6 +53,7 @@ npx --yes skills add <owner/repo> \
   --skill korean-law-search \
   --skill real-estate-search \
   --skill joseon-sillok-search \
+  --skill korean-patent-search \
   --skill fine-dust-location \
   --skill daiso-product-search \
   --skill blue-ribbon-nearby \
@@ -74,6 +75,7 @@ npx --yes skills add <owner/repo> \
   --skill korean-law-search \
   --skill real-estate-search \
   --skill joseon-sillok-search \
+  --skill korean-patent-search \
   --skill seoul-subway-arrival \
   --skill fine-dust-location
 ```
@@ -109,6 +111,18 @@ codex mcp add real-estate \
 ```
 
 shared HTTP가 필요하면 upstream Docker guide 대로 서버를 한 번 띄워 Docker의 `restart: unless-stopped` 재시작 정책에 맡긴 뒤 Cloudflare Tunnel 도메인(`https://real-estate-mcp.example.com/mcp`)을 붙인다. macOS에서는 `launchd` 에 서버/터널을 함께 넣지 말고 long-running 프로세스인 `cloudflared tunnel run real-estate-mcp` 만 자동 실행한다. 자세한 흐름은 [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)를 본다.
+
+`korean-patent-search` 는 설치된 skill payload 안의 helper를 그대로 쓴다.
+
+- helper 환경변수는 `KIPRIS_PLUS_API_KEY`
+- 실제 API 요청에서는 이 값을 `ServiceKey` 쿼리 파라미터로 보낸다
+- KIPRIS Plus / 공공데이터포털 안내 기준으로 개발계정은 자동승인, 운영계정은 심의승인 대상이다
+
+```bash
+export KIPRIS_PLUS_API_KEY=your-service-key
+python3 scripts/patent_search.py --query "배터리" --year 2024 --num-rows 5
+python3 scripts/patent_search.py --application-number 1020240001234
+```
 
 로컬 저장소에서 바로 전체 설치 테스트:
 
@@ -170,6 +184,13 @@ python3 -m pip install SRTrain korail2 pycryptodome
 python3 scripts/sillok_search.py --query "훈민정음" --king 세종 --year 1443
 ```
 
+한국 특허 정보 검색 helper는 설치된 `korean-patent-search` skill 안의 `scripts/patent_search.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
+
+```bash
+export KIPRIS_PLUS_API_KEY=your-service-key
+python3 scripts/patent_search.py --query "배터리"
+```
+
 한국어 맞춤법 검사 helper는 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
 
 ```bash
@@ -196,6 +217,7 @@ python3 scripts/korean_spell_check.py --text "아버지가방에들어가신다.
 - `fine-dust-location`
 - `korean-law-search`
 - `real-estate-search`
+- `korean-patent-search`
 
 관련 문서:
 
