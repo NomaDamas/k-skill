@@ -77,7 +77,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 유저에게 물어서 실제 값을 채운다.
 
-서울 지하철 도착정보는 hosted public route rollout 이 끝나기 전까지 `KSKILL_PROXY_BASE_URL` 을 self-host 또는 배포 확인이 끝난 proxy URL 로 채운다. 미세먼지만 hosted proxy 로 쓸 때는 이 값을 비워 둘 수 있다.
+서울 지하철 도착정보와 한국 날씨 조회는 hosted public route rollout 이 끝나기 전까지 `KSKILL_PROXY_BASE_URL` 을 self-host 또는 배포 확인이 끝난 proxy URL 로 채운다. 미세먼지만 hosted proxy 로 쓸 때는 이 값을 비워 둘 수 있다.
 
 한국 법령 검색은 로컬 `korean-law-mcp` 경로를 쓸 때만 `LAW_OC` 를 채운다. remote endpoint는 사용자 `LAW_OC` 없이 `url`만 등록하면 되고, 기존 경로 장애 시에는 `법망`(`https://api.beopmang.org`)을 fallback으로 안내한다.
 
@@ -96,6 +96,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 - 로컬/stdio 한국 부동산 실거래가 조회: `DATA_GO_KR_API_KEY` + `real-estate-mcp`
 - 공유형 한국 부동산 실거래가 조회: 운영자가 self-host + Cloudflare Tunnel + launchd/systemd 준비
 - 서울 지하철: self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`
+- 한국 날씨: self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`
 - 사용자 위치 미세먼지 조회: `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY`
 
 시크릿이 비어 있다는 이유로 다른 서비스나 비공식 우회 경로를 자동 선택하지 않는다.

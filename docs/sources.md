@@ -46,6 +46,7 @@
 - 조선왕조실록 검색 결과: https://sillok.history.go.kr/search/searchResultList.do
 - 조선왕조실록 기사 상세: https://sillok.history.go.kr/id/kda_12512030_002
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
+- 기상청 단기예보 조회서비스: https://www.data.go.kr/data/15084084/openapi.do
 - 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do
 - 에어코리아 측정소정보: https://www.data.go.kr/data/15073877/openapi.do
 - 우체국 도로명주소 검색: https://parcel.epost.go.kr/parcel/comm/zipcode/comm_newzipcd_list.jsp
