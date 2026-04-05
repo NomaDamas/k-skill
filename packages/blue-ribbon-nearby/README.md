@@ -113,3 +113,5 @@ main().catch((error) => {
 - `error.code === "premium_required"`
 - `error.statusCode === 403`
 - `error.upstreamError === "PREMIUM_REQUIRED"`
+
+다른 upstream 오류는 계속 일반 `Blue Ribbon request failed ...` 에러로 남고, 가능하면 `statusCode` 와 `upstreamError` 만 함께 노출됩니다.

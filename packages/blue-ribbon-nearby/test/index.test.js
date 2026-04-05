@@ -21,6 +21,10 @@ const landmarkZoneHtml = `
   <a href="/search?query=&zone1=${encodeURIComponent("서울 강남")}&zone2=${encodeURIComponent("삼성동/대치동")}&zone2Lat=37.511310&zone2Lng=127.059330">삼성동/대치동</a>
   <a href="/search?query=&zone1=${encodeURIComponent("서울 강북")}&zone2=${encodeURIComponent("남대문/서울역/후암동")}&zone2Lat=37.555000&zone2Lng=126.972000">남대문/서울역/후암동</a>
 `;
+const gwanghwamunCoordinates = {
+  latitude: 37.57371315593711,
+  longitude: 126.97833785777944
+};
 
 test("parseZoneCatalogHtml extracts official zone anchors and coordinates", () => {
   const zones = parseZoneCatalogHtml(zoneHtml);
@@ -69,10 +73,7 @@ test("buildNearbySearchParams encodes the official nearby ribbon query for a mat
 });
 
 test("normalizeNearbyItem exposes the public restaurant summary with computed distance", () => {
-  const item = normalizeNearbyItem(mapPayload.items[0], {
-    latitude: 37.57371315593711,
-    longitude: 126.97833785777944
-  });
+  const item = normalizeNearbyItem(mapPayload.items[0], gwanghwamunCoordinates);
 
   assert.equal(item.id, 29209);
   assert.equal(item.name, "유유안");
@@ -194,12 +195,37 @@ test("searchNearbyByCoordinates surfaces PREMIUM_REQUIRED with the same domain e
     await assert.rejects(
       () =>
         searchNearbyByCoordinates({
-          latitude: 37.57371315593711,
-          longitude: 126.97833785777944,
+          ...gwanghwamunCoordinates,
           distanceMeters: 1000,
           limit: 5
         }),
       assertPremiumRequiredError
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("searchNearbyByCoordinates keeps non-premium upstream failures generic", async () => {
+  const originalFetch = global.fetch;
+
+  global.fetch = async (url) => {
+    if (String(url).includes("/restaurants/map")) {
+      return makeResponse(403, { error: "ACCESS_DENIED" }, "application/json");
+    }
+
+    return makeResponse(404, "not found", "text/plain");
+  };
+
+  try {
+    await assert.rejects(
+      () =>
+        searchNearbyByCoordinates({
+          ...gwanghwamunCoordinates,
+          distanceMeters: 1000,
+          limit: 5
+        }),
+      assertGenericRequestError
     );
   } finally {
     global.fetch = originalFetch;
@@ -213,6 +239,16 @@ function assertPremiumRequiredError(error) {
     error.upstreamError === "PREMIUM_REQUIRED" &&
     error.upstreamUrl.includes("/restaurants/map") &&
     /premium/i.test(error.message)
+  );
+}
+
+function assertGenericRequestError(error) {
+  return (
+    error.statusCode === 403 &&
+    error.code === undefined &&
+    error.upstreamError === "ACCESS_DENIED" &&
+    error.upstreamUrl.includes("/restaurants/map") &&
+    /request failed/i.test(error.message)
   );
 }
 

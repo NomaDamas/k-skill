@@ -109,6 +109,8 @@ main().catch((error) => {
 
 같은 날짜에 광화문 좌표로 `searchNearbyByCoordinates()` 를 호출해도 동일한 `premium_required` 에러 계약이 확인됩니다.
 
+이 remap 은 `403 {"error":"PREMIUM_REQUIRED"}` 인 nearby 응답에만 적용되며, 다른 upstream 실패는 기존 generic request error 형태를 유지합니다.
+
 ## 과거 live smoke 예시
 
 아래 값은 **2026-03-27** 에는 실제 호출로 확인됐던 결과 일부입니다. 현재는 upstream 정책 변경으로 재현되지 않습니다.
