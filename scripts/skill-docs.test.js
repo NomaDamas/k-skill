@@ -47,6 +47,19 @@ function assertOliveYoungCloneFallbackCommands(doc, label) {
   assert.doesNotMatch(doc, /^\s*npx daiso\b/m, `${label} should not publish broken clone-local npx commands`);
 }
 
+function assertOliveYoungCloneFallbackShorthand(doc, label) {
+  assert.match(
+    doc,
+    /git clone https:\/\/github\.com\/hmmhmmhm\/daiso-mcp\.git && cd daiso-mcp && npm install && npm run build/,
+    `${label} should include a runnable shorthand that changes into the clone before install/build`,
+  );
+  assert.doesNotMatch(
+    doc,
+    /git clone https:\/\/github\.com\/hmmhmmhm\/daiso-mcp\.git && npm install && npm run build/,
+    `${label} should not publish the broken shorthand that skips cd daiso-mcp`,
+  );
+}
+
 function extractQuotedEntries(block, indent) {
   return block
     .split("\n")
@@ -734,6 +747,7 @@ test("olive-young install docs warn about intermittent public endpoint failures 
   assert.match(install, /5xx\/503/);
   assert.match(install, /재시도|retry/i);
   assert.match(install, /clone fallback|git clone https:\/\/github\.com\/hmmhmmhm\/daiso-mcp\.git/i);
+  assertOliveYoungCloneFallbackShorthand(quickstart, "olive-young install quickstart");
   assertOliveYoungCloneFallbackCommands(quickstart, "olive-young install quickstart");
 });
 
@@ -744,6 +758,7 @@ test("olive-young-search skill documents the upstream daiso CLI flow for stores,
   assert.ok(fs.existsSync(skillPath), "expected olive-young-search/SKILL.md to exist");
 
   const skill = read(path.join("olive-young-search", "SKILL.md"));
+  const featureTop = findSection(featureDoc, "## 가장 중요한 규칙");
   const featureFallback = findSection(featureDoc, "## 원본 저장소 clone fallback");
   const skillFallback = findSection(skill, "## Fallback: clone the original repository and run the same CLI locally");
 
@@ -766,6 +781,8 @@ test("olive-young-search skill documents the upstream daiso CLI flow for stores,
     assert.match(doc, /\/api\/oliveyoung\/inventory/);
     assert.match(doc, /vendoring 하지 않/);
   }
+
+  assertOliveYoungCloneFallbackShorthand(featureTop, "olive-young feature guide shorthand");
 
   for (const fallbackDoc of [featureFallback, skillFallback]) {
     assertOliveYoungCloneFallbackCommands(fallbackDoc, "olive-young clone fallback docs");

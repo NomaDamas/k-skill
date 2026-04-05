@@ -18,7 +18,7 @@
 즉 기본 경로는 아래 둘 중 하나다.
 
 1. `npx --yes daiso ...`
-2. `git clone https://github.com/hmmhmmhm/daiso-mcp.git && npm install && npm run build`
+2. `git clone https://github.com/hmmhmmhm/daiso-mcp.git && cd daiso-mcp && npm install && npm run build`
 
 ## 먼저 필요한 것
 
