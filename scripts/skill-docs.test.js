@@ -350,6 +350,50 @@ test("seoul subway docs require an explicit proxy until the hosted route is live
   assert.doesNotMatch(secretsExample, /KSKILL_PROXY_BASE_URL=https:\/\/k-skill-proxy\.nomadamas\.org/);
 });
 
+test("repository docs advertise the korea-weather skill across the documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korea-weather.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korea-weather.md to exist");
+  assert.match(readme, /\| 한국 날씨 조회 \|/);
+  assert.match(readme, /\[한국 날씨 조회 가이드\]\(docs\/features\/korea-weather\.md\)/);
+  assert.match(install, /--skill korea-weather/);
+  assert.match(roadmap, /한국 날씨 조회 스킬 출시/);
+  assert.match(sources, /기상청 단기예보 조회서비스: https:\/\/www\.data\.go\.kr\/data\/15084084\/openapi\.do/);
+});
+
+test("korea-weather docs route short-term forecast calls through the proxy without requiring a user API key", () => {
+  const skillPath = path.join(repoRoot, "korea-weather", "SKILL.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected korea-weather/SKILL.md to exist");
+
+  const skill = read(path.join("korea-weather", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "korea-weather.md"));
+  const proxyDoc = read(path.join("docs", "features", "k-skill-proxy.md"));
+  const proxyReadme = read(path.join("packages", "k-skill-proxy", "README.md"));
+
+  assert.match(skill, /^name: korea-weather$/m);
+  assert.match(skill, /^description: .*날씨.*기상청.*프록시.*$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /\/v1\/korea-weather\/forecast/);
+    assert.match(doc, /기상청.*단기예보|단기예보.*기상청/);
+    assert.match(doc, /사용자가 .*API key.*직접.*필요(가|는)? 없다|개인 API key 없이/i);
+    assert.match(doc, /nx|ny|위도|경도/u);
+    assert.match(doc, /TMP|SKY|PTY|POP/);
+    assert.match(doc, /KSKILL_PROXY_BASE_URL|k-skill-proxy\.nomadamas\.org/);
+    assert.doesNotMatch(doc, /KMA_OPEN_API_KEY=.*사용자/);
+  }
+
+  assert.match(proxyDoc, /GET \/v1\/korea-weather\/forecast/);
+  assert.match(proxyDoc, /KMA_OPEN_API_KEY/);
+  assert.match(proxyReadme, /GET \/v1\/korea-weather\/forecast/);
+  assert.match(proxyReadme, /KMA_OPEN_API_KEY/);
+});
+
 test("kakaotalk-mac skill documents safe macOS kakaocli usage", () => {
   const skillPath = path.join(repoRoot, "kakaotalk-mac", "SKILL.md");
 

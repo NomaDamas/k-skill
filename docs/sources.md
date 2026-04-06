@@ -80,6 +80,7 @@
 - Opinet 주유소 상세정보 API: https://www.opinet.co.kr/api/detailById.do
 - Opinet 지역코드 API: https://www.opinet.co.kr/api/areaCode.do
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
+- 기상청 단기예보 조회서비스: https://www.data.go.kr/data/15084084/openapi.do
 - 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do
 - 에어코리아 측정소정보: https://www.data.go.kr/data/15073877/openapi.do
 - 한강홍수통제소 Open API 레퍼런스: https://www.hrfco.go.kr/web/openapiPage/reference.do
