@@ -1,6 +1,6 @@
 {
   "name": "blue-ribbon-nearby",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Official Blue Ribbon Survey nearby restaurant client for asking a user's location and finding nearby ribbon picks",
   "license": "MIT",
   "main": "src/index.js",

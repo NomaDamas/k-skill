@@ -122,6 +122,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' 
   --data-urlencode 'bas_dd=20260404'
 ```
 
+
 ### `olive-young-search` upstream CLI quickstart
 
 `olive-young-search` 는 upstream 원본 [`hmmhmmhm/daiso-mcp`](https://github.com/hmmhmmhm/daiso-mcp) / npm package [`daiso`](https://www.npmjs.com/package/daiso) 를 그대로 사용한다.
@@ -185,6 +186,7 @@ npx --yes bunjang-cli --json chat list
 npx --yes bunjang-cli --json chat start 354957625 --message "안녕하세요"
 npx --yes bunjang-cli --json chat send 84191651 --message "상품 상태 괜찮을까요?"
 ```
+
 
 로컬 저장소에서 바로 전체 설치 테스트:
 

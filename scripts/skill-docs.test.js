@@ -884,7 +884,6 @@ test("bunjang-search skill documents bunjang-cli search, detail, favorite, chat,
   assert.match(install, /npx --yes bunjang-cli --json item get/);
 });
 
-
 test("repository docs advertise the coupang-product-search skill", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
