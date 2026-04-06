@@ -819,6 +819,62 @@ test("olive-young-search skill documents the upstream daiso CLI flow for stores,
   }
 });
 
+test("repository docs advertise the bunjang-search skill across the documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "bunjang-search.md");
+  const skillPath = path.join(repoRoot, "bunjang-search", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/bunjang-search.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected bunjang-search/SKILL.md to exist");
+  assert.match(readme, /\| 번개장터 검색 \|/);
+  assert.match(readme, /\[번개장터 검색 가이드\]\(docs\/features\/bunjang-search\.md\)/);
+  assert.match(install, /--skill bunjang-search/);
+  assert.match(install, /npm install -g .* bunjang-cli/);
+  assert.match(roadmap, /번개장터 검색 스킬 출시/);
+  assert.match(sources, /https:\/\/www\.npmjs\.com\/package\/bunjang-cli/);
+  assert.match(sources, /https:\/\/github\.com\/pinion05\/bunjangcli/);
+});
+
+test("bunjang-search skill documents bunjang-cli search, detail, favorite, chat, and AI export flows", () => {
+  const skill = read(path.join("bunjang-search", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "bunjang-search.md"));
+  const install = read(path.join("docs", "install.md"));
+
+  assert.match(skill, /^name: bunjang-search$/m);
+  assert.match(skill, /^description: .*번개장터.*검색.*상세.*찜.*채팅.*$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /bunjang-cli/);
+    assert.match(doc, /pinion05\/bunjangcli/);
+    assert.match(doc, /npx --yes bunjang-cli --help/);
+    assert.match(doc, /npx --yes bunjang-cli search /);
+    assert.match(doc, /item get/);
+    assert.match(doc, /favorite add/);
+    assert.match(doc, /favorite remove/);
+    assert.match(doc, /favorite list/);
+    assert.match(doc, /chat list/);
+    assert.match(doc, /chat start/);
+    assert.match(doc, /chat send/);
+    assert.match(doc, /--start-page/);
+    assert.match(doc, /--pages/);
+    assert.match(doc, /--max-items/);
+    assert.match(doc, /--with-detail/);
+    assert.match(doc, /--output/);
+    assert.match(doc, /--ai/);
+    assert.match(doc, /TOON|toon/i);
+    assert.match(doc, /TTY|interactive/);
+    assert.match(doc, /로그인.*선택적|선택적.*로그인/u);
+  }
+
+  assert.match(install, /### `bunjang-search` upstream CLI quickstart/);
+  assert.match(install, /npx --yes bunjang-cli --help/);
+  assert.match(install, /npx --yes bunjang-cli search "아이폰"/);
+  assert.match(install, /npx --yes bunjang-cli --json item get/);
+});
+
 
 test("repository docs advertise the coupang-product-search skill", () => {
   const readme = read("README.md");

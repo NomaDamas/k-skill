@@ -57,6 +57,8 @@
 - daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
 - coupang-mcp (MCP 서버): https://github.com/uju777/coupang-mcp
 - coupang-mcp endpoint: https://yuju777-coupang-mcp.hf.space/mcp
+- bunjang-cli package: https://www.npmjs.com/package/bunjang-cli
+- bunjang-cli repo: https://github.com/pinion05/bunjangcli
 - 블루리본 메인: https://www.bluer.co.kr/
 - 블루리본 지역 검색: https://www.bluer.co.kr/search/zone
 - 블루리본 주변 맛집 JSON: https://www.bluer.co.kr/restaurants/map

@@ -64,6 +64,7 @@ npx --yes skills add <owner/repo> \
   --skill zipcode-search \
   --skill delivery-tracking \
   --skill coupang-product-search \
+  --skill bunjang-search \
   --skill used-car-price-search \
   --skill korean-spell-check
 ```
@@ -130,6 +131,39 @@ node dist/bin.js get /api/oliveyoung/products --keyword 선크림 --size 5 --jso
 node dist/bin.js get /api/oliveyoung/inventory --keyword 선크림 --storeKeyword 명동 --size 5 --json
 ```
 
+### `bunjang-search` upstream CLI quickstart
+
+`bunjang-search` 는 upstream 원본 [`pinion05/bunjangcli`](https://github.com/pinion05/bunjangcli) / npm package [`bunjang-cli`](https://www.npmjs.com/package/bunjang-cli) 를 그대로 사용한다.
+
+- 기본 경로는 **CLI first** 다.
+- 가장 빠른 smoke test 는 `npx --yes bunjang-cli --help`
+- 검색/상세조회는 로그인 없이도 먼저 검증할 수 있다.
+- `favorite` / `chat` / `purchase` 는 로그인 세션이 필요하므로 **선택적 로그인 플로우**로만 안내한다.
+- `auth login` 은 headful 브라우저 + TTY(interactive 터미널) 가 필요하다.
+- 대량 수집은 `--start-page`, `--pages`, `--max-items`, `--with-detail`, `--output` 조합을 우선 쓴다.
+- AI 분석용 chunk 는 `--ai --output <directory>` 로 만든다.
+
+```bash
+npx --yes bunjang-cli --help
+npx --yes bunjang-cli --json auth status
+npx --yes bunjang-cli --json search "아이폰" --max-items 3 --sort date
+npx --yes bunjang-cli --json item get 354957625
+npx --yes bunjang-cli search "아이폰" --start-page 1 --pages 2 --max-items 20 --with-detail --output artifacts/bunjang-iphone.json
+npx --yes bunjang-cli search "아이폰" --start-page 1 --pages 2 --max-items 20 --with-detail --ai --output artifacts/bunjang-iphone-ai
+```
+
+로그인된 interactive 세션에서만 아래 액션을 진행한다.
+
+```bash
+npx --yes bunjang-cli auth login
+npx --yes bunjang-cli --json favorite list
+npx --yes bunjang-cli --json favorite add 354957625
+npx --yes bunjang-cli --json favorite remove 354957625
+npx --yes bunjang-cli --json chat list
+npx --yes bunjang-cli --json chat start 354957625 --message "안녕하세요"
+npx --yes bunjang-cli --json chat send 84191651 --message "상품 상태 괜찮을까요?"
+```
+
 로컬 저장소에서 바로 전체 설치 테스트:
 
 ```bash
@@ -164,7 +198,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g @ohah/hwpjs kbo-game kleague-results lck-analytics toss-securities k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp daiso
+npm install -g @ohah/hwpjs kbo-game kleague-results lck-analytics toss-securities k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp daiso bunjang-cli
 export NODE_PATH="$(npm root -g)"
 ```
 
