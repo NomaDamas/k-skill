@@ -8,12 +8,16 @@
 - `GET /v1/fine-dust/report`
 - `GET /v1/seoul-subway/arrival`
 - `GET /v1/han-river/water-level`
+- `GET /v1/korean-stock/search`
+- `GET /v1/korean-stock/base-info`
+- `GET /v1/korean-stock/trade-info`
 
 ## 환경변수
 
 - `AIR_KOREA_OPEN_API_KEY` — 프록시 서버 쪽 AirKorea upstream key
 - `SEOUL_OPEN_API_KEY` — 프록시 서버 쪽 서울 열린데이터 광장 upstream key
 - `HRFCO_OPEN_API_KEY` — 프록시 서버 쪽 한강홍수통제소 upstream key
+- `KRX_API_KEY` — 프록시 서버 쪽 KRX Open API upstream key
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — 기본 `4020`
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`
@@ -44,7 +48,15 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/han-river/water-level' \
   --data-urlencode 'stationName=한강대교'
 ```
 
-프록시는 내부적으로 `waterlevel/info.json` 으로 관측소를 해석하고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 수위/유량을 조회합니다.
+한국 주식 검색 예시:
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/korean-stock/search' \
+  --data-urlencode 'q=삼성전자' \
+  --data-urlencode 'bas_dd=20260404'
+```
+
+프록시는 내부적으로 `waterlevel/info.json` 으로 관측소를 해석하고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 수위/유량을 조회합니다. 한국 주식 route는 KRX Open API에 `AUTH_KEY` 헤더를 서버 쪽에서만 주입합니다.
 
 
 ## PM2 실행

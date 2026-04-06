@@ -18,6 +18,9 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/fine-dust/report`
 - `GET /v1/seoul-subway/arrival`
 - `GET /v1/han-river/water-level`
+- `GET /v1/korean-stock/search`
+- `GET /v1/korean-stock/base-info`
+- `GET /v1/korean-stock/trade-info`
 - `GET /v1/opinet/around`
 - `GET /v1/opinet/detail`
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
@@ -34,6 +37,7 @@ client/skill -> k-skill-proxy -> upstream public API
 - `SEOUL_OPEN_API_KEY=...`
 - `HRFCO_OPEN_API_KEY=...`
 - `OPINET_API_KEY=...`
+- `KRX_API_KEY=...`
 - `KSKILL_PROXY_PORT=4020`
 
 ## 프로덕션 배포 구조
@@ -122,6 +126,23 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/opinet/detail' \
   --data-urlencode 'id=A0009905'
 ```
 
+한국 주식 검색 endpoint:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
+  --data-urlencode 'q=삼성전자' \
+  --data-urlencode 'bas_dd=20260404'
+```
+
+한국 주식 기본정보 endpoint:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' \
+  --data-urlencode 'market=KOSPI' \
+  --data-urlencode 'code=005930' \
+  --data-urlencode 'bas_dd=20260404'
+```
+
 AirKorea passthrough endpoint:
 
 ```bash
@@ -137,5 +158,6 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/B552584/ArpltnInforInqireSv
 ## 주의할 점
 
 - upstream key는 프록시 서버에서만 관리합니다.
+- 한국 주식 route도 사용자에게 `KRX_API_KEY` 를 배포하지 않습니다.
 - client 쪽에는 upstream API key를 배포하지 않습니다.
 - public hosted route rollout 이 끝나기 전에는 서울 지하철 예시를 local/self-host URL 로 검증합니다.

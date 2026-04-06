@@ -3,6 +3,7 @@ const Fastify = require("fastify");
 const { fetchFineDustReport } = require("./airkorea");
 const { proxyBlueRibbonNearbyRequest } = require("./bluer");
 const { fetchWaterLevelReport } = require("./hrfco");
+const { KRX_MARKETS, fetchBaseInfo, fetchTradeInfo, getCurrentKstDate, searchStocks } = require("./krx-stock");
 const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
 const { searchRegionCode } = require("./region-lookup");
 const AIR_KOREA_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
@@ -51,6 +52,7 @@ function buildConfig(env = process.env) {
     opinetApiKey: trimOrNull(env.OPINET_API_KEY),
     blueRibbonSessionId: trimOrNull(env.BLUE_RIBBON_SESSION_ID),
     molitApiKey: trimOrNull(env.DATA_GO_KR_API_KEY),
+    krxApiKey: trimOrNull(env.KRX_API_KEY),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -91,7 +93,7 @@ function buildRateLimiter(config) {
   const state = new Map();
 
   return function rateLimit(request, reply) {
-    const key = trimOrNull(request.headers["cf-connecting-ip"]) || request.ip || "unknown";
+    const key = request.ip || "unknown";
     const now = Date.now();
     const current = state.get(key);
 
@@ -233,6 +235,68 @@ function normalizeHanRiverWaterLevelQuery(query) {
   return {
     stationName,
     stationCode
+  };
+}
+
+function normalizeKrxMarket(value) {
+  const normalized = trimOrNull(value)?.toUpperCase();
+  if (!normalized || !KRX_MARKETS.includes(normalized)) {
+    throw new Error(`Provide market as one of: ${KRX_MARKETS.join(", ")}.`);
+  }
+
+  return normalized;
+}
+
+function normalizeKoreanStockDate(value) {
+  const normalized = trimOrNull(value) || getCurrentKstDate();
+  if (!/^\d{8}$/.test(normalized)) {
+    throw new Error("Provide bas_dd/date as YYYYMMDD.");
+  }
+
+  return normalized;
+}
+
+function normalizeKoreanStockCodes(value) {
+  const values = Array.isArray(value) ? value : [value];
+  const codes = values
+    .flatMap((entry) => String(entry || "").split(","))
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  if (codes.length === 0) {
+    throw new Error("Provide code/stockCode/codes.");
+  }
+
+  return [...new Set(codes)];
+}
+
+function normalizeKoreanStockSearchQuery(query) {
+  const q = trimOrNull(query.q ?? query.query);
+  if (!q) {
+    throw new Error("Provide q/query.");
+  }
+
+  const basDd = normalizeKoreanStockDate(query.bas_dd ?? query.basDd ?? query.date);
+  const marketValue = trimOrNull(query.market);
+  const limit = parseInteger(query.limit, 10);
+
+  if (limit < 1 || limit > 20) {
+    throw new Error("limit must be between 1 and 20.");
+  }
+
+  return {
+    q,
+    basDd,
+    market: marketValue ? normalizeKrxMarket(marketValue) : null,
+    limit
+  };
+}
+
+function normalizeKoreanStockLookupQuery(query) {
+  return {
+    market: normalizeKrxMarket(query.market),
+    code: normalizeKoreanStockCodes(query.code ?? query.codes ?? query.codeList ?? query.stockCode ?? query.stock_code)[0],
+    basDd: normalizeKoreanStockDate(query.bas_dd ?? query.basDd ?? query.date)
   };
 }
 
@@ -437,7 +501,8 @@ function buildServer({ env = process.env, provider = null } = {}) {
       seoulOpenApiConfigured: Boolean(config.seoulOpenApiKey),
       hrfcoConfigured: Boolean(config.hrfcoApiKey),
       opinetConfigured: Boolean(config.opinetApiKey),
-      molitConfigured: Boolean(config.molitApiKey)
+      molitConfigured: Boolean(config.molitApiKey),
+      krxConfigured: Boolean(config.krxApiKey)
     },
     auth: {
       tokenRequired: false
@@ -993,6 +1058,283 @@ function buildServer({ env = process.env, provider = null } = {}) {
     return payload;
   });
 
+  app.get("/v1/korean-stock/search", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeKoreanStockSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "korean-stock-search",
+      q: normalized.q.toLowerCase(),
+      basDd: normalized.basDd,
+      market: normalized.market,
+      limit: normalized.limit
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.krxApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KRX_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let items;
+    try {
+      const result = await searchStocks({
+        query: normalized.q,
+        basDd: normalized.basDd,
+        market: normalized.market,
+        limit: normalized.limit,
+        apiKey: config.krxApiKey,
+        cache,
+        cacheTtlMs: config.cacheTtlMs
+      });
+      items = result.items;
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
+
+    const payload = {
+      items,
+      query: {
+        q: normalized.q,
+        bas_dd: normalized.basDd,
+        market: normalized.market,
+        limit: normalized.limit
+      },
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/korean-stock/base-info", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeKoreanStockLookupQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "korean-stock-base-info",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.krxApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KRX_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let items;
+    try {
+      items = await fetchBaseInfo({
+        market: normalized.market,
+        basDd: normalized.basDd,
+        codeList: [normalized.code],
+        apiKey: config.krxApiKey
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
+
+    if (items.length === 0) {
+      reply.code(404);
+      return {
+        error: "not_found",
+        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 을(를) 찾지 못했습니다.`
+      };
+    }
+
+    const payload = {
+      items,
+      item: items[0],
+      query: {
+        market: normalized.market,
+        code: normalized.code,
+        codes: [normalized.code],
+        bas_dd: normalized.basDd
+      },
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/korean-stock/trade-info", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeKoreanStockLookupQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "korean-stock-trade-info",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.krxApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KRX_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let items;
+    try {
+      items = await fetchTradeInfo({
+        market: normalized.market,
+        basDd: normalized.basDd,
+        codeList: [normalized.code],
+        apiKey: config.krxApiKey
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
+
+    if (items.length === 0) {
+      reply.code(404);
+      return {
+        error: "not_found",
+        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 의 일별 시세를 찾지 못했습니다.`
+      };
+    }
+
+    const payload = {
+      items,
+      item: items[0],
+      query: {
+        market: normalized.market,
+        code: normalized.code,
+        codes: [normalized.code],
+        bas_dd: normalized.basDd
+      },
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
   app.setErrorHandler((error, request, reply) => {
     request.log.error(error);
     const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
@@ -1035,6 +1377,8 @@ module.exports = {
   normalizeBlueRibbonNearbyQuery,
   normalizeFineDustQuery,
   normalizeHanRiverWaterLevelQuery,
+  normalizeKoreanStockLookupQuery,
+  normalizeKoreanStockSearchQuery,
   normalizeOpinetAroundQuery,
   normalizeOpinetDetailQuery,
   normalizeRealEstateQuery,

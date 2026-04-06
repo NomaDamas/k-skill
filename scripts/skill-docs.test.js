@@ -1467,6 +1467,75 @@ test("real-estate-search skill uses proxy endpoints not MCP self-host", () => {
   }
 });
 
+test("repository docs advertise the korean-stock-search skill and proxy-backed KRX approach", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const setup = read(path.join("docs", "setup.md"));
+  const security = read(path.join("docs", "security-and-secrets.md"));
+  const setupSkill = read(path.join("k-skill-setup", "SKILL.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-stock-search.md");
+  const featureDoc = read(path.join("docs", "features", "korean-stock-search.md"));
+  const skillPath = path.join(repoRoot, "korean-stock-search", "SKILL.md");
+  const skill = read(path.join("korean-stock-search", "SKILL.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const proxyReadme = read(path.join("packages", "k-skill-proxy", "README.md"));
+  const proxyDoc = read(path.join("docs", "features", "k-skill-proxy.md"));
+  const packageJson = readJson("package.json");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-stock-search.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-stock-search/SKILL.md to exist");
+
+  assert.match(readme, /\| 한국 주식 정보 조회 \|/);
+  assert.match(readme, /\[한국 주식 정보 조회 가이드\]\(docs\/features\/korean-stock-search\.md\)/);
+  assert.match(install, /--skill korean-stock-search/);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /https:\/\/github\.com\/jjlabsio\/korea-stock-mcp/);
+    assert.match(doc, /k-skill-proxy\.nomadamas\.org/);
+    assert.match(doc, /\/v1\/korean-stock\/search/);
+    assert.match(doc, /\/v1\/korean-stock\/base-info/);
+    assert.match(doc, /\/v1\/korean-stock\/trade-info/);
+    assert.match(doc, /KRX_API_KEY/);
+    assert.match(doc, /사용자.*KRX_API_KEY.*(불필요|준비할 필요가 없)/u);
+    assert.doesNotMatch(doc, /packages\/korean-stock-search/);
+    assert.doesNotMatch(doc, /python-packages\/korean-stock-search/);
+  }
+
+  for (const doc of [setup, security, setupSkill]) {
+    assert.match(doc, /KRX_API_KEY/);
+  }
+
+  for (const doc of [proxyReadme, proxyDoc]) {
+    assert.match(doc, /\/v1\/korean-stock\/search/);
+    assert.match(doc, /\/v1\/korean-stock\/base-info/);
+    assert.match(doc, /\/v1\/korean-stock\/trade-info/);
+  }
+
+  assert.match(sources, /korea-stock-mcp: https:\/\/github\.com\/jjlabsio\/korea-stock-mcp/);
+  assert.match(roadmap, /한국 주식 정보 조회 스킬 출시/);
+  assert.ok(
+    !packageJson.workspaces.some((workspace) => workspace.includes("korean-stock-search")),
+    "expected no repo workspace to be added for korean-stock-search",
+  );
+  assert.equal(fs.existsSync(path.join(repoRoot, "packages", "korean-stock-search")), false);
+});
+
+test("korean-stock-search skill stays proxy-first and does not require local MCP install", () => {
+  const featureDoc = read(path.join("docs", "features", "korean-stock-search.md"));
+  const skill = read(path.join("korean-stock-search", "SKILL.md"));
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /k-skill-proxy\.nomadamas\.org\/v1\/korean-stock/);
+    assert.match(doc, /curl/);
+    assert.match(doc, /proxy.*서버.*KRX_API_KEY|KRX_API_KEY.*proxy.*서버/u);
+    assert.doesNotMatch(doc, /npx\s+(?:-y|--yes)\s+korea-stock-mcp/);
+    assert.doesNotMatch(doc, /codex mcp add/);
+    assert.doesNotMatch(doc, /claude_desktop_config\.json/);
+    assert.doesNotMatch(doc, /DART_API_KEY/);
+  }
+});
+
 test("repository docs advertise the shipped korean-spell-check helper assets", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
