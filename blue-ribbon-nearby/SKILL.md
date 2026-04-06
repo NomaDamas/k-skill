@@ -1,6 +1,6 @@
 ---
 name: blue-ribbon-nearby
-description: Use when the user asks for nearby restaurants or 근처 맛집 and wants 블루리본 picks. Always ask the user's current location first, then resolve the official Blue Ribbon zone and explain that live nearby results may currently be premium-gated.
+description: Use when the user asks for nearby restaurants or 근처 맛집 and wants 블루리본 picks. Always ask the user's current location first, then search official Blue Ribbon nearby restaurants via k-skill-proxy.
 license: MIT
 metadata:
   category: food
@@ -12,13 +12,13 @@ metadata:
 
 ## What this skill does
 
-유저가 알려준 현재 위치를 기준으로 블루리본 서베이 공식 zone 을 찾고, 가능하면 **근처 블루리본 맛집**을 보여준다.
+유저가 알려준 현재 위치를 기준으로 블루리본 서베이 공식 zone 을 찾고, k-skill-proxy 를 경유해 **근처 블루리본 맛집**을 보여준다.
 
 - 위치는 자동으로 추정하지 않는다.
 - **반드시 먼저 현재 위치를 질문**한다.
-- 위치 문자열은 공식 `zone` 목록으로 매칭하고, 가능하면 주변 JSON endpoint 로 좁혀서 찾는다.
+- 위치 문자열은 공식 `zone` 목록으로 매칭하고, 주변 JSON endpoint 로 좁혀서 찾는다.
 - 좌표를 직접 받으면 더 정확한 nearby 검색을 할 수 있다.
-- 단, **2026-04-05 기준** `https://www.bluer.co.kr/restaurants/map` 는 공개 요청에 `403 {"error":"PREMIUM_REQUIRED"}` 를 반환할 수 있다. 이 경우 live nearby 결과 대신 제한사항을 설명한다.
+- nearby 검색은 기본적으로 k-skill-proxy (`/v1/blue-ribbon/nearby`) 를 경유한다. 프록시에 `BLUE_RIBBON_SESSION_ID` 가 설정되어 있어야 한다.
 
 ## When to use
 
@@ -88,32 +88,23 @@ metadata:
 
 ### 3. Query the nearby Blue Ribbon endpoint
 
-공식 JSON endpoint 에 nearby 조건을 붙여 호출한다.
+기본적으로 k-skill-proxy 를 경유해 nearby 결과를 가져온다.
 
 ```js
 const { searchNearbyByLocationQuery } = require("blue-ribbon-nearby");
 
-try {
-  const result = await searchNearbyByLocationQuery("광화문", {
-    distanceMeters: 1000,
-    limit: 5
-  });
+const result = await searchNearbyByLocationQuery("광화문", {
+  distanceMeters: 1000,
+  limit: 5
+});
 
-  console.log(result.anchor);
-  console.log(result.items);
-} catch (error) {
-  if (error.code === "premium_required") {
-    console.log("Blue Ribbon nearby live results are currently premium-only.");
-    return;
-  }
-
-  throw error;
-}
+console.log(result.anchor);
+console.log(result.items);
 ```
 
-내부적으로는 `ribbon=true`, `ribbonType=RIBBON_THREE,RIBBON_TWO,RIBBON_ONE`, `isAround=true`, `sort=distance`, `zone2Lat`, `zone2Lng` 같은 파라미터를 사용한다.
+내부적으로는 zone 매칭 후 프록시의 `/v1/blue-ribbon/nearby` 에 좌표와 거리를 넘긴다. 프록시가 프리미엄 세션으로 Blue Ribbon upstream 을 호출한다.
 
-`error.code === "premium_required"` 이면 zone 매칭은 성공했지만 Blue Ribbon 쪽 live nearby 결과가 현재 premium gate 뒤에 있다는 뜻이다. 이 계약은 location query 뿐 아니라 좌표 기반 `searchNearbyByCoordinates()` entrypoint 에도 동일하게 적용된다.
+직접 호출이 필요하면 `useDirectApi: true` 옵션을 쓸 수 있지만, 프리미엄 세션 없이는 `premium_required` 에러가 난다.
 
 ### 4. Respond with a short restaurant summary
 
@@ -128,7 +119,7 @@ try {
 ## Done when
 
 - 유저의 현재 위치를 먼저 확인했다.
-- 공식 Blue Ribbon nearby 결과를 최소 1개 이상 찾았거나, 현재 premium gate 때문에 결과를 가져올 수 없다는 이유와 다음 질문을 제시했다.
+- 공식 Blue Ribbon nearby 결과를 최소 1개 이상 찾았거나, 프록시 미설정 등의 이유로 결과를 가져올 수 없다는 이유와 다음 질문을 제시했다.
 - 결과를 거리순으로 짧게 정리했다.
 
 ## Failure modes
@@ -136,7 +127,7 @@ try {
 - 위치 문자열이 공식 zone 과 잘 매칭되지 않을 수 있다.
 - 같은 키워드가 여러 상권에 걸치면 추가 확인이 필요하다.
 - Blue Ribbon 사이트가 구조/파라미터를 바꾸면 zone 파싱 또는 nearby endpoint 가 깨질 수 있다.
-- 현재는 `/restaurants/map` 자체가 premium gate 뒤로 이동했을 수 있으므로, 결과 대신 제한사항 설명이 필요할 수 있다.
+- 프록시의 `BLUE_RIBBON_SESSION_ID` 가 만료(30일)되면 갱신이 필요하다.
 
 ## Notes
 

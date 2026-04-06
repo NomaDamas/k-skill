@@ -1,6 +1,7 @@
 const crypto = require("node:crypto");
 const Fastify = require("fastify");
 const { fetchFineDustReport } = require("./airkorea");
+const { proxyBlueRibbonNearbyRequest } = require("./bluer");
 const { fetchWaterLevelReport } = require("./hrfco");
 const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
 const { searchRegionCode } = require("./region-lookup");
@@ -48,6 +49,7 @@ function buildConfig(env = process.env) {
     seoulOpenApiKey: trimOrNull(env.SEOUL_OPEN_API_KEY),
     hrfcoApiKey: trimOrNull(env.HRFCO_OPEN_API_KEY),
     opinetApiKey: trimOrNull(env.OPINET_API_KEY),
+    blueRibbonSessionId: trimOrNull(env.BLUE_RIBBON_SESSION_ID),
     molitApiKey: trimOrNull(env.DATA_GO_KR_API_KEY),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
@@ -170,6 +172,27 @@ function normalizeOpinetDetailQuery(query) {
     throw new Error("Provide id.");
   }
   return { id };
+}
+
+function normalizeBlueRibbonNearbyQuery(query) {
+  const latitude = parseFloatValue(query.latitude ?? query.lat);
+  const longitude = parseFloatValue(query.longitude ?? query.lng);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("Provide latitude and longitude.");
+  }
+
+  const distanceMeters = parseInteger(query.distanceMeters ?? query.distance, 1000);
+  if (distanceMeters <= 0 || distanceMeters > 5000) {
+    throw new Error("distanceMeters must be between 1 and 5000.");
+  }
+
+  const limit = parseInteger(query.limit, 10);
+  if (limit <= 0 || limit > 50) {
+    throw new Error("limit must be between 1 and 50.");
+  }
+
+  return { latitude, longitude, distanceMeters, limit };
 }
 
 function normalizeRealEstateQuery(query) {
@@ -410,6 +433,7 @@ function buildServer({ env = process.env, provider = null } = {}) {
     port: config.port,
     upstreams: {
       airKoreaConfigured: Boolean(config.airKoreaApiKey),
+      blueRibbonConfigured: Boolean(config.blueRibbonSessionId),
       seoulOpenApiConfigured: Boolean(config.seoulOpenApiKey),
       hrfcoConfigured: Boolean(config.hrfcoApiKey),
       opinetConfigured: Boolean(config.opinetApiKey),
@@ -613,6 +637,67 @@ function buildServer({ env = process.env, provider = null } = {}) {
       cache.set(cacheKey, payload, config.cacheTtlMs);
     }
 
+    return payload;
+  });
+
+  app.get("/v1/blue-ribbon/nearby", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeBlueRibbonNearbyQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    if (!config.blueRibbonSessionId) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "BLUE_RIBBON_SESSION_ID is not configured on the proxy server."
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "blue-ribbon-nearby",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const result = await proxyBlueRibbonNearbyRequest({
+      ...normalized,
+      sessionId: config.blueRibbonSessionId
+    });
+
+    const payload = {
+      ...result,
+      query: normalized,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
     return payload;
   });
 
@@ -947,6 +1032,7 @@ if (require.main === module) {
 module.exports = {
   buildConfig,
   buildServer,
+  normalizeBlueRibbonNearbyQuery,
   normalizeFineDustQuery,
   normalizeHanRiverWaterLevelQuery,
   normalizeOpinetAroundQuery,

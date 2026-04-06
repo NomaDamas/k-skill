@@ -1,9 +1,9 @@
 # blue-ribbon-nearby
 
-Blue Ribbon Survey 공식 표면을 사용해 위치 문자열을 공식 zone 으로 매칭하고, 가능할 때 근처 블루리본 맛집을 조회하는 Node.js 패키지입니다.
+Blue Ribbon Survey 공식 표면을 사용해 위치 문자열을 공식 zone 으로 매칭하고, k-skill-proxy 를 경유해 근처 블루리본 맛집을 조회하는 Node.js 패키지입니다.
 
-> [!WARNING]
-> **2026-04-05 기준** Blue Ribbon의 `/restaurants/map` endpoint 가 공개 요청에 `403 {"error":"PREMIUM_REQUIRED"}` 를 반환합니다. 이 패키지는 zone 매칭까지는 계속 지원하지만, live nearby 결과는 현재 `premium_required` 도메인 에러로 명시적으로 실패합니다.
+> [!NOTE]
+> Blue Ribbon의 `/restaurants/map` 은 프리미엄 전용입니다. 이 패키지는 기본적으로 k-skill-proxy 를 경유해 프리미엄 세션으로 nearby 검색을 수행합니다. 직접 호출 시(`useDirectApi: true`) 프리미엄 세션 없이는 `premium_required` 에러가 발생합니다.
 
 ## 설치
 
@@ -34,7 +34,7 @@ npm install
 
 패키지는 먼저 `search/zone` 에서 가장 가까운 공식 zone 을 찾고, 그다음 `/restaurants/map` nearby 검색으로 블루리본 인증 맛집만 추립니다. 이때 `zone1`, `zone2`, `zone2Lat`, `zone2Lng`, `isAround=true`, `ribbon=true` 를 사용해 주변 결과만 다시 조회합니다.
 
-다만 현재 `/restaurants/map` 는 공개 호출에서 premium gate 가 걸려 있으므로, live nearby 조회는 아래처럼 `premium_required` 에러를 던질 수 있습니다.
+nearby 검색은 기본적으로 k-skill-proxy (`/v1/blue-ribbon/nearby`) 를 경유합니다. 프록시에 `BLUE_RIBBON_SESSION_ID` 환경변수가 설정되어 있어야 합니다.
 
 ## 사용 예시
 
@@ -42,23 +42,14 @@ npm install
 const { searchNearbyByLocationQuery } = require("blue-ribbon-nearby");
 
 async function main() {
-  try {
-    const result = await searchNearbyByLocationQuery("광화문", {
-      distanceMeters: 1000,
-      limit: 5
-    });
+  // 기본: k-skill-proxy 경유
+  const result = await searchNearbyByLocationQuery("광화문", {
+    distanceMeters: 1000,
+    limit: 5
+  });
 
-    console.log(result.anchor);
-    console.log(result.items);
-  } catch (error) {
-    if (error.code === "premium_required") {
-      console.error("Blue Ribbon nearby live results are currently premium-gated.");
-      console.error(error.message);
-      return;
-    }
-
-    throw error;
-  }
+  console.log(result.anchor);
+  console.log(result.items);
 }
 
 main().catch((error) => {
@@ -67,23 +58,11 @@ main().catch((error) => {
 });
 ```
 
-## Current live status
+직접 호출이 필요하면 `useDirectApi: true` 옵션을 사용하세요. 프리미엄 세션이 없으면 `premium_required` 에러가 발생합니다.
 
-**2026-04-05** 에 `광화문`, `distanceMeters=1000`, `limit=5` 로 실제 호출하면 현재는 아래와 같은 도메인 에러가 반환됩니다.
+## Live smoke snapshot
 
-```json
-{
-  "code": "premium_required",
-  "statusCode": 403,
-  "upstreamError": "PREMIUM_REQUIRED"
-}
-```
-
-같은 날짜에 `searchNearbyByCoordinates()` 로 광화문 좌표를 직접 넣어도 동일한 `premium_required` 계약이 반환됩니다.
-
-## Historical snapshot
-
-2026-03-27 에는 아래처럼 live nearby 결과가 내려왔습니다. 현재는 upstream 정책 변경으로 이 스냅샷을 재현할 수 없습니다.
+2026-03-27 에 `광화문`, `distanceMeters=1000`, `limit=5` 로 실제 호출했을 때 상위 결과 예시:
 
 ```json
 {
@@ -108,10 +87,6 @@ main().catch((error) => {
 - `searchNearbyByLocationQuery(locationQuery, options?)`
 - `searchNearbyByCoordinates(options)`
 
-`searchNearbyByLocationQuery()` / `searchNearbyByCoordinates()` 는 `/restaurants/map` 가 `403 {"error":"PREMIUM_REQUIRED"}` 를 반환하면 아래 속성을 가진 에러를 던집니다.
+기본적으로 k-skill-proxy 를 경유합니다. `useDirectApi: true` 로 직접 호출할 때 프리미엄 세션이 없으면 `premium_required` 에러가 발생합니다.
 
-- `error.code === "premium_required"`
-- `error.statusCode === 403`
-- `error.upstreamError === "PREMIUM_REQUIRED"`
-
-다른 upstream 오류는 계속 일반 `Blue Ribbon request failed ...` 에러로 남고, 가능하면 `statusCode` 와 `upstreamError` 만 함께 노출됩니다.
+프록시 base URL 은 `options.proxyBaseUrl`, `KSKILL_PROXY_BASE_URL` 환경변수, 또는 기본값 `https://k-skill-proxy.nomadamas.org` 순으로 결정됩니다.
