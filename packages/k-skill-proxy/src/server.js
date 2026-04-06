@@ -1,13 +1,18 @@
 const crypto = require("node:crypto");
 const Fastify = require("fastify");
 const { fetchFineDustReport } = require("./airkorea");
+const { proxyBlueRibbonNearbyRequest } = require("./bluer");
 const { fetchWaterLevelReport } = require("./hrfco");
+const { KRX_MARKETS, fetchBaseInfo, fetchTradeInfo, getCurrentKstDate, searchStocks } = require("./krx-stock");
+const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
+const { searchRegionCode } = require("./region-lookup");
 const AIR_KOREA_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
 const DATA_GO_KR_UPSTREAM_BASE_URL = "https://apis.data.go.kr";
 const SEOUL_OPEN_API_BASE_URL = "http://swopenapi.seoul.go.kr";
 const KMA_FORECAST_BASE_TIMES = ["0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300"];
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const KMA_FORECAST_READY_MINUTE = 10;
+const OPINET_API_BASE_URL = "https://www.opinet.co.kr/api";
 const ALLOWED_AIRKOREA_ROUTES = new Map([
   ["MsrstnInfoInqireSvc", new Set(["getMsrstnList", "getNearbyMsrstnList", "getTMStdrCrdnt"])],
   ["ArpltnInforInqireSvc", new Set(["getMsrstnAcctoRltmMesureDnsty", "getCtprvnRltmMesureDnsty"])],
@@ -126,6 +131,10 @@ function buildConfig(env = process.env) {
     kmaOpenApiKey: trimOrNull(env.KMA_OPEN_API_KEY),
     seoulOpenApiKey: trimOrNull(env.SEOUL_OPEN_API_KEY),
     hrfcoApiKey: trimOrNull(env.HRFCO_OPEN_API_KEY),
+    opinetApiKey: trimOrNull(env.OPINET_API_KEY),
+    blueRibbonSessionId: trimOrNull(env.BLUE_RIBBON_SESSION_ID),
+    molitApiKey: trimOrNull(env.DATA_GO_KR_API_KEY),
+    krxApiKey: trimOrNull(env.KRX_API_KEY),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -166,7 +175,7 @@ function buildRateLimiter(config) {
   const state = new Map();
 
   return function rateLimit(request, reply) {
-    const key = trimOrNull(request.headers["cf-connecting-ip"]) || request.ip || "unknown";
+    const key = request.ip || "unknown";
     const now = Date.now();
     const current = state.get(key);
 
@@ -296,6 +305,77 @@ function normalizeKmaForecastQuery(query, now = new Date()) {
   };
 }
 
+function normalizeOpinetAroundQuery(query) {
+  const x = parseFloatValue(query.x);
+  const y = parseFloatValue(query.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    throw new Error("Provide x and y as KATEC coordinates.");
+  }
+  const radius = parseInteger(query.radius, 1000);
+  if (radius <= 0 || radius > 5000) {
+    throw new Error("radius must be between 1 and 5000.");
+  }
+  const prodcd = trimOrNull(query.prodcd) || "B027";
+  const sort = parseInteger(query.sort, 1);
+  return { x, y, radius, prodcd, sort };
+}
+
+function normalizeOpinetDetailQuery(query) {
+  const id = trimOrNull(query.id);
+  if (!id) {
+    throw new Error("Provide id.");
+  }
+  return { id };
+}
+
+function normalizeBlueRibbonNearbyQuery(query) {
+  const latitude = parseFloatValue(query.latitude ?? query.lat);
+  const longitude = parseFloatValue(query.longitude ?? query.lng);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("Provide latitude and longitude.");
+  }
+
+  const distanceMeters = parseInteger(query.distanceMeters ?? query.distance, 1000);
+  if (distanceMeters <= 0 || distanceMeters > 5000) {
+    throw new Error("distanceMeters must be between 1 and 5000.");
+  }
+
+  const limit = parseInteger(query.limit, 10);
+  if (limit <= 0 || limit > 50) {
+    throw new Error("limit must be between 1 and 50.");
+  }
+
+  return { latitude, longitude, distanceMeters, limit };
+}
+
+function normalizeRealEstateQuery(query) {
+  const lawdCd = trimOrNull(query.lawd_cd ?? query.lawdCd);
+  if (!lawdCd || !/^\d{5}$/.test(lawdCd)) {
+    throw new Error("Provide lawd_cd as a 5-digit region code.");
+  }
+
+  const dealYmd = trimOrNull(query.deal_ymd ?? query.dealYmd);
+  if (!dealYmd || !/^\d{6}$/.test(dealYmd)) {
+    throw new Error("Provide deal_ymd as YYYYMM.");
+  }
+
+  const numOfRows = parseInteger(query.num_of_rows ?? query.numOfRows, 100);
+  if (numOfRows < 1 || numOfRows > 1000) {
+    throw new Error("num_of_rows must be between 1 and 1000.");
+  }
+
+  return { lawdCd, dealYmd, numOfRows };
+}
+
+function normalizeRegionCodeQuery(query) {
+  const q = trimOrNull(query.q ?? query.query);
+  if (!q) {
+    throw new Error("Provide q (region name query).");
+  }
+  return { q };
+}
+
 function normalizeHanRiverWaterLevelQuery(query) {
   const stationName = trimOrNull(query.stationName ?? query.station_name ?? query.station);
   const stationCode = trimOrNull(query.stationCode ?? query.station_code ?? query.wlobscd);
@@ -309,6 +389,69 @@ function normalizeHanRiverWaterLevelQuery(query) {
     stationCode
   };
 }
+
+function normalizeKrxMarket(value) {
+  const normalized = trimOrNull(value)?.toUpperCase();
+  if (!normalized || !KRX_MARKETS.includes(normalized)) {
+    throw new Error(`Provide market as one of: ${KRX_MARKETS.join(", ")}.`);
+  }
+
+  return normalized;
+}
+
+function normalizeKoreanStockDate(value) {
+  const normalized = trimOrNull(value) || getCurrentKstDate();
+  if (!/^\d{8}$/.test(normalized)) {
+    throw new Error("Provide bas_dd/date as YYYYMMDD.");
+  }
+
+  return normalized;
+}
+
+function normalizeKoreanStockCodes(value) {
+  const values = Array.isArray(value) ? value : [value];
+  const codes = values
+    .flatMap((entry) => String(entry || "").split(","))
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  if (codes.length === 0) {
+    throw new Error("Provide code/stockCode/codes.");
+  }
+
+  return [...new Set(codes)];
+}
+
+function normalizeKoreanStockSearchQuery(query) {
+  const q = trimOrNull(query.q ?? query.query);
+  if (!q) {
+    throw new Error("Provide q/query.");
+  }
+
+  const basDd = normalizeKoreanStockDate(query.bas_dd ?? query.basDd ?? query.date);
+  const marketValue = trimOrNull(query.market);
+  const limit = parseInteger(query.limit, 10);
+
+  if (limit < 1 || limit > 20) {
+    throw new Error("limit must be between 1 and 20.");
+  }
+
+  return {
+    q,
+    basDd,
+    market: marketValue ? normalizeKrxMarket(marketValue) : null,
+    limit
+  };
+}
+
+function normalizeKoreanStockLookupQuery(query) {
+  return {
+    market: normalizeKrxMarket(query.market),
+    code: normalizeKoreanStockCodes(query.code ?? query.codes ?? query.codeList ?? query.stockCode ?? query.stock_code)[0],
+    basDd: normalizeKoreanStockDate(query.bas_dd ?? query.basDd ?? query.date)
+  };
+}
+
 
 function isAllowedAirKoreaRoute(service, operation) {
   return ALLOWED_AIRKOREA_ROUTES.get(service)?.has(operation) || false;
@@ -439,6 +582,36 @@ async function proxyKmaWeatherRequest({
   };
 }
 
+async function proxyOpinetRequest({ path, params, apiKey, fetchImpl = global.fetch }) {
+  if (!apiKey) {
+    return {
+      statusCode: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "upstream_not_configured",
+        message: "OPINET_API_KEY is not configured on the proxy server."
+      })
+    };
+  }
+
+  const url = new URL(`${OPINET_API_BASE_URL}/${path}`);
+  url.searchParams.set("out", "json");
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, String(value));
+  }
+  url.searchParams.set("certkey", apiKey);
+
+  const response = await fetchImpl(url, {
+    signal: AbortSignal.timeout(20000)
+  });
+
+  return {
+    statusCode: response.status,
+    contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
+    body: await response.text()
+  };
+}
+
 async function proxyHrfcoWaterLevelRequest({
   stationName = null,
   stationCode = null,
@@ -519,8 +692,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     upstreams: {
       airKoreaConfigured: Boolean(config.airKoreaApiKey),
       kmaOpenApiConfigured: Boolean(config.kmaOpenApiKey),
+      blueRibbonConfigured: Boolean(config.blueRibbonSessionId),
       seoulOpenApiConfigured: Boolean(config.seoulOpenApiKey),
-      hrfcoConfigured: Boolean(config.hrfcoApiKey)
+      hrfcoConfigured: Boolean(config.hrfcoApiKey),
+      opinetConfigured: Boolean(config.opinetApiKey),
+      molitConfigured: Boolean(config.molitApiKey),
+      krxConfigured: Boolean(config.krxApiKey)
     },
     auth: {
       tokenRequired: false
@@ -784,6 +961,636 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
+  app.get("/v1/blue-ribbon/nearby", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeBlueRibbonNearbyQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    if (!config.blueRibbonSessionId) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "BLUE_RIBBON_SESSION_ID is not configured on the proxy server."
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "blue-ribbon-nearby",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const result = await proxyBlueRibbonNearbyRequest({
+      ...normalized,
+      sessionId: config.blueRibbonSessionId
+    });
+
+    const payload = {
+      ...result,
+      query: normalized,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/opinet/around", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeOpinetAroundQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "opinet-around",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const upstream = await proxyOpinetRequest({
+      path: "aroundAll.do",
+      params: normalized,
+      apiKey: config.opinetApiKey
+    });
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+
+    if (!upstream.contentType.includes("json")) {
+      return upstream.body;
+    }
+
+    const payload = JSON.parse(upstream.body);
+    payload.proxy = {
+      name: config.proxyName,
+      cache: {
+        hit: false,
+        ttl_ms: config.cacheTtlMs
+      },
+      requested_at: new Date().toISOString()
+    };
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+
+    return payload;
+  });
+
+  app.get("/v1/opinet/detail", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeOpinetDetailQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "opinet-detail",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const upstream = await proxyOpinetRequest({
+      path: "detailById.do",
+      params: normalized,
+      apiKey: config.opinetApiKey
+    });
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+
+    if (!upstream.contentType.includes("json")) {
+      return upstream.body;
+    }
+
+    const payload = JSON.parse(upstream.body);
+    payload.proxy = {
+      name: config.proxyName,
+      cache: {
+        hit: false,
+        ttl_ms: config.cacheTtlMs
+      },
+      requested_at: new Date().toISOString()
+    };
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+
+    return payload;
+  });
+
+
+  app.get("/v1/real-estate/region-code", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeRegionCodeQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "real-estate-region-code",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const results = searchRegionCode(normalized.q);
+    const payload = {
+      results,
+      query: normalized.q,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/real-estate/:assetType/:dealType", async (request, reply) => {
+    const { assetType, dealType } = request.params;
+
+    if (!VALID_ASSET_TYPES.has(assetType)) {
+      reply.code(404);
+      return {
+        error: "not_found",
+        message: `Unknown asset type: ${assetType}. Valid: apartment, officetel, villa, single-house, commercial`
+      };
+    }
+
+    if (!VALID_DEAL_TYPES.has(dealType)) {
+      reply.code(404);
+      return {
+        error: "not_found",
+        message: `Unknown deal type: ${dealType}. Valid: trade, rent`
+      };
+    }
+
+    if (assetType === "commercial" && dealType === "rent") {
+      reply.code(404);
+      return {
+        error: "not_found",
+        message: "commercial/rent is not available. Only commercial/trade is supported."
+      };
+    }
+
+    let normalized;
+
+    try {
+      normalized = normalizeRealEstateQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "real-estate",
+      assetType,
+      dealType,
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.molitApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "DATA_GO_KR_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const result = await fetchTransactions({
+      assetType,
+      dealType,
+      lawdCd: normalized.lawdCd,
+      dealYmd: normalized.dealYmd,
+      numOfRows: normalized.numOfRows,
+      serviceKey: config.molitApiKey
+    });
+
+    if (result.error) {
+      reply.code(502);
+      return {
+        ...result,
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          },
+          requested_at: new Date().toISOString()
+        }
+      };
+    }
+
+    const payload = {
+      ...result,
+      query: {
+        asset_type: assetType,
+        deal_type: dealType,
+        lawd_cd: normalized.lawdCd,
+        deal_ymd: normalized.dealYmd
+      },
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/korean-stock/search", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeKoreanStockSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "korean-stock-search",
+      q: normalized.q.toLowerCase(),
+      basDd: normalized.basDd,
+      market: normalized.market,
+      limit: normalized.limit
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.krxApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KRX_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let items;
+    try {
+      const result = await searchStocks({
+        query: normalized.q,
+        basDd: normalized.basDd,
+        market: normalized.market,
+        limit: normalized.limit,
+        apiKey: config.krxApiKey,
+        cache,
+        cacheTtlMs: config.cacheTtlMs
+      });
+      items = result.items;
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
+
+    const payload = {
+      items,
+      query: {
+        q: normalized.q,
+        bas_dd: normalized.basDd,
+        market: normalized.market,
+        limit: normalized.limit
+      },
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/korean-stock/base-info", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeKoreanStockLookupQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "korean-stock-base-info",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.krxApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KRX_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let items;
+    try {
+      items = await fetchBaseInfo({
+        market: normalized.market,
+        basDd: normalized.basDd,
+        codeList: [normalized.code],
+        apiKey: config.krxApiKey
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
+
+    if (items.length === 0) {
+      reply.code(404);
+      return {
+        error: "not_found",
+        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 을(를) 찾지 못했습니다.`
+      };
+    }
+
+    const payload = {
+      items,
+      item: items[0],
+      query: {
+        market: normalized.market,
+        code: normalized.code,
+        codes: [normalized.code],
+        bas_dd: normalized.basDd
+      },
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/korean-stock/trade-info", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeKoreanStockLookupQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "korean-stock-trade-info",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.krxApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KRX_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let items;
+    try {
+      items = await fetchTradeInfo({
+        market: normalized.market,
+        basDd: normalized.basDd,
+        codeList: [normalized.code],
+        apiKey: config.krxApiKey
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
+
+    if (items.length === 0) {
+      reply.code(404);
+      return {
+        error: "not_found",
+        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 의 일별 시세를 찾지 못했습니다.`
+      };
+    }
+
+    const payload = {
+      items,
+      item: items[0],
+      query: {
+        market: normalized.market,
+        code: normalized.code,
+        codes: [normalized.code],
+        bas_dd: normalized.basDd
+      },
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
   app.setErrorHandler((error, request, reply) => {
     request.log.error(error);
     const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
@@ -824,13 +1631,21 @@ module.exports = {
   buildConfig,
   buildServer,
   convertLatLonToKmaGrid,
+  normalizeBlueRibbonNearbyQuery,
   normalizeFineDustQuery,
   normalizeHanRiverWaterLevelQuery,
   normalizeKmaForecastQuery,
+  normalizeKoreanStockLookupQuery,
+  normalizeKoreanStockSearchQuery,
+  normalizeOpinetAroundQuery,
+  normalizeOpinetDetailQuery,
+  normalizeRealEstateQuery,
+  normalizeRegionCodeQuery,
   normalizeSeoulSubwayQuery,
   proxyAirKoreaRequest,
   proxyHrfcoWaterLevelRequest,
   proxyKmaWeatherRequest,
+  proxyOpinetRequest,
   proxySeoulSubwayRequest,
   resolveLatestKmaForecastBase,
   startServer

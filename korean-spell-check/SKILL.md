@@ -43,7 +43,7 @@ metadata:
 
 - 인터넷 연결
 - `python3` 3.10+
-- 이 저장소의 `scripts/korean_spell_check.py`
+- 이 스킬 디렉토리의 `scripts/korean_spell_check.py` (설치 시 자동 포함)
 
 ## Verified surface notes
 

@@ -47,13 +47,16 @@ npx --yes skills add <owner/repo> \
   --skill hwp \
   --skill kbo-results \
   --skill kleague-results \
+  --skill lck-analytics \
   --skill toss-securities \
   --skill lotto-results \
   --skill kakaotalk-mac \
   --skill korean-law-search \
   --skill real-estate-search \
+  --skill korean-stock-search \
   --skill joseon-sillok-search \
   --skill korea-weather \
+  --skill cheap-gas-nearby \
   --skill fine-dust-location \
   --skill han-river-water-level \
   --skill daiso-product-search \
@@ -63,6 +66,7 @@ npx --yes skills add <owner/repo> \
   --skill zipcode-search \
   --skill delivery-tracking \
   --skill coupang-product-search \
+  --skill bunjang-search \
   --skill used-car-price-search \
   --skill korean-spell-check
 ```
@@ -76,6 +80,7 @@ npx --yes skills add <owner/repo> \
   --skill ktx-booking \
   --skill korean-law-search \
   --skill real-estate-search \
+  --skill cheap-gas-nearby \
   --skill joseon-sillok-search \
   --skill seoul-subway-arrival \
   --skill korea-weather \
@@ -96,23 +101,29 @@ korean-law list
 
 로컬 설치가 막히면 `https://korean-law-mcp.fly.dev/mcp` remote endpoint를 MCP 클라이언트에 등록한다. 그 경로도 응답하지 않거나 서비스 장애가 나면 `https://api.beopmang.org/mcp` 또는 `https://api.beopmang.org/api/v4/law?action=search` 를 fallback으로 사용한다.
 
-`real-estate-search` 는 skill 설치 후 upstream `real-estate-mcp` (`https://github.com/tae0y/real-estate-mcp/tree/main`) 를 따로 clone 해서 붙인다.
+`real-estate-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/tae0y/real-estate-mcp/tree/main`. 자세한 사용법은 [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)를 본다.
 
-- 로컬 stdio/HTTP/self-host 경로는 `DATA_GO_KR_API_KEY` 를 채운다.
-- 2026-04-05 기준 upstream 문서에는 고정 public MCP URL이 없어서, shared HTTP가 필요하면 self-host를 기본으로 본다.
-- Codex CLI 에 붙일 때는 `uv run` 기반 stdio 등록을 먼저 시도한다.
-- self-host는 upstream Docker 문서 + `cloudflared tunnel`(Cloudflare Tunnel) 조합을 권장하고, macOS `launchd` 는 long-running Cloudflare Tunnel 전용으로만 둔다.
+`korean-stock-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `KRX_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/jjlabsio/korea-stock-mcp`. 자세한 사용법은 [한국 주식 정보 조회 가이드](features/korean-stock-search.md)를 본다.
+
+### `korean-stock-search` proxy quickstart
+
+`korean-stock-search` 는 로컬 MCP 설치 대신 **proxy first** 로 사용한다.
+
+- 가장 빠른 smoke test 는 `curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' --data-urlencode 'q=삼성전자' --data-urlencode 'bas_dd=20260404'`
+- 검색 결과에서 `market`, `code` 를 확인한 뒤 `base-info` 또는 `trade-info` 로 이어간다.
+- 사용자 쪽 `KRX_API_KEY` 는 필요 없다. self-host proxy 운영자만 서버 환경변수 `KRX_API_KEY` 를 설정한다.
 
 ```bash
-git clone https://github.com/tae0y/real-estate-mcp.git
-cd real-estate-mcp
-codex mcp add real-estate \
-  --env DATA_GO_KR_API_KEY=your-api-key \
-  -- uv run --directory /path/to/real-estate-mcp \
-  python src/real_estate/mcp_server/server.py
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
+  --data-urlencode 'q=삼성전자' \
+  --data-urlencode 'bas_dd=20260404'
+
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' \
+  --data-urlencode 'market=KOSPI' \
+  --data-urlencode 'code=005930' \
+  --data-urlencode 'bas_dd=20260404'
 ```
 
-shared HTTP가 필요하면 upstream Docker guide 대로 서버를 한 번 띄워 Docker의 `restart: unless-stopped` 재시작 정책에 맡긴 뒤 Cloudflare Tunnel 도메인(`https://real-estate-mcp.example.com/mcp`)을 붙인다. macOS에서는 `launchd` 에 서버/터널을 함께 넣지 말고 long-running 프로세스인 `cloudflared tunnel run real-estate-mcp` 만 자동 실행한다. 자세한 흐름은 [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)를 본다.
 
 ### `olive-young-search` upstream CLI quickstart
 
@@ -144,6 +155,40 @@ node dist/bin.js get /api/oliveyoung/stores --keyword 명동 --limit 5 --json
 node dist/bin.js get /api/oliveyoung/products --keyword 선크림 --size 5 --json
 node dist/bin.js get /api/oliveyoung/inventory --keyword 선크림 --storeKeyword 명동 --size 5 --json
 ```
+
+### `bunjang-search` upstream CLI quickstart
+
+`bunjang-search` 는 upstream 원본 [`pinion05/bunjangcli`](https://github.com/pinion05/bunjangcli) / npm package [`bunjang-cli`](https://www.npmjs.com/package/bunjang-cli) 를 그대로 사용한다.
+
+- 기본 경로는 **CLI first** 다.
+- 가장 빠른 smoke test 는 `npx --yes bunjang-cli --help`
+- 검색/상세조회는 로그인 없이도 먼저 검증할 수 있다.
+- `favorite` / `chat` / `purchase` 는 로그인 세션이 필요하므로 **선택적 로그인 플로우**로만 안내한다.
+- `auth login` 은 headful 브라우저 + TTY(interactive 터미널) 가 필요하다.
+- 대량 수집은 `--start-page`, `--pages`, `--max-items`, `--with-detail`, `--output` 조합을 우선 쓴다.
+- AI 분석용 chunk 는 `--ai --output <directory>` 로 만든다.
+
+```bash
+npx --yes bunjang-cli --help
+npx --yes bunjang-cli --json auth status
+npx --yes bunjang-cli --json search "아이폰" --max-items 3 --sort date
+npx --yes bunjang-cli --json item get 354957625
+npx --yes bunjang-cli search "아이폰" --start-page 1 --pages 2 --max-items 20 --with-detail --output artifacts/bunjang-iphone.json
+npx --yes bunjang-cli search "아이폰" --start-page 1 --pages 2 --max-items 20 --with-detail --ai --output artifacts/bunjang-iphone-ai
+```
+
+로그인된 interactive 세션에서만 아래 액션을 진행한다.
+
+```bash
+npx --yes bunjang-cli auth login
+npx --yes bunjang-cli --json favorite list
+npx --yes bunjang-cli --json favorite add 354957625
+npx --yes bunjang-cli --json favorite remove 354957625
+npx --yes bunjang-cli --json chat list
+npx --yes bunjang-cli --json chat start 354957625 --message "안녕하세요"
+npx --yes bunjang-cli --json chat send 84191651 --message "상품 상태 괜찮을까요?"
+```
+
 
 로컬 저장소에서 바로 전체 설치 테스트:
 
@@ -179,7 +224,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g @ohah/hwpjs kbo-game kleague-results toss-securities k-lotto coupang-product-search used-car-price-search korean-law-mcp daiso
+npm install -g @ohah/hwpjs kbo-game kleague-results lck-analytics toss-securities k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp daiso bunjang-cli
 export NODE_PATH="$(npm root -g)"
 ```
 
@@ -232,6 +277,8 @@ python3 scripts/korean_spell_check.py --text "아버지가방에들어가신다.
 - `fine-dust-location`
 - `korean-law-search`
 - `real-estate-search`
+- `korean-stock-search`
+- `cheap-gas-nearby`
 
 관련 문서:
 

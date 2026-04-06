@@ -1,0 +1,33 @@
+{
+  "RESULT": {
+    "OIL": [
+      {
+        "UNI_ID": "A1000001",
+        "POLL_DIV_CO": "SKE",
+        "OS_NM": "서울역셀프주유소",
+        "PRICE": "1635",
+        "DISTANCE": "112.4",
+        "GIS_X_COOR": "309240.0000",
+        "GIS_Y_COOR": "550790.0000"
+      },
+      {
+        "UNI_ID": "A1000002",
+        "POLL_DIV_CO": "RTE",
+        "OS_NM": "만리알뜰주유소",
+        "PRICE": "1649",
+        "DISTANCE": "315.0",
+        "GIS_X_COOR": "309010.2000",
+        "GIS_Y_COOR": "550940.1000"
+      },
+      {
+        "UNI_ID": "A1000003",
+        "POLL_DIV_CO": "SOL",
+        "OS_NM": "서울로주유소",
+        "PRICE": "1649",
+        "DISTANCE": "220.0",
+        "GIS_X_COOR": "309500.3000",
+        "GIS_Y_COOR": "550820.5000"
+      }
+    ]
+  }
+}

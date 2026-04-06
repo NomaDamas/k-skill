@@ -10,13 +10,31 @@
 - tossinvest-cli: https://github.com/JungHoonGhae/tossinvest-cli
 - K League 일정/결과 JSON: https://www.kleague.com/getScheduleList.do
 - K League 팀 순위 JSON: https://www.kleague.com/record/teamRank.do
+- jerjangmin original `lck-analytics` skill pack: https://github.com/jerjangmin/share/tree/main/SKILL/lck-analytics
+- Riot LoL Esports schedule API: https://esports-api.lolesports.com/persisted/gw/getSchedule
+- Riot LoL Esports tournaments API: https://esports-api.lolesports.com/persisted/gw/getTournamentsForLeague
+- Riot LoL Esports standings API: https://esports-api.lolesports.com/persisted/gw/getStandings
+- Riot LoL Esports event details API: https://esports-api.lolesports.com/persisted/gw/getEventDetails
+- Riot LoL Esports live window feed: https://feed.lolesports.com/livestats/v1/window/<gameId>
+- Riot LoL Esports live details feed: https://feed.lolesports.com/livestats/v1/details/<gameId>
+- Oracle's Elixir data glossary: https://oracleselixir.com/tools/downloads
 - `@ohah/hwpjs`: https://github.com/ohah/hwpjs
 - `hwp-mcp`: https://github.com/jkf87/hwp-mcp
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
-- real-estate-mcp Codex guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-codex-cli.md
-- real-estate-mcp Docker guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-docker.md
-- real-estate-mcp OAuth guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-oauth.md
+- korea-stock-mcp: https://github.com/jjlabsio/korea-stock-mcp
+- KRX OPEN API 메인: https://openapi.krx.co.kr/contents/OPP/MAIN/main/index.cmd
+- KRX 종목 기본정보 API (KOSPI): http://data-dbg.krx.co.kr/svc/apis/sto/stk_isu_base_info
+- KRX 일별 매매정보 API (KOSPI): http://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd
+- MOLIT 아파트 매매 실거래가 API: https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade
+- MOLIT 아파트 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent
+- MOLIT 오피스텔 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcOffiTrade/getRTMSDataSvcOffiTrade
+- MOLIT 오피스텔 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcOffiRent/getRTMSDataSvcOffiRent
+- MOLIT 연립다세대 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade
+- MOLIT 연립다세대 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcRHRent/getRTMSDataSvcRHRent
+- MOLIT 단독/다가구 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcSHTrade/getRTMSDataSvcSHTrade
+- MOLIT 단독/다가구 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcSHRent/getRTMSDataSvcSHRent
+- MOLIT 상업업무용 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcNrgTrade/getRTMSDataSvcNrgTrade
 - beopmang: https://api.beopmang.org
 - `silver-flight-group/kakaocli`: https://github.com/silver-flight-group/kakaocli
 - KakaoTalk Mac 설치 참고(`mas`): https://velog.io/@bonjugi/%EB%A7%A5%EB%B6%81-M1%EC%97%90-homebrew%EB%A1%9C-node-vscode-%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0
@@ -43,6 +61,8 @@
 - daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
 - coupang-mcp (MCP 서버): https://github.com/uju777/coupang-mcp
 - coupang-mcp endpoint: https://yuju777-coupang-mcp.hf.space/mcp
+- bunjang-cli package: https://www.npmjs.com/package/bunjang-cli
+- bunjang-cli repo: https://github.com/pinion05/bunjangcli
 - 블루리본 메인: https://www.bluer.co.kr/
 - 블루리본 지역 검색: https://www.bluer.co.kr/search/zone
 - 블루리본 주변 맛집 JSON: https://www.bluer.co.kr/restaurants/map
@@ -51,6 +71,10 @@
 - 조선왕조실록 메인: https://sillok.history.go.kr
 - 조선왕조실록 검색 결과: https://sillok.history.go.kr/search/searchResultList.do
 - 조선왕조실록 기사 상세: https://sillok.history.go.kr/id/kda_12512030_002
+- Opinet 오픈 API 안내: https://www.opinet.co.kr/user/custapi/openApiInfo.do
+- Opinet 반경 내 주유소 API: https://www.opinet.co.kr/api/aroundAll.do
+- Opinet 주유소 상세정보 API: https://www.opinet.co.kr/api/detailById.do
+- Opinet 지역코드 API: https://www.opinet.co.kr/api/areaCode.do
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
 - 기상청 단기예보 조회서비스: https://www.data.go.kr/data/15084084/openapi.do
 - 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do

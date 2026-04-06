@@ -1,6 +1,6 @@
 ---
 name: han-river-water-level
-description: 한강홍수통제소 기반 현재 수위/유량을 관측소명 또는 관측소코드로 조회한다. self-host 또는 배포 확인이 끝난 k-skill-proxy의 han-river water-level endpoint를 기본 경로로 쓴다.
+description: 한강홍수통제소 기반 현재 수위/유량을 관측소명 또는 관측소코드로 조회한다. 기본 경로는 k-skill-proxy의 han-river water-level endpoint다.
 license: MIT
 metadata:
   category: utility
@@ -12,7 +12,7 @@ metadata:
 
 ## What this skill does
 
-한강홍수통제소(HRFCO) 관측소의 현재 수위와 유량을 `k-skill-proxy` 경유로 요약한다. public hosted route 배포 확인이 끝나기 전에는 self-host 또는 이미 `/v1/han-river/water-level` 이 올라와 있는 `KSKILL_PROXY_BASE_URL` 을 사용한다.
+기본적으로 `https://k-skill-proxy.nomadamas.org/v1/han-river/water-level` 로 요청해서 현재 수위와 유량을 요약한다.
 
 ## When to use
 
@@ -28,31 +28,26 @@ metadata:
 ## Prerequisites
 
 - optional: `jq`
-- self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`
 
-## Required environment variables
+## Default path
 
-- `KSKILL_PROXY_BASE_URL` (필수: self-host 또는 배포 확인이 끝난 proxy base URL)
+추가 client API 레이어는 불필요하다. 그냥 프록시 서버에 HTTP 요청만 넣으면 된다.
 
-사용자는 별도 HRFCO `ServiceKey` 를 준비할 필요가 없다. 대신 `/v1/han-river/water-level` route 가 실제로 올라와 있는 proxy URL 을 `KSKILL_PROXY_BASE_URL` 로 받아야 한다. upstream key는 proxy 서버에서만 주입한다.
+사용자는 별도 HRFCO `ServiceKey` 를 준비할 필요가 없다. upstream key는 proxy 서버에서만 주입한다.
 
-### Proxy resolution order
-
-1. **`KSKILL_PROXY_BASE_URL` 이 있으면** 그 값을 사용한다.
-2. **없으면** 사용자/운영자에게 self-host 또는 배포 확인이 끝난 proxy URL 을 먼저 확보한다.
-3. **직접 proxy를 운영하는 경우에만** proxy 서버 upstream key를 서버 쪽에만 설정한다.
+`KSKILL_PROXY_BASE_URL` 환경변수가 있으면 그 값을 사용하고, 없으면 기본 경로 `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
 ## Example requests
 
 ```bash
-curl -fsS --get 'https://your-proxy.example.com/v1/han-river/water-level' \
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/han-river/water-level' \
   --data-urlencode 'stationName=한강대교'
 ```
 
 관측소코드로 바로 조회해도 된다.
 
 ```bash
-curl -fsS --get 'https://your-proxy.example.com/v1/han-river/water-level' \
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/han-river/water-level' \
   --data-urlencode 'stationCode=1018683'
 ```
 
@@ -71,7 +66,7 @@ curl -fsS --get 'https://your-proxy.example.com/v1/han-river/water-level' \
 입력이 너무 넓으면 proxy 는 `ambiguous_station` 과 함께 `candidate_stations` 를 돌려준다.
 
 ```bash
-curl -fsS --get 'https://your-proxy.example.com/v1/han-river/water-level' \
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/han-river/water-level' \
   --data-urlencode 'stationName=한강'
 ```
 
@@ -93,6 +88,6 @@ curl -fsS --get 'https://your-proxy.example.com/v1/han-river/water-level' \
 
 ## Notes
 
-- 배포 확인이 끝나면 hosted 기본 경로는 `https://k-skill-proxy.nomadamas.org/v1/han-river/water-level` 이다.
+- 기본 경로는 항상 `k-skill-proxy.nomadamas.org` 의 water-level endpoint 다.
 - upstream 은 `waterlevel/info.json` 으로 관측소 메타데이터를 찾고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신값을 조회한다.
 - 결과는 원시자료 기반이므로 조회 시각을 함께 적는다.

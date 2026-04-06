@@ -1,6 +1,6 @@
 {
   "name": "daiso-product-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official Daiso Mall store/product search and pickup-stock client",
   "license": "MIT",
   "main": "src/index.js",

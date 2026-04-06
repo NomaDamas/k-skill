@@ -102,7 +102,8 @@ test("searchNearbyByLocationQuery resolves documented landmark aliases like 코�
   try {
     const result = await searchNearbyByLocationQuery("코엑스", {
       distanceMeters: 1000,
-      limit: 5
+      limit: 5,
+      useDirectApi: true
     });
 
     assert.equal(result.anchor.zone2, "삼성동/대치동");
@@ -132,7 +133,8 @@ test("searchNearbyByLocationQuery resolves a zone match, fetches the official ne
   try {
     const result = await searchNearbyByLocationQuery("광화문", {
       distanceMeters: 1000,
-      limit: 5
+      limit: 5,
+      useDirectApi: true
     });
 
     assert.equal(result.anchor.zone2, "광화문/종로2가");
@@ -171,7 +173,8 @@ test("searchNearbyByLocationQuery surfaces PREMIUM_REQUIRED with a stable domain
       () =>
         searchNearbyByLocationQuery("광화문", {
           distanceMeters: 1000,
-          limit: 5
+          limit: 5,
+          useDirectApi: true
         }),
       assertPremiumRequiredError
     );
@@ -197,7 +200,8 @@ test("searchNearbyByCoordinates surfaces PREMIUM_REQUIRED with the same domain e
         searchNearbyByCoordinates({
           ...gwanghwamunCoordinates,
           distanceMeters: 1000,
-          limit: 5
+          limit: 5,
+          useDirectApi: true
         }),
       assertPremiumRequiredError
     );
@@ -223,7 +227,8 @@ test("searchNearbyByCoordinates keeps non-premium upstream failures generic", as
         searchNearbyByCoordinates({
           ...gwanghwamunCoordinates,
           distanceMeters: 1000,
-          limit: 5
+          limit: 5,
+          useDirectApi: true
         }),
       assertGenericRequestError
     );

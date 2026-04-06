@@ -6,6 +6,8 @@ const {
   parseZoneCatalogHtml
 } = require("./parse");
 
+const DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org";
+
 const DEFAULT_BROWSER_HEADERS = {
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "accept-language": "ko,en-US;q=0.9,en;q=0.8",
@@ -97,6 +99,26 @@ async function fetchText(url, options = {}) {
 
 async function fetchJson(url, options = {}) {
   return request(url, options, "json");
+}
+
+function resolveProxyBaseUrl(options = {}) {
+  return options.proxyBaseUrl || process.env.KSKILL_PROXY_BASE_URL || DEFAULT_PROXY_BASE_URL;
+}
+
+function useDirectApi(options = {}) {
+  return options.useDirectApi === true;
+}
+
+async function fetchNearbyViaProxy(latitude, longitude, distanceMeters, limit, options = {}) {
+  const base = resolveProxyBaseUrl(options);
+  const url = new URL(`${base}/v1/blue-ribbon/nearby`);
+  url.searchParams.set("latitude", String(latitude));
+  url.searchParams.set("longitude", String(longitude));
+  url.searchParams.set("distanceMeters", String(distanceMeters));
+  url.searchParams.set("limit", String(limit));
+
+  const payload = await fetchJson(url.toString(), options);
+  return payload;
 }
 
 function assertDistanceMeters(distanceMeters) {
@@ -197,6 +219,21 @@ async function searchNearbyByCoordinates(options) {
     throw new Error("latitude and longitude must be finite numbers.");
   }
 
+  if (!useDirectApi(options)) {
+    const proxyPayload = await fetchNearbyViaProxy(latitude, longitude, distanceMeters, limit, options);
+    const origin = { latitude, longitude };
+    const items = normalizeNearbyResults(proxyPayload, origin, limit);
+
+    return {
+      anchor: { latitude, longitude },
+      items,
+      meta: {
+        total: Number(proxyPayload.total || items.length),
+        capped: Boolean(proxyPayload.capped)
+      }
+    };
+  }
+
   const params = buildNearbySearchParams({
     latitude,
     longitude,
@@ -259,20 +296,32 @@ async function searchNearbyByLocationQuery(locationQuery, options = {}) {
   const anchor = matches[0].zone;
   const distanceMeters = Number(options.distanceMeters ?? DEFAULT_DISTANCE_METERS);
   const limit = options.limit ?? 10;
+  const origin = { latitude: anchor.latitude, longitude: anchor.longitude };
+
+  if (!useDirectApi(options)) {
+    const proxyPayload = await fetchNearbyViaProxy(
+      anchor.latitude, anchor.longitude, distanceMeters, limit, options
+    );
+    const items = normalizeNearbyResults(proxyPayload, origin, limit);
+
+    return {
+      anchor,
+      candidates: matches,
+      items,
+      meta: {
+        total: Number(proxyPayload.total || items.length),
+        capped: Boolean(proxyPayload.capped)
+      }
+    };
+  }
+
   const params = buildNearbySearchParams({
     zone: anchor,
     distanceMeters,
     sort: options.sort
   });
   const payload = await fetchNearbyMap(params, options);
-  const items = normalizeNearbyResults(
-    payload,
-    {
-      latitude: anchor.latitude,
-      longitude: anchor.longitude
-    },
-    limit,
-  );
+  const items = normalizeNearbyResults(payload, origin, limit);
 
   return {
     anchor,
