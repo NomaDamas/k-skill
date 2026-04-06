@@ -208,6 +208,64 @@ class ServiceKeyEncodingTest(unittest.TestCase):
         self.assertNotIn("%253D", captured["url"])
 
 
+    def test_build_search_params_decodes_percent_encoded_service_key(self):
+        """Callers passing a raw percent-encoded key directly into build_search_params
+        must not trigger double-encoding when urlencode serializes the dict."""
+        captured = {}
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return b"<response><header><resultCode>00</resultCode></header></response>"
+
+        def fake_urlopen(request, timeout):
+            captured["url"] = request.full_url
+            return FakeResponse()
+
+        with mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            fetch_xml(
+                "https://example.test/patent",
+                build_search_params(query="배터리", service_key="abc%2Bdef%3D%3D"),
+            )
+
+        self.assertIn("ServiceKey=abc%2Bdef%3D%3D", captured["url"])
+        self.assertNotIn("%252B", captured["url"])
+        self.assertNotIn("%253D", captured["url"])
+
+    def test_build_detail_params_decodes_percent_encoded_service_key(self):
+        """Same guard for build_detail_params direct callers."""
+        captured = {}
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return b"<response><header><resultCode>00</resultCode></header></response>"
+
+        def fake_urlopen(request, timeout):
+            captured["url"] = request.full_url
+            return FakeResponse()
+
+        with mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            fetch_xml(
+                "https://example.test/patent",
+                build_detail_params(application_number="1020240001234", service_key="abc%2Bdef%3D%3D"),
+            )
+
+        self.assertIn("ServiceKey=abc%2Bdef%3D%3D", captured["url"])
+        self.assertNotIn("%252B", captured["url"])
+        self.assertNotIn("%253D", captured["url"])
+
+
 class PatentSearchWorkflowTest(unittest.TestCase):
     def test_search_patents_uses_fetcher_and_returns_parsed_report(self):
         calls = []

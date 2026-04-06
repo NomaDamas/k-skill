@@ -121,7 +121,7 @@ def build_search_params(
         "utility": "true" if utility else "false",
         "pageNo": str(page_no),
         "numOfRows": str(num_of_rows),
-        "ServiceKey": service_key,
+        "ServiceKey": urllib.parse.unquote(service_key),
     }
     if year is not None:
         params["year"] = str(year)
@@ -129,7 +129,7 @@ def build_search_params(
 
 
 def build_detail_params(*, application_number: str, service_key: str) -> dict[str, str]:
-    return {"applicationNumber": application_number, "ServiceKey": service_key}
+    return {"applicationNumber": application_number, "ServiceKey": urllib.parse.unquote(service_key)}
 
 
 def fetch_xml(url: str, params: dict[str, str], timeout: int = DEFAULT_TIMEOUT) -> str:
