@@ -1,6 +1,6 @@
 {
   "name": "toss-securities",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Safe read-only tossctl wrapper for Toss Securities skill workflows",
   "license": "MIT",
   "main": "src/index.js",

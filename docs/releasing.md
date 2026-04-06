@@ -18,7 +18,7 @@
 3. Changesets가 Version Packages PR 생성
 4. Version Packages PR merge
 5. GitHub Actions가 변경된 npm 패키지만 `NPM_TOKEN` 으로 publish
-6. npm 패키지용 GitHub Release 는 만들지 않는다 (`.changeset/config.json` 이 `changelog: false` 이므로 `createGithubReleases: false` 유지)
+6. 패키지별 `CHANGELOG.md` 는 Changesets가 자동 관리하고, npm 패키지용 GitHub Release 는 계속 만들지 않는다 (`createGithubReleases: false` 유지)
 
 ## Python 패키지
 

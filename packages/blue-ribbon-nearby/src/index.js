@@ -6,6 +6,8 @@ const {
   parseZoneCatalogHtml
 } = require("./parse");
 
+const DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org";
+
 const DEFAULT_BROWSER_HEADERS = {
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "accept-language": "ko,en-US;q=0.9,en;q=0.8",
@@ -21,6 +23,52 @@ const SEARCH_ZONE_URL = `${BASE_URL}/search/zone`;
 const RESTAURANTS_MAP_URL = `${BASE_URL}/restaurants/map`;
 const DEFAULT_DISTANCE_METERS = 1000;
 const DEFAULT_RIBBON_TYPES = "RIBBON_THREE,RIBBON_TWO,RIBBON_ONE";
+
+async function readErrorPayload(response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("json")) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+function createRequestError(response, url, payload) {
+  if (
+    response.status === 403 &&
+    url.startsWith(RESTAURANTS_MAP_URL) &&
+    payload &&
+    payload.error === "PREMIUM_REQUIRED"
+  ) {
+    const error = new Error(
+      "Blue Ribbon nearby results are currently premium-gated by bluer.co.kr. Zone matching still works, but live nearby restaurant data now requires official premium access.",
+    );
+    error.code = "premium_required";
+    error.statusCode = response.status;
+    error.upstreamError = payload.error;
+    error.upstreamUrl = url;
+    return error;
+  }
+
+  const error = new Error(`Blue Ribbon request failed with ${response.status} for ${url}`);
+  error.statusCode = response.status;
+  error.upstreamUrl = url;
+
+  if (payload && typeof payload === "object" && typeof payload.error === "string") {
+    error.upstreamError = payload.error;
+  }
+
+  return error;
+}
 
 async function request(url, options = {}, responseType = "text") {
   const fetchImpl = options.fetchImpl || global.fetch;
@@ -39,7 +87,7 @@ async function request(url, options = {}, responseType = "text") {
   });
 
   if (!response.ok) {
-    throw new Error(`Blue Ribbon request failed with ${response.status} for ${url}`);
+    throw createRequestError(response, url, await readErrorPayload(response));
   }
 
   return responseType === "json" ? response.json() : response.text();
@@ -51,6 +99,26 @@ async function fetchText(url, options = {}) {
 
 async function fetchJson(url, options = {}) {
   return request(url, options, "json");
+}
+
+function resolveProxyBaseUrl(options = {}) {
+  return options.proxyBaseUrl || process.env.KSKILL_PROXY_BASE_URL || DEFAULT_PROXY_BASE_URL;
+}
+
+function useDirectApi(options = {}) {
+  return options.useDirectApi === true;
+}
+
+async function fetchNearbyViaProxy(latitude, longitude, distanceMeters, limit, options = {}) {
+  const base = resolveProxyBaseUrl(options);
+  const url = new URL(`${base}/v1/blue-ribbon/nearby`);
+  url.searchParams.set("latitude", String(latitude));
+  url.searchParams.set("longitude", String(longitude));
+  url.searchParams.set("distanceMeters", String(distanceMeters));
+  url.searchParams.set("limit", String(limit));
+
+  const payload = await fetchJson(url.toString(), options);
+  return payload;
 }
 
 function assertDistanceMeters(distanceMeters) {
@@ -151,6 +219,21 @@ async function searchNearbyByCoordinates(options) {
     throw new Error("latitude and longitude must be finite numbers.");
   }
 
+  if (!useDirectApi(options)) {
+    const proxyPayload = await fetchNearbyViaProxy(latitude, longitude, distanceMeters, limit, options);
+    const origin = { latitude, longitude };
+    const items = normalizeNearbyResults(proxyPayload, origin, limit);
+
+    return {
+      anchor: { latitude, longitude },
+      items,
+      meta: {
+        total: Number(proxyPayload.total || items.length),
+        capped: Boolean(proxyPayload.capped)
+      }
+    };
+  }
+
   const params = buildNearbySearchParams({
     latitude,
     longitude,
@@ -213,20 +296,32 @@ async function searchNearbyByLocationQuery(locationQuery, options = {}) {
   const anchor = matches[0].zone;
   const distanceMeters = Number(options.distanceMeters ?? DEFAULT_DISTANCE_METERS);
   const limit = options.limit ?? 10;
+  const origin = { latitude: anchor.latitude, longitude: anchor.longitude };
+
+  if (!useDirectApi(options)) {
+    const proxyPayload = await fetchNearbyViaProxy(
+      anchor.latitude, anchor.longitude, distanceMeters, limit, options
+    );
+    const items = normalizeNearbyResults(proxyPayload, origin, limit);
+
+    return {
+      anchor,
+      candidates: matches,
+      items,
+      meta: {
+        total: Number(proxyPayload.total || items.length),
+        capped: Boolean(proxyPayload.capped)
+      }
+    };
+  }
+
   const params = buildNearbySearchParams({
     zone: anchor,
     distanceMeters,
     sort: options.sort
   });
   const payload = await fetchNearbyMap(params, options);
-  const items = normalizeNearbyResults(
-    payload,
-    {
-      latitude: anchor.latitude,
-      longitude: anchor.longitude
-    },
-    limit,
-  );
+  const items = normalizeNearbyResults(payload, origin, limit);
 
   return {
     anchor,

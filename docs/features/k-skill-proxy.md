@@ -12,11 +12,17 @@
 client/skill -> k-skill-proxy -> upstream public API
 ```
 
-현재 기본 엔드포인트는 아래 둘입니다.
+현재 기본 엔드포인트는 아래와 같습니다.
 
 - `GET /health`
 - `GET /v1/fine-dust/report`
 - `GET /v1/seoul-subway/arrival`
+- `GET /v1/han-river/water-level`
+- `GET /v1/korean-stock/search`
+- `GET /v1/korean-stock/base-info`
+- `GET /v1/korean-stock/trade-info`
+- `GET /v1/opinet/around`
+- `GET /v1/opinet/detail`
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
 
 ## 권장 환경변수
@@ -29,9 +35,40 @@ client/skill -> k-skill-proxy -> upstream public API
 
 - `AIR_KOREA_OPEN_API_KEY=...`
 - `SEOUL_OPEN_API_KEY=...`
+- `HRFCO_OPEN_API_KEY=...`
+- `OPINET_API_KEY=...`
+- `KRX_API_KEY=...`
 - `KSKILL_PROXY_PORT=4020`
 
-## PM2 + cloudflared
+## 프로덕션 배포 구조
+
+프로덕션 proxy 서버는 개발 repo와 분리된 별도 clone으로 운영한다.
+
+- 배포 디렉토리: `~/.local/share/k-skill-proxy` (main 브랜치 단독 clone)
+- PM2 프로세스: `k-skill-proxy`
+- Cloudflare Tunnel ingress: `k-skill-proxy.nomadamas.org -> http://localhost:4020`
+
+### 자동 배포 (cron)
+
+`~/.local/share/k-skill-proxy/scripts/auto-update-proxy.sh`가 매시 정각에 실행된다.
+
+```
+0 * * * * PATH=/usr/bin:/opt/homebrew/bin:/opt/homebrew/lib/node_modules/.bin:$PATH ~/.local/share/k-skill-proxy/scripts/auto-update-proxy.sh >> /tmp/k-skill-proxy-update.log 2>&1
+```
+
+동작 순서:
+
+1. `git fetch origin main`
+2. local SHA == remote SHA 이면 종료 (up-to-date)
+3. `git pull --ff-only`
+4. `package-lock.json` 변경 시 `npm ci`
+5. `pm2 restart k-skill-proxy --update-env`
+
+따라서 **main에 merge되어야 프로덕션에 반영**된다. dev 브랜치 변경은 프로덕션에 영향 없음.
+
+로그: `/tmp/k-skill-proxy-update.log`
+
+### 초기 설정 (PM2 + cloudflared)
 
 1. `pm2 start ecosystem.config.cjs`
 2. `pm2 save`
@@ -63,6 +100,50 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
   --data-urlencode 'stationName=강남'
 ```
 
+한강 수위 정보 endpoint:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/han-river/water-level' \
+  --data-urlencode 'stationName=한강대교'
+```
+
+이 endpoint 는 내부적으로 HRFCO `waterlevel/info.json` 으로 관측소를 찾고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 10분 수위/유량을 가져옵니다.
+
+Opinet 근처 주유소 가격 endpoint:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/opinet/around' \
+  --data-urlencode 'x=313680' \
+  --data-urlencode 'y=545015' \
+  --data-urlencode 'radius=1500' \
+  --data-urlencode 'prodcd=B027'
+```
+
+Opinet 주유소 상세 endpoint:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/opinet/detail' \
+  --data-urlencode 'id=A0009905'
+```
+
+한국 주식 검색 endpoint:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
+  --data-urlencode 'q=삼성전자' \
+  --data-urlencode 'bas_dd=20260404'
+```
+
+한국 주식 기본정보 endpoint:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' \
+  --data-urlencode 'market=KOSPI' \
+  --data-urlencode 'code=005930' \
+  --data-urlencode 'bas_dd=20260404'
+```
+
+
 AirKorea passthrough endpoint:
 
 ```bash
@@ -78,5 +159,6 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/B552584/ArpltnInforInqireSv
 ## 주의할 점
 
 - upstream key는 프록시 서버에서만 관리합니다.
+- 한국 주식 route도 사용자에게 `KRX_API_KEY` 를 배포하지 않습니다.
 - client 쪽에는 upstream API key를 배포하지 않습니다.
 - public hosted route rollout 이 끝나기 전에는 서울 지하철 예시를 local/self-host URL 로 검증합니다.

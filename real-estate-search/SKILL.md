@@ -1,6 +1,6 @@
 ---
 name: real-estate-search
-description: Use tae0y's real-estate-mcp for Korean apartment/officetel/villa/single-house real transaction price and rent lookups. If no hosted endpoint is available, self-host the upstream server with Cloudflare Tunnel and launchd.
+description: Korean apartment/officetel/villa/single-house real transaction price and rent lookups via k-skill-proxy. Based on tae0y's real-estate-mcp and MOLIT public data APIs.
 license: MIT
 metadata:
   category: real-estate
@@ -12,216 +12,171 @@ metadata:
 
 ## What this skill does
 
-한국 부동산 실거래가/전월세 조회가 필요할 때 **upstream `real-estate-mcp`**(`https://github.com/tae0y/real-estate-mcp/tree/main`)를 그대로 사용한다.
-이 저장소는 upstream 소스 코드를 vendoring 하지 않고, 연결/운영 가이드만 제공한다.
-
-대표 도구:
-
-- 아파트 매매 실거래가: `get_apartment_trades`
-- 아파트 전월세: `get_apartment_rent`
-- 오피스텔 매매/전월세: `get_officetel_trades`, `get_officetel_rent`
-- 연립다세대 매매/전월세: `get_villa_trades`, `get_villa_rent`
-- 단독/다가구 매매/전월세: `get_single_house_trades`, `get_single_house_rent`
-- 상업업무용 매매: `get_commercial_trade`
-- 청약홈 분양/당첨: `get_apt_subscription_info`, `get_apt_subscription_results`
-- 공공경매/온비드 입찰결과: `get_public_auction_items`, `get_public_auction_item_detail` (`⚠️ WIP`, upstream README 기준)
-- 지역코드 조회: `get_region_code`
+기본적으로 `https://k-skill-proxy.nomadamas.org/v1/real-estate/...` 로 요청해서 한국 부동산 실거래가/전월세 데이터를 조회한다. 국토교통부(MOLIT) 실거래가 신고 데이터를 기반으로 한다.
 
 ## When to use
 
 - "잠실 리센츠 2024년 매매 실거래가 찾아줘"
 - "마포구 아파트 전세 실거래가 보여줘"
 - "성수동 오피스텔 월세 실거래 데이터 볼래"
-- "세종시 청약 결과 찾아줘"
-- "실거래가 조회용 한국 부동산 MCP 붙여줘"
+- "강남구 연립다세대 매매 실거래가"
+- "용산구 상업업무용 건물 거래 내역"
 
 ## When not to use
 
 - 해외 부동산 시세/거래 조회
 - 실거래가가 아닌 민간 호가/매물 비교만 필요한 경우
 - 세금/등기/중개 법률자문처럼 판단이 필요한 경우
-- 이 저장소 안에 부동산 데이터 수집기나 새 서버 코드를 추가하려는 경우
+- 청약홈 분양/당첨 조회 (아직 미지원)
+
+## Inputs
+
+- `q`: 지역명 (region-code endpoint, 예: `"서울 강남구"`, `"마포구"`)
+- `lawd_cd`: 5자리 법정동 코드 (transaction endpoint, 예: `"11680"`)
+- `deal_ymd`: 6자리 거래년월 YYYYMM (예: `"202403"`)
+- `num_of_rows`: 조회 건수 (기본 100, 최대 1000)
 
 ## Prerequisites
 
-- 인터넷 연결
-- `uv`
-- MCP 클라이언트(Codex CLI, Claude Desktop 등)
-- 공공데이터포털 API key (`DATA_GO_KR_API_KEY`)
-- upstream clone: `https://github.com/tae0y/real-estate-mcp/tree/main`
+없음. 사용자는 별도 API key를 준비할 필요가 없다. upstream key는 proxy 서버에서만 주입한다.
 
-`DATA_GO_KR_API_KEY` 하나만 넣어도 기본 부동산 조회는 시작할 수 있다.
-청약홈/온비드 키를 분리하고 싶으면 upstream 문서대로 `ODCLOUD_API_KEY`, `ODCLOUD_SERVICE_KEY`, `ONBID_API_KEY` 를 추가한다.
-다만 `get_public_auction_items`, `get_public_auction_item_detail` 는 2026-04-05 기준 upstream README 에서 아직 `⚠️ WIP` 로 표시돼 있으니, production-ready 라고 단정하지 않고 preview 성격으로만 안내한다.
+## Default path
 
-## Codex CLI setup (stdio)
+추가 client API 레이어는 불필요하다. 그냥 프록시 서버에 HTTP 요청만 넣으면 된다.
 
-로컬에서 가장 빠른 기본 경로는 Codex CLI stdio 연결이다.
+`KSKILL_PROXY_BASE_URL` 환경변수가 있으면 그 값을 사용하고, 없으면 기본 경로 `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
-```bash
-git clone https://github.com/tae0y/real-estate-mcp.git
-cd real-estate-mcp
+## Supported endpoints
 
-codex mcp add real-estate \
-  --env DATA_GO_KR_API_KEY=your_api_key_here \
-  -- uv run --directory /path/to/real-estate-mcp \
-  python src/real_estate/mcp_server/server.py
+### 지역코드 조회
 
-codex mcp list
-codex mcp get real-estate
+```
+GET /v1/real-estate/region-code?q={지역명}
 ```
 
-## Claude Desktop setup (stdio)
+### 실거래가/전월세 조회
+
+```
+GET /v1/real-estate/:assetType/:dealType?lawd_cd={코드}&deal_ymd={년월}
+```
+
+| assetType | dealType | 설명 |
+|---|---|---|
+| `apartment` | `trade` | 아파트 매매 |
+| `apartment` | `rent` | 아파트 전월세 |
+| `officetel` | `trade` | 오피스텔 매매 |
+| `officetel` | `rent` | 오피스텔 전월세 |
+| `villa` | `trade` | 연립다세대 매매 |
+| `villa` | `rent` | 연립다세대 전월세 |
+| `single-house` | `trade` | 단독/다가구 매매 |
+| `single-house` | `rent` | 단독/다가구 전월세 |
+| `commercial` | `trade` | 상업업무용 매매 |
+
+`commercial/rent`는 지원하지 않는다.
+
+## Example requests
+
+지역코드 조회:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/real-estate/region-code' \
+  --data-urlencode 'q=강남구'
+```
+
+아파트 매매 실거래가 조회:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/real-estate/apartment/trade' \
+  --data-urlencode 'lawd_cd=11680' \
+  --data-urlencode 'deal_ymd=202403'
+```
+
+오피스텔 전월세 조회:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/real-estate/officetel/rent' \
+  --data-urlencode 'lawd_cd=11680' \
+  --data-urlencode 'deal_ymd=202403'
+```
+
+## Response shape
+
+### 지역코드 응답
 
 ```json
 {
-  "mcpServers": {
-    "real-estate": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory", "/path/to/real-estate-mcp",
-        "python", "src/real_estate/mcp_server/server.py"
-      ],
-      "env": {
-        "DATA_GO_KR_API_KEY": "your_api_key_here"
-      }
-    }
-  }
+  "results": [
+    { "lawd_cd": "11680", "name": "서울특별시 강남구" }
+  ],
+  "query": "강남구",
+  "proxy": { "name": "k-skill-proxy", "cache": { "hit": false, "ttl_ms": 300000 } }
 }
 ```
 
-## Shared HTTP setup
-
-여러 클라이언트가 같이 붙어야 하면 upstream HTTP 모드를 사용한다.
-
-```bash
-git clone https://github.com/tae0y/real-estate-mcp.git
-cd real-estate-mcp
-cp .env.example .env
-printf 'DATA_GO_KR_API_KEY=your_api_key_here\n' >> .env
-uv run real-estate-mcp --transport http --host 127.0.0.1 --port 8000
-```
-
-Codex CLI/Claude Desktop 에는 HTTP URL을 등록한다.
-
-```bash
-codex mcp add real-estate --url http://127.0.0.1:8000/mcp
-```
+### 매매 실거래가 응답
 
 ```json
 {
-  "mcpServers": {
-    "real-estate": {
-      "url": "http://127.0.0.1:8000/mcp"
+  "items": [
+    {
+      "name": "래미안 퍼스티지",
+      "district": "반포동",
+      "area_m2": 84.99,
+      "floor": 12,
+      "price_10k": 245000,
+      "deal_date": "2024-03-15",
+      "build_year": 2009,
+      "deal_type": "중개거래"
     }
-  }
+  ],
+  "summary": {
+    "median_price_10k": 230000,
+    "min_price_10k": 180000,
+    "max_price_10k": 310000,
+    "sample_count": 42
+  },
+  "query": { "asset_type": "apartment", "deal_type": "trade", "lawd_cd": "11680", "deal_ymd": "202403" },
+  "proxy": { "name": "k-skill-proxy", "cache": { "hit": false, "ttl_ms": 300000 } }
 }
 ```
 
-## Self-host fallback when no hosted endpoint is available
+### 전월세 응답
 
-2026-04-05 기준, upstream README/docs에는 고정 public MCP URL이 문서화돼 있지 않았다. 그래서 인터넷에서 공유 가능한 endpoint가 미리 준비돼 있지 않다고 보고 **self-host를 기본 운영 경로**로 잡는다.
-
-### 1. Upstream Docker + Caddy로 로컬 HTTP 서버 띄우기
-
-```bash
-git clone https://github.com/tae0y/real-estate-mcp.git
-cd real-estate-mcp
-cp .env.example .env
-printf 'DATA_GO_KR_API_KEY=your_api_key_here\n' >> .env
-REPOSITORY_ROOT=$(pwd)
-docker compose -f "$REPOSITORY_ROOT"/docker/docker-compose.yml up -d --build
-```
-
-헬스 체크는 upstream 문서의 MCP initialize 예시로 확인한다.
-
-```bash
-curl -s -X POST http://localhost/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1"}}}'
-```
-
-### 2. Cloudflare Tunnel로 적합한 도메인 붙이기
-
-```bash
-cloudflared tunnel login
-cloudflared tunnel create real-estate-mcp
-cloudflared tunnel route dns real-estate-mcp real-estate-mcp.example.com
-cat > ~/.cloudflared/config.yml <<'EOF'
-tunnel: real-estate-mcp
-credentials-file: /Users/YOUR_USER/.cloudflared/<tunnel-id>.json
-ingress:
-  - hostname: real-estate-mcp.example.com
-    service: http://localhost:80
-  - service: http_status:404
-EOF
-cloudflared tunnel run real-estate-mcp
-```
-
-공유용 HTTPS URL은 `https://real-estate-mcp.example.com/mcp` 형식으로 잡는다.
-public 인터넷에 노출한다면 upstream `docs/setup-oauth.md` 대로 `AUTH_MODE=oauth` 를 켜고 OAuth/Auth0를 붙인다.
-
-### 3. macOS launchd 자동 실행
-
-부팅 후 안정적으로 다시 뜨게 하려면 **launchd 는 Cloudflare Tunnel만 담당**하게 두고, upstream 서버 컨테이너는 Docker 쪽 재시작 정책에 맡긴다.
-`docker/docker-compose.yml` 에 이미 `restart: unless-stopped` 가 들어 있으므로, `docker compose ... up -d` 를 `RunAtLoad` + `KeepAlive` launchd job 으로 감싸면 오히려 즉시 종료된 프로세스를 launchd 가 반복 재실행하게 된다.
-
-즉, 서버 쪽은 Docker Desktop/Engine 이 로그인 후 자동 기동되도록 설정한 다음 위의 `docker compose ... up -d --build` 를 한 번 실행해 두고, macOS launchd 에는 long-running 프로세스인 `cloudflared tunnel run ...` 만 등록한다.
-
-`~/Library/LaunchAgents/com.kskill.real-estate-mcp.tunnel.plist`
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>Label</key><string>com.kskill.real-estate-mcp.tunnel</string>
-    <key>ProgramArguments</key>
-    <array>
-      <string>/opt/homebrew/bin/cloudflared</string>
-      <string>tunnel</string>
-      <string>run</string>
-      <string>real-estate-mcp</string>
-    </array>
-    <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><true/>
-  </dict>
-</plist>
-```
-
-```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kskill.real-estate-mcp.tunnel.plist
-launchctl enable gui/$(id -u)/com.kskill.real-estate-mcp.tunnel
-```
-
-위 예시는 macOS 기준이다. Linux/Windows에서는 Docker 서비스 자동 시작 + systemd/서비스 관리자로 tunnel 같은 long-running 프로세스를 따로 등록한다.
+매매와 동일 구조이나 아이템에 `deposit_10k`, `monthly_rent_10k`, `contract_type` 이 포함되고, summary에 `median_deposit_10k`, `monthly_rent_avg_10k` 등이 들어간다.
 
 ## Response policy
 
-- 실거래가/전월세 요청이면 `get_region_code` 로 행정구역 코드를 먼저 확인한 뒤 자산 타입별 tool로 조회한다.
-- 아파트 매매는 `get_apartment_trades`, 아파트 전월세는 `get_apartment_rent` 를 우선 사용한다.
-- 오피스텔/빌라/단독주택/상업업무용은 자산 타입에 맞는 전용 tool로 라우팅한다.
+- 실거래가/전월세 요청이면 `region-code` endpoint로 행정구역 코드를 먼저 확인한 뒤 자산 타입별 endpoint로 조회한다.
+- 아파트 매매는 `apartment/trade`, 아파트 전월세는 `apartment/rent` 를 우선 사용한다.
+- 오피스텔/빌라/단독주택/상업업무용은 자산 타입에 맞는 endpoint로 라우팅한다.
 - 사용자가 동/건물명/연월을 덜 줬으면 지역, 단지명, 기준 월을 먼저 보강한다.
-- 실거래가와 호가를 섞어 말하지 않는다. 이 스킬은 국토교통부 기반 실거래/전월세 신고 데이터를 우선 다룬다.
-- 인터넷 공유용 endpoint가 미리 없다면 self-host + Cloudflare Tunnel + launchd 운영 경로를 안내한다.
-- upstream 소스는 이 저장소에 복사하지 않는다.
+- 실거래가와 호가를 섞어 말하지 않는다. 이 스킬은 국토교통부 기반 실거래/전월세 신고 데이터를 다룬다.
+
+## Keep the answer compact
+
+- 지역명 + 자산 타입 + 거래년월
+- 거래 건수 (summary.sample_count)
+- 가격 요약: 중위값, 최소, 최대
+- 상위 3-5건 대표 거래 (이름, 면적, 층, 가격, 날짜)
+- 전월세면 보증금 + 월세 요약도 포함
+
+## Failure modes
+
+- `lawd_cd` 또는 `deal_ymd` 형식이 잘못되면 400 응답
+- 프록시 서버에 `DATA_GO_KR_API_KEY` 가 없으면 503 응답
+- upstream MOLIT API 오류면 502 + `molit_api_XXX` 에러 코드
+- 해당 지역/기간에 데이터가 없으면 빈 `items` 배열 반환
 
 ## Done when
 
-- 요청 자산 타입에 맞는 `real-estate-mcp` tool이 선택되었다.
-- 필요한 경우 `get_region_code` 로 지역코드를 먼저 확인했다.
-- 실거래가/전월세/청약/경매 중 적절한 결과를 조회했다.
-- 로컬 stdio/HTTP 경로면 `DATA_GO_KR_API_KEY` 준비 여부를 확인했다.
-- hosted endpoint가 없으면 self-host + Cloudflare Tunnel + launchd 운영 경로를 제시했다.
-- 원본 MCP 링크(`https://github.com/tae0y/real-estate-mcp/tree/main`)를 함께 남겼다.
+- 요청 자산 타입에 맞는 endpoint를 선택했다.
+- 필요한 경우 `region-code` 로 지역코드를 먼저 확인했다.
+- 실거래가/전월세 결과를 조회하고 요약했다.
+- 원본 데이터 출처(국토교통부 실거래가 신고)를 함께 남겼다.
 
 ## Notes
 
-- upstream: `https://github.com/tae0y/real-estate-mcp/tree/main`
-- upstream Codex guide: `https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-codex-cli.md`
-- upstream Docker guide: `https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-docker.md`
-- upstream OAuth guide: `https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-oauth.md`
-- official data source: 공공데이터포털 (`https://www.data.go.kr`)
-- 이 저장소에는 별도 workspace/package를 추가하지 않고 스킬 문서만 유지한다.
+- 원본 참고: `https://github.com/tae0y/real-estate-mcp/tree/main`
+- 공식 데이터 출처: 공공데이터포털 (`https://www.data.go.kr`)
+- 가격 단위: `price_10k`, `deposit_10k` = 만원 단위 (예: 245000 = 24억 5천만원)
+- 취소된 거래는 서버에서 자동 필터링된다.

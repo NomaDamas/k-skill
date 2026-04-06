@@ -1,6 +1,6 @@
 {
   "name": "k-lotto",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official dhlottery-backed client for Korean Lotto results",
   "license": "MIT",
   "main": "src/index.js",

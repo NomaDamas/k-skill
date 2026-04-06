@@ -10,13 +10,31 @@
 - tossinvest-cli: https://github.com/JungHoonGhae/tossinvest-cli
 - K League 일정/결과 JSON: https://www.kleague.com/getScheduleList.do
 - K League 팀 순위 JSON: https://www.kleague.com/record/teamRank.do
+- jerjangmin original `lck-analytics` skill pack: https://github.com/jerjangmin/share/tree/main/SKILL/lck-analytics
+- Riot LoL Esports schedule API: https://esports-api.lolesports.com/persisted/gw/getSchedule
+- Riot LoL Esports tournaments API: https://esports-api.lolesports.com/persisted/gw/getTournamentsForLeague
+- Riot LoL Esports standings API: https://esports-api.lolesports.com/persisted/gw/getStandings
+- Riot LoL Esports event details API: https://esports-api.lolesports.com/persisted/gw/getEventDetails
+- Riot LoL Esports live window feed: https://feed.lolesports.com/livestats/v1/window/<gameId>
+- Riot LoL Esports live details feed: https://feed.lolesports.com/livestats/v1/details/<gameId>
+- Oracle's Elixir data glossary: https://oracleselixir.com/tools/downloads
 - `@ohah/hwpjs`: https://github.com/ohah/hwpjs
 - `hwp-mcp`: https://github.com/jkf87/hwp-mcp
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
-- real-estate-mcp Codex guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-codex-cli.md
-- real-estate-mcp Docker guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-docker.md
-- real-estate-mcp OAuth guide: https://github.com/tae0y/real-estate-mcp/blob/main/docs/setup-oauth.md
+- korea-stock-mcp: https://github.com/jjlabsio/korea-stock-mcp
+- KRX OPEN API 메인: https://openapi.krx.co.kr/contents/OPP/MAIN/main/index.cmd
+- KRX 종목 기본정보 API (KOSPI): http://data-dbg.krx.co.kr/svc/apis/sto/stk_isu_base_info
+- KRX 일별 매매정보 API (KOSPI): http://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd
+- MOLIT 아파트 매매 실거래가 API: https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade
+- MOLIT 아파트 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent
+- MOLIT 오피스텔 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcOffiTrade/getRTMSDataSvcOffiTrade
+- MOLIT 오피스텔 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcOffiRent/getRTMSDataSvcOffiRent
+- MOLIT 연립다세대 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade
+- MOLIT 연립다세대 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcRHRent/getRTMSDataSvcRHRent
+- MOLIT 단독/다가구 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcSHTrade/getRTMSDataSvcSHTrade
+- MOLIT 단독/다가구 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcSHRent/getRTMSDataSvcSHRent
+- MOLIT 상업업무용 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcNrgTrade/getRTMSDataSvcNrgTrade
 - beopmang: https://api.beopmang.org
 - `silver-flight-group/kakaocli`: https://github.com/silver-flight-group/kakaocli
 - KakaoTalk Mac 설치 참고(`mas`): https://velog.io/@bonjugi/%EB%A7%A5%EB%B6%81-M1%EC%97%90-homebrew%EB%A1%9C-node-vscode-%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0
@@ -35,8 +53,16 @@
 - 다이소몰 상품 요약 목록: https://www.daisomall.co.kr/ssn/search/GoodsMummResult
 - 다이소몰 매장 픽업 재고: https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck
 - 다이소몰 온라인 재고: https://www.daisomall.co.kr/api/pdo/selOnlStck
+- olive-young / multi-retail upstream repo (`hmmhmmhm/daiso-mcp`): https://github.com/hmmhmmhm/daiso-mcp
+- olive-young CLI package (`daiso`): https://www.npmjs.com/package/daiso
+- olive-young stores API: https://mcp.aka.page/api/oliveyoung/stores
+- olive-young products API: https://mcp.aka.page/api/oliveyoung/products
+- olive-young inventory API: https://mcp.aka.page/api/oliveyoung/inventory
+- daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
 - coupang-mcp (MCP 서버): https://github.com/uju777/coupang-mcp
 - coupang-mcp endpoint: https://yuju777-coupang-mcp.hf.space/mcp
+- bunjang-cli package: https://www.npmjs.com/package/bunjang-cli
+- bunjang-cli repo: https://github.com/pinion05/bunjangcli
 - 블루리본 메인: https://www.bluer.co.kr/
 - 블루리본 지역 검색: https://www.bluer.co.kr/search/zone
 - 블루리본 주변 맛집 JSON: https://www.bluer.co.kr/restaurants/map
@@ -49,9 +75,17 @@
 - 공공데이터포털 특허/실용신안 정보 검색 서비스: https://www.data.go.kr/data/15058788/openapi.do
 - KIPRIS Plus 특허/실용신안 검색 endpoint: https://plus.kipris.or.kr/kipo-api/kipi/patUtiModInfoSearchSevice/getWordSearch
 - KIPRIS Plus 특허/실용신안 서지상세 endpoint: https://plus.kipris.or.kr/kipo-api/kipi/patUtiModInfoSearchSevice/getBibliographyDetailInfoSearch
+- Opinet 오픈 API 안내: https://www.opinet.co.kr/user/custapi/openApiInfo.do
+- Opinet 반경 내 주유소 API: https://www.opinet.co.kr/api/aroundAll.do
+- Opinet 주유소 상세정보 API: https://www.opinet.co.kr/api/detailById.do
+- Opinet 지역코드 API: https://www.opinet.co.kr/api/areaCode.do
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
 - 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do
 - 에어코리아 측정소정보: https://www.data.go.kr/data/15073877/openapi.do
+- 한강홍수통제소 Open API 레퍼런스: https://www.hrfco.go.kr/web/openapiPage/reference.do
+- 한강홍수통제소 Open API 인증키 안내: https://www.hrfco.go.kr/web/openapiPage/certifyKey.do
+- 한강홍수통제소 Open API 정책: https://www.hrfco.go.kr/web/openapi/policy.do
+- 한강홍수통제소 API base: https://api.hrfco.go.kr
 - 우체국 도로명주소 검색: https://parcel.epost.go.kr/parcel/comm/zipcode/comm_newzipcd_list.jsp
 - CJ대한통운 배송조회: https://www.cjlogistics.com/ko/tool/parcel/tracking
 - CJ대한통운 배송상세 JSON: https://www.cjlogistics.com/ko/tool/parcel/tracking-detail

@@ -38,6 +38,7 @@ done < <(
   find "$root" -mindepth 1 -maxdepth 1 -type d \
     ! -name .git \
     ! -name .github \
+    ! -name .claude \
     ! -name .omx \
     ! -name .changeset \
     ! -name docs \

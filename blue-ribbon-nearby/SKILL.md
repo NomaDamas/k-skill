@@ -1,6 +1,6 @@
 ---
 name: blue-ribbon-nearby
-description: Use when the user asks for nearby restaurants or 근처 맛집. Always ask the user's current location first, then search official 블루리본 Blue Ribbon Survey ribbon restaurants near that location.
+description: Use when the user asks for nearby restaurants or 근처 맛집 and wants 블루리본 picks. Always ask the user's current location first, then search official Blue Ribbon nearby restaurants via k-skill-proxy.
 license: MIT
 metadata:
   category: food
@@ -12,12 +12,13 @@ metadata:
 
 ## What this skill does
 
-유저가 알려준 현재 위치를 기준으로 블루리본 서베이 공식 검색 표면에서 **근처 블루리본 맛집**만 추려서 보여준다.
+유저가 알려준 현재 위치를 기준으로 블루리본 서베이 공식 zone 을 찾고, k-skill-proxy 를 경유해 **근처 블루리본 맛집**을 보여준다.
 
 - 위치는 자동으로 추정하지 않는다.
 - **반드시 먼저 현재 위치를 질문**한다.
-- 위치 문자열은 공식 `zone` 목록으로 매칭하고, 가능하면 주변 JSON endpoint 로 좁혀서 찾는다.
+- 위치 문자열은 공식 `zone` 목록으로 매칭하고, 주변 JSON endpoint 로 좁혀서 찾는다.
 - 좌표를 직접 받으면 더 정확한 nearby 검색을 할 수 있다.
+- nearby 검색은 기본적으로 k-skill-proxy (`/v1/blue-ribbon/nearby`) 를 경유한다. 프록시에 `BLUE_RIBBON_SESSION_ID` 가 설정되어 있어야 한다.
 
 ## When to use
 
@@ -87,7 +88,7 @@ metadata:
 
 ### 3. Query the nearby Blue Ribbon endpoint
 
-공식 JSON endpoint 에 nearby 조건을 붙여 호출한다.
+기본적으로 k-skill-proxy 를 경유해 nearby 결과를 가져온다.
 
 ```js
 const { searchNearbyByLocationQuery } = require("blue-ribbon-nearby");
@@ -101,7 +102,9 @@ console.log(result.anchor);
 console.log(result.items);
 ```
 
-내부적으로는 `ribbon=true`, `ribbonType=RIBBON_THREE,RIBBON_TWO,RIBBON_ONE`, `isAround=true`, `sort=distance`, `zone2Lat`, `zone2Lng` 같은 파라미터를 사용한다.
+내부적으로는 zone 매칭 후 프록시의 `/v1/blue-ribbon/nearby` 에 좌표와 거리를 넘긴다. 프록시가 프리미엄 세션으로 Blue Ribbon upstream 을 호출한다.
+
+직접 호출이 필요하면 `useDirectApi: true` 옵션을 쓸 수 있지만, 프리미엄 세션 없이는 `premium_required` 에러가 난다.
 
 ### 4. Respond with a short restaurant summary
 
@@ -116,7 +119,7 @@ console.log(result.items);
 ## Done when
 
 - 유저의 현재 위치를 먼저 확인했다.
-- 공식 Blue Ribbon nearby 결과를 최소 1개 이상 찾았거나, 찾지 못한 이유와 다음 질문을 제시했다.
+- 공식 Blue Ribbon nearby 결과를 최소 1개 이상 찾았거나, 프록시 미설정 등의 이유로 결과를 가져올 수 없다는 이유와 다음 질문을 제시했다.
 - 결과를 거리순으로 짧게 정리했다.
 
 ## Failure modes
@@ -124,6 +127,7 @@ console.log(result.items);
 - 위치 문자열이 공식 zone 과 잘 매칭되지 않을 수 있다.
 - 같은 키워드가 여러 상권에 걸치면 추가 확인이 필요하다.
 - Blue Ribbon 사이트가 구조/파라미터를 바꾸면 zone 파싱 또는 nearby endpoint 가 깨질 수 있다.
+- 프록시의 `BLUE_RIBBON_SESSION_ID` 가 만료(30일)되면 갱신이 필요하다.
 
 ## Notes
 
