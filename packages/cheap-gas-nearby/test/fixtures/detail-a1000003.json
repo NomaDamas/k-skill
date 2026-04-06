@@ -1,0 +1,25 @@
+{
+  "RESULT": {
+    "OIL": {
+      "UNI_ID": "A1000003",
+      "POLL_DIV_CO": "SOL",
+      "OS_NM": "서울로주유소",
+      "VAN_ADR": "서울 중구 봉래동2가 122",
+      "NEW_ADR": "서울 중구 통일로 10",
+      "TEL": "02-3333-4444",
+      "SIGUNCD": "0102",
+      "LPG_YN": "N",
+      "MAINT_YN": "N",
+      "CAR_WASH_YN": "Y",
+      "CVS_YN": "Y",
+      "KPETRO_YN": "N",
+      "SELF_YN": "N",
+      "GIS_X_COOR": "309500.3000",
+      "GIS_Y_COOR": "550820.5000",
+      "OIL_PRICE": [
+        { "PRODCD": "B027", "PRICE": "1649", "TRADE_DT": "20260405", "TRADE_TM": "091420" },
+        { "PRODCD": "D047", "PRICE": "1539", "TRADE_DT": "20260405", "TRADE_TM": "091410" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "esportsGameId": "game-1",
+  "esportsMatchId": "match-1",
+  "gameMetadata": {
+    "patchVersion": "16.6.753.8272",
+    "blueTeamMetadata": {
+      "participantMetadata": [
+        {
+          "participantId": 1,
+          "summonerName": "HLE Zeus",
+          "championId": "Aatrox",
+          "role": "top"
+        },
+        {
+          "participantId": 2,
+          "summonerName": "HLE Peanut",
+          "championId": "Vi",
+          "role": "jungle"
+        }
+      ]
+    },
+    "redTeamMetadata": {
+      "participantMetadata": [
+        {
+          "participantId": 6,
+          "summonerName": "T1 Doran",
+          "championId": "Gnar",
+          "role": "top"
+        },
+        {
+          "participantId": 7,
+          "summonerName": "T1 Oner",
+          "championId": "Sejuani",
+          "role": "jungle"
+        }
+      ]
+    }
+  },
+  "frames": [
+    {
+      "rfc460Timestamp": "2026-04-01T09:00:00.000Z",
+      "gameState": "in_game",
+      "blueTeam": {
+        "totalGold": 24000,
+        "inhibitors": 0,
+        "towers": 3,
+        "barons": 0,
+        "totalKills": 2,
+        "dragons": [
+          "infernal"
+        ],
+        "participants": [
+          {
+            "participantId": 1
+          },
+          {
+            "participantId": 2
+          }
+        ]
+      },
+      "redTeam": {
+        "totalGold": 23200,
+        "inhibitors": 0,
+        "towers": 2,
+        "barons": 0,
+        "totalKills": 1,
+        "dragons": [],
+        "participants": [
+          {
+            "participantId": 6
+          },
+          {
+            "participantId": 7
+          }
+        ]
+      }
+    },
+    {
+      "rfc460Timestamp": "2026-04-01T09:05:00.000Z",
+      "gameState": "in_game",
+      "blueTeam": {
+        "totalGold": 29800,
+        "inhibitors": 0,
+        "towers": 5,
+        "barons": 1,
+        "totalKills": 6,
+        "dragons": [
+          "infernal",
+          "hextech"
+        ],
+        "participants": [
+          {
+            "participantId": 1
+          },
+          {
+            "participantId": 2
+          }
+        ]
+      },
+      "redTeam": {
+        "totalGold": 26200,
+        "inhibitors": 0,
+        "towers": 2,
+        "barons": 0,
+        "totalKills": 1,
+        "dragons": [],
+        "participants": [
+          {
+            "participantId": 6
+          },
+          {
+            "participantId": 7
+          }
+        ]
+      }
+    }
+  ]
+}

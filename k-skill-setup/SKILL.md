@@ -76,9 +76,14 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 유저에게 물어서 실제 값을 채운다.
 
-서울 지하철 도착정보는 hosted public route rollout 이 끝나기 전까지 `KSKILL_PROXY_BASE_URL` 을 self-host 또는 배포 확인이 끝난 proxy URL 로 채운다. 미세먼지만 hosted proxy 로 쓸 때는 이 값을 비워 둘 수 있다.
+서울 지하철 도착정보는 hosted public route rollout 이 끝나기 전까지 `KSKILL_PROXY_BASE_URL` 을 self-host 또는 배포 확인이 끝난 proxy URL 로 채운다. 미세먼지, 한강 수위, 주유소 가격은 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다.
 
 한국 법령 검색은 로컬 `korean-law-mcp` 경로를 쓸 때만 `LAW_OC` 를 채운다. remote endpoint는 사용자 `LAW_OC` 없이 `url`만 등록하면 되고, 기존 경로 장애 시에는 `법망`(`https://api.beopmang.org`)을 fallback으로 안내한다.
+
+한국 부동산 실거래가 조회는 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 경유하므로 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다.
+
+근처 가장 싼 주유소 찾기는 기본 hosted proxy를 경유하므로 사용자 쪽 `OPINET_API_KEY` 가 불필요하다.
+
 
 ### Missing secret response template
 
@@ -90,6 +95,8 @@ chmod 0600 ~/.config/k-skill/secrets.env
 - KTX: `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD`
 - 로컬 한국 법령 검색: `LAW_OC` + `korean-law-mcp`
 - 한국 법령 검색 remote endpoint: 사용자 `LAW_OC` 없이 `url`만 등록, 장애 시 `법망` fallback
+- 한국 부동산 실거래가 조회: 사용자 시크릿 불필요 (기본 hosted proxy 사용)
+- 근처 가장 싼 주유소 찾기: 사용자 시크릿 불필요 (기본 hosted proxy 사용)
 - 서울 지하철: self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`
 - 사용자 위치 미세먼지 조회: `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY`
 

@@ -1,0 +1,52 @@
+{
+  "data": {
+    "standings": [
+      {
+        "stages": [
+          {
+            "id": "stage-1",
+            "name": "Regular Season",
+            "slug": "regular-season",
+            "sections": [
+              {
+                "name": "Rankings",
+                "rankings": [
+                  {
+                    "ordinal": 1,
+                    "teams": [
+                      {
+                        "id": "100205573496804586",
+                        "name": "Hanwha Life Esports",
+                        "code": "HLE",
+                        "slug": "hanwha-life-esports",
+                        "record": {
+                          "wins": 5,
+                          "losses": 1
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "ordinal": 2,
+                    "teams": [
+                      {
+                        "id": "98767991853197861",
+                        "name": "T1",
+                        "code": "T1",
+                        "slug": "t1",
+                        "record": {
+                          "wins": 4,
+                          "losses": 2
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

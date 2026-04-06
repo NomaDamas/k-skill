@@ -1,0 +1,21 @@
+{
+  "summary": {
+    "confirm_id": "1001",
+    "name": "서울역",
+    "category": {
+      "name1": "교통,수송",
+      "name2": "기차역",
+      "name3": "기차역"
+    },
+    "point": {
+      "lon": 126.97068,
+      "lat": 37.55472
+    },
+    "address": {
+      "disp": "서울 용산구 동자동"
+    },
+    "phone_numbers": [
+      { "tel": "1544-7788" }
+    ]
+  }
+}

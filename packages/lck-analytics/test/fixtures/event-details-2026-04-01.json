@@ -1,0 +1,47 @@
+{
+  "data": {
+    "event": {
+      "id": "match-1",
+      "streams": [
+        {
+          "parameter": "lck",
+          "locale": "ko-KR",
+          "provider": "afreeca"
+        }
+      ],
+      "match": {
+        "games": [
+          {
+            "id": "game-1",
+            "number": 1,
+            "state": "inProgress",
+            "teams": [
+              {
+                "id": "100205573496804586",
+                "side": "blue"
+              },
+              {
+                "id": "98767991853197861",
+                "side": "red"
+              }
+            ]
+          }
+        ],
+        "teams": [
+          {
+            "id": "100205573496804586",
+            "name": "Hanwha Life Esports",
+            "code": "HLE",
+            "slug": "hanwha-life-esports"
+          },
+          {
+            "id": "98767991853197861",
+            "name": "T1",
+            "code": "T1",
+            "slug": "t1"
+          }
+        ]
+      }
+    }
+  }
+}

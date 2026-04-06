@@ -2,10 +2,13 @@
 
 ## 이 기능으로 할 수 있는 일
 
-- 유저가 알려준 현재 위치 근처의 블루리본 맛집 검색
+- 유저가 알려준 현재 위치를 공식 Blue Ribbon zone 으로 매칭
 - 공식 Blue Ribbon zone 목록으로 동네/역명 매칭
-- 좌표 기반 nearby 검색
+- k-skill-proxy 경유 nearby 블루리본 맛집 검색
 - 거리순 상위 결과 정리
+
+> [!NOTE]
+> Blue Ribbon의 `/restaurants/map` 은 프리미엄 전용입니다. 이 기능은 k-skill-proxy 에 설정된 프리미엄 세션(`BLUE_RIBBON_SESSION_ID`)을 경유해 nearby 검색을 수행합니다.
 
 ## 먼저 필요한 것
 
@@ -58,7 +61,7 @@
 2. 동네/역명/랜드마크를 받으면 공식 `search/zone` 목록에서 가장 가까운 zone 후보를 찾습니다.
    - 공식 zone 이름이 아닌 대표 랜드마크는 먼저 nearest zone alias 로 확장합니다. 예: `코엑스` → `삼성동/대치동`
 3. 좌표를 받으면 nearby bounding box 를 계산합니다.
-4. 공식 `/restaurants/map` endpoint 를 `isAround=true`, `ribbon=true`, `ribbonType=RIBBON_THREE,RIBBON_TWO,RIBBON_ONE`, `sort=distance` 로 조회합니다.
+4. k-skill-proxy 의 `/v1/blue-ribbon/nearby` 에 좌표와 거리를 넘겨 nearby 검색을 수행합니다. 프록시가 프리미엄 세션으로 `/restaurants/map` 을 호출합니다.
 5. 거리순 상위 결과를 3~5개 정리합니다.
 
 ## Node.js 예시
@@ -82,7 +85,9 @@ main().catch((error) => {
 });
 ```
 
-## 검증된 live smoke 예시
+기본적으로 k-skill-proxy 를 경유합니다. 직접 호출이 필요하면 `useDirectApi: true` 옵션을 사용하세요 (프리미엄 세션 없이는 `premium_required` 에러).
+
+## Live smoke 예시
 
 아래 값은 **2026-03-27** 에 `광화문`, `distanceMeters=1000`, `limit=5` 로 실제 호출해 확인한 결과 일부입니다.
 
@@ -123,6 +128,6 @@ main().catch((error) => {
 
 ## 주의할 점
 
-- Blue Ribbon 사이트는 browser-like 요청 헤더가 없으면 403 이 나올 수 있습니다.
+- Blue Ribbon `/restaurants/map` 은 프리미엄 전용입니다. k-skill-proxy 에 `BLUE_RIBBON_SESSION_ID` 가 설정되어 있어야 합니다 (30일마다 갱신).
 - 검색 페이지의 zone 목록이 바뀌면 매칭 결과도 바뀔 수 있습니다.
 - 좌표 없이 너무 넓은 지역명만 받으면 상권 후보가 많아질 수 있습니다.

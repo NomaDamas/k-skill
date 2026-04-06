@@ -1,0 +1,33 @@
+{
+  "name": "lck-analytics",
+  "version": "0.1.0",
+  "description": "LCK match analytics and insights powered by Riot LoL Esports data",
+  "license": "MIT",
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "lck",
+    "league-of-legends",
+    "esports"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/parse.js && node --check src/teams.js && node --check src/oracle.js && node --check src/analytics.js && node --check test/index.test.js",
+    "test": "node --test"
+  },
+  "author": "k-skill maintainers (adapted from jerjangmin's original lck-analytics pack)"
+}

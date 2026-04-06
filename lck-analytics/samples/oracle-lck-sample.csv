@@ -1,0 +1,5 @@
+league,matchid,date,patch,side,teamname,opponentteam,playername,position,champion,opponentchampion,result,gd15,csd15,xpd15,drg,bn,blindpick,counterpick
+LCK,match-1,2026-04-01,16.6.753.8272,blue,Hanwha Life Esports,T1,HLE Zeus,top,Aatrox,Gnar,win,1200,18,340,100,100,0,1
+LCK,match-1,2026-04-01,16.6.753.8272,blue,Hanwha Life Esports,T1,HLE Peanut,jungle,Vi,Sejuani,win,800,5,280,100,100,1,0
+LCK,match-1,2026-04-01,16.6.753.8272,red,T1,Hanwha Life Esports,T1 Doran,top,Gnar,Aatrox,loss,-1200,-18,-340,0,0,1,0
+LCK,match-1,2026-04-01,16.6.753.8272,red,T1,Hanwha Life Esports,T1 Oner,jungle,Sejuani,Vi,loss,-800,-5,-280,0,0,0,1

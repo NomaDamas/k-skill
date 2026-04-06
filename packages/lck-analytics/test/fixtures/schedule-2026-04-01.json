@@ -1,0 +1,57 @@
+{
+  "data": {
+    "schedule": {
+      "pages": {
+        "older": null,
+        "newer": null
+      },
+      "events": [
+        {
+          "id": "event-1",
+          "startTime": "2026-04-01T09:00:00.000Z",
+          "state": "inProgress",
+          "blockName": "Regular Season",
+          "league": {
+            "slug": "lck",
+            "name": "LCK"
+          },
+          "tournament": {
+            "id": "tournament-2026",
+            "name": "LCK 2026 Spring",
+            "slug": "lck-2026-spring"
+          },
+          "match": {
+            "id": "match-1",
+            "strategy": {
+              "type": "bestOf",
+              "count": 3
+            },
+            "teams": [
+              {
+                "id": "100205573496804586",
+                "name": "Hanwha Life Esports",
+                "code": "HLE",
+                "slug": "hanwha-life-esports",
+                "result": {
+                  "gameWins": 1
+                }
+              },
+              {
+                "id": "98767991853197861",
+                "name": "T1",
+                "code": "T1",
+                "slug": "t1",
+                "result": {
+                  "gameWins": 0
+                }
+              }
+            ],
+            "flags": [
+              "featured"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
