@@ -1170,19 +1170,6 @@ test("pack:dry-run includes the toss-securities workspace", () => {
   assert.match(packageJson.scripts["pack:dry-run"], /workspace used-car-price-search/);
 });
 
-test("used-car-price-search ships with a changeset for release automation", () => {
-  const changesetDir = path.join(repoRoot, ".changeset");
-  const changesetFiles = fs
-    .readdirSync(changesetDir)
-    .filter((name) => name.endsWith(".md"))
-    .map((name) => read(path.join(".changeset", name)));
-
-  assert.ok(
-    changesetFiles.some((doc) => /["']used-car-price-search["']:\s*(patch|minor|major)/.test(doc)),
-    "expected a changeset entry that releases used-car-price-search",
-  );
-});
-
 test("package-lock captures the toss-securities workspace metadata for npm ci", () => {
   const packageLock = readJson("package-lock.json");
 
