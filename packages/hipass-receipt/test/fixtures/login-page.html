@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <title>개인/외국인 로그인 | 고속도로 통행료 홈페이지</title>
+  </head>
+  <body>
+    <form id="loginForm">
+      <input type="hidden" id="session_time" value="1200" />
+    </form>
+    <script>
+      var session_time = 1200;
+      function refreshSession() {
+        return "/comm/sessionCheck.do";
+      }
+      var loginEndpoints = [
+        "/comm/sendLoginVerificationCode.do",
+        "/comm/chkLoginVerificationCode.do",
+        "/comm/IdPwLogin.do",
+        "/comm/IdPwLogin_90Check.do"
+      ];
+    </script>
+  </body>
+</html>

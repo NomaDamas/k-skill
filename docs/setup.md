@@ -71,6 +71,7 @@ bash scripts/check-setup.sh
 | 한국 법령 검색 (remote MCP endpoint) | 사용자 시크릿 불필요 (`url`만 등록, 장애 시 `법망` fallback 가능) |
 | 한국 부동산 실거래가 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
 | 한국 특허 정보 검색 | `KIPRIS_PLUS_API_KEY` |
+| 하이패스 영수증 발급 | 사용자 시크릿 불필요 (로그인된 브라우저 세션 필요) |
 | 한국 주식 정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KRX_API_KEY`) |
 | 근처 가장 싼 주유소 찾기 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
 | 서울 지하철 도착정보 조회 | self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL` |
@@ -89,6 +90,7 @@ bash scripts/check-setup.sh
 - [한국 법령 검색 가이드](features/korean-law-search.md)
 - [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)
 - [한국 특허 정보 검색 가이드](features/korean-patent-search.md)
+- [하이패스 영수증 발급 가이드](features/hipass-receipt.md)
 - [한국 주식 정보 조회 가이드](features/korean-stock-search.md)
 - [근처 가장 싼 주유소 찾기 가이드](features/cheap-gas-nearby.md)
 - [보안/시크릿 정책](security-and-secrets.md)

@@ -221,7 +221,7 @@ test("repository docs advertise the used-car-price-search skill", () => {
   assert.match(install, /--skill used-car-price-search/);
   assert.match(
     install,
-    /npm install -g @ohah\/hwpjs kbo-game kleague-results lck-analytics toss-securities k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp/,
+    /npm install -g @ohah\/hwpjs kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp/,
   );
 });
 
@@ -1225,6 +1225,26 @@ test("repository docs advertise the toss-securities skill across the documented 
   assert.match(sources, /tossinvest-cli: https:\/\/github\.com\/JungHoonGhae\/tossinvest-cli/);
 });
 
+test("repository docs advertise the hipass-receipt skill across the documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const setup = read(path.join("docs", "setup.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "hipass-receipt.md");
+  const skillPath = path.join(repoRoot, "hipass-receipt", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/hipass-receipt.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected hipass-receipt/SKILL.md to exist");
+  assert.match(readme, /\| 하이패스 영수증 발급 \|/);
+  assert.match(readme, /\[하이패스 영수증 발급 가이드\]\(docs\/features\/hipass-receipt\.md\)/);
+  assert.match(install, /--skill hipass-receipt/);
+  assert.match(setup, /하이패스 영수증 발급 \| 사용자 시크릿 불필요 \(로그인된 브라우저 세션 필요\)/);
+  assert.match(roadmap, /하이패스 영수증 발급 스킬 출시/);
+  assert.match(sources, /https:\/\/www\.hipass\.co\.kr\/main\.do/);
+  assert.match(sources, /https:\/\/www\.hipass\.co\.kr\/html\/guide\/siteguide_6\.jsp/);
+});
+
 test("toss-securities skill documents the tossctl install, auth, and read-only workflow", () => {
   const skillPath = path.join(repoRoot, "toss-securities", "SKILL.md");
 
@@ -1248,6 +1268,29 @@ test("toss-securities skill documents the tossctl install, auth, and read-only w
   }
 });
 
+test("hipass-receipt skill documents the logged-in browser session contract", () => {
+  const skillPath = path.join(repoRoot, "hipass-receipt", "SKILL.md");
+  const packageReadmePath = path.join(repoRoot, "packages", "hipass-receipt", "README.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected hipass-receipt/SKILL.md to exist");
+  assert.ok(fs.existsSync(packageReadmePath), "expected packages/hipass-receipt/README.md to exist");
+
+  const skill = read(path.join("hipass-receipt", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "hipass-receipt.md"));
+  const packageReadme = read(path.join("packages", "hipass-receipt", "README.md"));
+
+  assert.match(skill, /^name: hipass-receipt$/m);
+  assert.match(skill, /로그인은 반드시 사용자가 직접 해야 한다/);
+  assert.match(skill, /Playwright persistent context|user-data-dir/);
+  assert.match(skill, /세션이 만료되면 즉시 중단하고 다시 로그인/);
+  assert.match(featureDoc, /20분/);
+  assert.match(featureDoc, /영수증선택출력|영수증전체출력/);
+  assert.match(featureDoc, /로그인된 브라우저 세션에서만 동작/);
+  assert.match(packageReadme, /buildUsageHistoryQuery/);
+  assert.match(packageReadme, /parseUsageHistoryList/);
+  assert.match(packageReadme, /inspectHipassPage/);
+});
+
 test("toss-securities package exposes safe read-only tossctl helpers", () => {
   const pkg = require(path.join(repoRoot, "packages", "toss-securities", "src", "index.js"));
 
@@ -1258,6 +1301,16 @@ test("toss-securities package exposes safe read-only tossctl helpers", () => {
   assert.equal(typeof pkg.getQuote, "function");
   assert.equal(typeof pkg.getQuoteBatch, "function");
   assert.equal(typeof pkg.listWatchlist, "function");
+});
+
+test("hipass-receipt package exposes fixture-friendly query, parse, and session helpers", () => {
+  const pkg = require(path.join(repoRoot, "packages", "hipass-receipt", "src", "index.js"));
+
+  assert.equal(pkg.HIPASS_ENDPOINTS.loginPage, "https://www.hipass.co.kr/comm/lginpg.do");
+  assert.equal(typeof pkg.buildUsageHistoryQuery, "function");
+  assert.equal(typeof pkg.parseUsageHistoryList, "function");
+  assert.equal(typeof pkg.inspectHipassPage, "function");
+  assert.equal(typeof pkg.buildReceiptRequest, "function");
 });
 
 test("toss-securities package README stays aligned with the read-only tossctl wrapper contract", () => {
@@ -1271,10 +1324,22 @@ test("toss-securities package README stays aligned with the read-only tossctl wr
   assert.match(packageReadme, /지원하지 않음|not supported/u);
 });
 
+test("hipass-receipt package README and npm metadata stay aligned with the helper contract", () => {
+  const packageReadme = read(path.join("packages", "hipass-receipt", "README.md"));
+  const packageJson = readJson(path.join("packages", "hipass-receipt", "package.json"));
+
+  assert.equal(packageJson.name, "hipass-receipt");
+  assert.match(packageJson.description, /Hi-Pass/);
+  assert.match(packageReadme, /logged-in browser session/i);
+  assert.match(packageReadme, /Playwright/);
+  assert.match(packageReadme, /buildReceiptRequest/);
+});
+
 test("pack:dry-run includes the toss-securities workspace", () => {
   const packageJson = JSON.parse(read("package.json"));
 
   assert.match(packageJson.scripts["pack:dry-run"], /workspace toss-securities/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace hipass-receipt/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace used-car-price-search/);
 });
 
