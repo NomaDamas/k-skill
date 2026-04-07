@@ -8,6 +8,11 @@
 - `korail2` anti-bot bypass PR #54: https://github.com/carpedm20/korail2/pull/54
 - `kbo-game`: https://github.com/vkehfdl1/kbo-game
 - tossinvest-cli: https://github.com/JungHoonGhae/tossinvest-cli
+- 하이패스 메인: https://www.hipass.co.kr/main.do
+- 하이패스 로그인: https://www.hipass.co.kr/comm/lginpg.do
+- 하이패스 사용내역 조회 진입: https://www.hipass.co.kr/usepculr/InitUsePculrTabSearch.do
+- 하이패스 사용내역 이용안내: https://www.hipass.co.kr/html/guide/siteguide_6.jsp
+- 하이패스 사용내역 이용안내(do): https://www.hipass.co.kr/info/guide/siteguide_6.do
 - K League 일정/결과 JSON: https://www.kleague.com/getScheduleList.do
 - K League 팀 순위 JSON: https://www.kleague.com/record/teamRank.do
 - jerjangmin original `lck-analytics` skill pack: https://github.com/jerjangmin/share/tree/main/SKILL/lck-analytics

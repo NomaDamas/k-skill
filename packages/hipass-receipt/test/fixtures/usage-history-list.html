@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <title>사용내역 조회 | 하이패스 홈페이지</title>
+  </head>
+  <body>
+    <form id="hpForm" method="post" action="/usepculr/UsePculrTabSearchList.do" target="if_main_post">
+      <input type="hidden" name="card_kind" value="2" />
+      <input type="hidden" name="card_com" value="005" />
+      <input type="hidden" name="ecd_no" value="QmFzZTY0RW5jcnlwdGVkQ2FyZE5vPT0=" />
+      <input type="hidden" name="sDate" value="20260401" />
+      <input type="hidden" name="eDate" value="20260407" />
+      <input type="hidden" name="date_type" value="work" />
+      <input type="hidden" name="biz_type" value="on" />
+      <input type="hidden" name="pageSize" value="30" />
+      <input type="hidden" name="pageNo" value="1" />
+      <input type="hidden" name="order_type" value="desc" />
+      <input type="hidden" name="order_item" value="date" />
+    </form>
+
+    <table class="list_table">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>거래일시</th>
+          <th>하이패스 카드</th>
+          <th>카드별칭</th>
+          <th>차종</th>
+          <th>입구영업소</th>
+          <th>출구영업소</th>
+          <th>이용차로</th>
+          <th>거래금액</th>
+          <th>청구일자</th>
+          <th>구분</th>
+          <th>기준통행료</th>
+          <th>납부할통행료</th>
+          <th>청구금액</th>
+          <th>기능</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>2026-04-07 08:30</td>
+          <td>0020-01**-****-2086</td>
+          <td>가족카드</td>
+          <td>1종</td>
+          <td>서울TG</td>
+          <td>판교IC</td>
+          <td>하이패스</td>
+          <td>1,200원</td>
+          <td>2026-04-10</td>
+          <td>출구</td>
+          <td>1,200원</td>
+          <td>1,200원</td>
+          <td>1,200원</td>
+          <td>
+            <a href="#" onclick="viewDetail('2','20260407083012','A12','000123','VH001'); return false;">상세</a>
+            <a href="#" onclick="printReceipt('2','20260407083012','A12','000123','VH001','display','nodisplay'); return false;">영수증</a>
+          </td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>2026-04-06 20:15</td>
+          <td>0020-01**-****-2086</td>
+          <td>출퇴근</td>
+          <td>1종</td>
+          <td>판교IC</td>
+          <td>서울TG</td>
+          <td>일반</td>
+          <td>1,200원</td>
+          <td>2026-04-10</td>
+          <td>입구</td>
+          <td>1,200원</td>
+          <td>1,200원</td>
+          <td>1,200원</td>
+          <td>
+            <a href="#" onclick="viewDetail('2','20260406201540','A12','000124','VH002'); return false;">상세</a>
+            <a href="#" onclick="printReceipt('2','20260406201540','A12','000124','VH002','display','nodisplay'); return false;">영수증</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

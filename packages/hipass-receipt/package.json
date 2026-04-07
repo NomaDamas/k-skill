@@ -1,0 +1,39 @@
+{
+  "name": "hipass-receipt",
+  "version": "0.1.0",
+  "description": "Hi-Pass logged-in browser-session helper for usage-history and receipt workflows",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "hipass-receipt": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "test/fixtures",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "hipass",
+    "receipt",
+    "playwright"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/parse.js && node --check src/browser.js && node --check src/cli.js && node --check test/index.test.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "playwright-core": "^1.52.0"
+  }
+}

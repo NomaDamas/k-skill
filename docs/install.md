@@ -49,6 +49,7 @@ npx --yes skills add <owner/repo> \
   --skill kleague-results \
   --skill lck-analytics \
   --skill toss-securities \
+  --skill hipass-receipt \
   --skill lotto-results \
   --skill kakaotalk-mac \
   --skill korean-law-search \
@@ -84,6 +85,7 @@ npx --yes skills add <owner/repo> \
   --skill cheap-gas-nearby \
   --skill joseon-sillok-search \
   --skill korean-patent-search \
+  --skill hipass-receipt \
   --skill seoul-subway-arrival \
   --skill korea-weather \
   --skill fine-dust-location
@@ -239,7 +241,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g @ohah/hwpjs kbo-game kleague-results lck-analytics toss-securities k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp daiso bunjang-cli
+npm install -g @ohah/hwpjs kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp daiso bunjang-cli
 export NODE_PATH="$(npm root -g)"
 ```
 
@@ -300,6 +302,7 @@ python3 scripts/korean_spell_check.py --text "아버지가방에들어가신다.
 - `korean-law-search`
 - `real-estate-search`
 - `korean-patent-search`
+- `hipass-receipt`
 - `korean-stock-search`
 - `cheap-gas-nearby`
 
