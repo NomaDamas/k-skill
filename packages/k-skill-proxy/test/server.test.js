@@ -791,3 +791,152 @@ test("health endpoint reports molitConfigured status", async (t) => {
 
   assert.equal(response.json().upstreams.molitConfigured, true);
 });
+
+test("household waste info endpoint requires SGG_NM filter", async (t) => {
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/household-waste/info"
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "bad_request");
+});
+
+test("household waste info endpoint reports 503 when DATA_GO_KR_API_KEY is missing", async (t) => {
+  const app = buildServer();
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_not_configured");
+});
+
+test("household waste info endpoint injects serviceKey, forces returnType=json, and caches", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(
+      JSON.stringify({
+        response: {
+          body: {
+            items: [
+              {
+                SGG_NM: "강남구",
+                MNG_ZONE_NM: "역삼1동",
+                EMSN_PLC: "지정장소",
+                LF_WST_EMSN_DOW: "월,수,금",
+                LF_WST_EMSN_BGNG_TM: "18:00",
+                LF_WST_EMSN_END_TM: "23:00"
+              }
+            ]
+          }
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      DATA_GO_KR_API_KEY: "test-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=1&numOfRows=20";
+
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  const firstBody = first.json();
+  assert.equal(firstBody.proxy.cache.hit, false);
+  assert.equal(firstBody.query.sgg_nm, "강남구");
+  assert.equal(firstBody.query.page_no, "1");
+  assert.equal(firstBody.query.num_of_rows, "20");
+  assert.equal(firstBody.response.body.items[0].SGG_NM, "강남구");
+
+  assert.equal(fetchCalls.length, 1);
+  const upstream = new URL(fetchCalls[0]);
+  assert.equal(upstream.origin + upstream.pathname, "https://apis.data.go.kr/1741000/household_waste_info/info");
+  assert.equal(upstream.searchParams.get("serviceKey"), "test-key");
+  assert.equal(upstream.searchParams.get("returnType"), "json");
+  assert.equal(upstream.searchParams.get("pageNo"), "1");
+  assert.equal(upstream.searchParams.get("numOfRows"), "20");
+  assert.equal(upstream.searchParams.get("cond[SGG_NM::LIKE]"), "강남구");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls.length, 1);
+});
+
+test("household waste info endpoint ignores user-supplied returnType override", async (t) => {
+  const originalFetch = global.fetch;
+  let capturedUrl = "";
+  global.fetch = async (url) => {
+    capturedUrl = String(url);
+    return new Response(JSON.stringify({ response: { body: { items: [] } } }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EC%88%98%EC%9B%90%EC%8B%9C&returnType=xml"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(new URL(capturedUrl).searchParams.get("returnType"), "json");
+});
+
+test("household waste info endpoint surfaces upstream non-200 as 502", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("oops", { status: 500 });
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_error");
+});

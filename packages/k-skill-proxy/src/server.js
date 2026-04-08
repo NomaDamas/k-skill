@@ -1007,7 +1007,6 @@ function buildServer({ env = process.env, provider = null } = {}) {
 
     const pageNo = query.pageNo || "1";
     const numOfRows = query.numOfRows || "20";
-    const returnType = query.returnType || "json";
 
     const cacheKey = makeCacheKey({
       route: "household-waste-info",
@@ -1039,7 +1038,7 @@ function buildServer({ env = process.env, provider = null } = {}) {
     url.searchParams.set("serviceKey", config.molitApiKey);
     url.searchParams.set("pageNo", pageNo);
     url.searchParams.set("numOfRows", numOfRows);
-    url.searchParams.set("returnType", returnType);
+    url.searchParams.set("returnType", "json");
     url.searchParams.set("cond[SGG_NM::LIKE]", sggNm.trim());
 
     let upstreamData;
