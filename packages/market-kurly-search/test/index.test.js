@@ -89,6 +89,30 @@ const detailHtml = `<!doctype html><html><head></head><body><script id="__NEXT_D
   }
 })}</script></body></html>`
 
+const discountedDetailHtml = `<!doctype html><html><head></head><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+  props: {
+    pageProps: {
+      product: {
+        productNo: 5048935,
+        name: "금실 딸기 2종",
+        shortDescription: "새콤달콤 제철 딸기",
+        basePrice: 9900,
+        retailPrice: 13900,
+        discountRate: 28,
+        isSoldOut: false,
+        deliveryTypeNames: ["샛별배송"],
+        showablePrices: {
+          salesPrice: 9900,
+          basePrice: null,
+          retailPrice: 13900,
+          couponDiscountedPrice: null
+        },
+        mainImageUrl: "https://img-cf.kurly.com/shop/data/goods/1581671553838l0.jpg"
+      }
+    }
+  }
+})}</script></body></html>`
+
 test("normalizeSearchResponse returns public Market Kurly product candidates", () => {
   const result = normalizeSearchResponse(searchPayload, "딸기")
 
@@ -122,6 +146,20 @@ test("extractNextDataJson and findProductDetail parse the goods page payload", (
   assert.equal(detail.isSoldOut, false)
   assert.deepEqual(detail.deliveryTypeNames, ["샛별배송(내일 아침)"])
   assert.equal(detail.goodsUrl, "https://www.kurly.com/goods/5063110")
+})
+
+test("findProductDetail normalizes discounted goods page payloads", () => {
+  const nextData = extractNextDataJson(discountedDetailHtml)
+  const detail = findProductDetail(nextData)
+
+  assert.equal(detail.productNo, 5048935)
+  assert.equal(detail.currentPrice, 9900)
+  assert.equal(detail.originalPrice, 13900)
+  assert.equal(detail.basePrice, 13900)
+  assert.equal(detail.salesPrice, 9900)
+  assert.equal(detail.discountedPrice, 9900)
+  assert.equal(detail.imageUrl, "https://img-cf.kurly.com/shop/data/goods/1581671553838l0.jpg")
+  assert.deepEqual(detail.deliveryTypeNames, ["샛별배송"])
 })
 
 test("public client helpers consume injected fetch fixtures", async () => {

@@ -139,11 +139,26 @@ function hasDetailShape(candidate) {
 
 function normalizeDetailCandidate(candidate) {
   const productNo = normalizeProductNo(firstPresent(candidate.productNo, candidate.no))
-  const basePrice = toNumberOrNull(candidate.basePrice)
-  const salesPrice = toNumberOrNull(candidate.salesPrice)
-  const discountedPrice = toNumberOrNull(candidate.discountedPrice)
+  const showablePrices = candidate?.showablePrices || {}
+  const basePrice = toNumberOrNull(firstPresent(
+    candidate.retailPrice,
+    showablePrices.retailPrice,
+    candidate.basePrice,
+    showablePrices.basePrice
+  ))
+  const salesPrice = toNumberOrNull(firstPresent(candidate.salesPrice, showablePrices.salesPrice))
+  const rawDiscountedPrice = toNumberOrNull(firstPresent(
+    candidate.discountedPrice,
+    showablePrices.discountedPrice,
+    showablePrices.couponDiscountedPrice
+  ))
+  const discountedPrice = rawDiscountedPrice ?? (
+    basePrice !== null && salesPrice !== null && basePrice > salesPrice
+      ? salesPrice
+      : null
+  )
   const currentPrice = firstPresent(discountedPrice, salesPrice, basePrice)
-  const originalPrice = firstPresent(salesPrice, basePrice, currentPrice)
+  const originalPrice = firstPresent(basePrice, salesPrice, currentPrice)
 
   return {
     productNo,
@@ -157,7 +172,12 @@ function normalizeDetailCandidate(candidate) {
     discountRate: toNumberOrNull(candidate.discountRate),
     isSoldOut: Boolean(candidate.isSoldOut),
     deliveryTypeNames: normalizeDeliveryTypes(candidate.deliveryTypeNames),
-    imageUrl: firstPresent(candidate.imageUrl, candidate.listImageUrl, candidate.productVerticalMediumUrl),
+    imageUrl: firstPresent(
+      candidate.imageUrl,
+      candidate.listImageUrl,
+      candidate.productVerticalMediumUrl,
+      candidate.mainImageUrl
+    ),
     goodsUrl: buildGoodsUrl(productNo),
     raw: candidate
   }
