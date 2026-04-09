@@ -1,6 +1,6 @@
 {
   "name": "hipass-receipt",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Hi-Pass logged-in browser-session helper for usage-history and receipt workflows",
   "license": "MIT",
   "main": "src/index.js",
