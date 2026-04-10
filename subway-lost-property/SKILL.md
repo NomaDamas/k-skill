@@ -63,7 +63,7 @@ python3 scripts/subway_lost_property.py \
   --days 14
 ```
 
-helper는 기본적으로 `SITE=V` 를 사용하고, 역명/물품명/기간을 LOST112 form payload와 `curl` 예시로 정리해 준다.
+helper는 기본적으로 `SITE=V` 를 사용하고, 역명/물품명/기간을 LOST112 form payload와 **referer까지 포함한 runnable `curl` 예시**로 정리해 준다. 예시 `curl` 은 응답 HTML을 `lost112-search-result.html` 로 저장한다.
 
 ### 3) Optionally verify live reachability
 

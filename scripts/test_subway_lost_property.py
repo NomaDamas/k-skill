@@ -2,6 +2,7 @@ import contextlib
 import io
 import json
 import os
+import shlex
 from datetime import date
 from pathlib import Path
 import unittest
@@ -57,7 +58,14 @@ class SubwayLostPropertyQueryTest(unittest.TestCase):
         self.assertEqual(plan.official_sources[1]["url"], SEOUL_METRO_LOST_CENTER_URL)
         self.assertIn("강남역", plan.suggested_keywords)
         self.assertIn("강남", plan.suggested_keywords)
-        self.assertIn("SITE=V", build_curl_command(plan.payload))
+        command = shlex.split(build_curl_command(plan.payload))
+        self.assertNotIn("-L", command)
+        self.assertIn("--referer", command)
+        self.assertEqual(command[command.index("--referer") + 1], "https://www.lost112.go.kr/")
+        self.assertIn("--output", command)
+        self.assertEqual(command[command.index("--output") + 1], "lost112-search-result.html")
+        self.assertIn("SITE=V", " ".join(command))
+        self.assertEqual(command[-1], LOST112_LIST_URL)
 
     def test_blank_station_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "station"):

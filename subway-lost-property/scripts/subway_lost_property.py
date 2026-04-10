@@ -11,6 +11,8 @@ from datetime import date, timedelta
 from typing import Callable
 
 LOST112_LIST_URL = "https://www.lost112.go.kr/find/findList.do"
+LOST112_REFERER_URL = "https://www.lost112.go.kr/"
+LOST112_OUTPUT_FILE = "lost112-search-result.html"
 SEOUL_METRO_LOST_CENTER_URL = "https://www.seoulmetro.co.kr/kr/page.do?menuIdx=541"
 CURL_USER_AGENT = "Mozilla/5.0"
 
@@ -93,11 +95,10 @@ def build_search_payload(query: SearchQuery) -> dict[str, str]:
     return payload
 
 
-def _base_curl_command(url: str, max_time: int) -> list[str]:
-    return [
+def _base_curl_command(url: str | None, max_time: int, *, follow_redirects: bool = True) -> list[str]:
+    command = [
         "curl",
         "-fsS",
-        "-L",
         "--http1.1",
         "--tls-max",
         "1.2",
@@ -107,15 +108,22 @@ def _base_curl_command(url: str, max_time: int) -> list[str]:
         str(max_time),
         "-A",
         CURL_USER_AGENT,
-        url,
     ]
+    if follow_redirects:
+        command.insert(2, "-L")
+    if url:
+        command.append(url)
+    return command
 
 
 def build_curl_command(payload: dict[str, str]) -> str:
-    command = _base_curl_command(LOST112_LIST_URL, 20)
+    command = _base_curl_command("", 20, follow_redirects=False)
+    command.extend(["--referer", LOST112_REFERER_URL])
     for key, value in payload.items():
         if value:
             command.extend(["--data-urlencode", f"{key}={value}"])
+    command.extend(["--output", LOST112_OUTPUT_FILE])
+    command.append(LOST112_LIST_URL)
     return " ".join(shlex.quote(part) for part in command)
 
 

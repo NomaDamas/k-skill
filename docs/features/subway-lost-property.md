@@ -36,7 +36,7 @@ LOST112에서 실제로 중요한 검색 조건은 아래와 같다.
 ## 기본 흐름
 
 1. 사용자에게 역명, 물품명, 대략의 날짜를 먼저 받는다.
-2. helper로 LOST112 payload와 `curl` 예시를 생성한다.
+2. helper로 LOST112 payload와 referer가 포함된 runnable `curl` 예시를 생성한다. 예시 `curl` 은 응답 HTML을 `lost112-search-result.html` 로 저장한다.
 3. 역명 그대로 검색한 뒤, 결과가 없으면 `역` 없는 키워드나 호선명으로 넓힌다.
 4. 서울교통공사 유실물센터 페이지를 함께 열어 후속 절차를 확인한다.
 
@@ -63,6 +63,8 @@ python3 scripts/subway_lost_property.py \
 
 - `payload.SITE` 가 `V` 로 고정되어 있는지
 - `payload.DEP_PLACE` 에 역명 키워드가 들어갔는지
+- `curl_example` 에 `--referer https://www.lost112.go.kr/` 가 포함되어 있는지
+- `curl_example` 에 `--output lost112-search-result.html` 가 포함되어 있는지
 - `curl_example` 이 `https://www.lost112.go.kr/find/findList.do` 를 사용하는지
 - `official_sources` 에 LOST112 와 서울교통공사 URL이 모두 들어 있는지
 
