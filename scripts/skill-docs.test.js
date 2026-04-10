@@ -528,40 +528,40 @@ test("repository docs advertise the zipcode-search skill across the documented s
   assert.match(sources, /우체국 도로명주소 검색: https:\/\/parcel\.epost\.go\.kr\/parcel\/comm\/zipcode\/comm_newzipcd_list\.jsp/);
 });
 
-test("zipcode-search docs lock the official ePost extraction flow and reliable transport example", () => {
+test("zipcode-search docs lock the official postcode plus English-address extraction flow", () => {
   const skillPath = path.join(repoRoot, "zipcode-search", "SKILL.md");
 
   assert.ok(fs.existsSync(skillPath), "expected zipcode-search/SKILL.md to exist");
 
   const skill = read(path.join("zipcode-search", "SKILL.md"));
   const featureDoc = read(path.join("docs", "features", "zipcode-search.md"));
+  const readme = read("README.md");
+  const sources = read(path.join("docs", "sources.md"));
 
   assert.match(skill, /^name: zipcode-search$/m);
 
   for (const doc of [skill, featureDoc]) {
-    assert.match(doc, /parcel\.epost\.go\.kr\/parcel\/comm\/zipcode\/comm_newzipcd_list\.jsp/);
-    assert.match(doc, /sch_zipcode/);
-    assert.match(doc, /sch_address1/);
-    assert.match(doc, /sch_bdNm/);
+    assert.match(doc, /https:\/\/www\.epost\.kr\/search\.RetrieveIntegrationNewZipCdList\.comm/);
+    assert.match(doc, /viewDetail/);
+    assert.match(doc, /English\/집배코드/);
+    assert.match(doc, /Rep\. of KOREA/);
     assert.match(doc, /curl --http1\.1 --tls-max 1\.2/);
     assert.match(doc, /--max-time/);
     assert.match(doc, /"--retry",\s+"3"/);
     assert.match(doc, /--retry-all-errors/);
     assert.match(doc, /"--retry-delay",\s+"1"/);
+    assert.match(doc, /영문 주소|영문주소/);
+    assert.match(doc, /python3 scripts\/zipcode_search\.py/);
     assert.match(doc, /mktemp|임시 파일/);
-    assert.match(doc, /curl: \(23\)/);
-    assert.match(doc, /짧은 도로명 \+ 건물번호/);
-    assert.match(doc, /시\/군\/구 포함 전체 주소/);
     assert.doesNotMatch(doc, /urllib\.request/);
-    assert.doesNotMatch(doc, /urlopen/);
   }
 
+  assert.match(readme, /우편번호 \+ 공식 영문주소 조회/);
+  assert.match(sources, /우체국 통합 우편번호\/영문주소 검색: https:\/\/www\.epost\.kr\/search\.RetrieveIntegrationNewZipCdList\.comm/);
   assert.match(skill, /검색 결과가 없으면/i);
   assert.doesNotMatch(skill, /timeout\s*=/);
   assert.doesNotMatch(featureDoc, /timeout\s*=/);
-  assert.match(skill, /`curl` 자체 제한/);
   assert.match(featureDoc, /프로토콜\/클라이언트 제약/i);
-  assert.match(featureDoc, /`curl` 자체 제한/);
 });
 
 test("repository docs advertise the delivery-tracking skill across the documented surfaces", () => {

@@ -9,6 +9,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
+from html.parser import HTMLParser
 from typing import Callable
 
 SERVICE_KEY_ENV_VAR = "KIPRIS_PLUS_API_KEY"
@@ -73,6 +74,40 @@ class PatentDetail:
     applicant_name: str | None
     drawing: str | None
     big_drawing: str | None
+
+
+@dataclass
+class XmlNode:
+    tag: str
+    children: list["XmlNode"]
+    text_chunks: list[str]
+
+    @property
+    def text(self) -> str:
+        return "".join(self.text_chunks)
+
+
+class XmlNodeBuilder(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.root: XmlNode | None = None
+        self.stack: list[XmlNode] = []
+
+    def handle_starttag(self, tag: str, attrs) -> None:  # type: ignore[override]
+        node = XmlNode(tag=tag, children=[], text_chunks=[])
+        if self.stack:
+            self.stack[-1].children.append(node)
+        else:
+            self.root = node
+        self.stack.append(node)
+
+    def handle_endtag(self, tag: str) -> None:  # type: ignore[override]
+        if self.stack:
+            self.stack.pop()
+
+    def handle_data(self, data: str) -> None:  # type: ignore[override]
+        if self.stack:
+            self.stack[-1].text_chunks.append(data)
 
 
 def clean_text(value: str | None) -> str | None:
@@ -145,10 +180,45 @@ def fetch_xml(url: str, params: dict[str, str], timeout: int = DEFAULT_TIMEOUT) 
         raise RuntimeError(f"Failed to reach KIPRIS Plus API: {exc.reason}") from exc
 
 
-def get_child_text(element: ET.Element | None, tag_name: str) -> str | None:
+def normalize_tag(tag_name: str) -> str:
+    return tag_name.casefold()
+
+
+def iter_children(element: ET.Element | XmlNode | None) -> list[ET.Element | XmlNode]:
     if element is None:
-        return None
-    child = element.find(tag_name)
+        return []
+    if isinstance(element, XmlNode):
+        return element.children
+    return list(element)
+
+
+def find_child(element: ET.Element | XmlNode | None, tag_name: str) -> ET.Element | XmlNode | None:
+    normalized_tag = normalize_tag(tag_name)
+    for child in iter_children(element):
+        if normalize_tag(child.tag) == normalized_tag:
+            return child
+    return None
+
+
+def find_children(element: ET.Element | XmlNode | None, tag_name: str) -> list[ET.Element | XmlNode]:
+    normalized_tag = normalize_tag(tag_name)
+    return [child for child in iter_children(element) if normalize_tag(child.tag) == normalized_tag]
+
+
+def parse_xml_with_fallback(xml_text: str) -> XmlNode:
+    parser = XmlNodeBuilder()
+    try:
+        parser.feed(xml_text)
+        parser.close()
+    except Exception as exc:  # pragma: no cover - defensive fallback guard
+        raise RuntimeError(f"Failed to parse KIPRIS Plus XML response: {exc}") from exc
+    if parser.root is None:
+        raise RuntimeError("Failed to parse KIPRIS Plus XML response: empty document")
+    return parser.root
+
+
+def get_child_text(element: ET.Element | XmlNode | None, tag_name: str) -> str | None:
+    child = find_child(element, tag_name)
     return clean_text(child.text if child is not None else None)
 
 
@@ -158,20 +228,21 @@ def parse_int(value: str | None) -> int | None:
     return int(value)
 
 
-def parse_xml_response(xml_text: str) -> ET.Element:
+def parse_xml_response(xml_text: str) -> ET.Element | XmlNode:
     try:
         root = ET.fromstring(xml_text)
-    except ET.ParseError as exc:
-        raise RuntimeError(f"Failed to parse KIPRIS Plus XML response: {exc}") from exc
+    except (ET.ParseError, ImportError):
+        root = parse_xml_with_fallback(xml_text)
 
-    result_code = get_child_text(root.find("header"), "resultCode")
-    result_msg = get_child_text(root.find("header"), "resultMsg")
+    header = find_child(root, "header")
+    result_code = get_child_text(header, "resultCode")
+    result_msg = get_child_text(header, "resultMsg")
     if result_code and result_code != "00":
         raise RuntimeError(result_msg or f"KIPRIS Plus API error code {result_code}")
     return root
 
 
-def parse_patent_item(item: ET.Element) -> PatentSearchResult:
+def parse_patent_item(item: ET.Element | XmlNode) -> PatentSearchResult:
     application_number = get_child_text(item, "applicationNumber")
     if not application_number:
         raise RuntimeError("KIPRIS Plus response item is missing applicationNumber")
@@ -198,9 +269,9 @@ def parse_patent_item(item: ET.Element) -> PatentSearchResult:
 
 def parse_patent_search_response(xml_text: str, *, query: str) -> PatentSearchResponse:
     root = parse_xml_response(xml_text)
-    body = root.find("body")
-    items_parent = body.find("items") if body is not None else None
-    item_elements = items_parent.findall("item") if items_parent is not None else []
+    body = find_child(root, "body")
+    items_parent = find_child(body, "items")
+    item_elements = find_children(items_parent, "item")
     items = [parse_patent_item(item) for item in item_elements]
     return PatentSearchResponse(
         query=query,
@@ -213,11 +284,11 @@ def parse_patent_search_response(xml_text: str, *, query: str) -> PatentSearchRe
 
 def parse_patent_detail_response(xml_text: str) -> PatentDetail:
     root = parse_xml_response(xml_text)
-    body = root.find("body")
-    item = body.find("item") if body is not None else None
+    body = find_child(root, "body")
+    item = find_child(body, "item")
     if item is None and body is not None:
-        items_parent = body.find("items")
-        item = items_parent.find("item") if items_parent is not None else None
+        items_parent = find_child(body, "items")
+        item = find_child(items_parent, "item")
     if item is None:
         raise RuntimeError("KIPRIS Plus detail response did not include an item payload")
 

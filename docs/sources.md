@@ -110,6 +110,7 @@
 - 한강홍수통제소 Open API 정책: https://www.hrfco.go.kr/web/openapi/policy.do
 - 한강홍수통제소 API base: https://api.hrfco.go.kr
 - 우체국 도로명주소 검색: https://parcel.epost.go.kr/parcel/comm/zipcode/comm_newzipcd_list.jsp
+- 우체국 통합 우편번호/영문주소 검색: https://www.epost.kr/search.RetrieveIntegrationNewZipCdList.comm
 - CJ대한통운 배송조회: https://www.cjlogistics.com/ko/tool/parcel/tracking
 - CJ대한통운 배송상세 JSON: https://www.cjlogistics.com/ko/tool/parcel/tracking-detail
 - 우체국 배송조회: https://service.epost.go.kr/trace.RetrieveRegiPrclDeliv.postal?sid1=
