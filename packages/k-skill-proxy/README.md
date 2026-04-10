@@ -28,6 +28,7 @@
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`
 - `KSKILL_PROXY_RATE_LIMIT_WINDOW_MS` — 기본 `60000`
 - `KSKILL_PROXY_RATE_LIMIT_MAX` — 기본 `60`
+- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `mfds-drug-safety`)
 
 기본 정책은 **무료 API 공개 프록시 = 무인증** 이다. 대신 endpoint scope 를 좁게 유지하고, cache + rate limit 으로 남용을 늦춘다.
 

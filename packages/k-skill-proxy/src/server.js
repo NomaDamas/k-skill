@@ -888,7 +888,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       hrfcoConfigured: Boolean(config.hrfcoApiKey),
       opinetConfigured: Boolean(config.opinetApiKey),
       molitConfigured: Boolean(config.molitApiKey),
-      neisSchoolMealConfigured: Boolean(config.keduInfoKey)
+      neisSchoolMealConfigured: Boolean(config.keduInfoKey),
       krxConfigured: Boolean(config.krxApiKey)
     },
     auth: {
@@ -1783,6 +1783,106 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     return payload;
   });
+
+  app.get("/v1/neis/school-meal", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeNeisSchoolMealQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "neis-school-meal",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.keduInfoKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KEDU_INFO_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const upstream = await proxyNeisSchoolMealRequest({
+      apiKey: config.keduInfoKey,
+      atptOfcdcScCode: normalized.atptOfcdcScCode,
+      sdSchulCode: normalized.sdSchulCode,
+      mlsvYmd: normalized.mlsvYmd,
+      mmealScCode: normalized.mmealScCode,
+      pIndex: normalized.pIndex,
+      pSize: normalized.pSize
+    });
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+
+    const looksJson =
+      upstream.contentType.includes("json") ||
+      upstream.body.trimStart().startsWith("{") ||
+      upstream.body.trimStart().startsWith("[");
+
+    if (!looksJson) {
+      return upstream.body;
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(upstream.body);
+    } catch {
+      return upstream.body;
+    }
+
+    payload.proxy = {
+      name: config.proxyName,
+      cache: {
+        hit: false,
+        ttl_ms: config.cacheTtlMs
+      },
+      requested_at: new Date().toISOString()
+    };
+    payload.query = {
+      education_office_code: normalized.atptOfcdcScCode,
+      school_code: normalized.sdSchulCode,
+      meal_date: normalized.mlsvYmd,
+      meal_kind_code: normalized.mmealScCode,
+      p_index: normalized.pIndex,
+      p_size: normalized.pSize
+    };
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+
+    return payload;
+  });
+
   app.get("/v1/korean-stock/base-info", async (request, reply) => {
     let normalized;
 
@@ -1814,11 +1914,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    if (!config.keduInfoKey) {
-      reply.code(503);
-      return {
-        error: "upstream_not_configured",
-        message: "KEDU_INFO_KEY is not configured on the proxy server.",
     if (!config.krxApiKey) {
       reply.code(503);
       return {
@@ -1966,89 +2061,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
           hit: false,
           ttl_ms: config.cacheTtlMs
         },
-        requested_at: new Date().toISOString()
-      }
-    };
-
-    cache.set(cacheKey, payload, config.cacheTtlMs);
-    return payload;
-  });
-
-  app.get("/v1/household-waste/info", async (request, reply) => {
-    const query = request.query || {};
-    const sggNm = query["cond[SGG_NM::LIKE]"];
-
-    if (!sggNm || !sggNm.trim()) {
-      reply.code(400);
-      return {
-        error: "bad_request",
-        message: "cond[SGG_NM::LIKE] is required"
-      };
-    }
-
-    const pageNo = query.pageNo || "1";
-    const numOfRows = query.numOfRows || "20";
-
-    const cacheKey = makeCacheKey({
-      route: "household-waste-info",
-      sggNm: sggNm.trim(),
-      pageNo,
-      numOfRows
-    });
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        proxy: {
-          ...cached.proxy,
-          cache: { hit: true, ttl_ms: config.cacheTtlMs }
-        }
-      };
-    }
-
-    if (!config.molitApiKey) {
-      reply.code(503);
-      return {
-        error: "upstream_not_configured",
-        message: "DATA_GO_KR_API_KEY is not configured on the proxy server.",
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-      };
-    }
-
-    const url = new URL("https://apis.data.go.kr/1741000/household_waste_info/info");
-    url.searchParams.set("serviceKey", config.molitApiKey);
-    url.searchParams.set("pageNo", pageNo);
-    url.searchParams.set("numOfRows", numOfRows);
-    url.searchParams.set("returnType", "json");
-    url.searchParams.set("cond[SGG_NM::LIKE]", sggNm.trim());
-
-    let upstreamData;
-    try {
-      const res = await fetch(url.toString());
-      if (!res.ok) {
-        reply.code(502);
-        return {
-          error: "upstream_error",
-          message: `Upstream responded with ${res.status}`,
-          proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-        };
-      }
-      upstreamData = await res.json();
-    } catch (err) {
-      reply.code(502);
-      return {
-        error: "upstream_fetch_failed",
-        message: err.message,
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-      };
-    }
-
-    const payload = {
-      ...upstreamData,
-      query: { sgg_nm: sggNm.trim(), page_no: pageNo, num_of_rows: numOfRows },
-      proxy: {
-        name: config.proxyName,
-        cache: { hit: false, ttl_ms: config.cacheTtlMs },
         requested_at: new Date().toISOString()
       }
     };

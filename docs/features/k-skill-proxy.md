@@ -41,6 +41,7 @@ client/skill -> k-skill-proxy -> upstream public API
 - `SEOUL_OPEN_API_KEY=...`
 - `HRFCO_OPEN_API_KEY=...`
 - `OPINET_API_KEY=...`
+- `DATA_GO_KR_API_KEY=...`
 - `KEDU_INFO_KEY=...` (나이스 교육정보 개방 포털 Open API 인증키)
 - `KRX_API_KEY=...`
 - `KSKILL_PROXY_PORT=4020`
