@@ -16,7 +16,8 @@ from _naver_http import TAG_RE, urlopen
 SEARCH_URL = "https://search.naver.com/search.naver"
 DEFAULT_COUNT = 10
 MAX_COUNT = 30
-RESULTS_PER_PAGE = 7
+FIRST_PAGE_START = 1
+RESULTS_PER_PAGE = 15
 
 DEFAULT_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -37,13 +38,18 @@ def strip_html(text: str) -> str:
     return unescape(TAG_RE.sub("", text)).strip()
 
 
-def fetch_search_page(query: str, start: int = 1, sort: str = "sim", timeout: int = 15, *, insecure: bool = False) -> str:
-    params = {
-        "where": "blog",
+def build_search_params(query: str, start: int = FIRST_PAGE_START, sort: str = "sim") -> dict[str, str]:
+    return {
         "query": query,
+        "ssc": "tab.blog.all",
+        "sm": "tab_jum" if start <= FIRST_PAGE_START else "tab_pge",
         "start": str(start),
-        "sort": {"sim": "rel", "date": "date"}.get(sort, "rel"),
+        "nso": {"sim": "so:r,p:all,a:all", "date": "so:dd,p:all,a:all"}.get(sort, "so:r,p:all,a:all"),
     }
+
+
+def fetch_search_page(query: str, start: int = 1, sort: str = "sim", timeout: int = 15, *, insecure: bool = False) -> str:
+    params = build_search_params(query, start=start, sort=sort)
     url = f"{SEARCH_URL}?{urllib.parse.urlencode(params)}"
     request = urllib.request.Request(url, headers=DEFAULT_HEADERS)
 
@@ -99,7 +105,7 @@ def search(query: str, count: int = DEFAULT_COUNT, sort: str = "sim", timeout: i
     count = max(1, min(count, MAX_COUNT))
     all_results: list[dict] = []
     seen_urls: set[str] = set()
-    start = 1
+    start = FIRST_PAGE_START
     # 네이버 검색이 페이지당 정확히 RESULTS_PER_PAGE개를 반환하지 않을 수 있으므로 여유 페이지 확보
     max_pages = (count // RESULTS_PER_PAGE) + 3
 
@@ -111,7 +117,7 @@ def search(query: str, count: int = DEFAULT_COUNT, sort: str = "sim", timeout: i
             time.sleep(0.5)
 
         html = fetch_search_page(query, start=start, sort=sort, timeout=timeout, insecure=insecure)
-        page_results = parse_search_results(html)
+        page_results = parse_search_results(html)[:RESULTS_PER_PAGE]
 
         if not page_results:
             if start == 1:
