@@ -27,6 +27,10 @@
 - `hwp-mcp`: https://github.com/jkf87/hwp-mcp
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
+- 한국장학재단 학자금 지원구간 산정절차: https://www.kosaf.go.kr/ko/tuition.do?pg=tuition04_09_01&type=tuition
+- 한국장학재단 학자금 지원구간 경곗값 확인: https://www.kosaf.go.kr/ko/tuition.do?naviParam=JH%2C01%2C01%2C03&pg=tuition04_09_07
+- 한국장학재단 푸른등대 기부장학금: https://www.kosaf.go.kr/ko/scholar.do?pg=scholarship05_11_01
+- 삼성꿈장학재단: https://www.sdream.or.kr/w/web60gV
 - korea-stock-mcp: https://github.com/jjlabsio/korea-stock-mcp
 - 공공데이터포털 의약품개요정보(e약은요): https://www.data.go.kr/data/15075057/openapi.do
 - 식약처 e약은요 endpoint: https://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList
