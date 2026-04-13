@@ -122,12 +122,32 @@ console.log(result.items);
 - 공식 Blue Ribbon nearby 결과를 최소 1개 이상 찾았거나, 프록시 미설정 등의 이유로 결과를 가져올 수 없다는 이유와 다음 질문을 제시했다.
 - 결과를 거리순으로 짧게 정리했다.
 
+## 브라우저 fallback (봇 차단 우회)
+
+bluer.co.kr이 자동화 접근을 차단(403)할 경우, `rebrowser-playwright`가 설치되어 있으면 실제 Chrome 브라우저를 통해 자동으로 fallback한다.
+
+### 조건
+
+- `rebrowser-playwright`가 설치되어 있어야 한다: `npm install rebrowser-playwright`
+- Google Chrome이 시스템에 설치되어 있어야 한다
+- headed 모드로 동작한다 (디스플레이 환경 필요)
+
+### 동작 방식
+
+1. 기존 fetch 요청이 403을 반환하면 자동으로 브라우저 fallback 활성화
+2. stealth 패치 적용 (webdriver 제거, plugins/languages 스푸핑 등)
+3. 실제 Chrome으로 zone 카탈로그 또는 nearby API를 호출
+4. 결과를 기존 파이프라인에 그대로 전달
+
+별도 설정 없이 `rebrowser-playwright`만 설치하면 자동으로 작동한다. 설치되어 있지 않으면 기존처럼 403 에러를 그대로 던진다.
+
 ## Failure modes
 
 - 위치 문자열이 공식 zone 과 잘 매칭되지 않을 수 있다.
 - 같은 키워드가 여러 상권에 걸치면 추가 확인이 필요하다.
 - Blue Ribbon 사이트가 구조/파라미터를 바꾸면 zone 파싱 또는 nearby endpoint 가 깨질 수 있다.
 - 프록시의 `BLUE_RIBBON_SESSION_ID` 가 만료(30일)되면 갱신이 필요하다.
+- 브라우저 fallback은 headed 모드 전용이므로 서버(CI) 환경에서는 동작하지 않는다.
 
 ## Notes
 

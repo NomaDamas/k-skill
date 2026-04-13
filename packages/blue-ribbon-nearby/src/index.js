@@ -6,6 +6,12 @@ const {
   parseZoneCatalogHtml
 } = require("./parse");
 
+const {
+  browserFetchNearby,
+  browserFetchZoneCatalog,
+  isBrowserFallbackAvailable
+} = require("./browser-fallback");
+
 const DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org";
 
 const DEFAULT_BROWSER_HEADERS = {
@@ -109,6 +115,14 @@ function useDirectApi(options = {}) {
   return options.useDirectApi === true;
 }
 
+function shouldUseBrowserFallback(error) {
+  return (
+    error?.statusCode === 403 &&
+    error?.upstreamError === undefined &&
+    isBrowserFallbackAvailable()
+  );
+}
+
 async function fetchNearbyViaProxy(latitude, longitude, distanceMeters, limit, options = {}) {
   const base = resolveProxyBaseUrl(options);
   const url = new URL(`${base}/v1/blue-ribbon/nearby`);
@@ -160,8 +174,16 @@ function buildNearbySearchParams(options = {}) {
 }
 
 async function fetchZoneCatalog(options = {}) {
-  const html = await fetchText(SEARCH_ZONE_URL, options);
-  return parseZoneCatalogHtml(html);
+  try {
+    const html = await fetchText(SEARCH_ZONE_URL, options);
+    return parseZoneCatalogHtml(html);
+  } catch (error) {
+    if (shouldUseBrowserFallback(error)) {
+      const html = await browserFetchZoneCatalog();
+      return parseZoneCatalogHtml(html);
+    }
+    throw error;
+  }
 }
 
 async function fetchNearbyMap(params, options = {}) {
@@ -173,7 +195,14 @@ async function fetchNearbyMap(params, options = {}) {
     }
   }
 
-  return fetchJson(url.toString(), options);
+  try {
+    return await fetchJson(url.toString(), options);
+  } catch (error) {
+    if (shouldUseBrowserFallback(error)) {
+      return browserFetchNearby(params);
+    }
+    throw error;
+  }
 }
 
 function sortNearbyItems(items) {
@@ -343,6 +372,7 @@ module.exports = {
   buildNearbySearchParams,
   fetchZoneCatalog,
   findZoneMatches,
+  isBrowserFallbackAvailable,
   normalizeNearbyItem,
   parseZoneCatalogHtml,
   searchNearbyByCoordinates,

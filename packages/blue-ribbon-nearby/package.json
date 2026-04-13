@@ -26,7 +26,10 @@
     "bluer"
   ],
   "scripts": {
-    "lint": "node --check src/index.js && node --check src/parse.js && node --check test/index.test.js",
+    "lint": "node --check src/index.js && node --check src/parse.js && node --check src/browser-fallback.js && node --check test/index.test.js",
     "test": "node --test"
+  },
+  "optionalDependencies": {
+    "rebrowser-playwright": ">=1.0.0"
   }
 }
