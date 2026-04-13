@@ -25,7 +25,6 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/korean-stock/trade-info`
 - `GET /v1/opinet/around`
 - `GET /v1/opinet/detail`
-- `GET /v1/household-waste/info` (생활쓰레기 배출정보, `DATA_GO_KR_API_KEY`)
 - `GET /v1/neis/school-search` (나이스 학교기본정보, `KEDU_INFO_KEY`)
 - `GET /v1/neis/school-meal` (나이스 급식식단정보, `KEDU_INFO_KEY`)
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
@@ -43,7 +42,7 @@ client/skill -> k-skill-proxy -> upstream public API
 - `SEOUL_OPEN_API_KEY=...`
 - `HRFCO_OPEN_API_KEY=...`
 - `OPINET_API_KEY=...`
-- `DATA_GO_KR_API_KEY=...` (생활쓰레기 배출정보 upstream key)
+- `DATA_GO_KR_API_KEY=...`
 - `KEDU_INFO_KEY=...` (나이스 교육정보 개방 포털 Open API 인증키)
 - `KRX_API_KEY=...`
 - `KSKILL_PROXY_PORT=4020`
@@ -141,17 +140,6 @@ Opinet 주유소 상세 endpoint:
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/opinet/detail' \
   --data-urlencode 'id=A0009905'
 ```
-
-생활쓰레기 배출정보 endpoint:
-
-```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/household-waste/info' \
-  --data-urlencode 'cond[SGG_NM::LIKE]=강남구' \
-  --data-urlencode 'pageNo=1' \
-  --data-urlencode 'numOfRows=100'
-```
-
-이 endpoint 는 `DATA_GO_KR_API_KEY`를 프록시 서버에서만 주입하고 `returnType=json`을 강제합니다. `pageNo`는 정확히 `1`만 허용하고 `numOfRows`는 정확히 `100`만 허용합니다.
 
 나이스 학교 검색·급식 endpoint (학교 급식 식단 스킬에서 사용):
 

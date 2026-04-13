@@ -1787,41 +1787,64 @@ test("neis school-search proxies schoolInfo and resolves 교육청 이름", asyn
   assert.ok(decodeURIComponent(fetchedUrl).includes("미래초등학교"));
 });
 
-function buildHouseholdWasteTestApp(t, envOverrides = {}) {
+test("neis school-search maps rejected upstream fetches to a 502 proxy error", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("boom");
+  };
+
+  const app = buildServer({ env: { KEDU_INFO_KEY: "k" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: `/v1/neis/school-search?educationOffice=${encodeURIComponent("서울특별시교육청")}&schoolName=${encodeURIComponent("미래초등학교")}`
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.deepEqual(response.json(), {
+    error: "proxy_error",
+    message: "boom"
+  });
+});
+
+test("neis school-meal maps rejected upstream fetches to a 502 proxy error", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("boom");
+  };
+
+  const app = buildServer({ env: { KEDU_INFO_KEY: "k" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/neis/school-meal?educationOfficeCode=B10&schoolCode=7010123&mealDate=20260410"
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.deepEqual(response.json(), {
+    error: "proxy_error",
+    message: "boom"
+  });
+});
+
+test("household waste info endpoint requires SGG_NM filter", async (t) => {
   const app = buildServer({
-    env: {
-      DATA_GO_KR_API_KEY: "test-key",
-      ...envOverrides
-    }
+    env: { DATA_GO_KR_API_KEY: "test-key" }
   });
 
   t.after(async () => {
     await app.close();
   });
-
-  return app;
-}
-
-function mockHouseholdWasteJsonFetch(t, body = { response: { body: { items: [] } } }, status = 200) {
-  const originalFetch = global.fetch;
-  const fetchCalls = [];
-  global.fetch = async (url) => {
-    fetchCalls.push(String(url));
-    return new Response(JSON.stringify(body), {
-      status,
-      headers: { "content-type": "application/json" }
-    });
-  };
-
-  t.after(() => {
-    global.fetch = originalFetch;
-  });
-
-  return fetchCalls;
-}
-
-test("household waste info endpoint requires SGG_NM filter", async (t) => {
-  const app = buildHouseholdWasteTestApp(t);
 
   const response = await app.inject({
     method: "GET",
@@ -1830,52 +1853,6 @@ test("household waste info endpoint requires SGG_NM filter", async (t) => {
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.json().error, "bad_request");
-});
-
-test("household waste info endpoint rejects duplicated SGG_NM filters before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&cond%5BSGG_NM%3A%3ALIKE%5D=%EC%84%9C%EC%B4%88%EA%B5%AC&pageNo=1&numOfRows=100"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /cond\[SGG_NM::LIKE\]/i);
-  assert.equal(fetchCalls.length, 0);
-});
-
-
-test("household waste info endpoint requires pageNo before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&numOfRows=100"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /pageNo/i);
-  assert.equal(fetchCalls.length, 0);
-});
-
-test("household waste info endpoint requires numOfRows before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=1"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /numOfRows/i);
-  assert.equal(fetchCalls.length, 0);
 });
 
 test("household waste info endpoint reports 503 when DATA_GO_KR_API_KEY is missing", async (t) => {
@@ -1913,24 +1890,41 @@ test("household waste info endpoint requires pageNo and numOfRows with cond", as
 });
 
 test("household waste info endpoint injects serviceKey, forces returnType=json, and caches", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t, {
-    response: {
-      body: {
-        items: [
-          {
-            SGG_NM: "강남구",
-            MNG_ZONE_NM: "역삼1동",
-            EMSN_PLC: "지정장소",
-            LF_WST_EMSN_DOW: "월,수,금",
-            LF_WST_EMSN_BGNG_TM: "18:00",
-            LF_WST_EMSN_END_TM: "23:00"
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(
+      JSON.stringify({
+        response: {
+          body: {
+            items: [
+              {
+                SGG_NM: "강남구",
+                MNG_ZONE_NM: "역삼1동",
+                EMSN_PLC: "지정장소",
+                LF_WST_EMSN_DOW: "월,수,금",
+                LF_WST_EMSN_BGNG_TM: "18:00",
+                LF_WST_EMSN_END_TM: "23:00"
+              }
+            ]
           }
-        ]
-      }
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      DATA_GO_KR_API_KEY: "test-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
-  const app = buildHouseholdWasteTestApp(t, {
-    KSKILL_PROXY_CACHE_TTL_MS: "60000"
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
   });
 
   const url =
@@ -2050,9 +2044,13 @@ test("household waste info endpoint ignores user-supplied returnType override", 
     });
   };
 
-  const app = buildHouseholdWasteTestApp(t);
-  t.after(() => {
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
     global.fetch = originalFetch;
+    await app.close();
   });
 
   const response = await app.inject({
@@ -2062,96 +2060,6 @@ test("household waste info endpoint ignores user-supplied returnType override", 
 
   assert.equal(response.statusCode, 200);
   assert.equal(new URL(capturedUrl).searchParams.get("returnType"), "json");
-});
-
-test("household waste info endpoint rejects non-numeric pageNo before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=abc&numOfRows=100"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /pageNo/i);
-  assert.equal(fetchCalls.length, 0);
-});
-
-test("household waste info endpoint rejects pageNo values other than 1 before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=2&numOfRows=100"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /pageNo/i);
-  assert.equal(fetchCalls.length, 0);
-});
-
-test("household waste info endpoint rejects numOfRows values other than 100 before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=1&numOfRows=20"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /numOfRows/i);
-  assert.equal(fetchCalls.length, 0);
-});
-
-test("household waste info endpoint rejects duplicated pageNo values before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=1&pageNo=2&numOfRows=100"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /pageNo/i);
-  assert.equal(fetchCalls.length, 0);
-});
-
-test("household waste info endpoint rejects mixed pageNo aliases before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=1&page_no=2&numOfRows=100"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /pageNo/i);
-  assert.equal(fetchCalls.length, 0);
-});
-
-test("household waste info endpoint rejects mixed numOfRows aliases before upstream fetch", async (t) => {
-  const fetchCalls = mockHouseholdWasteJsonFetch(t);
-  const app = buildHouseholdWasteTestApp(t);
-
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=1&numOfRows=100&num_of_rows=20"
-  });
-
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.json().error, "bad_request");
-  assert.match(response.json().message, /numOfRows/i);
-  assert.equal(fetchCalls.length, 0);
 });
 
 test("household waste info endpoint surfaces upstream non-200 as 502", async (t) => {

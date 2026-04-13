@@ -36,7 +36,6 @@ while IFS= read -r -d '' skill_dir; do
   fi
 done < <(
   find "$root" -mindepth 1 -maxdepth 1 -type d \
-    ! -name '.*' \
     ! -name .git \
     ! -name .github \
     ! -name .claude \

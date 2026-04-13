@@ -126,39 +126,6 @@ function convertLatLonToKmaGrid(latitude, longitude) {
   };
 }
 
-function trimSingleQueryValueOrNull(value, fieldName) {
-  if (Array.isArray(value)) {
-    throw new Error(`${fieldName} must be provided exactly once.`);
-  }
-  return trimOrNull(value);
-}
-
-function trimSingleAliasedQueryValueOrNull(query, aliases, fieldName) {
-  const providedAliases = aliases.filter((alias) => Object.hasOwn(query, alias));
-  if (providedAliases.length > 1) {
-    throw new Error(`${fieldName} must be provided exactly once.`);
-  }
-
-  if (providedAliases.length === 0) {
-    return null;
-  }
-
-  return trimSingleQueryValueOrNull(query[providedAliases[0]], fieldName);
-}
-
-function requireFixedQueryInteger(query, aliases, fieldName, expectedValue) {
-  const rawValue = trimSingleAliasedQueryValueOrNull(query, aliases, fieldName);
-  if (rawValue === null) {
-    throw new Error(`${fieldName} is required and must be exactly ${expectedValue}.`);
-  }
-
-  if (!/^\d+$/.test(rawValue) || Number.parseInt(rawValue, 10) !== expectedValue) {
-    throw new Error(`${fieldName} must be exactly ${expectedValue}.`);
-  }
-
-  return String(expectedValue);
-}
-
 function buildConfig(env = process.env) {
   return {
     host: env.KSKILL_PROXY_HOST || "127.0.0.1",
@@ -517,22 +484,6 @@ function normalizeRegionCodeQuery(query) {
     throw new Error("Provide q (region name query).");
   }
   return { q };
-}
-
-function normalizeHouseholdWasteInfoQuery(query) {
-  const sggNm = trimSingleQueryValueOrNull(query["cond[SGG_NM::LIKE]"], "cond[SGG_NM::LIKE]");
-  if (!sggNm) {
-    throw new Error("cond[SGG_NM::LIKE] is required");
-  }
-
-  const pageNo = requireFixedQueryInteger(query, ["pageNo", "page_no"], "pageNo", 1);
-  const numOfRows = requireFixedQueryInteger(query, ["numOfRows", "num_of_rows"], "numOfRows", 100);
-
-  return {
-    sggNm,
-    pageNo,
-    numOfRows
-  };
 }
 
 function normalizeHanRiverWaterLevelQuery(query) {
@@ -902,6 +853,51 @@ async function proxyNeisSchoolInfoRequest({
 }
 
 
+
+function validateHouseholdWastePaginationQuery(query) {
+  const HOUSEHOLD_WASTE_PAGINATION_RULE =
+    "Household waste info requires pageNo=1 and numOfRows=100 (page_no and num_of_rows accepted). Other values or non-digit strings return 400.";
+
+  const rawPage = query.pageNo ?? query.page_no;
+  const rawNum = query.numOfRows ?? query.num_of_rows;
+  const pageProvided =
+    rawPage !== undefined && rawPage !== null && String(rawPage).trim() !== "";
+  const numProvided =
+    rawNum !== undefined && rawNum !== null && String(rawNum).trim() !== "";
+
+  if (!pageProvided || !numProvided) {
+    return { ok: false, message: HOUSEHOLD_WASTE_PAGINATION_RULE };
+  }
+
+  const parseDigitsOnlyUInt = (raw, label) => {
+    const s = String(raw).trim();
+    if (!/^\d+$/.test(s)) {
+      return {
+        ok: false,
+        message: `Invalid ${label} for household waste info: use digits only; pageNo must be 1 and numOfRows must be 100.`
+      };
+    }
+    return { ok: true, value: Number.parseInt(s, 10) };
+  };
+
+  const pageParsed = parseDigitsOnlyUInt(rawPage, "pageNo");
+  if (!pageParsed.ok) {
+    return pageParsed;
+  }
+  if (pageParsed.value !== 1) {
+    return { ok: false, message: HOUSEHOLD_WASTE_PAGINATION_RULE };
+  }
+
+  const numParsed = parseDigitsOnlyUInt(rawNum, "numOfRows");
+  if (!numParsed.ok) {
+    return numParsed;
+  }
+  if (numParsed.value !== 100) {
+    return { ok: false, message: HOUSEHOLD_WASTE_PAGINATION_RULE };
+  }
+
+  return { ok: true };
+}
 
 function buildServer({ env = process.env, provider = null, now = () => new Date() } = {}) {
   const config = buildConfig(env);
@@ -1559,21 +1555,32 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   });
 
   app.get("/v1/household-waste/info", async (request, reply) => {
-    let normalized;
+    const query = request.query || {};
+    const sggNm = query["cond[SGG_NM::LIKE]"];
 
-    try {
-      normalized = normalizeHouseholdWasteInfoQuery(request.query || {});
-    } catch (error) {
+    if (!sggNm || !sggNm.trim()) {
       reply.code(400);
       return {
         error: "bad_request",
-        message: error.message
+        message: "cond[SGG_NM::LIKE] is required"
       };
     }
 
+    const paginationCheck = validateHouseholdWastePaginationQuery(query);
+    if (!paginationCheck.ok) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: paginationCheck.message
+      };
+    }
+
+    const pageNo =  "1";
+    const numOfRows =  "100";
+
     const cacheKey = makeCacheKey({
       route: "household-waste-info",
-      ...normalized
+      sggNm: sggNm.trim()
     });
     const cached = cache.get(cacheKey);
     if (cached) {
@@ -1597,10 +1604,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     const url = new URL("https://apis.data.go.kr/1741000/household_waste_info/info");
     url.searchParams.set("serviceKey", config.molitApiKey);
-    url.searchParams.set("pageNo", normalized.pageNo);
-    url.searchParams.set("numOfRows", normalized.numOfRows);
+    url.searchParams.set("pageNo", pageNo);
+    url.searchParams.set("numOfRows", numOfRows);
     url.searchParams.set("returnType", "json");
-    url.searchParams.set("cond[SGG_NM::LIKE]", normalized.sggNm);
+    url.searchParams.set("cond[SGG_NM::LIKE]", sggNm.trim());
 
     let upstreamData;
     try {
@@ -1625,11 +1632,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     const payload = {
       ...upstreamData,
-      query: {
-        sgg_nm: normalized.sggNm,
-        page_no: normalized.pageNo,
-        num_of_rows: normalized.numOfRows
-      },
+      query: { sgg_nm: sggNm.trim(), page_no: pageNo, num_of_rows: numOfRows },
       proxy: {
         name: config.proxyName,
         cache: { hit: false, ttl_ms: config.cacheTtlMs },
@@ -1782,13 +1785,22 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const upstream = await proxyNeisSchoolInfoRequest({
-      apiKey: config.keduInfoKey,
-      atptOfcdcScCode: normalized.atptOfcdcScCode,
-      schulNm: normalized.schulNm,
-      pIndex: normalized.pIndex,
-      pSize: normalized.pSize
-    });
+    let upstream;
+    try {
+      upstream = await proxyNeisSchoolInfoRequest({
+        apiKey: config.keduInfoKey,
+        atptOfcdcScCode: normalized.atptOfcdcScCode,
+        schulNm: normalized.schulNm,
+        pIndex: normalized.pIndex,
+        pSize: normalized.pSize
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
 
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);
@@ -1882,15 +1894,24 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const upstream = await proxyNeisSchoolMealRequest({
-      apiKey: config.keduInfoKey,
-      atptOfcdcScCode: normalized.atptOfcdcScCode,
-      sdSchulCode: normalized.sdSchulCode,
-      mlsvYmd: normalized.mlsvYmd,
-      mmealScCode: normalized.mmealScCode,
-      pIndex: normalized.pIndex,
-      pSize: normalized.pSize
-    });
+    let upstream;
+    try {
+      upstream = await proxyNeisSchoolMealRequest({
+        apiKey: config.keduInfoKey,
+        atptOfcdcScCode: normalized.atptOfcdcScCode,
+        sdSchulCode: normalized.sdSchulCode,
+        mlsvYmd: normalized.mlsvYmd,
+        mmealScCode: normalized.mmealScCode,
+        pIndex: normalized.pIndex,
+        pSize: normalized.pSize
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
 
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);
@@ -2175,7 +2196,6 @@ module.exports = {
   normalizeOpinetDetailQuery,
   normalizeNeisSchoolMealQuery,
   normalizeNeisSchoolSearchQuery,
-  normalizeHouseholdWasteInfoQuery,
   normalizeRealEstateQuery,
   normalizeRegionCodeQuery,
   normalizeSeoulSubwayQuery,

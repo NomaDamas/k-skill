@@ -65,6 +65,7 @@ npx --yes skills add <owner/repo> \
   --skill fine-dust-location \
   --skill han-river-water-level \
   --skill subway-lost-property \
+  --skill geeknews-search \
   --skill daiso-product-search \
   --skill market-kurly-search \
   --skill olive-young-search \
@@ -76,7 +77,7 @@ npx --yes skills add <owner/repo> \
   --skill bunjang-search \
   --skill used-car-price-search \
   --skill korean-spell-check \
-  --skill k-schoollunch-menu
+  --skill k-schoollunch-menu \
   --skill korean-character-count
 ```
 
@@ -97,6 +98,7 @@ npx --yes skills add <owner/repo> \
   --skill hipass-receipt \
   --skill seoul-subway-arrival \
   --skill subway-lost-property \
+  --skill geeknews-search \
   --skill korea-weather \
   --skill fine-dust-location
 ```
@@ -121,7 +123,25 @@ korean-law list
 
 `household-waste-info` 는 별도 설치 없이 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 호출하고, `serviceKey`(`DATA_GO_KR_API_KEY`)는 proxy 서버에서만 원본 API(`apis.data.go.kr/1741000/household_waste_info/info`)로 주입한다. 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다. 자세한 사용법은 [생활쓰레기 배출정보 조회 가이드](features/household-waste-info.md)를 본다.
 
-`k-schoollunch-menu` 는 별도 설치 없이 `k-skill-proxy`의 `/v1/neis/school-search`, `/v1/neis/school-meal` 라우트를 호출하고, `KEDU_INFO_KEY`는 proxy 서버에서만 나이스 Open API `KEY`로 주입한다. 사용자 쪽 `KEDU_INFO_KEY` 가 불필요하다. 자세한 사용법은 [학교 급식 식단 조회 가이드](features/k-schoollunch-menu.md)를 본다.
+### `korean-stock-search` proxy quickstart
+
+`korean-stock-search` 는 로컬 MCP 설치 대신 **proxy first** 로 사용한다.
+
+- 가장 빠른 smoke test 는 `curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' --data-urlencode 'q=삼성전자' --data-urlencode 'bas_dd=20260404'`
+- 검색 결과에서 `market`, `code` 를 확인한 뒤 `base-info` 또는 `trade-info` 로 이어간다.
+- 사용자 쪽 `KRX_API_KEY` 는 필요 없다. self-host proxy 운영자만 서버 환경변수 `KRX_API_KEY` 를 설정한다.
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
+  --data-urlencode 'q=삼성전자' \
+  --data-urlencode 'bas_dd=20260404'
+
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' \
+  --data-urlencode 'market=KOSPI' \
+  --data-urlencode 'code=005930' \
+  --data-urlencode 'bas_dd=20260404'
+```
+
 
 ### `olive-young-search` upstream CLI quickstart
 

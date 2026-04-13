@@ -104,6 +104,8 @@
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
 - 경찰청 LOST112 습득물 목록: https://www.lost112.go.kr/find/findList.do
 - 서울교통공사 유실물센터: https://www.seoulmetro.co.kr/kr/page.do?menuIdx=541
+- GeekNews public RSS/Atom feed: https://feeds.feedburner.com/geeknews-feed
+- GeekNews home: https://news.hada.io
 - 기상청 단기예보 조회서비스: https://www.data.go.kr/data/15084084/openapi.do
 - 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do
 - 에어코리아 측정소정보: https://www.data.go.kr/data/15073877/openapi.do

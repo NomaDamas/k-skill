@@ -77,7 +77,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 유저에게 물어서 실제 값을 채운다.
 
-서울 지하철 도착정보는 hosted public route rollout 이 끝나기 전까지 `KSKILL_PROXY_BASE_URL` 을 self-host 또는 배포 확인이 끝난 proxy URL 로 채운다. 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보, 학교 급식 식단은 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다.
+서울 지하철 도착정보와 한국 날씨 조회는 hosted public route rollout 이 끝나기 전까지 `KSKILL_PROXY_BASE_URL` 을 self-host 또는 배포 확인이 끝난 proxy URL 로 채운다. 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다.
 
 한국 법령 검색은 로컬 `korean-law-mcp` 경로를 쓸 때만 `LAW_OC` 를 채운다. remote endpoint는 사용자 `LAW_OC` 없이 `url`만 등록하면 되고, 기존 경로 장애 시에는 `법망`(`https://api.beopmang.org`)을 fallback으로 안내한다.
 
@@ -87,7 +87,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 생활쓰레기 배출정보 조회는 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 호출하고, `serviceKey`(`DATA_GO_KR_API_KEY`)는 proxy 서버에서 주입/관리하므로 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다.
 
-학교 급식 식단 조회는 `k-skill-proxy`의 `/v1/neis/school-search`, `/v1/neis/school-meal` 라우트를 호출하고, `KEDU_INFO_KEY`는 proxy 서버에서 주입/관리하므로 사용자 쪽 `KEDU_INFO_KEY` 가 불필요하다.
+학교 급식 식단 조회는 `k-skill-proxy`의 `/v1/neis/school-search`·`/v1/neis/school-meal`을 호출하고, `KEDU_INFO_KEY`는 프록시 서버에만 두므로 사용자 쪽에 둘 필요가 없다.
 
 근처 가장 싼 주유소 찾기는 기본 hosted proxy를 경유하므로 사용자 쪽 `OPINET_API_KEY` 가 불필요하다.
 
@@ -106,8 +106,9 @@ chmod 0600 ~/.config/k-skill/secrets.env
 - 한국 법령 검색 remote endpoint: 사용자 `LAW_OC` 없이 `url`만 등록, 장애 시 `법망` fallback
 - 한국 부동산 실거래가 조회: 사용자 시크릿 불필요 (기본 hosted proxy 사용)
 - 한국 특허 정보 검색: `KIPRIS_PLUS_API_KEY`
-- 생활쓰레기 배출정보 조회: 사용자 시크릿 불필요 (`serviceKey`(`DATA_GO_KR_API_KEY`)는 proxy 서버 주입)
-- 학교 급식 식단 조회: 사용자 시크릿 불필요 (`KEDU_INFO_KEY`는 proxy 서버 주입)
+- 한국 주식 정보 조회: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KRX_API_KEY`)
+- 생활쓰레기 배출정보 조회: 사용자 시크릿 불필요 (`serviceKey`는 proxy 서버 주입, 호출 시 `pageNo=1`·`numOfRows=100` 필수)
+- 학교 급식 식단 조회: 사용자 시크릿 불필요 (`KEDU_INFO_KEY`는 proxy 서버만)
 - 근처 가장 싼 주유소 찾기: 사용자 시크릿 불필요 (기본 hosted proxy 사용)
 - 서울 지하철: self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`
 - 한국 날씨: self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`

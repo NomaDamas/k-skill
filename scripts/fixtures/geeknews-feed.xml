@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom'>
+  <title>GeekNews - 개발/기술/스타트업 뉴스 서비스</title>
+  <subtitle>개발 뉴스, 기술 관련 새소식, 스타트업 정보와 노하우</subtitle>
+  <link ref='alternate' type='text/html' href='https://news.hada.io' />
+  <link ref='self' type='application/atom+xml' href='https://news.hada.io/rss/news' />
+  <id>https://news.hada.io/rss/news</id>
+  <updated>2026-04-12T22:53:56+09:00</updated>
+  <entry>
+    <title><![CDATA[Ask GN: 기억이 안나는 웹사이트를 찾고 있습니다.]]></title>
+    <link rel='alternate' type='text/html' href='https://news.hada.io/topic?id=28441' />
+    <id>https://news.hada.io/topic?id=28441</id>
+    <updated>2026-04-12T22:53:56+09:00</updated>
+    <published>2026-04-12T22:53:56+09:00</published>
+    <author>
+      <name>princox</name>
+      <uri>https://news.hada.io/user/princox</uri>
+    </author>
+    <content type='html' xml:lang='ko'><![CDATA[<p>예전에 아내와 함께 인상깊게 봤던 웹 사이트가 있었는데 기억이 안납니다.</p><p>교육용 시각화 사이트였습니다.</p>]]></content>
+  </entry>
+  <entry>
+    <title><![CDATA[AI 에이전트 벤치마크를 무너뜨린 방법과 그 다음 단계]]></title>
+    <link rel='alternate' type='text/html' href='https://news.hada.io/topic?id=28440' />
+    <id>https://news.hada.io/topic?id=28440</id>
+    <updated>2026-04-12T21:32:54+09:00</updated>
+    <published>2026-04-12T21:32:54+09:00</published>
+    <author>
+      <name>neo</name>
+      <uri>https://news.hada.io/user/neo</uri>
+    </author>
+    <content type='html' xml:lang='ko'><![CDATA[<ul><li>주요 AI agent benchmark 8종이 실제 문제 해결 없이도 최고 점수를 얻을 수 있는 구조적 취약점을 가진 것으로 드러남</li></ul>]]></content>
+  </entry>
+  <entry>
+    <title><![CDATA[Show GN: [GN] 비개발자 + Claude로 프로덕션 운영 238일 — 무엇이 됐고 무엇이 안 됐나?]]></title>
+    <link rel='alternate' type='text/html' href='https://news.hada.io/topic?id=28439' />
+    <id>https://news.hada.io/topic?id=28439</id>
+    <updated>2026-04-12T20:53:05+09:00</updated>
+    <published>2026-04-12T20:53:05+09:00</published>
+    <author>
+      <name>workdriver</name>
+      <uri>https://news.hada.io/user/workdriver</uri>
+    </author>
+    <content type='html' xml:lang='ko'><![CDATA[<p>코드를 한 줄도 칠 줄 모르는 상태에서 2025년 8월 16일 Claude와 함께 첫 커밋을 찍었습니다.</p>]]></content>
+  </entry>
+</feed>
