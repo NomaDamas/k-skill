@@ -1,6 +1,6 @@
 ---
-name: "장학금 주세요 쮜에발"
-description: Search Korean scholarship announcements across official KOSAF, university, foundation, company, and public-sector sources, extract amount and eligibility, and filter results by school, income band, student level, and organization type.
+name: korean-scholarship-search
+description: Search Korean scholarship announcements across official KOSAF, university, foundation, company, and public-sector sources, extract amount and eligibility, and filter results by school, income band, student level, and organization type. Users may invoke it with the phrase 장학금 주세요 쮜에발.
 license: MIT
 metadata:
   category: education
@@ -9,6 +9,8 @@ metadata:
 ---
 
 # 장학금 주세요 쮜에발
+
+사용자에게는 `장학금 주세요 쮜에발` 이라는 이름으로 안내해도 되지만, skill slug는 `korean-scholarship-search` 이다.
 
 ## What this skill does
 
