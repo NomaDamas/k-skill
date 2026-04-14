@@ -646,7 +646,7 @@ def command_report(args: argparse.Namespace) -> int:
         groups[infer_deadline_status(record, today)].append(record)
 
     lines = [
-        "# 장학금 찾기 lets go 리포트",
+        "# 장학금 주세요 쮜에발 리포트",
         f"- 기준일: {today.isoformat()}",
         f"- 총 후보 수: {len(matched)}",
         f"- 지금 지원 가능: {len(groups['open'])}",
