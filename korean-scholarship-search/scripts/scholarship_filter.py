@@ -22,6 +22,7 @@ AMOUNT_KEYS = (
     "min_krw",
     "amount_krw",
 )
+CANONICAL_DEADLINE_STATUSES = {"open", "upcoming", "closed", "unknown"}
 
 
 def read_payload(path: str | None) -> Any:
@@ -141,6 +142,13 @@ def parse_amount_from_text(text: str) -> list[int]:
     return candidates
 
 
+def normalize_deadline_status(value: Any) -> str | None:
+    status = normalize_text(value)
+    if status in CANONICAL_DEADLINE_STATUSES:
+        return status
+    return None
+
+
 def extract_amount_value(record: dict[str, Any]) -> int | None:
     amount = record.get("amount")
     candidates: list[int] = []
@@ -156,19 +164,17 @@ def extract_amount_value(record: dict[str, Any]) -> int | None:
         parsed = parse_int(record.get("amount_krw"))
         if parsed is not None:
             candidates.append(parsed)
+        if isinstance(amount, str):
+            candidates.extend(parse_amount_from_text(amount))
+        text = str(record.get("amount_text") or "")
+        candidates.extend(parse_amount_from_text(text))
 
-    if not candidates:
-        candidates.extend(parse_amount_from_text(json.dumps(record, ensure_ascii=False)))
     return max(candidates) if candidates else None
 
 
 def infer_deadline_status(record: dict[str, Any], today: date | None = None) -> str:
-    deadline = record.get("deadline") or {}
-    status = normalize_text(deadline.get("status") or record.get("deadline_status"))
-    if status:
-        return status
-
     today = today or date.today()
+    deadline = record.get("deadline") or {}
     start_at = parse_date(deadline.get("start"))
     end_at = parse_date(deadline.get("end"))
 
@@ -178,7 +184,8 @@ def infer_deadline_status(record: dict[str, Any], today: date | None = None) -> 
         return "upcoming"
     if end_at and end_at >= today:
         return "open"
-    return "unknown"
+    cached_status = normalize_deadline_status(deadline.get("status") or record.get("deadline_status"))
+    return cached_status or "unknown"
 
 
 def deadline_context(record: dict[str, Any], today: date | None = None) -> dict[str, Any]:
@@ -219,9 +226,6 @@ def school_match_values(record: dict[str, Any]) -> list[Any]:
     values: list[Any] = []
     values.extend(as_list(eligibility.get("school_names")))
     values.append(extract_org_name(record))
-    values.append(record.get("source_url"))
-    values.append(record.get("apply_url"))
-    values.append(record.get("summary"))
     return [value for value in values if value]
 
 
@@ -300,6 +304,8 @@ def match_filter(record: dict[str, Any], args: argparse.Namespace) -> tuple[bool
             return False, reasons
         if school_kinds:
             reasons.append(f"school_kind={args.school_kind}")
+        else:
+            reasons.append("school_kind=?")
 
     if args.school_name:
         school_names = school_match_values(record)
@@ -307,6 +313,8 @@ def match_filter(record: dict[str, Any], args: argparse.Namespace) -> tuple[bool
             return False, reasons
         if school_names:
             reasons.append(f"school_name~={args.school_name}")
+        else:
+            reasons.append("school_name=?")
 
     if args.student_level:
         student_levels = [normalize_text(value) for value in as_list(eligibility.get("student_levels"))]
@@ -314,6 +322,8 @@ def match_filter(record: dict[str, Any], args: argparse.Namespace) -> tuple[bool
             return False, reasons
         if student_levels:
             reasons.append(f"student_level={args.student_level}")
+        else:
+            reasons.append("student_level=?")
 
     if args.major:
         majors = as_list(eligibility.get("majors"))
@@ -321,6 +331,8 @@ def match_filter(record: dict[str, Any], args: argparse.Namespace) -> tuple[bool
             return False, reasons
         if majors:
             reasons.append(f"major~={args.major}")
+        else:
+            reasons.append("major=?")
 
     if getattr(args, "department_name", None):
         departments = department_match_values(record)
@@ -328,6 +340,8 @@ def match_filter(record: dict[str, Any], args: argparse.Namespace) -> tuple[bool
             return False, reasons
         if departments:
             reasons.append(f"department_name~={args.department_name}")
+        else:
+            reasons.append("department_name=?")
 
     if args.grade_year is not None:
         grade_years = {parse_int(value) for value in as_list(eligibility.get("grade_years"))}
@@ -336,6 +350,8 @@ def match_filter(record: dict[str, Any], args: argparse.Namespace) -> tuple[bool
             return False, reasons
         if grade_years:
             reasons.append(f"grade_year={args.grade_year}")
+        else:
+            reasons.append("grade_year=?")
 
     if args.gpa is not None:
         gpa_min = parse_float(eligibility.get("gpa_min"))
@@ -343,6 +359,8 @@ def match_filter(record: dict[str, Any], args: argparse.Namespace) -> tuple[bool
             return False, reasons
         if gpa_min is not None:
             reasons.append(f"gpa>={gpa_min}")
+        else:
+            reasons.append("gpa=?")
 
     if args.income_band is not None:
         income_band_min = parse_int(eligibility.get("income_band_min"))
@@ -358,16 +376,28 @@ def match_filter(record: dict[str, Any], args: argparse.Namespace) -> tuple[bool
             return False, reasons
         if income_bands or income_band_min is not None or income_band_max is not None:
             reasons.append(f"income_band={args.income_band}")
+        else:
+            reasons.append("income_band=?")
 
     amount_value = extract_amount_value(record)
     if args.min_amount is not None:
-        if amount_value is None or amount_value < args.min_amount:
+        if amount_value is not None and amount_value < args.min_amount:
             return False, reasons
-        reasons.append(f"amount>={args.min_amount}")
+        if amount_value is None:
+            if getattr(args, "strict_amount", False):
+                return False, reasons
+            reasons.append(f"amount>={args.min_amount}?")
+        else:
+            reasons.append(f"amount>={args.min_amount}")
     if args.max_amount is not None:
-        if amount_value is None or amount_value > args.max_amount:
+        if amount_value is not None and amount_value > args.max_amount:
             return False, reasons
-        reasons.append(f"amount<={args.max_amount}")
+        if amount_value is None:
+            if getattr(args, "strict_amount", False):
+                return False, reasons
+            reasons.append(f"amount<={args.max_amount}?")
+        else:
+            reasons.append(f"amount<={args.max_amount}")
 
     return True, reasons
 
@@ -421,11 +451,14 @@ def command_filter(args: argparse.Namespace) -> int:
 def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     failed: list[str] = []
     passed: list[str] = []
+    unknown: list[str] = []
     eligibility = get_eligibility(record)
 
     if args.org_type:
         org_type = extract_org_type(record)
-        if org_type == normalize_text(args.org_type):
+        if not org_type:
+            unknown.append("org_type=?")
+        elif org_type == normalize_text(args.org_type):
             passed.append(f"org_type={org_type}")
         else:
             failed.append(f"org_type mismatch: {org_type or 'unknown'}")
@@ -436,6 +469,8 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
             failed.append(f"school_kind mismatch: {school_kinds}")
         elif school_kinds:
             passed.append(f"school_kind={args.school_kind}")
+        else:
+            unknown.append("school_kind=?")
 
     if args.school_name:
         school_names = school_match_values(record)
@@ -443,6 +478,8 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
             failed.append(f"school_name mismatch: {school_names}")
         elif school_names:
             passed.append(f"school_name~={args.school_name}")
+        else:
+            unknown.append("school_name=?")
 
     if args.student_level:
         student_levels = [normalize_text(value) for value in as_list(eligibility.get("student_levels"))]
@@ -450,6 +487,8 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
             failed.append(f"student_level mismatch: {student_levels}")
         elif student_levels:
             passed.append(f"student_level={args.student_level}")
+        else:
+            unknown.append("student_level=?")
 
     if args.major:
         majors = as_list(eligibility.get("majors"))
@@ -457,6 +496,8 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
             failed.append(f"major mismatch: {majors}")
         elif majors:
             passed.append(f"major~={args.major}")
+        else:
+            unknown.append("major=?")
 
     if getattr(args, "department_name", None):
         departments = department_match_values(record)
@@ -464,6 +505,8 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
             failed.append(f"department_name mismatch: {departments}")
         elif departments:
             passed.append(f"department_name~={args.department_name}")
+        else:
+            unknown.append("department_name=?")
 
     if args.grade_year is not None:
         grade_years = {parse_int(value) for value in as_list(eligibility.get("grade_years"))}
@@ -472,6 +515,8 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
             failed.append(f"grade_year mismatch: {sorted(grade_years)}")
         elif grade_years:
             passed.append(f"grade_year={args.grade_year}")
+        else:
+            unknown.append("grade_year=?")
 
     if args.gpa is not None:
         gpa_min = parse_float(eligibility.get("gpa_min"))
@@ -479,6 +524,8 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
             failed.append(f"gpa below minimum: {gpa_min}")
         elif gpa_min is not None:
             passed.append(f"gpa>={gpa_min}")
+        else:
+            unknown.append("gpa=?")
 
     if args.income_band is not None:
         income_band_min = parse_int(eligibility.get("income_band_min"))
@@ -494,8 +541,17 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
             failed.append(f"income_band above maximum: {income_band_max}")
         elif income_bands or income_band_min is not None or income_band_max is not None:
             passed.append(f"income_band={args.income_band}")
+        else:
+            unknown.append("income_band=?")
 
-    status = "eligible" if not failed else "not_eligible"
+    if failed:
+        status = "not_eligible"
+    elif unknown:
+        status = "indeterminate"
+    elif passed:
+        status = "eligible"
+    else:
+        status = "indeterminate"
     return {
         "name": record.get("name"),
         "organization_name": extract_org_name(record),
@@ -505,6 +561,7 @@ def eligibility_result(record: dict[str, Any], args: argparse.Namespace) -> dict
         "status": status,
         "passed": passed,
         "failed": failed,
+        "unknown": unknown,
     }
 
 
@@ -598,7 +655,8 @@ def compact_eligibility_text(record: dict[str, Any]) -> str:
 
 
 def report_entry(record: dict[str, Any], today: date) -> str:
-    context = deadline_context(record, today)
+    match_meta = record.get("_match") if isinstance(record.get("_match"), dict) else {}
+    context = match_meta.get("deadline") if isinstance(match_meta.get("deadline"), dict) else deadline_context(record, today)
     amount_text = None
     if isinstance(record.get("amount"), dict):
         amount_text = record["amount"].get("text")
@@ -616,19 +674,25 @@ def report_entry(record: dict[str, Any], today: date) -> str:
     period = f"{context['start'] or '?'} ~ {context['end'] or '?'}"
     source_url = record.get("source_url") or "-"
     apply_url = record.get("apply_url") or "-"
+    reasons = match_meta.get("reasons") if isinstance(match_meta.get("reasons"), list) else []
 
-    return "\n".join(
+    lines = [
+        f"### {record.get('name') or '장학금명 미상'}",
+        f"- 기관: {organization_name} ({organization_type})",
+        f"- 금액: {amount_text}",
+        f"- 기간: {period}",
+        f"- 상태: {status_label}",
+        f"- 핵심 조건: {compact_eligibility_text(record)}",
+    ]
+    if reasons:
+        lines.append(f"- 필터 판정: {', '.join(reasons)}")
+    lines.extend(
         [
-            f"### {record.get('name') or '장학금명 미상'}",
-            f"- 기관: {organization_name} ({organization_type})",
-            f"- 금액: {amount_text}",
-            f"- 기간: {period}",
-            f"- 상태: {status_label}",
-            f"- 핵심 조건: {compact_eligibility_text(record)}",
             f"- 공식 공고: {source_url}",
             f"- 신청 링크: {apply_url}",
         ]
     )
+    return "\n".join(lines)
 
 
 def command_report(args: argparse.Namespace) -> int:
@@ -637,13 +701,21 @@ def command_report(args: argparse.Namespace) -> int:
     matched: list[dict[str, Any]] = []
 
     for record in records:
-        ok, _ = match_filter(record, args)
+        ok, reasons = match_filter(record, args)
         if ok:
-            matched.append(record)
+            entry = deepcopy(record)
+            entry["_match"] = {
+                "amount_krw": extract_amount_value(record),
+                "deadline": deadline_context(record, today),
+                "deadline_status": infer_deadline_status(record, today),
+                "reasons": reasons,
+            }
+            matched.append(entry)
 
     groups = {"open": [], "upcoming": [], "closed": [], "unknown": []}
     for record in matched:
-        groups[infer_deadline_status(record, today)].append(record)
+        status = normalize_deadline_status((record.get("_match") or {}).get("deadline_status")) or "unknown"
+        groups[status].append(record)
 
     lines = [
         "# 장학금 주세요 쮜에발 리포트",
@@ -652,6 +724,7 @@ def command_report(args: argparse.Namespace) -> int:
         f"- 지금 지원 가능: {len(groups['open'])}",
         f"- 곧 열림: {len(groups['upcoming'])}",
         f"- 마감됨: {len(groups['closed'])}",
+        f"- 상태 미확인: {len(groups['unknown'])}",
         "",
     ]
 
@@ -684,6 +757,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_common_filters(filter_parser)
     filter_parser.add_argument("--min-amount", type=int, help="Minimum scholarship amount in KRW.")
     filter_parser.add_argument("--max-amount", type=int, help="Maximum scholarship amount in KRW.")
+    filter_parser.add_argument("--strict-amount", action="store_true", help="Drop records whose amount cannot be normalized to KRW.")
     filter_parser.add_argument("--deadline-status", help="open|upcoming|closed")
     filter_parser.add_argument("--only-open-now", action="store_true", help="Keep only scholarships open on --today.")
     filter_parser.add_argument("--upcoming-within-days", type=int, help="Keep scholarships opening within N days.")
@@ -704,6 +778,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_common_filters(report_parser)
     report_parser.add_argument("--min-amount", type=int, help="Minimum scholarship amount in KRW.")
     report_parser.add_argument("--max-amount", type=int, help="Maximum scholarship amount in KRW.")
+    report_parser.add_argument("--strict-amount", action="store_true", help="Drop records whose amount cannot be normalized to KRW.")
     report_parser.add_argument("--deadline-status", help="open|upcoming|closed")
     report_parser.add_argument("--only-open-now", action="store_true", help="Keep only scholarships open on --today.")
     report_parser.add_argument("--upcoming-within-days", type=int, help="Keep scholarships opening within N days.")

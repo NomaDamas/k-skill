@@ -15,9 +15,10 @@ def build_school_queries(
     colleges: list[str],
     year: int,
 ) -> dict[str, object]:
-    domain_targets = [f"site:*.ac.kr \"{school_name}\""]
     if school_domain:
-        domain_targets.insert(0, f"site:{school_domain}")
+        domain_targets = [f"site:{school_domain}"]
+    else:
+        domain_targets = [f"site:*.ac.kr \"{school_name}\""]
 
     base_suffixes = [
         f"{year} 장학 공고",
