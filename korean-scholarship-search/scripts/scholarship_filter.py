@@ -731,7 +731,7 @@ def command_report(args: argparse.Namespace) -> int:
         groups[status].append(record)
 
     lines = [
-        "# 장학금 주세요 쮜에발 리포트",
+        "# 장학금 검색 및 조회 리포트",
         f"- 기준일: {today.isoformat()} ({KST_LABEL})",
         f"- 총 후보 수: {len(matched)}",
         f"- 지금 지원 가능: {len(groups['open'])}",

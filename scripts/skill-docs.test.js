@@ -1814,12 +1814,12 @@ test("repository docs advertise the korean-scholarship-search skill and official
   assert.ok(fs.existsSync(searchCluesPath), "expected korean-scholarship-search/references/search-clues.md to exist");
   assert.ok(fs.existsSync(reportFormatPath), "expected korean-scholarship-search/references/report-format.md to exist");
 
-  assert.match(readme, /\| 장학금 주세요 쮜에발 \|/);
-  assert.match(readme, /\[장학금 주세요 쮜에발 가이드\]\(docs\/features\/korean-scholarship-search\.md\)/);
+  assert.match(readme, /\| 장학금 검색 및 조회 \|/);
+  assert.match(readme, /\[장학금 검색 및 조회 가이드\]\(docs\/features\/korean-scholarship-search\.md\)/);
   assert.match(install, /--skill korean-scholarship-search/);
 
   for (const doc of [skill, featureDoc]) {
-    assert.match(doc, /장학금 주세요 쮜에발/);
+    assert.match(doc, /장학금 검색 및 조회/);
     assert.match(doc, /kosaf\.go\.kr/);
     assert.match(doc, /\*\.ac\.kr/);
     assert.match(doc, /전국 대학교|전국 대학/);
@@ -1834,7 +1834,7 @@ test("repository docs advertise the korean-scholarship-search skill and official
   assert.match(sources, /한국장학재단 학자금 지원구간 산정절차/);
   assert.match(sources, /한국장학재단 푸른등대 기부장학금/);
   assert.match(sources, /삼성꿈장학재단/);
-  assert.match(roadmap, /장학금 주세요 쮜에발 스킬 출시/);
+  assert.match(roadmap, /장학금 검색 및 조회 스킬 출시/);
   assert.ok(
     !packageJson.workspaces.some((workspace) => workspace.includes("korean-scholarship-search")),
     "expected no repo workspace to be added for korean-scholarship-search",
@@ -1958,7 +1958,7 @@ test("korean-scholarship-search helper filters normalized records, renders repor
       { cwd: repoRoot, encoding: "utf8" },
     );
 
-    assert.match(report, /# 장학금 주세요 쮜에발 리포트/);
+    assert.match(report, /# 장학금 검색 및 조회 리포트/);
     assert.match(report, /## 지금 지원 가능/);
     assert.match(report, /테스트재단 생활비 장학금/);
     assert.match(report, /D-2/);
