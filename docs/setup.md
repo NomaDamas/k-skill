@@ -97,6 +97,7 @@ bash scripts/check-setup.sh
 - [하이패스 영수증 발급 가이드](features/hipass-receipt.md)
 - [한국 주식 정보 조회 가이드](features/korean-stock-search.md)
 - [근처 가장 싼 주유소 찾기 가이드](features/cheap-gas-nearby.md)
+- [근처 공중화장실 찾기 가이드](features/public-restroom-nearby.md)
 - [생활쓰레기 배출정보 조회 가이드](features/household-waste-info.md)
 - [학교 급식 식단 조회 가이드](features/k-schoollunch-menu.md)
 - [의약품 안전 체크 가이드](features/mfds-drug-safety.md)

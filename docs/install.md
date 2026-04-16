@@ -63,6 +63,7 @@ npx --yes skills add <owner/repo> \
   --skill korean-patent-search \
   --skill korea-weather \
   --skill cheap-gas-nearby \
+  --skill public-restroom-nearby \
   --skill fine-dust-location \
   --skill han-river-water-level \
   --skill subway-lost-property \
@@ -70,6 +71,7 @@ npx --yes skills add <owner/repo> \
   --skill daiso-product-search \
   --skill market-kurly-search \
   --skill olive-young-search \
+  --skill hola-poke-yeoksam \
   --skill blue-ribbon-nearby \
   --skill kakao-bar-nearby \
   --skill zipcode-search \
@@ -258,7 +260,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g @ohah/hwpjs kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp market-kurly-search daiso bunjang-cli
+npm install -g @ohah/hwpjs kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli
 export NODE_PATH="$(npm root -g)"
 ```
 
@@ -336,6 +338,7 @@ node scripts/korean_character_count.js --text $'첫 줄\n둘째 줄🙂' --profi
 - `korean-stock-search`
 - `household-waste-info`
 - `cheap-gas-nearby`
+- `public-restroom-nearby`
 - `k-schoollunch-menu` (hosted proxy에 `KEDU_INFO_KEY`가 배포된 경우 사용자 시크릿 불필요)
 
 관련 문서:
