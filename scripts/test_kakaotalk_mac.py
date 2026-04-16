@@ -171,7 +171,12 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
         with self.assertRaises(kakaotalk_mac.AuthResolutionError):
             kakaotalk_mac.build_passthrough_command("query", auth, ["DELETE FROM chat_logs"])
 
+    def test_build_parser_only_exposes_read_only_commands(self) -> None:
+        parser = kakaotalk_mac.build_parser()
+        subcommands = parser._subparsers._group_actions[0].choices
 
+        self.assertEqual(sorted(subcommands), ["auth", "chats", "messages", "schema", "search"])
+        self.assertNotIn("query", subcommands)
 
 if __name__ == "__main__":
     unittest.main()
