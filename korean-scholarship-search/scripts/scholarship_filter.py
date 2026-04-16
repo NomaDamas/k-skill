@@ -8,7 +8,7 @@ import json
 import re
 import sys
 from copy import deepcopy
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +23,8 @@ AMOUNT_KEYS = (
     "amount_krw",
 )
 CANONICAL_DEADLINE_STATUSES = {"open", "upcoming", "closed", "unknown"}
+KST = timezone(timedelta(hours=9), name="Asia/Seoul")
+KST_LABEL = "Asia/Seoul (KST)"
 
 
 def read_payload(path: str | None) -> Any:
@@ -115,9 +117,17 @@ def parse_date(value: Any) -> date | None:
     return None
 
 
+def current_kst_date(now: datetime | None = None) -> date:
+    if now is None:
+        return datetime.now(KST).date()
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return now.astimezone(KST).date()
+
+
 def resolve_today(value: str | None) -> date:
     parsed = parse_date(value)
-    return parsed or date.today()
+    return parsed or current_kst_date()
 
 
 def extract_org_type(record: dict[str, Any]) -> str:
@@ -173,7 +183,7 @@ def extract_amount_value(record: dict[str, Any]) -> int | None:
 
 
 def infer_deadline_status(record: dict[str, Any], today: date | None = None) -> str:
-    today = today or date.today()
+    today = today or current_kst_date()
     deadline = record.get("deadline") or {}
     start_at = parse_date(deadline.get("start"))
     end_at = parse_date(deadline.get("end"))
@@ -189,7 +199,7 @@ def infer_deadline_status(record: dict[str, Any], today: date | None = None) -> 
 
 
 def deadline_context(record: dict[str, Any], today: date | None = None) -> dict[str, Any]:
-    today = today or date.today()
+    today = today or current_kst_date()
     deadline = record.get("deadline") or {}
     start_at = parse_date(deadline.get("start"))
     end_at = parse_date(deadline.get("end"))
@@ -600,7 +610,10 @@ def add_common_filters(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--grade-year", type=int, help="Student year, e.g. 1, 2, 3, 4.")
     parser.add_argument("--gpa", type=float, help="Current GPA for eligibility check.")
     parser.add_argument("--income-band", type=int, help="학자금 지원구간 integer, usually 0~10.")
-    parser.add_argument("--today", help="Override current date for deadline filtering, e.g. 2026-04-14.")
+    parser.add_argument(
+        "--today",
+        help=f"Override current date for deadline filtering/reporting. When omitted or unparsable, defaults to current KST date ({KST_LABEL}), e.g. 2026-04-14.",
+    )
 
 
 def format_krw(value: int | None) -> str:
@@ -719,7 +732,7 @@ def command_report(args: argparse.Namespace) -> int:
 
     lines = [
         "# 장학금 주세요 쮜에발 리포트",
-        f"- 기준일: {today.isoformat()}",
+        f"- 기준일: {today.isoformat()} ({KST_LABEL})",
         f"- 총 후보 수: {len(matched)}",
         f"- 지금 지원 가능: {len(groups['open'])}",
         f"- 곧 열림: {len(groups['upcoming'])}",

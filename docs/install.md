@@ -120,7 +120,7 @@ korean-law list
 
 `real-estate-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/tae0y/real-estate-mcp/tree/main`. 자세한 사용법은 [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)를 본다.
 
-`korean-scholarship-search` 는 스킬 이름 `장학금 주세요 쮜에발` 로 동작한다. 별도 API key 없이 최신 웹 검색과 공식 공고 확인으로 장학금을 찾고, 한국장학재단·전국 대학교 본부·단과대·학과·재단·기업·공공기관 공고를 모아 금액/지원자격/지원구간/공식 링크를 정리한다. 설치된 helper `python3 scripts/scholarship_filter.py` 로 사용자 조건 필터링, 현재 날짜 기준 마감 상태 분류, readable report, 지원 가능 여부 확인을 할 수 있고, `python3 scripts/university_search_plan.py` 로 학교별 또는 전국 대학 검색 쿼리 팩을 만들 수 있다. 자세한 사용법은 [장학금 주세요 쮜에발 가이드](features/korean-scholarship-search.md)를 본다.
+`korean-scholarship-search` 는 스킬 이름 `장학금 주세요 쮜에발` 로 동작한다. 별도 API key 없이 최신 웹 검색과 공식 공고 확인으로 장학금을 찾고, 한국장학재단·전국 대학교 본부·단과대·학과·재단·기업·공공기관 공고를 모아 금액/지원자격/지원구간/공식 링크를 정리한다. 설치된 helper `python3 scripts/scholarship_filter.py` 로 사용자 조건 필터링, KST(`Asia/Seoul`) 현재 날짜 기준 마감 상태 분류, readable report, 지원 가능 여부 확인을 할 수 있고, `python3 scripts/university_search_plan.py` 로 학교별 또는 전국 대학 검색 쿼리 팩을 만들 수 있다. 자세한 사용법은 [장학금 주세요 쮜에발 가이드](features/korean-scholarship-search.md)를 본다.
 
 `korean-stock-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `KRX_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/jjlabsio/korea-stock-mcp`. 자세한 사용법은 [한국 주식 정보 조회 가이드](features/korean-stock-search.md)를 본다.
 
@@ -291,7 +291,7 @@ export KIPRIS_PLUS_API_KEY=your-service-key
 python3 scripts/patent_search.py --query "배터리"
 ```
 
-장학금 주세요 쮜에발 helper는 설치된 `korean-scholarship-search` skill 안의 `scripts/scholarship_filter.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
+장학금 주세요 쮜에발 helper는 설치된 `korean-scholarship-search` skill 안의 `scripts/scholarship_filter.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다. `--today` 를 생략하거나 잘못 넣으면 host local time 이 아니라 KST 오늘 날짜를 기준으로 마감 상태를 계산한다.
 
 ```bash
 python3 scripts/scholarship_filter.py report --input scholarships.json --today 2026-04-14 --only-open-now

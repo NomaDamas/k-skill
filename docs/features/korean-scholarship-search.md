@@ -5,7 +5,7 @@
 - 한국장학재단, 전국 대학교, 재단, 기업, 공공기관의 최신 장학 공고 검색
 - 장학금별 금액, 지원 자격, 학자금 지원구간, 신청 기간, 링크 정리
 - 사용자 조건(학교, 학부/대학원, 전공, 학과, 금액, 기관 유형) 기반 필터링
-- 현재 날짜 기준으로 `지금 지원 가능`, `곧 열림`, `마감됨` 구분
+- KST(`Asia/Seoul`) 현재 날짜 기준으로 `지금 지원 가능`, `곧 열림`, `마감됨` 구분
 - 정규화된 JSON 목록에 대해 지원 가능 여부 빠른 판정
 - readable markdown report 출력
 
@@ -71,7 +71,7 @@ python3 scripts/scholarship_filter.py eligibility \
   --income-band 5
 ```
 
-현재 날짜 기준 readable report:
+KST 기준 readable report:
 
 ```bash
 python3 scripts/scholarship_filter.py report \
@@ -98,7 +98,7 @@ python3 scripts/university_search_plan.py --nationwide --year 2026
 ## 바로 쓸 프롬프트 예시
 
 ```text
-장학금 주세요 쮜에발 스킬을 사용해서 지금 신청 가능하거나 곧 열리는 한국 장학금 공고를 찾아줘. 한국장학재단, 전국 대학교, 재단, 기업, 공공기관 공식 공고만 포함하고, 현재 날짜 기준으로 열린 공고와 곧 열릴 공고를 나눠서 가독성 좋은 form으로 정리해줘.
+장학금 주세요 쮜에발 스킬을 사용해서 지금 신청 가능하거나 곧 열리는 한국 장학금 공고를 찾아줘. 한국장학재단, 전국 대학교, 재단, 기업, 공공기관 공식 공고만 포함하고, KST 기준 현재 날짜로 열린 공고와 곧 열릴 공고를 나눠서 가독성 좋은 form으로 정리해줘.
 ```
 
 ```text
@@ -128,7 +128,7 @@ python3 scripts/university_search_plan.py --nationwide --year 2026
 - 기관 / 기관 유형
 - 금액
 - 신청기간
-- 현재 날짜 기준 상태
+- KST 기준 현재 날짜 상태
 - 핵심 조건
 - 공식 공고 링크
 - 신청 링크
@@ -149,6 +149,7 @@ python3 scripts/university_search_plan.py --nationwide --year 2026
 
 ## 주의 사항
 
+- `scripts/scholarship_filter.py` 에서 `--today` 를 생략하거나 잘못 넣으면 host local time 이 아니라 KST 오늘 날짜를 기준으로 마감 상태를 계산한다.
 - "등록금 전액" 같이 금액이 정액이 아닌 공고는 원문 텍스트를 그대로 유지한다.
 - 성적 조건이 4.5 만점인지 100점 만점인지 공고마다 다르므로 원문 기준을 같이 적는다.
 - 장학금은 학기별/연도별로 반복되더라도 조건과 마감일이 달라질 수 있으니, 과거 공고를 최신 공고로 착각하지 않는다.

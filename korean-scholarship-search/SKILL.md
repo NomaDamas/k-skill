@@ -28,7 +28,7 @@ metadata:
 
 특정 학교가 주어지면 그 학교의 본부, 학생지원처, 단과대, 학과/전공, 대학원 공지를 전수 탐색하려고 시도한다. 학교가 주어지지 않으면 `*.ac.kr` 전체를 기준으로 전국 대학 장학 공고를 넓게 찾는다.
 
-필요하면 동봉된 helper(`scripts/scholarship_filter.py`)로 사용자 조건에 맞게 후처리 필터링하고, 지원 가능 여부를 빠르게 판정하고, 현재 날짜 기준 readable report를 만든다.
+필요하면 동봉된 helper(`scripts/scholarship_filter.py`)로 사용자 조건에 맞게 후처리 필터링하고, 지원 가능 여부를 빠르게 판정하고, KST(`Asia/Seoul`) 현재 날짜 기준 readable report를 만든다. `--today` 를 생략하거나 잘못 넣으면 host local time 이 아니라 KST 오늘 날짜를 기준일로 사용한다.
 
 ## Works in both Claude Code and Codex
 
@@ -207,7 +207,7 @@ python3 scripts/scholarship_filter.py eligibility \
   --income-band 5
 ```
 
-현재 날짜 기준으로 열린 공고만 readable 하게 보기:
+KST 기준 현재 날짜로 열린 공고만 readable 하게 보기:
 
 ```bash
 python3 scripts/scholarship_filter.py report \
@@ -245,7 +245,7 @@ python3 scripts/scholarship_filter.py report \
 - 장학금명
 - 기관명 / 기관 유형
 - 금액
-- 신청기간 + 현재 날짜 기준 상태 (`open`, `upcoming`, `closed`, `D-3`)
+- 신청기간 + KST 기준 현재 날짜 상태 (`open`, `upcoming`, `closed`, `D-3`)
 - 학교/학과/학년/성적/지원구간 핵심 조건
 - 공식 공고 링크
 - 신청 링크
@@ -274,7 +274,7 @@ python3 scripts/scholarship_filter.py report \
 ### 1. 전체 탐색
 
 ```text
-장학금 주세요 쮜에발 스킬을 사용해서 지금 신청 가능하거나 곧 열리는 한국 장학금 공고를 찾아줘. 한국장학재단, 전국 대학교, 재단, 기업, 공공기관 공식 공고만 포함하고, 현재 날짜 기준으로 열린 공고와 곧 열릴 공고를 나눠서 보여줘. 각 항목마다 장학금명, 기관명, 기관 유형, 지원 금액, 신청 기간, 핵심 자격, 학자금 지원구간 조건, 공식 공고 링크, 신청 링크를 가독성 좋은 섹션형 form으로 정리해줘.
+장학금 주세요 쮜에발 스킬을 사용해서 지금 신청 가능하거나 곧 열리는 한국 장학금 공고를 찾아줘. 한국장학재단, 전국 대학교, 재단, 기업, 공공기관 공식 공고만 포함하고, KST 기준 현재 날짜로 열린 공고와 곧 열릴 공고를 나눠서 보여줘. 각 항목마다 장학금명, 기관명, 기관 유형, 지원 금액, 신청 기간, 핵심 자격, 학자금 지원구간 조건, 공식 공고 링크, 신청 링크를 가독성 좋은 섹션형 form으로 정리해줘.
 ```
 
 ### 2. 사용자 조건 기반 필터링
@@ -290,7 +290,7 @@ python3 scripts/scholarship_filter.py report \
 - 최소 금액: 200만원
 - 기관 유형: 재단
 
-공식 공고만 포함하고, 현재 날짜 기준으로 마감 여부도 고려해서 지원 가능 여부를 가능/불확실/불가로 표시해줘.
+공식 공고만 포함하고, KST 기준 현재 날짜로 마감 여부도 고려해서 지원 가능 여부를 가능/불확실/불가로 표시해줘.
 ```
 
 ### 3. 학교 장학 vs 재단 장학 비교

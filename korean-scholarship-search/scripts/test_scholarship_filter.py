@@ -3,9 +3,10 @@ import json
 import subprocess
 import sys
 from argparse import Namespace
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 import unittest
+from unittest import mock
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -26,6 +27,18 @@ university_search_plan = load_module("university_search_plan", PLANNER_PATH)
 
 
 class DeadlineStatusTest(unittest.TestCase):
+    def test_current_kst_date_uses_korea_calendar_day(self):
+        now = datetime(2026, 4, 15, 16, 30, tzinfo=timezone.utc)
+
+        today = scholarship_filter.current_kst_date(now)
+
+        self.assertEqual(today, date(2026, 4, 16))
+
+    def test_resolve_today_falls_back_to_kst_when_missing_or_invalid(self):
+        with mock.patch.object(scholarship_filter, "current_kst_date", return_value=date(2026, 4, 16)):
+            self.assertEqual(scholarship_filter.resolve_today(None), date(2026, 4, 16))
+            self.assertEqual(scholarship_filter.resolve_today("not-a-date"), date(2026, 4, 16))
+
     def test_infer_deadline_status_overrides_stale_cached_status_with_dates(self):
         record = {
             "deadline": {
@@ -64,6 +77,7 @@ class DeadlineStatusTest(unittest.TestCase):
             check=True,
         )
 
+        self.assertIn("- 기준일: 2026-04-15 (Asia/Seoul (KST))", result.stdout)
         self.assertIn("- 상태 미확인: 1", result.stdout)
         self.assertIn("## 상태 미확인", result.stdout)
 
