@@ -20,7 +20,7 @@ upstream 설계 참고는 [`jjlabsio/korea-stock-mcp`](https://github.com/jjlabs
 
 - "삼성전자 종목코드랑 시장구분 찾아줘"
 - "005930 기본정보 보여줘"
-- "SK하이닉스 20260404 종가/거래량 알려줘"
+- "SK하이닉스 20260408 종가/거래량 알려줘"
 - "KOSDAQ 에서 알테오젠 시세 확인해줘"
 
 ## When not to use
@@ -75,7 +75,7 @@ GET /v1/korean-stock/trade-info?market={KOSPI|KOSDAQ|KONEX}&code={종목코드}&
 ```bash
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
   --data-urlencode 'q=삼성전자' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 ```
 
 종목 기본정보:
@@ -84,7 +84,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' \
   --data-urlencode 'market=KOSPI' \
   --data-urlencode 'code=005930' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 ```
 
 종목 일별 시세:
@@ -93,7 +93,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' 
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/trade-info' \
   --data-urlencode 'market=KOSPI' \
   --data-urlencode 'code=005930' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 ```
 
 ## Response shape
@@ -113,7 +113,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/trade-info'
       "listed_at": "1975-06-11"
     }
   ],
-  "query": { "q": "삼성전자", "bas_dd": "20260404", "limit": 10 },
+  "query": { "q": "삼성전자", "bas_dd": "20260408", "limit": 10 },
   "proxy": { "name": "k-skill-proxy", "cache": { "hit": false, "ttl_ms": 300000 } }
 }
 ```
@@ -135,7 +135,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/trade-info'
     "par_value": 100,
     "listed_shares": 5969782550
   },
-  "query": { "market": "KOSPI", "code": "005930", "bas_dd": "20260404" },
+  "query": { "market": "KOSPI", "code": "005930", "bas_dd": "20260408" },
   "proxy": { "name": "k-skill-proxy", "cache": { "hit": false, "ttl_ms": 300000 } }
 }
 ```
@@ -148,7 +148,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/trade-info'
     "market": "KOSPI",
     "code": "005930",
     "standard_code": "KR7005930003",
-    "base_date": "20260404",
+    "base_date": "20260408",
     "name": "삼성전자",
     "close_price": 84000,
     "change_price": 1000,
@@ -160,7 +160,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/trade-info'
     "trading_value": 1030000000000,
     "market_cap": 500000000000000
   },
-  "query": { "market": "KOSPI", "code": "005930", "bas_dd": "20260404" },
+  "query": { "market": "KOSPI", "code": "005930", "bas_dd": "20260408" },
   "proxy": { "name": "k-skill-proxy", "cache": { "hit": false, "ttl_ms": 300000 } }
 }
 ```
@@ -168,8 +168,9 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/trade-info'
 ## Response policy
 
 - 종목명이 모호하면 먼저 `search` 로 시장/종목코드를 좁힌 뒤 `base-info` 또는 `trade-info` 로 들어간다.
+- 일부 시장 upstream 이 실패하면 `upstream.degraded=true` 와 `failed_markets` 를 보고 부분 장애 여부를 함께 설명한다.
 - `trade-info` 결과는 일별 snapshot 이다. 실시간 호가/체결처럼 말하지 않는다.
-- 휴장일/장마감 이전이면 해당 `bas_dd` 에 데이터가 없을 수 있으니 최근 영업일로 재시도한다.
+- 휴장일/장마감 이전이면 해당 `bas_dd` 에 데이터가 없을 수 있으니 최근 영업일로 재시도한다. 이 경우 `trade-info` 는 502 대신 `not_found` 로 끝날 수 있다.
 - 숫자는 사람이 읽기 쉬운 단위(원, 주, 억/조)로 짧게 풀어주되 원본 숫자도 유지한다.
 - 답변 말미에 "KRX 공식 데이터 기준 / 투자 조언 아님" 을 짧게 남긴다.
 
@@ -185,7 +186,8 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/trade-info'
 
 - `q`, `market`, `code`, `bas_dd` 형식이 잘못되면 400 응답
 - 프록시 서버에 `KRX_API_KEY` 가 없으면 503 응답
-- upstream KRX 응답 오류면 502 응답
+- 검색 중 일부 시장 upstream 이 실패하면 200 응답이지만 `upstream.degraded=true` 와 `failed_markets` 를 함께 반환할 수 있다.
+- 모든 요청 시장에서 upstream KRX 조회가 실패하면 502 응답
 - 해당 기준일/시장에 종목이 없으면 404 `not_found`
 
 ## Done when

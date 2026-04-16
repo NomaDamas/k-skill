@@ -54,6 +54,7 @@ npx --yes skills add <owner/repo> \
   --skill kakaotalk-mac \
   --skill korean-law-search \
   --skill real-estate-search \
+  --skill korean-scholarship-search \
   --skill korean-stock-search \
   --skill household-waste-info \
   --skill mfds-drug-safety \
@@ -62,6 +63,7 @@ npx --yes skills add <owner/repo> \
   --skill korean-patent-search \
   --skill korea-weather \
   --skill cheap-gas-nearby \
+  --skill public-restroom-nearby \
   --skill fine-dust-location \
   --skill han-river-water-level \
   --skill subway-lost-property \
@@ -69,6 +71,7 @@ npx --yes skills add <owner/repo> \
   --skill daiso-product-search \
   --skill market-kurly-search \
   --skill olive-young-search \
+  --skill hola-poke-yeoksam \
   --skill blue-ribbon-nearby \
   --skill kakao-bar-nearby \
   --skill zipcode-search \
@@ -119,6 +122,8 @@ korean-law list
 
 `real-estate-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/tae0y/real-estate-mcp/tree/main`. 자세한 사용법은 [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)를 본다.
 
+`korean-scholarship-search` 는 스킬 이름 `장학금 검색 및 조회` 로 동작한다. 별도 API key 없이 최신 웹 검색과 공식 공고 확인으로 장학금을 찾고, 한국장학재단·전국 대학교 본부·단과대·학과·재단·기업·공공기관 공고를 모아 금액/지원자격/지원구간/공식 링크를 정리한다. 설치된 helper `python3 scripts/scholarship_filter.py` 로 사용자 조건 필터링, KST(`Asia/Seoul`) 현재 날짜 기준 마감 상태 분류, readable report, 지원 가능 여부 확인을 할 수 있고, `python3 scripts/university_search_plan.py` 로 학교별 또는 전국 대학 검색 쿼리 팩을 만들 수 있다. 자세한 사용법은 [장학금 검색 및 조회 가이드](features/korean-scholarship-search.md)를 본다.
+
 `korean-stock-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `KRX_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/jjlabsio/korea-stock-mcp`. 자세한 사용법은 [한국 주식 정보 조회 가이드](features/korean-stock-search.md)를 본다.
 
 `household-waste-info` 는 별도 설치 없이 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 호출하고, `serviceKey`(`DATA_GO_KR_API_KEY`)는 proxy 서버에서만 원본 API(`apis.data.go.kr/1741000/household_waste_info/info`)로 주입한다. 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다. 자세한 사용법은 [생활쓰레기 배출정보 조회 가이드](features/household-waste-info.md)를 본다.
@@ -127,19 +132,19 @@ korean-law list
 
 `korean-stock-search` 는 로컬 MCP 설치 대신 **proxy first** 로 사용한다.
 
-- 가장 빠른 smoke test 는 `curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' --data-urlencode 'q=삼성전자' --data-urlencode 'bas_dd=20260404'`
+- 가장 빠른 smoke test 는 `curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' --data-urlencode 'q=삼성전자' --data-urlencode 'bas_dd=20260408'`
 - 검색 결과에서 `market`, `code` 를 확인한 뒤 `base-info` 또는 `trade-info` 로 이어간다.
 - 사용자 쪽 `KRX_API_KEY` 는 필요 없다. self-host proxy 운영자만 서버 환경변수 `KRX_API_KEY` 를 설정한다.
 
 ```bash
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
   --data-urlencode 'q=삼성전자' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' \
   --data-urlencode 'market=KOSPI' \
   --data-urlencode 'code=005930' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 ```
 
 
@@ -255,7 +260,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g kordoc pdfjs-dist kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp market-kurly-search daiso bunjang-cli
+npm install -g kordoc pdfjs-dist kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli
 export NODE_PATH="$(npm root -g)"
 ```
 
@@ -289,6 +294,12 @@ python3 scripts/sillok_search.py --query "훈민정음" --king 세종 --year 144
 ```bash
 export KIPRIS_PLUS_API_KEY=your-service-key
 python3 scripts/patent_search.py --query "배터리"
+```
+
+장학금 검색 및 조회 helper는 설치된 `korean-scholarship-search` skill 안의 `scripts/scholarship_filter.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다. `--today` 를 생략하거나 잘못 넣으면 host local time 이 아니라 KST 오늘 날짜를 기준으로 마감 상태를 계산한다.
+
+```bash
+python3 scripts/scholarship_filter.py report --input scholarships.json --today 2026-04-14 --only-open-now
 ```
 
 한국어 맞춤법 검사 helper는 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
@@ -330,6 +341,7 @@ node scripts/korean_character_count.js --text $'첫 줄\n둘째 줄🙂' --profi
 - `korean-stock-search`
 - `household-waste-info`
 - `cheap-gas-nearby`
+- `public-restroom-nearby`
 - `k-schoollunch-menu` (hosted proxy에 `KEDU_INFO_KEY`가 배포된 경우 사용자 시크릿 불필요)
 
 관련 문서:

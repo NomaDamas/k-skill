@@ -2020,9 +2020,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    let items;
+    let result;
     try {
-      const result = await searchStocks({
+      result = await searchStocks({
         query: normalized.q,
         basDd: normalized.basDd,
         market: normalized.market,
@@ -2031,7 +2031,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         cache,
         cacheTtlMs: config.cacheTtlMs
       });
-      items = result.items;
     } catch (error) {
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
@@ -2041,7 +2040,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     }
 
     const payload = {
-      items,
+      items: result.items,
       query: {
         q: normalized.q,
         bas_dd: normalized.basDd,
@@ -2058,7 +2057,13 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       }
     };
 
-    cache.set(cacheKey, payload, config.cacheTtlMs);
+    if (result.upstream) {
+      payload.upstream = result.upstream;
+    }
+
+    if (!result.upstream?.degraded) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
     return payload;
   });
 
@@ -2442,7 +2447,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       reply.code(404);
       return {
         error: "not_found",
-        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 의 일별 시세를 찾지 못했습니다.`
+        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 의 일별 시세를 찾지 못했습니다. 휴장일이거나 데이터가 아직 없을 수 있습니다.`
       };
     }
 

@@ -165,6 +165,10 @@ async function fetchBaseInfo({ market, basDd = getCurrentKstDate(), codeList = [
 async function fetchTradeInfo({ market, basDd = getCurrentKstDate(), codeList, apiKey, fetchImpl = global.fetch }) {
   const tradeItems = await krxRequest(buildUrl(KRX_TRADE_INFO_URLS[market], { basDd }), apiKey, fetchImpl);
 
+  if (tradeItems.length === 0) {
+    return [];
+  }
+
   const directlyMatched = tradeItems.filter((item) => matchesCodes(item, codeList));
   if (directlyMatched.length > 0) {
     return directlyMatched.map((item) => normalizeTradeItem(item, market));
@@ -221,6 +225,14 @@ function buildBaseInfoSnapshotCacheKey({ market, basDd }) {
   return `krx-base-info:${market}:${basDd}`;
 }
 
+function serializeKrxError(error) {
+  return {
+    code: error?.code || "proxy_error",
+    status_code: error?.statusCode || 502,
+    message: error?.message || "Unknown KRX upstream error."
+  };
+}
+
 async function fetchBaseInfoSnapshot({
   market,
   basDd,
@@ -272,13 +284,20 @@ async function searchStocks({
   const successfulResults = settledResults
     .filter((result) => result.status === "fulfilled")
     .map((result) => result.value);
+  const failedResults = settledResults
+    .map((result, index) => ({ result, market: markets[index] }))
+    .filter(({ result }) => result.status === "rejected")
+    .map(({ result, market }) => ({
+      market,
+      ...serializeKrxError(result.reason)
+    }));
 
   if (successfulResults.length === 0) {
     const firstFailure = settledResults.find((result) => result.status === "rejected");
     throw firstFailure?.reason || new Error("KRX search failed for every market.");
   }
 
-  return {
+  const payload = {
     items: successfulResults
       .flatMap(({ market: entryMarket, items }) =>
         items
@@ -289,6 +308,17 @@ async function searchStocks({
       .slice(0, limit)
       .map(({ score, ...item }) => item)
   };
+
+  if (failedResults.length > 0) {
+    payload.upstream = {
+      degraded: true,
+      requested_markets: markets,
+      successful_markets: successfulResults.map(({ market: entryMarket }) => entryMarket),
+      failed_markets: failedResults
+    };
+  }
+
+  return payload;
 }
 
 module.exports = {

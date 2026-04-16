@@ -254,8 +254,32 @@ test("repository docs advertise the used-car-price-search skill", () => {
   assert.match(install, /--skill used-car-price-search/);
   assert.match(
     install,
-    /npm install -g kordoc pdfjs-dist kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp/,
+    /npm install -g kordoc pdfjs-dist kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp/,
   );
+});
+
+test("repository docs advertise the public-restroom-nearby skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "public-restroom-nearby.md");
+  const skillPath = path.join(repoRoot, "public-restroom-nearby", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/public-restroom-nearby.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected public-restroom-nearby/SKILL.md to exist");
+  assert.match(readme, /\| 근처 공중화장실 찾기 \|/);
+  assert.match(readme, /\[근처 공중화장실 찾기 가이드\]\(docs\/features\/public-restroom-nearby\.md\)/);
+  assert.match(install, /--skill public-restroom-nearby/);
+  assert.match(install, /npm install -g .*public-restroom-nearby/);
+});
+
+test("public-restroom-nearby docs describe the maxDistanceMeters distance cap", () => {
+  const featureDoc = read(path.join("docs", "features", "public-restroom-nearby.md"));
+  const packageReadme = read(path.join("packages", "public-restroom-nearby", "README.md"));
+
+  assert.match(featureDoc, /maxDistanceMeters/);
+  assert.match(featureDoc, /100m/);
+  assert.match(packageReadme, /maxDistanceMeters/);
+  assert.match(packageReadme, /100m/);
 });
 
 test("repository docs advertise the lck-analytics skill and package", () => {
@@ -1146,6 +1170,7 @@ test("root pack:dry-run script covers all publishable workspaces", () => {
   assert.match(packageJson.scripts["pack:dry-run"], /workspace market-kurly-search/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace kakao-bar-nearby/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace public-restroom-nearby/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace kleague-results/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace lck-analytics/);
 });
@@ -1825,6 +1850,237 @@ test("repository docs advertise the real-estate-search skill and proxy-based app
   assert.equal(fs.existsSync(path.join(repoRoot, "packages", "real-estate-search")), false);
 });
 
+test("repository docs advertise the korean-scholarship-search skill and official-source workflow", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-scholarship-search.md");
+  const featureDoc = read(path.join("docs", "features", "korean-scholarship-search.md"));
+  const skillPath = path.join(repoRoot, "korean-scholarship-search", "SKILL.md");
+  const skill = read(path.join("korean-scholarship-search", "SKILL.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const helperPath = path.join(repoRoot, "korean-scholarship-search", "scripts", "scholarship_filter.py");
+  const plannerPath = path.join(repoRoot, "korean-scholarship-search", "scripts", "university_search_plan.py");
+  const searchCluesPath = path.join(repoRoot, "korean-scholarship-search", "references", "search-clues.md");
+  const reportFormatPath = path.join(repoRoot, "korean-scholarship-search", "references", "report-format.md");
+  const packageJson = readJson("package.json");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-scholarship-search.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-scholarship-search/SKILL.md to exist");
+  assert.ok(fs.existsSync(helperPath), "expected korean-scholarship-search/scripts/scholarship_filter.py to exist");
+  assert.ok(fs.existsSync(plannerPath), "expected korean-scholarship-search/scripts/university_search_plan.py to exist");
+  assert.ok(fs.existsSync(searchCluesPath), "expected korean-scholarship-search/references/search-clues.md to exist");
+  assert.ok(fs.existsSync(reportFormatPath), "expected korean-scholarship-search/references/report-format.md to exist");
+
+  assert.match(readme, /\| 장학금 검색 및 조회 \|/);
+  assert.match(readme, /\[장학금 검색 및 조회 가이드\]\(docs\/features\/korean-scholarship-search\.md\)/);
+  assert.match(install, /--skill korean-scholarship-search/);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /장학금 검색 및 조회/);
+    assert.match(doc, /kosaf\.go\.kr/);
+    assert.match(doc, /\*\.ac\.kr/);
+    assert.match(doc, /전국 대학교|전국 대학/);
+    assert.match(doc, /공식 공고 우선/);
+    assert.match(doc, /학자금 지원구간/);
+    assert.match(doc, /scholarship_filter\.py/);
+    assert.match(doc, /university_search_plan\.py/);
+    assert.match(doc, /학과/);
+    assert.match(doc, /외부 장학 추천|등록금 감면|생활비 지원/);
+  }
+
+  assert.match(sources, /한국장학재단 학자금 지원구간 산정절차/);
+  assert.match(sources, /한국장학재단 푸른등대 기부장학금/);
+  assert.match(sources, /삼성꿈장학재단/);
+  assert.match(roadmap, /장학금 검색 및 조회 스킬 출시/);
+  assert.ok(
+    !packageJson.workspaces.some((workspace) => workspace.includes("korean-scholarship-search")),
+    "expected no repo workspace to be added for korean-scholarship-search",
+  );
+  assert.equal(fs.existsSync(path.join(repoRoot, "packages", "korean-scholarship-search")), false);
+});
+
+test("korean-scholarship-search helper filters normalized records, renders reports, and returns eligibility verdicts", () => {
+  const helperPath = path.join(repoRoot, "korean-scholarship-search", "scripts", "scholarship_filter.py");
+  const plannerPath = path.join(repoRoot, "korean-scholarship-search", "scripts", "university_search_plan.py");
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "k-skill-scholarship-"));
+
+  try {
+    const inputPath = path.join(tempRoot, "scholarships.json");
+    fs.writeFileSync(
+      inputPath,
+      JSON.stringify(
+        [
+          {
+            name: "테스트재단 생활비 장학금",
+            organization: { name: "테스트재단", type: "foundation" },
+            source_url: "https://foundation.example.com/notice/1",
+            apply_url: "https://foundation.example.com/apply/1",
+            amount: { text: "학기당 250만 원", per_semester_krw: 2500000, category: "living" },
+            eligibility: {
+              student_levels: ["undergraduate"],
+              school_kinds: ["university"],
+              school_names: ["서울대학교", "연세대학교"],
+              department_names: ["컴퓨터공학부"],
+              grade_years: [2, 3, 4],
+              gpa_min: 3.2,
+              income_band_min: 0,
+              income_band_max: 6,
+            },
+            deadline: { start: "2026-04-01", end: "2026-04-16" },
+          },
+          {
+            name: "교내 성적우수 장학금",
+            organization: { name: "샘플대학교", type: "school" },
+            source_url: "https://sample.ac.kr/notice/2",
+            apply_url: "https://sample.ac.kr/apply/2",
+            amount: { text: "등록금 전액", category: "tuition" },
+            eligibility: {
+              student_levels: ["undergraduate"],
+              school_kinds: ["university"],
+              school_names: ["샘플대학교"],
+              grade_years: [1],
+              gpa_min: 4.0,
+              income_band_min: 0,
+              income_band_max: 10,
+            },
+            deadline: { start: "2026-05-01", end: "2026-05-20" },
+          },
+        ],
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    const helpText = childProcess.execFileSync("python3", [helperPath, "--help"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    assert.match(helpText, /Filter normalized Korean scholarship records/);
+    assert.match(helpText, /\bfilter\b/);
+    assert.match(helpText, /\beligibility\b/);
+    assert.match(helpText, /\breport\b/);
+
+    const plannerHelpText = childProcess.execFileSync("python3", [plannerPath, "--help"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    assert.match(plannerHelpText, /nationwide/i);
+    assert.match(plannerHelpText, /school-name/);
+
+    const filtered = JSON.parse(
+      childProcess.execFileSync(
+        "python3",
+        [
+          helperPath,
+          "filter",
+          "--input",
+          inputPath,
+          "--org-type",
+          "foundation",
+          "--student-level",
+          "undergraduate",
+          "--department-name",
+          "컴퓨터공학부",
+          "--income-band",
+          "4",
+          "--min-amount",
+          "2000000",
+          "--today",
+          "2026-04-14",
+          "--deadline-within-days",
+          "7",
+        ],
+        { cwd: repoRoot, encoding: "utf8" },
+      ),
+    );
+
+    assert.equal(filtered.total, 1);
+    assert.equal(filtered.items[0].name, "테스트재단 생활비 장학금");
+    assert.equal(filtered.items[0]._match.amount_krw, 2500000);
+    assert.equal(filtered.items[0]._match.deadline.status, "open");
+    assert.equal(filtered.items[0]._match.deadline.days_until_end, 2);
+
+    const report = childProcess.execFileSync(
+      "python3",
+      [
+        helperPath,
+        "report",
+        "--input",
+        inputPath,
+        "--today",
+        "2026-04-14",
+        "--only-open-now",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+
+    assert.match(report, /# 장학금 검색 및 조회 리포트/);
+    assert.match(report, /## 지금 지원 가능/);
+    assert.match(report, /테스트재단 생활비 장학금/);
+    assert.match(report, /D-2/);
+
+    const plannerPayload = JSON.parse(
+      childProcess.execFileSync(
+        "python3",
+        [
+          plannerPath,
+          "--school-name",
+          "부산대학교",
+          "--department",
+          "컴퓨터공학과",
+          "--year",
+          "2026",
+        ],
+        { cwd: repoRoot, encoding: "utf8" },
+      ),
+    );
+    assert.equal(plannerPayload.scope, "school");
+    assert.equal(plannerPayload.school_name, "부산대학교");
+    assert.match(plannerPayload.search_queries.join("\n"), /컴퓨터공학과/);
+
+    const nationwidePayload = JSON.parse(
+      childProcess.execFileSync(
+        "python3",
+        [plannerPath, "--nationwide", "--year", "2026"],
+        { cwd: repoRoot, encoding: "utf8" },
+      ),
+    );
+    assert.equal(nationwidePayload.scope, "nationwide-universities");
+    assert.match(nationwidePayload.search_queries.join("\n"), /site:\*\.ac\.kr 2026 장학 공고/);
+
+    const eligibility = JSON.parse(
+      childProcess.execFileSync(
+        "python3",
+        [
+          helperPath,
+          "eligibility",
+          "--input",
+          inputPath,
+          "--school-name",
+          "서울대학교",
+          "--student-level",
+          "undergraduate",
+          "--grade-year",
+          "2",
+          "--gpa",
+          "3.5",
+          "--income-band",
+          "4",
+        ],
+        { cwd: repoRoot, encoding: "utf8" },
+      ),
+    );
+
+    assert.equal(eligibility.total, 2);
+    assert.equal(eligibility.results[0].status, "eligible");
+    assert.equal(eligibility.results[1].status, "not_eligible");
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("real-estate-search skill uses proxy endpoints not MCP self-host", () => {
   const featureDoc = read(path.join("docs", "features", "real-estate-search.md"));
   const skill = read(path.join("real-estate-search", "SKILL.md"));
@@ -2244,4 +2500,75 @@ test("docs/setup.md and k-skill-setup document hosted school lunch proxy flow", 
     /^KEDU_INFO_KEY=/m,
     "client secrets example must not encourage KEDU_INFO_KEY (proxy server only)",
   );
+});
+
+test("repository docs advertise the hola-poke-yeoksam skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "hola-poke-yeoksam.md");
+  const skillPath = path.join(repoRoot, "hola-poke-yeoksam", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/hola-poke-yeoksam.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected hola-poke-yeoksam/SKILL.md to exist");
+
+  const featureDoc = read(path.join("docs", "features", "hola-poke-yeoksam.md"));
+  const skill = read(path.join("hola-poke-yeoksam", "SKILL.md"));
+
+  assert.match(readme, /\| 올라포케 역삼 포케 \|/);
+  assert.match(readme, /\[올라포케 역삼 포케 가이드\]\(docs\/features\/hola-poke-yeoksam\.md\)/);
+  assert.match(install, /--skill hola-poke-yeoksam/);
+  assert.match(sources, /mnspkm\/hola-poke-yeoksam-skill/);
+  assert.match(roadmap, /올라포케 역삼 포케 스킬 출시/);
+});
+
+test("hola-poke-yeoksam docs pin the verified remote MCP contract snapshot and phone-only event flow", () => {
+  const fixture = readJson(path.join("scripts", "fixtures", "hola-poke-yeoksam-contract-smoke.json"));
+  const skill = read(path.join("hola-poke-yeoksam", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "hola-poke-yeoksam.md"));
+  const snapshotLabels = [
+    ["initialize 결과", "initialize", "initialize snapshot"],
+    ["tools/list 결과", "tools_list", "tools/list snapshot"],
+    ["get_menu 구조 예시", "get_menu", "get_menu snapshot"],
+    ["get_shop_info 구조 예시", "get_shop_info", "get_shop_info snapshot"],
+    ["enter_event(phone='010-12') 예시", "enter_event_invalid_phone", "invalid-phone snapshot"],
+    ["enter_event 성공 응답 필수 필드", "enter_event_success_contract", "success-contract snapshot"],
+  ];
+
+  assert.match(skill, /^name: hola-poke-yeoksam$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /올라포케 역삼점/);
+    assert.match(doc, /get_menu/);
+    assert.match(doc, /get_shop_info/);
+    assert.match(doc, /enter_event/);
+    assert.match(doc, /이름(?:·|\/)?이메일.*받지 않/);
+    assert.match(doc, /already_entered_today/);
+    assert.match(doc, /message.*글자 그대로/);
+    assert.match(doc, /주문\/결제\/배달앱 자동화는 하지 않/);
+    assert.match(doc, /성공 경로는.*(?:fixture|스냅샷|recorded)/i);
+    assert.match(doc, /라이브 스모크.*invalid-phone|invalid-phone.*라이브 스모크/i);
+    assert.match(doc, /01012345678|010-1234-5678/);
+    assert.match(doc, /hola-poke-yeoksam-skill\.onrender\.com\/mcp/);
+
+    for (const [label, key, message] of snapshotLabels) {
+      assert.equal(
+        findJsonFenceTextAfterLabel(doc, label),
+        JSON.stringify(fixture[key], null, 2),
+        `${message} must stay byte-aligned with the checked-in fixture`,
+      );
+    }
+  }
+
+  assert.deepEqual(
+    fixture.tools_list.tools.map((tool) => tool.name),
+    ["get_menu", "get_shop_info", "enter_event"],
+    "tools/list fixture must pin the expected remote tool roster",
+  );
+  assert.equal(fixture.get_shop_info.group_order_url, "");
+  assert.match(fixture.get_shop_info.group_order_note, /단체주문|네이버페이/);
+  assert.deepEqual(fixture.enter_event_success_contract.required_fields, ["message", "code", "next_action"]);
+  assert.equal(fixture.enter_event_invalid_phone.error, "phone_format");
+  assert.match(fixture.enter_event_invalid_phone.message, /01012345678|010-1234-5678/);
 });
