@@ -499,8 +499,11 @@ test("korea-weather docs route short-term forecast calls through the proxy witho
 
 test("kakaotalk-mac skill documents safe macOS kakaocli usage", () => {
   const skillPath = path.join(repoRoot, "kakaotalk-mac", "SKILL.md");
+  const helperPath = path.join(repoRoot, "scripts", "kakaotalk_mac.py");
+  const featureDoc = read(path.join("docs", "features", "kakaotalk-mac.md"));
 
   assert.ok(fs.existsSync(skillPath), "expected kakaotalk-mac/SKILL.md to exist");
+  assert.ok(fs.existsSync(helperPath), "expected scripts/kakaotalk_mac.py to exist");
 
   const skill = read(path.join("kakaotalk-mac", "SKILL.md"));
 
@@ -512,6 +515,15 @@ test("kakaotalk-mac skill documents safe macOS kakaocli usage", () => {
   assert.match(skill, /Accessibility/i);
   assert.match(skill, /--me/);
   assert.match(skill, /confirm before sending/i);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /python3 scripts\/kakaotalk_mac\.py auth/);
+    assert.match(doc, /python3 scripts\/kakaotalk_mac\.py chats --limit 10 --json/);
+    assert.match(doc, /python3 scripts\/kakaotalk_mac\.py messages --chat/);
+    assert.match(doc, /python3 scripts\/kakaotalk_mac\.py search/);
+    assert.match(doc, /user_id 자동 감지 실패|SHA-512|DESIGNATEDFRIENDSREVISION/i);
+    assert.match(doc, /cache|캐시/);
+  }
 });
 
 test("repository docs advertise the KTX booking skill as supported", () => {
