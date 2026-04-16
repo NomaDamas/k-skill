@@ -69,6 +69,7 @@ npx --yes skills add <owner/repo> \
   --skill daiso-product-search \
   --skill market-kurly-search \
   --skill olive-young-search \
+  --skill hola-poke-yeoksam \
   --skill blue-ribbon-nearby \
   --skill kakao-bar-nearby \
   --skill zipcode-search \

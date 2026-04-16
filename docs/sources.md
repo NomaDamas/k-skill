@@ -81,6 +81,8 @@
 - olive-young products API: https://mcp.aka.page/api/oliveyoung/products
 - olive-young inventory API: https://mcp.aka.page/api/oliveyoung/inventory
 - daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
+- hola-poke-yeoksam reference repo: https://github.com/mnspkm/hola-poke-yeoksam-skill
+- hola-poke-yeoksam remote MCP endpoint: https://hola-poke-yeoksam-skill.onrender.com/mcp
 - coupang-mcp (MCP 서버): https://github.com/uju777/coupang-mcp
 - coupang-mcp endpoint: https://yuju777-coupang-mcp.hf.space/mcp
 - bunjang-cli package: https://www.npmjs.com/package/bunjang-cli
