@@ -172,7 +172,7 @@ test("korean stock search rate limit does not trust spoofed cf-connecting-ip on 
   assert.equal(second.json().error, "rate_limited");
 });
 
-test("korean stock search returns healthy market results when another market upstream fails", async (t) => {
+test("korean stock search surfaces degraded upstream metadata when another market fails", async (t) => {
   const originalFetch = global.fetch;
   const fetchCalls = [];
   global.fetch = async (url, options = {}) => {
@@ -249,6 +249,17 @@ test("korean stock search returns healthy market results when another market ups
   assert.equal(response.json().items[0].market, "KOSPI");
   assert.equal(response.json().items[0].code, "005930");
   assert.equal(response.json().items[0].name, "삼성전자");
+  assert.equal(response.json().upstream.degraded, true);
+  assert.deepEqual(response.json().upstream.requested_markets, ["KOSPI", "KOSDAQ", "KONEX"]);
+  assert.deepEqual(response.json().upstream.successful_markets, ["KOSPI", "KONEX"]);
+  assert.deepEqual(response.json().upstream.failed_markets, [
+    {
+      market: "KOSDAQ",
+      code: "upstream_error",
+      status_code: 502,
+      message: "KRX API HTTP 오류 (status: 500): Internal Server Error"
+    }
+  ]);
   assert.equal(fetchCalls.length, 3);
   assert.ok(fetchCalls.every((entry) => entry.url.startsWith("https://data-dbg.krx.co.kr/")));
 });
@@ -536,6 +547,56 @@ test("korean stock trade-info endpoint does not relabel an unmatched single-row 
   assert.equal(response.json().error, "not_found");
   assert.equal(fetchCalls.length, 2);
   assert.ok(fetchCalls.every((entry) => entry.startsWith("https://data-dbg.krx.co.kr/")));
+});
+
+test("korean stock trade-info endpoint treats empty trade snapshots as not_found without base-info fallback", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+
+    if (text.includes("stk_bydd_trd")) {
+      return new Response(
+        JSON.stringify({
+          OutBlock_1: []
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    if (text.includes("stk_isu_base_info")) {
+      throw new Error("base-info fallback should not run for empty trade snapshots");
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/trade-info?market=KOSPI&code=005930&bas_dd=20260404"
+  });
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.json().error, "not_found");
+  assert.match(response.json().message, /휴장일이거나 데이터가 아직 없을 수 있습니다/);
+  assert.deepEqual(fetchCalls, [
+    "https://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd?basDd=20260404"
+  ]);
 });
 
 test("fine dust endpoint stays publicly callable without proxy auth", async (t) => {
