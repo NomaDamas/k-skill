@@ -239,6 +239,16 @@ test("repository docs advertise the public-restroom-nearby skill", () => {
   assert.match(install, /npm install -g .*public-restroom-nearby/);
 });
 
+test("public-restroom-nearby docs describe the maxDistanceMeters distance cap", () => {
+  const featureDoc = read(path.join("docs", "features", "public-restroom-nearby.md"));
+  const packageReadme = read(path.join("packages", "public-restroom-nearby", "README.md"));
+
+  assert.match(featureDoc, /maxDistanceMeters/);
+  assert.match(featureDoc, /100m/);
+  assert.match(packageReadme, /maxDistanceMeters/);
+  assert.match(packageReadme, /100m/);
+});
+
 test("repository docs advertise the lck-analytics skill and package", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));

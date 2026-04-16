@@ -65,6 +65,26 @@ main().catch((error) => {
 });
 ```
 
+반경 제한이 필요하면 `maxDistanceMeters` 옵션으로 100m 같은 거리 캡을 줄 수 있습니다.
+
+```js
+const { searchNearbyPublicRestroomsByLocationQuery } = require("public-restroom-nearby");
+
+async function main() {
+  const result = await searchNearbyPublicRestroomsByLocationQuery("광화문", {
+    limit: 3,
+    maxDistanceMeters: 100
+  });
+
+  console.log(`100m 이내 결과 수: ${result.meta.total}`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
 ## Offline smoke example
 
 fixture 기반 검증:
@@ -108,9 +128,12 @@ node --test packages/public-restroom-nearby/test/index.test.js
 }
 ```
 
+같은 날짜에 `광화문`, `limit=3`, `maxDistanceMeters=100` 으로 확인했을 때는 `meta.total = 0` 이었습니다.
+
 ## 운영 팁
 
 - 좌표를 직접 받으면 anchor 검색을 생략해 더 빠르게 nearby 계산을 할 수 있습니다.
+- 화장실이 너무 많이 잡히는 지역이면 `maxDistanceMeters` 로 100m, 300m 같은 거리 캡을 먼저 걸어두세요.
 - CSV는 공개 표준데이터이므로 **실시간 잠금/점검 상태는 보장하지 않습니다**. 개방시간 위주로만 안내하세요.
 - 넓은 질의(예: `강남`)는 기준점이 흔들릴 수 있으니 필요하면 역명/동 이름으로 한 번 더 좁히세요.
 - 지도 링크가 필요하면 `item.mapUrl` 을 함께 전달하면 됩니다.

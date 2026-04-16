@@ -74,6 +74,26 @@ main().catch((error) => {
 });
 ```
 
+거리 제한이 필요하면 `maxDistanceMeters` 를 함께 넘겨서 반경 바깥 결과를 잘라낼 수 있습니다.
+
+```js
+const { searchNearbyPublicRestroomsByLocationQuery } = require("public-restroom-nearby");
+
+async function main() {
+  const result = await searchNearbyPublicRestroomsByLocationQuery("광화문", {
+    limit: 3,
+    maxDistanceMeters: 100
+  });
+
+  console.log(`100m 이내 결과 수: ${result.meta.total}`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
 ## Live smoke snapshot
 
 2026-04-16 에 `광화문`, `limit=3` 로 실제 호출했을 때 상위 결과 예시:
@@ -105,6 +125,8 @@ main().catch((error) => {
   ]
 }
 ```
+
+같은 날짜에 `광화문`, `limit=3`, `maxDistanceMeters=100` 로 확인했을 때는 `meta.total = 0` 으로 100m 이내 결과만 남도록 동작했습니다.
 
 ## 공개 API
 
