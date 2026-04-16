@@ -502,7 +502,8 @@ def resolve_auth(
     workers: int | None,
     chunk_size: int,
 ) -> ResolvedAuth:
-    if not refresh:
+    use_cache = not refresh and user_id_override is None and uuid_override is None
+    if use_cache:
         cached = load_cached_auth(cache_path)
         if cached is not None:
             return cached
@@ -576,10 +577,10 @@ def build_passthrough_command(command: str, auth: ResolvedAuth, forwarded_args: 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
-    args, forwarded_args = parser.parse_known_args(argv)
-    cache_path = Path(args.cache_path).expanduser()
 
     try:
+        args, forwarded_args = parser.parse_known_args(argv)
+        cache_path = Path(args.cache_path).expanduser()
         if args.command == "auth":
             if forwarded_args:
                 raise AuthResolutionError(f"Unexpected auth arguments: {' '.join(forwarded_args)}")
@@ -606,7 +607,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         result = subprocess.run(build_passthrough_command(args.command, resolved, forwarded_args))
         return result.returncode
-    except AuthResolutionError as exc:
+    except (AuthResolutionError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
@@ -634,9 +635,23 @@ def add_auth_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--cache-path", default=str(DEFAULT_CACHE_PATH))
     parser.add_argument("--user-id", type=int, help="Explicit Kakao user_id override.")
     parser.add_argument("--uuid", help="Explicit device UUID override.")
-    parser.add_argument("--max-user-id", type=int, default=DEFAULT_MAX_USER_ID)
-    parser.add_argument("--workers", type=int, default=None)
-    parser.add_argument("--chunk-size", type=int, default=DEFAULT_CHUNK_SIZE)
+    parser.add_argument("--max-user-id", type=non_negative_int, default=DEFAULT_MAX_USER_ID)
+    parser.add_argument("--workers", type=positive_int, default=None)
+    parser.add_argument("--chunk-size", type=positive_int, default=DEFAULT_CHUNK_SIZE)
+
+
+def non_negative_int(value: str) -> int:
+    integer = int(value)
+    if integer < 0:
+        raise argparse.ArgumentTypeError("must be non-negative")
+    return integer
+
+
+def positive_int(value: str) -> int:
+    integer = int(value)
+    if integer <= 0:
+        raise argparse.ArgumentTypeError("must be positive")
+    return integer
 
 
 if __name__ == "__main__":

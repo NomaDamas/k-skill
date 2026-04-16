@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -156,6 +157,76 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
             collect_state.assert_called_once_with(None)
             resolve_state.assert_called_once()
 
+    def test_resolve_auth_bypasses_cache_when_user_id_override_is_supplied(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            cache_path = Path(tempdir) / "auth-cache.json"
+            database_path = Path(tempdir) / "kakaotalk.db"
+            database_path.write_text("", encoding="utf-8")
+            persistable = make_resolved_auth(database_path=database_path, source="cache")
+            kakaotalk_mac.persist_auth_cache(persistable, cache_path)
+            override_result = make_resolved_auth(user_id=999, database_path=database_path, source="candidate")
+
+            with (
+                mock.patch.object(kakaotalk_mac, "collect_detection_state", return_value=mock.sentinel.state) as collect_state,
+                mock.patch.object(kakaotalk_mac, "resolve_auth_state", return_value=override_result) as resolve_state,
+            ):
+                resolved = kakaotalk_mac.resolve_auth(
+                    refresh=False,
+                    cache_path=cache_path,
+                    user_id_override=999,
+                    uuid_override=None,
+                    max_user_id=1000,
+                    workers=1,
+                    chunk_size=100,
+                )
+
+            self.assertEqual(resolved, override_result)
+            collect_state.assert_called_once_with(None)
+            resolve_state.assert_called_once_with(
+                mock.sentinel.state,
+                verify_access=kakaotalk_mac.verify_database_access,
+                cache_path=cache_path,
+                user_id_override=999,
+                max_user_id=1000,
+                workers=1,
+                chunk_size=100,
+            )
+
+    def test_resolve_auth_bypasses_cache_when_uuid_override_is_supplied(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            cache_path = Path(tempdir) / "auth-cache.json"
+            database_path = Path(tempdir) / "kakaotalk.db"
+            database_path.write_text("", encoding="utf-8")
+            persistable = make_resolved_auth(database_path=database_path, source="cache")
+            kakaotalk_mac.persist_auth_cache(persistable, cache_path)
+            override_result = make_resolved_auth(uuid="override-uuid", database_path=database_path, source="candidate")
+
+            with (
+                mock.patch.object(kakaotalk_mac, "collect_detection_state", return_value=mock.sentinel.state) as collect_state,
+                mock.patch.object(kakaotalk_mac, "resolve_auth_state", return_value=override_result) as resolve_state,
+            ):
+                resolved = kakaotalk_mac.resolve_auth(
+                    refresh=False,
+                    cache_path=cache_path,
+                    user_id_override=None,
+                    uuid_override="override-uuid",
+                    max_user_id=1000,
+                    workers=1,
+                    chunk_size=100,
+                )
+
+            self.assertEqual(resolved, override_result)
+            collect_state.assert_called_once_with("override-uuid")
+            resolve_state.assert_called_once_with(
+                mock.sentinel.state,
+                verify_access=kakaotalk_mac.verify_database_access,
+                cache_path=cache_path,
+                user_id_override=None,
+                max_user_id=1000,
+                workers=1,
+                chunk_size=100,
+            )
+
     def test_render_auth_text_redacts_key_material(self) -> None:
         resolved = make_resolved_auth(key="super-secret-key", source="hash-recovery")
 
@@ -177,6 +248,26 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
 
         self.assertEqual(sorted(subcommands), ["auth", "chats", "messages", "schema", "search"])
         self.assertNotIn("query", subcommands)
+
+    def test_build_parser_rejects_negative_max_user_id(self) -> None:
+        parser = kakaotalk_mac.build_parser()
+        stderr = io.StringIO()
+
+        with self.assertRaises(SystemExit) as exit_context, mock.patch("sys.stderr", stderr):
+            parser.parse_args(["auth", "--max-user-id", "-1"])
+
+        self.assertEqual(exit_context.exception.code, 2)
+        self.assertIn("must be non-negative", stderr.getvalue())
+
+    def test_build_parser_rejects_non_positive_chunk_size(self) -> None:
+        parser = kakaotalk_mac.build_parser()
+        stderr = io.StringIO()
+
+        with self.assertRaises(SystemExit) as exit_context, mock.patch("sys.stderr", stderr):
+            parser.parse_args(["auth", "--chunk-size", "0"])
+
+        self.assertEqual(exit_context.exception.code, 2)
+        self.assertIn("must be positive", stderr.getvalue())
 
 if __name__ == "__main__":
     unittest.main()
