@@ -82,6 +82,174 @@
 - 단체주문 문의는 `group_order_url` 이 비어 있으면 `group_order_note` 를 대신 제공한다.
 - 역삼점 외 다른 지점 문의에는 이 스킬 범위가 아니라는 점을 먼저 밝힌다.
 
+## Verified remote MCP contract snapshot
+
+아래 값은 `2026-04-16 KST` live smoke check(`initialize`, `tools/list`, `get_menu`, `get_shop_info`, `enter_event(phone='010-12')`) 기준으로 정리한 contract fixture다.
+
+### initialize 결과
+
+```json
+{
+  "protocolVersion": "2025-03-26",
+  "serverInfo": {
+    "name": "hola-poke-yeoksam",
+    "version": "3.2.3"
+  }
+}
+```
+
+### tools/list 결과
+
+```json
+{
+  "tools": [
+    {
+      "name": "get_menu",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "get_shop_info",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "enter_event",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  ]
+}
+```
+
+### get_menu 구조 예시
+
+```json
+{
+  "updated_at": "2026-04-13",
+  "currency": "KRW",
+  "price_unit": "천원",
+  "signature_poke": [
+    {
+      "id": 2,
+      "name": "갈릭 쉬림프 포케",
+      "price": 11.5,
+      "tags": [
+        "BEST"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "아보카도 포케",
+      "price": 10.5,
+      "tags": [
+        "VEGAN"
+      ]
+    }
+  ],
+  "sets": [
+    {
+      "name": "1인 포케+스프 세트",
+      "items": "포케 + 스프",
+      "price": 13.5,
+      "price_note": "13.5~"
+    },
+    {
+      "name": "1인 혼밥 든든세트",
+      "items": "포케 + 스프 + 음료",
+      "price": 15.5,
+      "price_note": "15.5~"
+    }
+  ],
+  "addons": [
+    {
+      "name": "아보카도",
+      "price": 3.5
+    },
+    {
+      "name": "메밀면",
+      "price": 1.5
+    }
+  ]
+}
+```
+
+### get_shop_info 구조 예시
+
+```json
+{
+  "name": "올라포케 역삼점",
+  "address_road": "서울 강남구 논현로95길 29-8 1층 102호",
+  "hours": {
+    "weekday": "10:30 - 20:30",
+    "break_time": "15:00 - 17:00",
+    "weekend": "영업시간 네이버 스마트플레이스 확인"
+  },
+  "delivery_radius_km": 3,
+  "group_order_url": "",
+  "group_order_note": "10만원 이상 단체주문은 네이버 단체주문 페이지에서 메뉴 선택 후 네이버페이 결제. 결제 완료 시 예약 확정.",
+  "delivery_apps": [
+    "배달의민족",
+    "쿠팡이츠",
+    "요기요"
+  ]
+}
+```
+
+### enter_event 성공 응답 필수 필드
+
+```json
+{
+  "required_fields": [
+    "message",
+    "code",
+    "next_action"
+  ],
+  "accepts": [
+    "01012345678",
+    "010-1234-5678"
+  ],
+  "stores_name_or_email": false
+}
+```
+
+### enter_event(phone='010-12') 예시
+
+```json
+{
+  "error": "phone_format",
+  "message": "번호는 010으로 시작하는 11자리로 입력해주세요 (예: 01012345678 또는 010-1234-5678)."
+}
+```
+
 ## 제한사항
 
 - 역삼점 전용이다.

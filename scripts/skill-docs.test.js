@@ -2091,7 +2091,7 @@ test("MFDS public-health skill docs require interview-first safety flow and offi
   assert.doesNotMatch(sources, /http:\/\/openapi\.foodsafetykorea\.go\.kr/);
 });
 
-test("hola-poke-yeoksam skill docs advertise menu, shop-info, and event-entry flows", () => {
+test("repository docs advertise the hola-poke-yeoksam skill", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
   const sources = read(path.join("docs", "sources.md"));
@@ -2110,6 +2110,20 @@ test("hola-poke-yeoksam skill docs advertise menu, shop-info, and event-entry fl
   assert.match(install, /--skill hola-poke-yeoksam/);
   assert.match(sources, /mnspkm\/hola-poke-yeoksam-skill/);
   assert.match(roadmap, /올라포케 역삼 포케 스킬 출시/);
+});
+
+test("hola-poke-yeoksam docs pin the verified remote MCP contract snapshot and phone-only event flow", () => {
+  const fixture = readJson(path.join("scripts", "fixtures", "hola-poke-yeoksam-contract-smoke.json"));
+  const skill = read(path.join("hola-poke-yeoksam", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "hola-poke-yeoksam.md"));
+  const snapshotLabels = [
+    ["initialize 결과", "initialize", "initialize snapshot"],
+    ["tools/list 결과", "tools_list", "tools/list snapshot"],
+    ["get_menu 구조 예시", "get_menu", "get_menu snapshot"],
+    ["get_shop_info 구조 예시", "get_shop_info", "get_shop_info snapshot"],
+    ["enter_event(phone='010-12') 예시", "enter_event_invalid_phone", "invalid-phone snapshot"],
+    ["enter_event 성공 응답 필수 필드", "enter_event_success_contract", "success-contract snapshot"],
+  ];
 
   assert.match(skill, /^name: hola-poke-yeoksam$/m);
 
@@ -2124,5 +2138,24 @@ test("hola-poke-yeoksam skill docs advertise menu, shop-info, and event-entry fl
     assert.match(doc, /주문\/결제\/배달앱 자동화는 하지 않/);
     assert.match(doc, /01012345678|010-1234-5678/);
     assert.match(doc, /hola-poke-yeoksam-skill\.onrender\.com\/mcp/);
+
+    for (const [label, key, message] of snapshotLabels) {
+      assert.equal(
+        findJsonFenceTextAfterLabel(doc, label),
+        JSON.stringify(fixture[key], null, 2),
+        `${message} must stay byte-aligned with the checked-in fixture`,
+      );
+    }
   }
+
+  assert.deepEqual(
+    fixture.tools_list.tools.map((tool) => tool.name),
+    ["get_menu", "get_shop_info", "enter_event"],
+    "tools/list fixture must pin the expected remote tool roster",
+  );
+  assert.equal(fixture.get_shop_info.group_order_url, "");
+  assert.match(fixture.get_shop_info.group_order_note, /단체주문|네이버페이/);
+  assert.deepEqual(fixture.enter_event_success_contract.required_fields, ["message", "code", "next_action"]);
+  assert.equal(fixture.enter_event_invalid_phone.error, "phone_format");
+  assert.match(fixture.enter_event_invalid_phone.message, /01012345678|010-1234-5678/);
 });
