@@ -2136,6 +2136,8 @@ test("hola-poke-yeoksam docs pin the verified remote MCP contract snapshot and p
     assert.match(doc, /already_entered_today/);
     assert.match(doc, /message.*글자 그대로/);
     assert.match(doc, /주문\/결제\/배달앱 자동화는 하지 않/);
+    assert.match(doc, /성공 경로는.*(?:fixture|스냅샷|recorded)/i);
+    assert.match(doc, /라이브 스모크.*invalid-phone|invalid-phone.*라이브 스모크/i);
     assert.match(doc, /01012345678|010-1234-5678/);
     assert.match(doc, /hola-poke-yeoksam-skill\.onrender\.com\/mcp/);
 

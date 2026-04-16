@@ -226,6 +226,8 @@
 
 ### enter_event 성공 응답 필수 필드
 
+실제 이벤트 참여를 발생시키지 않기 위해 성공 경로는 저장된 스냅샷 fixture 계약으로만 고정한다. 라이브 스모크는 invalid-phone 재시도 흐름만 검증한다.
+
 ```json
 {
   "required_fields": [
