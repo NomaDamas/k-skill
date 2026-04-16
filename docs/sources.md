@@ -23,8 +23,8 @@
 - Riot LoL Esports live window feed: https://feed.lolesports.com/livestats/v1/window/<gameId>
 - Riot LoL Esports live details feed: https://feed.lolesports.com/livestats/v1/details/<gameId>
 - Oracle's Elixir data glossary: https://oracleselixir.com/tools/downloads
-- `@ohah/hwpjs`: https://github.com/ohah/hwpjs
-- `hwp-mcp`: https://github.com/jkf87/hwp-mcp
+- `kordoc`: https://github.com/chrisryugj/kordoc
+- `pdfjs-dist`: https://www.npmjs.com/package/pdfjs-dist
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
 - 한국장학재단 학자금 지원구간 산정절차: https://www.kosaf.go.kr/ko/tuition.do?pg=tuition04_09_01&type=tuition
