@@ -7,6 +7,8 @@
 - `korail2` / `carpedm20/korail2`: https://github.com/carpedm20/korail2
 - `korail2` anti-bot bypass PR #54: https://github.com/carpedm20/korail2/pull/54
 - `kbo-game`: https://github.com/vkehfdl1/kbo-game
+- KBL 일정/결과 API: https://api.kbl.or.kr/match/list
+- KBL 팀 순위 API: https://api.kbl.or.kr/league/rank/team
 - tossinvest-cli: https://github.com/JungHoonGhae/tossinvest-cli
 - 하이패스 메인: https://www.hipass.co.kr/main.do
 - 하이패스 로그인: https://www.hipass.co.kr/comm/lginpg.do

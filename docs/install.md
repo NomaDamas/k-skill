@@ -46,6 +46,7 @@ k-skill-setup 스킬을 사용해서 공통 설정을 진행해줘.
 npx --yes skills add <owner/repo> \
   --skill hwp \
   --skill kbo-results \
+  --skill kbl-results \
   --skill kleague-results \
   --skill lck-analytics \
   --skill toss-securities \
@@ -260,7 +261,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g kordoc pdfjs-dist kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli
+npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli
 export NODE_PATH="$(npm root -g)"
 ```
 

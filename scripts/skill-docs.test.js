@@ -254,7 +254,7 @@ test("repository docs advertise the used-car-price-search skill", () => {
   assert.match(install, /--skill used-car-price-search/);
   assert.match(
     install,
-    /npm install -g kordoc pdfjs-dist kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp/,
+    /npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp/,
   );
 });
 
@@ -1185,8 +1185,67 @@ test("root pack:dry-run script covers all publishable workspaces", () => {
   assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace kakao-bar-nearby/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace public-restroom-nearby/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace kbl-results/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace kleague-results/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace lck-analytics/);
+});
+
+test("repository docs advertise the kbl-results skill across the documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "kbl-results.md");
+  const skillPath = path.join(repoRoot, "kbl-results", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/kbl-results.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected kbl-results/SKILL.md to exist");
+  assert.match(readme, /\| KBL 경기 결과 조회 \|/);
+  assert.match(readme, /\[KBL 경기 결과 가이드\]\(docs\/features\/kbl-results\.md\)/);
+  assert.match(install, /--skill kbl-results/);
+  assert.match(roadmap, /KBL 경기 결과 조회 스킬 출시/);
+  assert.match(sources, /KBL 일정\/결과 API: https:\/\/api\.kbl\.or\.kr\/match\/list/);
+  assert.match(sources, /KBL 팀 순위 API: https:\/\/api\.kbl\.or\.kr\/league\/rank\/team/);
+});
+
+test("kbl-results skill documents the official JSON flow for date, team, and standings lookups", () => {
+  const skillPath = path.join(repoRoot, "kbl-results", "SKILL.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected kbl-results/SKILL.md to exist");
+
+  const skill = read(path.join("kbl-results", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "kbl-results.md"));
+
+  assert.match(skill, /^name: kbl-results$/m);
+  assert.match(skill, /^description: .*KBL.*경기 결과.*순위.*$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /YYYY-MM-DD/);
+    assert.match(doc, /서울 SK|부산 KCC|팀 코드/);
+    assert.match(doc, /https:\/\/api\.kbl\.or\.kr\/match\/list/);
+    assert.match(doc, /https:\/\/api\.kbl\.or\.kr\/league\/rank\/team/);
+    assert.match(doc, /공식 JSON|공식 API|공식 표면/u);
+    assert.match(doc, /현재 순위|standings/i);
+    assert.match(doc, /kbl-results|KBL 경기 결과/u);
+  }
+});
+
+test("kbl-results package exports reusable results and standings helpers", () => {
+  const pkg = require(path.join(repoRoot, "packages", "kbl-results", "src", "index.js"));
+
+  assert.equal(typeof pkg.getMatchResults, "function");
+  assert.equal(typeof pkg.getStandings, "function");
+  assert.equal(typeof pkg.getKBLSummary, "function");
+});
+
+test("kbl-results package README stays aligned with the official KBL JSON lookup flow", () => {
+  const packageReadme = read(path.join("packages", "kbl-results", "README.md"));
+
+  assert.match(packageReadme, /공식 KBL JSON 엔드포인트/u);
+  assert.match(packageReadme, /api\.kbl\.or\.kr\/match\/list/);
+  assert.match(packageReadme, /league\/rank\/team/);
+  assert.match(packageReadme, /getKBLSummary/);
+  assert.match(packageReadme, /서울 SK/);
 });
 
 test("repository docs advertise the kleague-results skill across the documented surfaces", () => {
