@@ -109,7 +109,7 @@ kakaocli chats --limit 10 --json
 - plist 의 `DESIGNATEDFRIENDSREVISION:<sha512(user_id)>` 만 남아 있음
 - upstream `kakaocli` 의 기본 `user_id` brute-force 시간이 짧아서 auto-detection 이 실패함
 
-이 저장소는 그 구간만 보완하는 얇은 helper 를 함께 제공한다.
+이 저장소는 그 구간만 보완하는 **read-only helper** 를 함께 제공한다.
 
 ```bash
 python3 scripts/kakaotalk_mac.py auth --refresh
@@ -121,7 +121,7 @@ python3 scripts/kakaotalk_mac.py search "회의" --json
 - helper 는 plist 의 `AlertKakaoIDsList` 와 `DESIGNATEDFRIENDSREVISION` hash 를 읽는다.
 - 후보 `user_id` 가 모두 실패하면 SHA-512 preimage search 로 실제 `user_id` 를 더 오래 찾는다.
 - 성공한 `user_id`, DB 경로, derived key 는 `~/.cache/k-skill/kakaotalk-mac-auth.json` 에 캐시한다.
-- 이후 read 명령은 cached `--db` / `--key` 를 붙여 `kakaocli` 를 다시 호출한다.
+- 이후 read-only helper 명령(`chats`, `messages`, `search`, `schema`)은 cached `--db` / `--key` 를 붙여 `kakaocli` 를 다시 호출한다.
 
 ### 4. Read or search messages
 
@@ -199,3 +199,4 @@ kakaocli login --status
 - 첫 검증은 `kakaocli status` 와 `kakaocli auth` 부터 시작하는 편이 안전하다.
 - `kakaocli auth` 가 `User ID: auto-detection failed` 로 멈추면 helper 경로를 우선 사용한다.
 - helper cache 는 로컬 SQLCipher key 를 포함하므로 본인 계정에서만 유지하고 공유하지 않는다.
+- 기본 `auth` 텍스트 출력은 key 를 다시 보여주지 않는다. 자동화가 필요할 때만 `--format json` 또는 `--format shell` 을 사용한다.

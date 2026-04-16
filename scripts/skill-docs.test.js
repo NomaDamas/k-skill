@@ -523,6 +523,8 @@ test("kakaotalk-mac skill documents safe macOS kakaocli usage", () => {
     assert.match(doc, /python3 scripts\/kakaotalk_mac\.py search/);
     assert.match(doc, /user_id 자동 감지 실패|SHA-512|DESIGNATEDFRIENDSREVISION/i);
     assert.match(doc, /cache|캐시/);
+    assert.match(doc, /read-only|읽기 전용/i);
+    assert.doesNotMatch(doc, /`query`/);
   }
 });
 

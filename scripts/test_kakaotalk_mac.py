@@ -5,12 +5,32 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import scripts.kakaotalk_mac as kakaotalk_mac
 
 
 def sha512_hex(value: int) -> str:
     return hashlib.sha512(str(value).encode("utf-8")).hexdigest()
+
+
+def make_resolved_auth(
+    *,
+    user_id: int = 123,
+    uuid: str = "uuid",
+    database_path: Path | None = None,
+    database_name: str = "db-name",
+    key: str = "super-secret",
+    source: str = "cache",
+) -> kakaotalk_mac.ResolvedAuth:
+    return kakaotalk_mac.ResolvedAuth(
+        user_id=user_id,
+        uuid=uuid,
+        database_path=database_path or Path("/tmp/kakaotalk.db"),
+        database_name=database_name,
+        key=key,
+        source=source,
+    )
 
 
 class KakaoTalkMacHelperTests(unittest.TestCase):
@@ -102,6 +122,55 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
         self.assertEqual(resolved.database_path, database_path)
         self.assertEqual(cache_payload["user_id"], target_user_id)
         self.assertEqual(cache_payload["database_path"], str(database_path))
+
+    def test_load_cached_auth_treats_corrupt_json_as_cache_miss(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            cache_path = Path(tempdir) / "auth-cache.json"
+            cache_path.write_text("{bad json\n", encoding="utf-8")
+
+            self.assertIsNone(kakaotalk_mac.load_cached_auth(cache_path))
+
+    def test_resolve_auth_reuses_detection_when_cache_is_corrupt(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            cache_path = Path(tempdir) / "auth-cache.json"
+            cache_path.write_text("{bad json\n", encoding="utf-8")
+            database_path = Path(tempdir) / "kakaotalk.db"
+            database_path.write_text("", encoding="utf-8")
+            resolved = make_resolved_auth(database_path=database_path, source="hash-recovery")
+
+            with (
+                mock.patch.object(kakaotalk_mac, "collect_detection_state", return_value=mock.sentinel.state) as collect_state,
+                mock.patch.object(kakaotalk_mac, "resolve_auth_state", return_value=resolved) as resolve_state,
+            ):
+                cached = kakaotalk_mac.resolve_auth(
+                    refresh=False,
+                    cache_path=cache_path,
+                    user_id_override=None,
+                    uuid_override=None,
+                    max_user_id=1000,
+                    workers=1,
+                    chunk_size=100,
+                )
+
+            self.assertEqual(cached, resolved)
+            collect_state.assert_called_once_with(None)
+            resolve_state.assert_called_once()
+
+    def test_render_auth_text_redacts_key_material(self) -> None:
+        resolved = make_resolved_auth(key="super-secret-key", source="hash-recovery")
+
+        rendered = kakaotalk_mac.render_auth(resolved, output_format="text", cache_path=Path("/tmp/cache.json"))
+
+        self.assertNotIn("super-secret-key", rendered)
+        self.assertNotIn("--key", rendered)
+        self.assertIn("python3 scripts/kakaotalk_mac.py chats --limit 10 --json", rendered)
+
+    def test_build_passthrough_command_rejects_non_read_only_command(self) -> None:
+        auth = make_resolved_auth()
+
+        with self.assertRaises(kakaotalk_mac.AuthResolutionError):
+            kakaotalk_mac.build_passthrough_command("query", auth, ["DELETE FROM chat_logs"])
+
 
 
 if __name__ == "__main__":

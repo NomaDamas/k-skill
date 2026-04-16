@@ -67,12 +67,12 @@ kakaocli send --dry-run "팀 공지방" "오늘 3시에 만나요"
 - `kakaocli status` 는 정상이어도 `auth` 는 `user_id 자동 감지 실패` 로 끝날 수 있다.
 - 이 경우 plist 의 `AlertKakaoIDsList` 후보만으로는 부족하고, `DESIGNATEDFRIENDSREVISION:<SHA-512(user_id)>` 에서 실제 `user_id` 를 더 오래 찾아야 할 수 있다.
 
-helper `scripts/kakaotalk_mac.py` 는 그 얇은 어댑터 역할을 한다.
+helper `scripts/kakaotalk_mac.py` 는 그 얇은 read-only 어댑터 역할을 한다.
 
 - plist 에서 후보 `user_id` 와 active hash 를 읽는다.
 - hash recovery 가 필요하면 더 긴 검색으로 실제 `user_id` 를 찾는다.
 - 검증된 DB 경로와 SQLCipher key 를 `~/.cache/k-skill/kakaotalk-mac-auth.json` 에 캐시한다.
-- 이후 `chats`, `messages`, `search`, `query`, `schema` 를 cached `--db` / `--key` 와 함께 다시 실행한다.
+- 이후 read-only helper 명령 `chats`, `messages`, `search`, `schema` 를 cached `--db` / `--key` 와 함께 다시 실행한다.
 
 ## 주의할 점
 
@@ -81,3 +81,4 @@ helper `scripts/kakaotalk_mac.py` 는 그 얇은 어댑터 역할을 한다.
 - macOS 전용이므로 Windows/Linux 대체 구현으로 넘어가지 않는다.
 - 다른 사람에게 보내는 메시지는 자동 전송하지 말고 확인을 먼저 받는다.
 - helper cache 는 로컬 auth material 을 담으므로 본인 장비에서만 보관한다.
+- 기본 `auth` 텍스트 출력은 key 를 다시 보여주지 않는다. 자동화가 필요할 때만 `--format json` 또는 `--format shell` 을 사용한다.

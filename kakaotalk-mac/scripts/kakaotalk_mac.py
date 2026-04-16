@@ -24,6 +24,7 @@ DIRECT_USER_ID_KEYS = ("userId", "user_id", "KAKAO_USER_ID", "userID")
 DEFAULT_MAX_USER_ID = 1_000_000_000
 DEFAULT_CHUNK_SIZE = 500_000
 DEFAULT_CACHE_PATH = Path.home() / ".cache" / "k-skill" / "kakaotalk-mac-auth.json"
+READ_ONLY_COMMANDS = ("chats", "messages", "search", "schema")
 
 
 class AuthResolutionError(RuntimeError):
@@ -350,17 +351,27 @@ def prioritized_database_paths(database_files: Sequence[Path], derived_name: str
 def load_cached_auth(cache_path: Path) -> ResolvedAuth | None:
     if not cache_path.exists():
         return None
-    payload = json.loads(cache_path.read_text(encoding="utf-8"))
-    database_path = Path(payload["database_path"])
-    if not database_path.exists():
+    try:
+        payload = json.loads(cache_path.read_text(encoding="utf-8"))
+        database_path = Path(payload["database_path"]).expanduser()
+        user_id = int(payload["user_id"])
+        uuid = str(payload["uuid"])
+        database_name = str(payload["database_name"])
+        key = str(payload["key"])
+        source = str(payload.get("source", "cache"))
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
         return None
+
+    if user_id <= 0 or not uuid or not database_name or not key or not database_path.exists():
+        return None
+
     return ResolvedAuth(
-        user_id=int(payload["user_id"]),
-        uuid=payload["uuid"],
+        user_id=user_id,
+        uuid=uuid,
         database_path=database_path,
-        database_name=payload["database_name"],
-        key=payload["key"],
-        source=payload.get("source", "cache"),
+        database_name=database_name,
+        key=key,
+        source=source,
     )
 
 
@@ -538,14 +549,20 @@ def render_auth(resolved: ResolvedAuth, *, output_format: str, cache_path: Path)
             f"- database: {resolved.database_path}",
             f"- source: {resolved.source}",
             f"- cache: {cache_path}",
+            "- secrets: redacted in text output (use --format json or --format shell only when automation needs them)",
             "",
             "You can now run:",
-            f"  kakaocli chats --db '{resolved.database_path}' --key '{resolved.key}' --json",
+            "  python3 scripts/kakaotalk_mac.py chats --limit 10 --json",
+            "  python3 scripts/kakaotalk_mac.py messages --chat \"채팅방 이름\" --since 1d --json",
         ]
     )
 
 
 def build_passthrough_command(command: str, auth: ResolvedAuth, forwarded_args: Sequence[str]) -> list[str]:
+    if command not in READ_ONLY_COMMANDS:
+        raise AuthResolutionError(
+            f"Unsupported command '{command}'. Allowed read-only commands: {', '.join(READ_ONLY_COMMANDS)}"
+        )
     return [
         "kakaocli",
         command,
@@ -605,7 +622,7 @@ def build_parser() -> argparse.ArgumentParser:
     auth_parser.add_argument("--refresh", action="store_true", help="Ignore cached auth and resolve again.")
     auth_parser.add_argument("--format", choices=("text", "json", "shell"), default="text")
 
-    for command in ("chats", "messages", "search", "query", "schema"):
+    for command in READ_ONLY_COMMANDS:
         passthrough = subparsers.add_parser(command, help=f"Run kakaocli {command} with cached/recovered auth.")
         add_auth_options(passthrough)
         passthrough.add_argument("--refresh-auth", action="store_true", help="Refresh cached auth before running.")
