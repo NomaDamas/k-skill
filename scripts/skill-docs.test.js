@@ -221,8 +221,32 @@ test("repository docs advertise the used-car-price-search skill", () => {
   assert.match(install, /--skill used-car-price-search/);
   assert.match(
     install,
-    /npm install -g @ohah\/hwpjs kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby korean-law-mcp/,
+    /npm install -g @ohah\/hwpjs kbo-game kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby(?: public-restroom-nearby)? korean-law-mcp/,
   );
+});
+
+test("repository docs advertise the public-restroom-nearby skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "public-restroom-nearby.md");
+  const skillPath = path.join(repoRoot, "public-restroom-nearby", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/public-restroom-nearby.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected public-restroom-nearby/SKILL.md to exist");
+  assert.match(readme, /\| 근처 공중화장실 찾기 \|/);
+  assert.match(readme, /\[근처 공중화장실 찾기 가이드\]\(docs\/features\/public-restroom-nearby\.md\)/);
+  assert.match(install, /--skill public-restroom-nearby/);
+  assert.match(install, /npm install -g .*public-restroom-nearby/);
+});
+
+test("public-restroom-nearby docs describe the maxDistanceMeters distance cap", () => {
+  const featureDoc = read(path.join("docs", "features", "public-restroom-nearby.md"));
+  const packageReadme = read(path.join("packages", "public-restroom-nearby", "README.md"));
+
+  assert.match(featureDoc, /maxDistanceMeters/);
+  assert.match(featureDoc, /100m/);
+  assert.match(packageReadme, /maxDistanceMeters/);
+  assert.match(packageReadme, /100m/);
 });
 
 test("repository docs advertise the lck-analytics skill and package", () => {
@@ -1113,6 +1137,7 @@ test("root pack:dry-run script covers all publishable workspaces", () => {
   assert.match(packageJson.scripts["pack:dry-run"], /workspace market-kurly-search/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace kakao-bar-nearby/);
+  assert.match(packageJson.scripts["pack:dry-run"], /workspace public-restroom-nearby/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace kleague-results/);
   assert.match(packageJson.scripts["pack:dry-run"], /workspace lck-analytics/);
 });
