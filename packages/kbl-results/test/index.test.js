@@ -122,6 +122,38 @@ test("public fetchers compose day results with current standings via mocked fetc
   }
 });
 
+test("getKBLSummary skips the standings endpoint when includeStandings is false", async () => {
+  const originalFetch = global.fetch;
+  const calls = [];
+
+  global.fetch = async (url) => {
+    const target = String(url);
+    calls.push(target);
+
+    if (target.includes("/match/list?")) {
+      return makeResponse(schedulePayload);
+    }
+
+    throw new Error(`unexpected url: ${target}`);
+  };
+
+  try {
+    const summary = await getKBLSummary("2026-04-01", {
+      team: "KCC",
+      includeStandings: false,
+    });
+
+    assert.equal(summary.matches.length, 1);
+    assert.equal(summary.standings, undefined);
+    assert.deepEqual(
+      calls.filter((target) => target.includes("/league/rank/team")),
+      [],
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("getMatchResults rejects impossible calendar dates before fetching", async () => {
   let fetchCalled = false;
 
