@@ -132,19 +132,19 @@ korean-law list
 
 `korean-stock-search` 는 로컬 MCP 설치 대신 **proxy first** 로 사용한다.
 
-- 가장 빠른 smoke test 는 `curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' --data-urlencode 'q=삼성전자' --data-urlencode 'bas_dd=20260404'`
+- 가장 빠른 smoke test 는 `curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' --data-urlencode 'q=삼성전자' --data-urlencode 'bas_dd=20260408'`
 - 검색 결과에서 `market`, `code` 를 확인한 뒤 `base-info` 또는 `trade-info` 로 이어간다.
 - 사용자 쪽 `KRX_API_KEY` 는 필요 없다. self-host proxy 운영자만 서버 환경변수 `KRX_API_KEY` 를 설정한다.
 
 ```bash
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
   --data-urlencode 'q=삼성전자' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' \
   --data-urlencode 'market=KOSPI' \
   --data-urlencode 'code=005930' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 ```
 
 

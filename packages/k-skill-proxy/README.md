@@ -116,7 +116,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/mfds/food-safety/search' \
 ```bash
 curl -fsS --get 'http://127.0.0.1:4020/v1/korean-stock/search' \
   --data-urlencode 'q=삼성전자' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 ```
 
 프록시는 내부적으로 `waterlevel/info.json` 으로 관측소를 해석하고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 수위/유량을 조회합니다. 한국 주식 route는 KRX Open API에 `AUTH_KEY` 헤더를 서버 쪽에서만 주입합니다.

@@ -190,7 +190,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/mfds/food-safety/search'
 ```bash
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
   --data-urlencode 'q=삼성전자' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 ```
 
 한국 주식 기본정보 endpoint:
@@ -199,7 +199,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/search' \
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-stock/base-info' \
   --data-urlencode 'market=KOSPI' \
   --data-urlencode 'code=005930' \
-  --data-urlencode 'bas_dd=20260404'
+  --data-urlencode 'bas_dd=20260408'
 ```
 
 
