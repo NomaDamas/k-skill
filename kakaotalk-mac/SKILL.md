@@ -38,6 +38,8 @@ metadata:
 - Homebrew
 - Mac App Store 로그인(`mas` 사용 시)
 - `kakaocli` 설치
+- `python3` 3.10+
+- 이 저장소의 helper `scripts/kakaotalk_mac.py`
 - 터미널 앱에 **Full Disk Access** 와 **Accessibility** 권한 부여
 
 ## Inputs
@@ -99,11 +101,40 @@ kakaocli chats --limit 10 --json
 
 `auth` 가 성공하면 읽기 경로는 준비된 것이다.
 
+### 3.5. Use the helper when `kakaocli auth` fails on `user_id` auto-detection
+
+실제 macOS 환경에서는 `KakaoTalk.db` 라는 literal 파일이 없어도, container 안의 **78자 hex 파일**이 실제 SQLCipher DB 인 경우가 있다. 이때 `kakaocli status` 는 정상인데 `kakaocli auth` 만 실패하는 대표 원인은:
+
+- `AlertKakaoIDsList` 후보로는 복호화가 안 됨
+- plist 의 `DESIGNATEDFRIENDSREVISION:<sha512(user_id)>` 만 남아 있음
+- upstream `kakaocli` 의 기본 `user_id` brute-force 시간이 짧아서 auto-detection 이 실패함
+
+이 저장소는 그 구간만 보완하는 **read-only helper** 를 함께 제공한다.
+
+```bash
+python3 scripts/kakaotalk_mac.py auth --refresh
+python3 scripts/kakaotalk_mac.py chats --limit 10 --json
+python3 scripts/kakaotalk_mac.py messages --chat "지수" --since 1d --json
+python3 scripts/kakaotalk_mac.py search "회의" --json
+```
+
+- helper 는 plist 의 `AlertKakaoIDsList` 와 `DESIGNATEDFRIENDSREVISION` hash 를 읽는다.
+- 후보 `user_id` 가 모두 실패하면 SHA-512 preimage search 로 실제 `user_id` 를 더 오래 찾는다.
+- 성공한 `user_id`, DB 경로, derived key 는 `~/.cache/k-skill/kakaotalk-mac-auth.json` 에 캐시한다.
+- 이후 read-only helper 명령(`chats`, `messages`, `search`, `schema`)은 cached `--db` / `--key` 를 붙여 `kakaocli` 를 다시 호출한다.
+
 ### 4. Read or search messages
 
 ```bash
 kakaocli messages --chat "지수" --since 1h --json
 kakaocli search "점심" --json
+```
+
+helper 경유 예시:
+
+```bash
+python3 scripts/kakaotalk_mac.py messages --chat "지수" --since 1h --json
+python3 scripts/kakaotalk_mac.py search "점심" --json
 ```
 
 응답은 가능하면 JSON 모드로 받고, 사람이 읽기 쉽게 다시 요약한다.
@@ -158,6 +189,7 @@ kakaocli login --status
 - App Store 로그인 누락으로 `mas install` 실패
 - Full Disk Access 미부여
 - Accessibility 미부여
+- `status` 는 정상인데 `auth` 만 실패하는 `user_id` auto-detection / key mismatch 케이스
 - 채팅방 이름 substring 이 애매해서 잘못된 후보가 여러 개 잡힘
 
 ## Notes
@@ -165,3 +197,6 @@ kakaocli login --status
 - 이 스킬은 macOS 전용이다.
 - 다른 사람에게 보내는 메시지는 항상 confirm before sending 원칙을 지킨다.
 - 첫 검증은 `kakaocli status` 와 `kakaocli auth` 부터 시작하는 편이 안전하다.
+- `kakaocli auth` 가 `User ID: auto-detection failed` 로 멈추면 helper 경로를 우선 사용한다.
+- helper cache 는 로컬 SQLCipher key 를 포함하므로 본인 계정에서만 유지하고 공유하지 않는다.
+- 기본 `auth` 텍스트 출력은 key 를 다시 보여주지 않는다. 자동화가 필요할 때만 `--format json` 또는 `--format shell` 을 사용한다.
