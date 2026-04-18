@@ -1,6 +1,6 @@
 {
   "name": "public-restroom-nearby",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official public restroom standard-data client for nearby restroom lookup from a user-provided Korean location",
   "license": "MIT",
   "main": "src/index.js",
