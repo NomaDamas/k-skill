@@ -1,6 +1,6 @@
 ---
 name: coupang-product-search
-description: coupang-mcp 서버를 통해 쿠팡 상품 검색, 로켓배송 필터, 가격대 검색, 상품 비교, 베스트 상품, 골드박스 특가를 조회한다.
+description: retention-corp/coupang_partners의 로컬 Coupang MCP 호환 레이어로 쿠팡 상품 검색, 로켓배송 필터, 가격대 검색, 상품 비교, 베스트 상품, 골드박스 특가를 조회한다.
 license: MIT
 metadata:
   category: retail
@@ -12,9 +12,9 @@ metadata:
 
 ## What this skill does
 
-[coupang-mcp](https://github.com/uju777/coupang-mcp) 서버를 경유하여 쿠팡 상품을 검색하고 실시간 가격을 확인한다.
+[retention-corp/coupang_partners](https://github.com/retention-corp/coupang_partners) 저장소의 로컬 Coupang MCP 호환 레이어를 사용해 쿠팡 상품 조회 도구를 실행한다. 기존 유지보수형 HF Space MCP 엔드포인트 대신, 이 저장소의 `bin/coupang_mcp.py`가 제공하는 `local://coupang-mcp` 계약을 호출한다.
 
-- 키워드 상품 검색 (로켓배송/일반배송 구분)
+- 키워드 상품 검색
 - 로켓배송 전용 필터 검색
 - 가격대 범위 검색
 - 상품 비교표 생성
@@ -25,22 +25,29 @@ metadata:
 ## How it works
 
 ```
-Claude Code
-  → MCP Streamable HTTP (JSON-RPC)
-    → HF Space (coupang-mcp 서버)
-      → Netlify 프록시 (도쿄)
-        → 다나와 가격 조회 (1차) / 쿠팡 API 폴백
+Claude Code / Codex
+  → coupang-product-search/scripts/coupang_partners_mcp.py
+    → git clone/update retention-corp/coupang_partners (user cache)
+      → python3 bin/coupang_mcp.py
+        → local://coupang-mcp compatible tool layer
+          → Coupang Partners API client
 ```
 
-- API 키 불필요
-- 다나와에서 정확한 판매가 우선 조회, 실패 시 쿠팡 API 가격 자동 폴백
-- 해외 IP 차단 우회를 위해 도쿄 리전 프록시 경유
+Hard rules:
 
-## MCP endpoint
+- `COUPANG_MCP_ENDPOINT`는 호환성 knob로만 유지한다. 기본값은 `local://coupang-mcp`다.
+- 구형 HF Space hosted MCP 엔드포인트를 사용하거나 새로 지어내지 않는다.
+- upstream 저장소는 `https://github.com/retention-corp/coupang_partners.git`만 사용한다.
+- 실제 상품/API 호출은 upstream Coupang Partners 클라이언트 정책을 따른다. 운영 환경에서는 `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY` 같은 runtime secret을 환경변수로 제공하고, 키를 문서/로그/커밋에 노출하지 않는다.
+- `tools`와 `init`은 로컬 MCP 계약 확인용으로 먼저 실행한다.
+
+## MCP endpoint / contract
 
 ```
-https://yuju777-coupang-mcp.hf.space/mcp
+local://coupang-mcp
 ```
+
+프로토콜 호환 버전: MCP `2025-03-26`. 네트워크로 붙는 Streamable HTTP 서버가 아니라, upstream 저장소의 로컬 MCP 호환 CLI가 같은 도구 이름과 JSON-RPC 모양의 payload를 반환한다.
 
 ## When to use
 
@@ -55,6 +62,7 @@ https://yuju777-coupang-mcp.hf.space/mcp
 
 - 로그인, 장바구니, 결제 자동화가 필요한 경우
 - 쿠팡 계정/session 접근이 필요한 경우
+- Coupang Partners API 사용 권한이나 운영 backend가 전혀 없는데 live 상품 가격을 보장해야 하는 경우
 
 ## Workflow
 
@@ -64,61 +72,93 @@ https://yuju777-coupang-mcp.hf.space/mcp
 
 - 권장 질문: `어떤 용도/예산/브랜드/용량을 우선할까요?`
 
-### 2. Initialize MCP session
+### 2. Bootstrap and check the tool contract
 
-coupang-mcp는 MCP Streamable HTTP 프로토콜을 사용한다. 세션을 초기화한 뒤 도구를 호출한다.
+래퍼는 기본적으로 `~/.cache/k-skill/coupang_partners`에 upstream 저장소를 clone한다. 이미 clone되어 있으면 그대로 사용하고, 최신화가 필요할 때만 `--update`를 붙인다.
 
 ```bash
-# Step 1: Initialize and get session ID
-SESSION_ID=$(curl -s -X POST "https://yuju777-coupang-mcp.hf.space/mcp" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"k-skill","version":"1.0"}}}' \
-  -D /dev/stderr 2>&1 1>/dev/null | grep -i 'mcp-session-id' | awk '{print $2}' | tr -d '\r')
+python3 coupang-product-search/scripts/coupang_partners_mcp.py tools
+```
+
+기존 checkout을 명시하거나 CI/검증에서 네트워크 clone을 막으려면:
+
+```bash
+python3 coupang-product-search/scripts/coupang_partners_mcp.py \
+  --repo-dir /path/to/coupang_partners \
+  --no-clone \
+  tools
 ```
 
 ### 3. Call tools
 
-세션 ID를 얻은 뒤 `tools/call` 로 원하는 도구를 호출한다.
+구체적인 사용자 요청에 맞춰 upstream CLI 명령을 호출한다. 결과는 `ok`, `data.tool`, `data.payload`, `data.result`를 포함하는 JSON으로 반환된다.
 
 ```bash
-curl -s -X POST "https://yuju777-coupang-mcp.hf.space/mcp" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -H "Mcp-Session-Id: $SESSION_ID" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search_coupang_products","arguments":{"keyword":"32인치 4K 모니터"}}}' \
-  2>&1 | grep "^data:" | sed 's/^data: //'
+# 일반 검색
+python3 coupang-product-search/scripts/coupang_partners_mcp.py search "32인치 4K 모니터"
+
+# 로켓배송 필터
+python3 coupang-product-search/scripts/coupang_partners_mcp.py rocket "에어팟"
+
+# 가격대 검색
+python3 coupang-product-search/scripts/coupang_partners_mcp.py budget "키보드" --max-price 100000
+
+# 비교
+python3 coupang-product-search/scripts/coupang_partners_mcp.py compare "아이패드 vs 갤럭시탭"
+
+# 골드박스
+python3 coupang-product-search/scripts/coupang_partners_mcp.py goldbox
 ```
 
 ## Available tools
 
-| 도구명 | 기능 | 파라미터 예시 |
-|--------|------|-------------|
-| `search_coupang_products` | 일반 상품 검색 | `{"keyword":"생수"}` |
-| `search_coupang_rocket` | 로켓배송만 필터링 | `{"keyword":"에어팟"}` |
-| `search_coupang_budget` | 가격대 범위 검색 | `{"keyword":"키보드","min_price":0,"max_price":100000}` |
-| `compare_coupang_products` | 상품 비교표 생성 | `{"keyword":"아이패드 vs 갤럭시탭"}` |
-| `get_coupang_recommendations` | 인기 검색어 제안 | `{}` |
-| `get_coupang_seasonal` | 계절/상황별 추천 | `{"keyword":"설날 선물"}` |
-| `get_coupang_best_products` | 카테고리별 베스트 | `{"keyword":"전자제품"}` |
-| `get_coupang_goldbox` | 당일 특가 정보 | `{}` |
+| 도구명 | CLI 명령 | 기능 | 파라미터 예시 |
+|--------|----------|------|-------------|
+| `search_coupang_products` | `search` | 일반 상품 검색 | `"생수"` |
+| `search_coupang_rocket` | `rocket` | 로켓배송만 필터링 | `"에어팟"` |
+| `search_coupang_budget` | `budget` | 가격대 범위 검색 | `"키보드" --max-price 100000` |
+| `compare_coupang_products` | `compare` | 상품 비교표 생성 | `"아이패드 vs 갤럭시탭"` |
+| `get_coupang_recommendations` | `recommendations` | 인기 검색어 제안 | `--category 전자제품` |
+| `get_coupang_seasonal` | `seasonal` | 계절/상황별 추천 | `"설날 선물"` |
+| `get_coupang_best_products` | `best` | 카테고리별 베스트 | `--category-id 1016` |
+| `get_coupang_goldbox` | `goldbox` | 당일 특가 정보 | `--limit 10` |
 
 ## Response format
 
-결과는 로켓배송(rocket)과 일반배송(normal)으로 구분되어 반환된다.
+upstream CLI는 JSON을 출력한다. `data.result` 안의 상품 배열 또는 도구별 객체를 읽고, 답변에서는 로켓배송(rocket)과 일반배송(normal)을 구분한다.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "session_id": "session-...",
+    "tool": "search_coupang_products",
+    "payload": {
+      "jsonrpc": "2.0",
+      "result": {
+        "content": [
+          {"type": "text", "text": "[...]"}
+        ]
+      }
+    },
+    "result": []
+  }
+}
+```
+
+사용자에게 보여줄 때는 다음처럼 짧게 정리한다.
 
 ```
-## rocket (6)
+## rocket (상위 후보)
 
 1) LG전자 4K UHD 모니터
-   옵션: 80cm / 32UR500K
-   가격: 397,750원 (39만원대)
+   가격: 397,750원 (참고용)
    보러가기: https://link.coupang.com/a/...
 
-## normal (4)
+## normal (상위 후보)
 
 1) 삼성전자 QHD 오디세이 G5 게이밍 모니터
-   가격: 283,000원 (28만원대)
+   가격: 283,000원 (참고용)
    보러가기: https://link.coupang.com/a/...
 ```
 
@@ -126,11 +166,13 @@ curl -s -X POST "https://yuju777-coupang-mcp.hf.space/mcp" \
 
 - 후보가 여러 개면 상위 3~5개만 짧게 비교한다.
 - 로켓배송/일반배송 구분을 명시한다.
-- 가격은 참고용임을 안내한다 (다나와 실패 시 쿠팡 API 추정가).
-- MCP 서버가 응답하지 않으면 서버 상태를 알리고 나중에 재시도를 권한다.
+- 가격/품절/배송 정보는 실시간 변동될 수 있음을 안내한다.
+- upstream checkout, 권한, Coupang Partners 환경변수 문제로 실패하면 실패 원인과 재시도/설정 방법을 짧게 안내한다.
+- affiliate/deeplink가 포함될 때는 필요한 고지 문구를 누락하지 않는다.
 
 ## Done when
 
+- `tools` 또는 실제 명령으로 retention-corp/coupang_partners 로컬 MCP 계약을 확인했다.
 - 검색 결과가 로켓배송/일반배송으로 구분되어 정리되었다.
 - 사용자 니즈에 맞는 추천 TOP 3이 제시되었다.
-- 가격/배송 정보가 포함되었다.
+- 가격/배송 정보와 변동 가능성 안내가 포함되었다.

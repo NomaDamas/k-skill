@@ -89,8 +89,8 @@
 - daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
 - hola-poke-yeoksam reference repo: https://github.com/mnspkm/hola-poke-yeoksam-skill
 - hola-poke-yeoksam remote MCP endpoint: https://hola-poke-yeoksam-skill.onrender.com/mcp
-- coupang-mcp (MCP 서버): https://github.com/uju777/coupang-mcp
-- coupang-mcp endpoint: https://yuju777-coupang-mcp.hf.space/mcp
+- retention-corp/coupang_partners (Coupang Partners client and local MCP-compatible layer): https://github.com/retention-corp/coupang_partners
+- coupang_partners local MCP contract: local://coupang-mcp
 - bunjang-cli package: https://www.npmjs.com/package/bunjang-cli
 - bunjang-cli repo: https://github.com/pinion05/bunjangcli
 - 블루리본 메인: https://www.bluer.co.kr/

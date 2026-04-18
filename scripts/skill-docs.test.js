@@ -1160,20 +1160,29 @@ test("repository docs advertise the coupang-product-search skill", () => {
   assert.match(install, /--skill coupang-product-search/);
 });
 
-test("coupang-product-search skill and docs reference coupang-mcp", () => {
+test("coupang-product-search skill and docs use retention-corp coupang_partners MCP layer", () => {
   const skillPath = path.join(repoRoot, "coupang-product-search", "SKILL.md");
+  const wrapperPath = path.join(repoRoot, "coupang-product-search", "scripts", "coupang_partners_mcp.py");
   const featureDoc = read(path.join("docs", "features", "coupang-product-search.md"));
+  const sources = read(path.join("docs", "sources.md"));
 
   assert.ok(fs.existsSync(skillPath), "expected coupang-product-search/SKILL.md to exist");
+  assert.ok(fs.existsSync(wrapperPath), "expected retention-corp wrapper script to exist");
 
   const skill = read(path.join("coupang-product-search", "SKILL.md"));
 
   for (const doc of [skill, featureDoc]) {
-    assert.match(doc, /coupang-mcp/);
-    assert.match(doc, /yuju777-coupang-mcp\.hf\.space\/mcp/);
+    assert.match(doc, /retention-corp\/coupang_partners/);
+    assert.match(doc, /local:\/\/coupang-mcp/);
+    assert.match(doc, /coupang_partners_mcp\.py/);
     assert.match(doc, /search_coupang_products/);
     assert.match(doc, /로켓배송/);
+    assert.doesNotMatch(doc, /yuju777-coupang-mcp\.hf\.space\/mcp/);
+    assert.doesNotMatch(doc, /github\.com\/uju777\/coupang-mcp/);
   }
+
+  assert.match(sources, /retention-corp\/coupang_partners/);
+  assert.doesNotMatch(sources, /yuju777-coupang-mcp\.hf\.space\/mcp/);
 });
 
 test("root pack:dry-run script covers all publishable workspaces", () => {
