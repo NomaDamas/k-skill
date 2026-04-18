@@ -57,8 +57,10 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-http://127.0.0.1:4020}/v1/naver-shoppi
 
 - `q` 또는 `query` — 검색어. 2글자 이상.
 - `limit` — 반환 개수. 기본 10, 최대 40으로 clamp.
-- `page` — 페이지. 기본 1.
+- `page` — 페이지. 기본 1. no-key BFF fallback에서는 BFF의 `page`를 요청하고 해당 페이지 카드만 정규화한다.
 - `sort` — `rel`, `date`, `price_asc`, `price_dsc`, `review` 중 하나. 알 수 없는 값은 `rel`.
+  - 공식 Search API 경로는 네이버 API sort를 사용한다.
+  - no-key BFF fallback은 `rel`은 BFF 노출 순서를 유지하고, `price_asc`/`price_dsc`/`review`는 선택된 BFF 페이지 카드 안에서 로컬 정렬한다. BFF 카드에 날짜 필드가 없어 `date`는 `meta.sort_applied: "unsupported"`로 표시하고 BFF 노출 순서를 유지한다.
 
 응답 주요 필드:
 
@@ -69,12 +71,13 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-http://127.0.0.1:4020}/v1/naver-shoppi
 - `items[].image_url`
 - `items[].review_count`, `purchase_count`, `score` (노출될 때만)
 - `meta.extraction` — `naver-openapi`, `bff-json`, `embedded-json`, `html-card`, `none`
+- `meta.sort_applied` — BFF fallback에서 `upstream`, `local`, `unsupported` 중 하나
 
 ## Workflow
 
 1. 검색어를 확인한다.
 2. `GET /v1/naver-shopping/search` 를 호출한다.
-3. `items`가 있으면 가격 낮은 순, 공식/브랜드몰 여부, 리뷰 수 등을 기준으로 3~5개 후보를 짧게 비교한다.
+3. `items`가 있으면 요청 sort와 `meta.sort_applied`를 확인한 뒤 가격 낮은 순, 공식/브랜드몰 여부, 리뷰 수 등을 기준으로 3~5개 후보를 짧게 비교한다.
 4. `meta.extraction`과 조회 시각 기준임을 함께 말한다.
 5. `items`가 비었거나 upstream 차단/오류가 나면 우회 시도를 반복하지 말고, 검색어를 좁히거나 브라우저 수동 확인을 안내한다.
 

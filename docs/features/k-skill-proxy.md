@@ -198,7 +198,9 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/naver-shopping/search' \
 
 키가 없는 no-key fallback은 `search.shopping.naver.com/search/all` HTML 페이지 대신
 `ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui`
-공개 JSON path를 사용한다.
+공개 JSON path를 사용한다. `page`는 BFF에 전달한 뒤 해당 페이지 카드만 정규화하고, no-key
+`price_asc`/`price_dsc`/`review` 정렬은 선택된 BFF 페이지 안에서 로컬 적용한다. BFF에는 날짜
+필드가 없어 no-key `date` 요청은 `meta.sort_applied: "unsupported"`로 표시한다.
 
 한국 주식 검색 endpoint:
 

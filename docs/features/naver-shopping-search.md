@@ -42,8 +42,11 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
 
 - `q` 또는 `query`: 검색어. 2글자 이상.
 - `limit`: 반환 개수. 기본 10, 최대 40.
-- `page`: 페이지. 기본 1.
+- `page`: 페이지. 기본 1. no-key BFF fallback은 BFF `page`를 요청하고 해당 페이지 카드만 정규화한다.
 - `sort`: `rel`, `date`, `price_asc`, `price_dsc`, `review`.
+  - 공식 Search API 경로는 네이버 API sort를 그대로 사용한다.
+  - no-key BFF fallback은 `rel`은 BFF 노출 순서를 유지하고, `price_asc`/`price_dsc`/`review`는 선택된 BFF 페이지 안에서 로컬 정렬한다.
+  - BFF에는 날짜 정렬용 카드 필드가 없어 no-key `date` 요청은 `meta.sort_applied: "unsupported"`로 표시하고 BFF 노출 순서를 유지한다.
 
 ## 응답 예시
 
@@ -76,7 +79,10 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
   "meta": {
     "query": "애플 어댑터",
     "extraction": "bff-json",
-    "item_count": 1
+    "item_count": 1,
+    "page": 1,
+    "sort": "rel",
+    "sort_applied": "upstream"
   }
 }
 ```
@@ -94,5 +100,6 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
 - 모델명, 용량, 색상, 세대 정보를 검색어에 포함하면 가격 비교 품질이 좋아진다.
 - 네이버가 특정 서버/IP에 418/403 등을 반환하면 같은 요청을 반복해 우회하지 말고 사용자에게 수동 확인 또는 검색어 조정을 안내한다.
 - no-key fallback은 기존 `search.shopping.naver.com/search/all` HTML 페이지가 아니라 `ns-portal.shopping.naver.com/api/v2/shopping-paged-slot` JSON path를 사용한다.
+- no-key fallback의 가격/리뷰 정렬은 BFF가 반환한 선택 페이지 내부의 로컬 정렬이다. 전체 네이버 쇼핑 결과에 대한 전역 최저가/최다리뷰 정렬이 필요하면 공식 Search API 키를 설정한다.
 - proxy route는 public/read-only/no-auth이며 cache와 rate limit을 사용한다.
 - 운영 환경에는 가능하면 `NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET`을 설정해 공식 Search API 경로를 우선 사용한다.

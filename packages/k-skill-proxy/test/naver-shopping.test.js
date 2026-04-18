@@ -105,6 +105,10 @@ test("normalizeNaverShoppingSearchQuery validates q/query and clamps limit", () 
   assert.equal(url.pathname, "/api/v2/shopping-paged-slot");
   assert.equal(url.searchParams.get("query"), "아이폰 케이스");
   assert.equal(url.searchParams.get("source"), "shp_gui");
+
+  const pageUrl = buildNaverShoppingSearchUrl({ query: "아이폰 케이스", limit: 3, page: 2, sort: "price_asc" });
+  assert.equal(pageUrl.searchParams.get("page"), "2");
+  assert.equal(pageUrl.searchParams.has("sort"), false);
 });
 
 test("parseNaverShoppingSearchPayload maps public BFF shopping-paged-slot cards", () => {
@@ -168,6 +172,89 @@ test("parseNaverShoppingSearchPayload maps public BFF shopping-paged-slot cards"
   });
   assert.equal(result.meta.extraction, "bff-json");
   assert.equal(result.meta.item_count, 1);
+});
+
+test("parseNaverShoppingSearchPayload selects requested BFF page and locally sorts comparable cards", () => {
+  const payload = {
+    data: [
+      {
+        page: 1,
+        pageSize: 2,
+        slots: [
+          {
+            data: {
+              nvMid: "page1-expensive",
+              productNameOrg: "1페이지 비싼 상품",
+              salePrice: 30000,
+              mallName: "첫페이지몰"
+            }
+          },
+          {
+            data: {
+              nvMid: "page1-cheap",
+              productNameOrg: "1페이지 싼 상품",
+              salePrice: 10000,
+              mallName: "첫페이지몰"
+            }
+          }
+        ]
+      },
+      {
+        page: 2,
+        pageSize: 3,
+        slots: [
+          {
+            data: {
+              nvMid: "page2-mid",
+              productNameOrg: "2페이지 중간 상품",
+              salePrice: 50000,
+              totalReviewCount: 4,
+              mallName: "둘째페이지몰"
+            }
+          },
+          {
+            data: {
+              nvMid: "page2-cheap",
+              productNameOrg: "2페이지 싼 상품",
+              salePrice: 20000,
+              totalReviewCount: 9,
+              mallName: "둘째페이지몰"
+            }
+          },
+          {
+            data: {
+              nvMid: "page2-reviewed",
+              productNameOrg: "2페이지 리뷰 많은 상품",
+              salePrice: 70000,
+              totalReviewCount: 50,
+              mallName: "둘째페이지몰"
+            }
+          }
+        ]
+      }
+    ]
+  };
+
+  const priceAscending = parseNaverShoppingSearchPayload(payload, {
+    query: "테스트 상품",
+    limit: 3,
+    page: 2,
+    sort: "price_asc"
+  });
+  assert.deepEqual(priceAscending.items.map((item) => item.product_id), ["page2-cheap", "page2-mid", "page2-reviewed"]);
+  assert.equal(priceAscending.meta.page, 2);
+  assert.equal(priceAscending.meta.page_size, 3);
+  assert.equal(priceAscending.meta.sort, "price_asc");
+  assert.equal(priceAscending.meta.sort_applied, "local");
+
+  const reviewDescending = parseNaverShoppingSearchPayload(payload, {
+    query: "테스트 상품",
+    limit: 2,
+    page: 2,
+    sort: "review"
+  });
+  assert.deepEqual(reviewDescending.items.map((item) => item.product_id), ["page2-reviewed", "page2-cheap"]);
+  assert.equal(reviewDescending.meta.item_count, 2);
 });
 
 
@@ -278,6 +365,84 @@ test("naver shopping search endpoint returns normalized comparison payload from 
   assert.match(fetchCalls[0].url, /source=shp_gui/);
   assert.match(fetchCalls[0].headers["user-agent"], /Mozilla\/5\.0/);
   assert.match(fetchCalls[0].headers.referer, /^https:\/\/search\.naver\.com\/search\.naver\?/);
+});
+
+test("naver shopping BFF fallback fetches requested page and applies local comparable sort", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url, options = {}) => {
+    fetchCalls.push({ url: String(url), headers: options.headers });
+    return new Response(
+      JSON.stringify({
+        data: [
+          {
+            page: 1,
+            pageSize: 2,
+            slots: [
+              {
+                data: {
+                  nvMid: "page1-first",
+                  productNameOrg: "첫 페이지 상품",
+                  discountedSalePrice: 99000,
+                  mallName: "첫페이지몰"
+                }
+              }
+            ]
+          },
+          {
+            page: 2,
+            pageSize: 3,
+            slots: [
+              {
+                data: {
+                  nvMid: "page2-expensive",
+                  productNameOrg: "둘째 페이지 비싼 상품",
+                  discountedSalePrice: 50000,
+                  mallName: "둘째페이지몰"
+                }
+              },
+              {
+                data: {
+                  nvMid: "page2-cheap",
+                  productNameOrg: "둘째 페이지 싼 상품",
+                  discountedSalePrice: 12000,
+                  mallName: "둘째페이지몰"
+                }
+              }
+            ]
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({ env: { KSKILL_PROXY_CACHE_TTL_MS: "60000" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=%ED%85%8C%EC%8A%A4%ED%8A%B8%20%EC%83%81%ED%92%88&limit=2&page=2&sort=price_asc"
+  });
+
+  assert.equal(response.statusCode, 200);
+  const body = response.json();
+  assert.deepEqual(body.items.map((item) => item.product_id), ["page2-cheap", "page2-expensive"]);
+  assert.deepEqual(body.items.map((item) => item.rank), [1, 2]);
+  assert.equal(body.query.page, 2);
+  assert.equal(body.query.sort, "price_asc");
+  assert.equal(body.meta.page, 2);
+  assert.equal(body.meta.sort, "price_asc");
+  assert.equal(body.meta.sort_applied, "local");
+  assert.equal(fetchCalls.length, 1);
+  const upstreamUrl = new URL(fetchCalls[0].url);
+  assert.equal(upstreamUrl.hostname, "ns-portal.shopping.naver.com");
+  assert.equal(upstreamUrl.searchParams.get("page"), "2");
+  assert.equal(upstreamUrl.searchParams.has("sort"), false);
 });
 
 

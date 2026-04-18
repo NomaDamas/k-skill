@@ -5,6 +5,7 @@ const NAVER_SHOPPING_OPEN_API_URL = "https://openapi.naver.com/v1/search/shop.js
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 40;
 const ALLOWED_SORTS = new Set(["rel", "date", "price_asc", "price_dsc", "review"]);
+const LOCALLY_SORTABLE_BFF_SORTS = new Set(["price_asc", "price_dsc", "review"]);
 
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
@@ -338,6 +339,82 @@ function productDedupKey(product) {
     return `id:${product.product_id}`;
   }
   return [product.title, product.price, product.mall_name || "", product.url || ""].join("|").toLowerCase();
+}
+
+function compareWithMissingLast(left, right, direction = "asc") {
+  const leftMissing = left === undefined || left === null;
+  const rightMissing = right === undefined || right === null;
+  if (leftMissing && rightMissing) {
+    return 0;
+  }
+  if (leftMissing) {
+    return 1;
+  }
+  if (rightMissing) {
+    return -1;
+  }
+  return direction === "desc" ? right - left : left - right;
+}
+
+function applyLocalBffSort(items, sort) {
+  if (!LOCALLY_SORTABLE_BFF_SORTS.has(sort)) {
+    return items;
+  }
+
+  return [...items].sort((left, right) => {
+    if (sort === "price_asc") {
+      return compareWithMissingLast(left.price, right.price, "asc")
+        || compareWithMissingLast(left.review_count, right.review_count, "desc")
+        || left.rank - right.rank;
+    }
+    if (sort === "price_dsc") {
+      return compareWithMissingLast(left.price, right.price, "desc")
+        || compareWithMissingLast(left.review_count, right.review_count, "desc")
+        || left.rank - right.rank;
+    }
+    if (sort === "review") {
+      return compareWithMissingLast(left.review_count, right.review_count, "desc")
+        || compareWithMissingLast(left.purchase_count, right.purchase_count, "desc")
+        || compareWithMissingLast(left.score, right.score, "desc")
+        || compareWithMissingLast(left.price, right.price, "asc")
+        || left.rank - right.rank;
+    }
+    return left.rank - right.rank;
+  });
+}
+
+function getBffPageNumber(page) {
+  return parseDigits(page?.page ?? page?.pageNo ?? page?.pageNumber ?? page?.pagingIndex);
+}
+
+function selectBffPages(payload, requestedPage) {
+  const pages = Array.isArray(payload?.data) ? payload.data : [];
+  if (pages.length === 0) {
+    return [];
+  }
+
+  const numberedPages = pages.filter((page) => getBffPageNumber(page) === requestedPage);
+  if (numberedPages.length > 0) {
+    return numberedPages;
+  }
+
+  if (requestedPage === 1) {
+    return pages.filter((page) => getBffPageNumber(page) === null).length > 0
+      ? pages.filter((page) => getBffPageNumber(page) === null)
+      : pages.slice(0, 1);
+  }
+
+  return [];
+}
+
+function getBffSortApplied(sort) {
+  if (sort === "rel") {
+    return "upstream";
+  }
+  if (LOCALLY_SORTABLE_BFF_SORTS.has(sort)) {
+    return "local";
+  }
+  return "unsupported";
 }
 
 function extractScriptBodies(html) {
@@ -720,15 +797,14 @@ function parseNaverShoppingSearchHtml(html, { query = null, limit = DEFAULT_LIMI
   };
 }
 
-function parseNaverShoppingSearchPayload(payload, { query = null, limit = DEFAULT_LIMIT } = {}) {
+function parseNaverShoppingSearchPayload(payload, { query = null, limit = DEFAULT_LIMIT, page = 1, sort = "rel" } = {}) {
   const normalizedLimit = clamp(parseInteger(limit, DEFAULT_LIMIT), 1, MAX_LIMIT);
+  const requestedPage = Math.max(parseInteger(page, 1), 1);
+  const normalizedSort = ALLOWED_SORTS.has(sort) ? sort : "rel";
   const items = [];
   const seen = new Set();
 
   function addCandidate(candidate) {
-    if (items.length >= normalizedLimit) {
-      return;
-    }
     const product = normalizeBffProductCandidate(candidate, {
       rank: items.length + 1,
       source: "bff-json"
@@ -744,26 +820,30 @@ function parseNaverShoppingSearchPayload(payload, { query = null, limit = DEFAUL
     items.push(product);
   }
 
-  const pages = Array.isArray(payload?.data) ? payload.data : [];
+  const pages = selectBffPages(payload, requestedPage);
   for (const page of pages) {
     const slots = Array.isArray(page?.slots) ? page.slots : [];
     for (const slot of slots) {
       addCandidate(slot?.data);
-      if (items.length >= normalizedLimit) {
-        break;
-      }
-    }
-    if (items.length >= normalizedLimit) {
-      break;
     }
   }
 
+  const sortedItems = applyLocalBffSort(items, normalizedSort).slice(0, normalizedLimit);
+  const availablePages = (Array.isArray(payload?.data) ? payload.data : [])
+    .map(getBffPageNumber)
+    .filter((value) => value !== null);
+
   return {
-    items: items.map((item, index) => ({ ...item, rank: index + 1 })),
+    items: sortedItems.map((item, index) => ({ ...item, rank: index + 1 })),
     meta: {
       query,
-      extraction: items.length > 0 ? "bff-json" : "none",
-      item_count: items.length
+      extraction: sortedItems.length > 0 ? "bff-json" : "none",
+      item_count: sortedItems.length,
+      page: requestedPage,
+      page_size: sortedItems.length,
+      available_pages: availablePages,
+      sort: normalizedSort,
+      sort_applied: getBffSortApplied(normalizedSort)
     }
   };
 }
@@ -792,11 +872,14 @@ function normalizeNaverShoppingSearchQuery(query) {
 
 function buildNaverShoppingSearchUrl({ query, limit = DEFAULT_LIMIT, page = 1, sort = "rel" } = {}) {
   void limit;
-  void page;
   void sort;
   const url = new URL(NAVER_SHOPPING_SEARCH_PATH, NAVER_SHOPPING_BFF_BASE_URL);
   url.searchParams.set("query", query);
   url.searchParams.set("source", "shp_gui");
+  const normalizedPage = Math.max(parseInteger(page, 1), 1);
+  if (normalizedPage > 1) {
+    url.searchParams.set("page", String(normalizedPage));
+  }
   return url;
 }
 
@@ -832,7 +915,7 @@ async function fetchNaverShoppingSearch({ query, limit, page, sort, clientId = n
 
   let parsed;
   try {
-    parsed = parseNaverShoppingSearchPayload(JSON.parse(body), { query, limit });
+    parsed = parseNaverShoppingSearchPayload(JSON.parse(body), { query, limit, page, sort });
   } catch {
     parsed = parseNaverShoppingSearchHtml(body, { query, limit });
   }
