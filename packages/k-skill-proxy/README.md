@@ -17,7 +17,7 @@
 - `GET /v1/korean-stock/search`
 - `GET /v1/korean-stock/base-info`
 - `GET /v1/korean-stock/trade-info`
-- `GET /v1/naver-shopping/search` — 네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 네이버 쇼핑 공개 검색 화면 기반 상품/가격 후보 조회
+- `GET /v1/naver-shopping/search` — 네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 네이버 쇼핑 공개 BFF JSON 기반 상품/가격 후보 조회
 
 ## 환경변수
 
@@ -28,7 +28,7 @@
 - `KEDU_INFO_KEY` — 프록시 서버 쪽 나이스(NEIS) 교육정보 개방 포털 Open API 인증키 (`school-search`, `school-meal`)
 - `FOODSAFETYKOREA_API_KEY` — 프록시 서버 쪽 식품안전나라 회수정보 live key (`mfds/food-safety/search`; 없으면 sample feed fallback)
 - `KRX_API_KEY` — 프록시 서버 쪽 KRX Open API upstream key
-- `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 선택: 네이버 검색 Open API 쇼핑 검색(`shop.json`) 키. 설정되면 네이버 쇼핑 route가 bot-block 위험이 낮은 공식 API를 우선 사용하고, 없으면 공개 검색 화면 HTML 파서로 fallback
+- `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 선택: 네이버 검색 Open API 쇼핑 검색(`shop.json`) 키. 설정되면 네이버 쇼핑 route가 bot-block 위험이 낮은 공식 API를 우선 사용하고, 없으면 공개 BFF JSON(`ns-portal.shopping.naver.com/api/v2/shopping-paged-slot`) 파서로 fallback
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — 기본 `4020`
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`

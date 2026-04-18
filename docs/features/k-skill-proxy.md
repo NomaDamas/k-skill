@@ -25,7 +25,7 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/korean-stock/search`
 - `GET /v1/korean-stock/base-info`
 - `GET /v1/korean-stock/trade-info`
-- `GET /v1/naver-shopping/search` (네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 공개 검색 화면 기반 상품/가격 후보 조회)
+- `GET /v1/naver-shopping/search` (네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 공개 BFF JSON 기반 상품/가격 후보 조회)
 - `GET /v1/opinet/around`
 - `GET /v1/opinet/detail`
 - `GET /v1/neis/school-search` (나이스 학교기본정보, `KEDU_INFO_KEY`)
@@ -195,6 +195,10 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/naver-shopping/search' \
   --data-urlencode 'q=에어팟 프로 2세대' \
   --data-urlencode 'limit=10'
 ```
+
+키가 없는 no-key fallback은 `search.shopping.naver.com/search/all` HTML 페이지 대신
+`ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui`
+공개 JSON path를 사용한다.
 
 한국 주식 검색 endpoint:
 

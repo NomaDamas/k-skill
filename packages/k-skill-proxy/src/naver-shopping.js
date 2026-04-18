@@ -1,5 +1,6 @@
 const NAVER_SHOPPING_BASE_URL = "https://search.shopping.naver.com";
-const NAVER_SHOPPING_SEARCH_PATH = "/search/all";
+const NAVER_SHOPPING_BFF_BASE_URL = "https://ns-portal.shopping.naver.com";
+const NAVER_SHOPPING_SEARCH_PATH = "/api/v2/shopping-paged-slot";
 const NAVER_SHOPPING_OPEN_API_URL = "https://openapi.naver.com/v1/search/shop.json";
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 40;
@@ -113,6 +114,48 @@ function normalizeUrl(value, baseUrl = NAVER_SHOPPING_BASE_URL) {
   return null;
 }
 
+function firstUrlFromObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  for (const key of ["pcUrl", "mobileUrl", "url", "link", "href"]) {
+    const normalized = normalizeUrl(value[key]);
+    if (normalized) {
+      return normalized;
+    }
+  }
+  return null;
+}
+
+function normalizeUrlCandidate(value) {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const normalized = normalizeUrlCandidate(entry);
+      if (normalized) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  if (value && typeof value === "object") {
+    const objectUrl = firstUrlFromObject(value);
+    if (objectUrl) {
+      return objectUrl;
+    }
+    for (const key of ["imageUrl", "image", "thumbnailUrl", "src"]) {
+      const normalized = normalizeUrl(value[key]);
+      if (normalized) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  return normalizeUrl(value);
+}
+
 function normalizeString(value) {
   const normalized = stripTags(value);
   return normalized || null;
@@ -206,6 +249,74 @@ function normalizeProductCandidate(candidate, { rank, source }) {
     is_ad: Boolean(adFlag),
     source
   };
+}
+
+function normalizeBffProductCandidate(candidate, { rank, source }) {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    return null;
+  }
+
+  const title = normalizeString(getFirstValue(candidate, [
+    "productNameOrg",
+    "productName",
+    "productTitle",
+    "product_name",
+    "mallProductName",
+    "title",
+    "name"
+  ]));
+  const discountedPrice = parseDigits(getFirstValue(candidate, [
+    "discountedSalePrice",
+    "discountedKRWSalePrice",
+    "couponDiscountedPrice",
+    "discountedPrice",
+    "mobileLowPrice",
+    "lowPrice",
+    "price"
+  ]));
+  const salePrice = parseDigits(getFirstValue(candidate, [
+    "salePrice",
+    "saleKRWPrice",
+    "originPrice",
+    "originalPrice",
+    "hprice"
+  ]));
+  const price = discountedPrice ?? salePrice;
+
+  if (!title || price === null) {
+    return null;
+  }
+
+  const highPrice = salePrice !== null && salePrice > price ? salePrice : parseDigits(candidate.highPrice);
+  const imageUrl = normalizeUrlCandidate(candidate.images)
+    || normalizeUrlCandidate(getFirstValue(candidate, ["imageUrl", "imgUrl", "image", "thumbnail", "thumbnailUrl", "imgSrc"]));
+  const url = normalizeUrlCandidate(getFirstValue(candidate, ["productUrl", "mallProductUrl", "productClickUrl", "crUrl", "adcrUrl", "url", "link"]));
+  const cardType = normalizeString(candidate.cardType);
+  const sourceType = normalizeString(candidate.sourceType);
+  const adFlag = getFirstValue(candidate, ["isAd", "ad", "adId", "adcrUrl", "adProduct"]);
+  const isAd = Boolean(adFlag)
+    || /ad/i.test(cardType || "")
+    || /ad/i.test(sourceType || "");
+
+  return compactProduct({
+    rank,
+    product_id: normalizeString(getFirstValue(candidate, ["nvMid", "productId", "id", "catalogId", "channelProductId"])),
+    title,
+    price,
+    high_price: highPrice,
+    price_text: formatWon(price),
+    mall_name: normalizeString(getFirstValue(candidate, ["mallName", "mallNm", "mall_name", "storeName", "sellerName", "channelName", "adMallName"])),
+    url,
+    image_url: imageUrl,
+    category: collectCategory(candidate),
+    review_count: parseDigits(getFirstValue(candidate, ["totalReviewCount", "reviewCount", "reviewCnt", "review_count"])),
+    purchase_count: parseDigits(getFirstValue(candidate, ["purchaseCount", "purchaseCnt", "purchase_count"])),
+    score: parseFloatNumber(getFirstValue(candidate, ["averageReviewScore", "scoreInfo", "score", "rating", "reviewScore"])),
+    is_ad: isAd,
+    is_brand_store: candidate.isBrandStore === true ? true : undefined,
+    product_type: normalizeString(candidate.productType),
+    source
+  });
 }
 
 function compactProduct(product) {
@@ -609,6 +720,54 @@ function parseNaverShoppingSearchHtml(html, { query = null, limit = DEFAULT_LIMI
   };
 }
 
+function parseNaverShoppingSearchPayload(payload, { query = null, limit = DEFAULT_LIMIT } = {}) {
+  const normalizedLimit = clamp(parseInteger(limit, DEFAULT_LIMIT), 1, MAX_LIMIT);
+  const items = [];
+  const seen = new Set();
+
+  function addCandidate(candidate) {
+    if (items.length >= normalizedLimit) {
+      return;
+    }
+    const product = normalizeBffProductCandidate(candidate, {
+      rank: items.length + 1,
+      source: "bff-json"
+    });
+    if (!product) {
+      return;
+    }
+    const key = productDedupKey(product);
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    items.push(product);
+  }
+
+  const pages = Array.isArray(payload?.data) ? payload.data : [];
+  for (const page of pages) {
+    const slots = Array.isArray(page?.slots) ? page.slots : [];
+    for (const slot of slots) {
+      addCandidate(slot?.data);
+      if (items.length >= normalizedLimit) {
+        break;
+      }
+    }
+    if (items.length >= normalizedLimit) {
+      break;
+    }
+  }
+
+  return {
+    items: items.map((item, index) => ({ ...item, rank: index + 1 })),
+    meta: {
+      query,
+      extraction: items.length > 0 ? "bff-json" : "none",
+      item_count: items.length
+    }
+  };
+}
+
 function normalizeNaverShoppingSearchQuery(query) {
   const q = trimOrNull(query.q ?? query.query ?? query.keyword);
   if (!q) {
@@ -632,14 +791,12 @@ function normalizeNaverShoppingSearchQuery(query) {
 }
 
 function buildNaverShoppingSearchUrl({ query, limit = DEFAULT_LIMIT, page = 1, sort = "rel" } = {}) {
-  const url = new URL(NAVER_SHOPPING_SEARCH_PATH, NAVER_SHOPPING_BASE_URL);
+  void limit;
+  void page;
+  void sort;
+  const url = new URL(NAVER_SHOPPING_SEARCH_PATH, NAVER_SHOPPING_BFF_BASE_URL);
   url.searchParams.set("query", query);
-  url.searchParams.set("origQuery", query);
-  url.searchParams.set("pagingIndex", String(page));
-  url.searchParams.set("pagingSize", String(limit));
-  url.searchParams.set("productSet", "total");
-  url.searchParams.set("sort", sort);
-  url.searchParams.set("viewType", "list");
+  url.searchParams.set("source", "shp_gui");
   return url;
 }
 
@@ -656,9 +813,9 @@ async function fetchNaverShoppingSearch({ query, limit, page, sort, clientId = n
   const response = await fetchImpl(url, {
     headers: {
       "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,application/json;q=0.8,*/*;q=0.7",
+      accept: "application/json,text/plain;q=0.9,*/*;q=0.8",
       "accept-language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-      referer: "https://search.shopping.naver.com/"
+      referer: `https://search.naver.com/search.naver?query=${encodeURIComponent(query)}`
     },
     signal: AbortSignal.timeout(15000)
   });
@@ -673,13 +830,20 @@ async function fetchNaverShoppingSearch({ query, limit, page, sort, clientId = n
     throw error;
   }
 
-  const parsed = parseNaverShoppingSearchHtml(body, { query, limit });
+  let parsed;
+  try {
+    parsed = parseNaverShoppingSearchPayload(JSON.parse(body), { query, limit });
+  } catch {
+    parsed = parseNaverShoppingSearchHtml(body, { query, limit });
+  }
+
   return {
     ...parsed,
     upstream: {
       url: url.toString(),
       status_code: response.status,
-      content_type: response.headers.get("content-type") || null
+      content_type: response.headers.get("content-type") || null,
+      provider: "naver-shopping-bff"
     }
   };
 }
@@ -691,5 +855,6 @@ module.exports = {
   fetchNaverShoppingSearch,
   normalizeNaverShoppingOpenApiPayload,
   normalizeNaverShoppingSearchQuery,
+  parseNaverShoppingSearchPayload,
   parseNaverShoppingSearchHtml
 };

@@ -15,10 +15,10 @@
 
 ## 공식/공개 표면
 
-- 공개 검색 화면: `https://search.shopping.naver.com/search/all?query=<검색어>`
+- 공개 BFF JSON: `https://ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui`
 - 프록시 endpoint: `GET /v1/naver-shopping/search`
 
-프록시에 `NAVER_SEARCH_CLIENT_ID`와 `NAVER_SEARCH_CLIENT_SECRET`이 있으면 네이버 검색 Open API의 쇼핑 검색(`shop.json`)을 우선 사용한다. 키가 없으면 네이버 쇼핑 웹 프론트엔드가 노출하는 공개 검색 화면을 읽는다. 프론트엔드 fallback은 스키마 변경이나 bot-block 응답이 있을 수 있으며, 접근 통제를 우회하지 않는다.
+프록시에 `NAVER_SEARCH_CLIENT_ID`와 `NAVER_SEARCH_CLIENT_SECRET`이 있으면 네이버 검색 Open API의 쇼핑 검색(`shop.json`)을 우선 사용한다. 키가 없으면 네이버 검색/쇼핑 프론트엔드가 사용하는 공개 BFF JSON endpoint를 단일 요청으로 읽는다. BFF fallback은 스키마 변경이나 bot-block 응답이 있을 수 있으며, 접근 통제를 우회하지 않는다.
 
 ## 기본 호출
 
@@ -64,7 +64,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
       "purchase_count": 56,
       "score": 4.8,
       "is_ad": false,
-      "source": "embedded-json"
+      "source": "bff-json"
     }
   ],
   "query": {
@@ -75,7 +75,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
   },
   "meta": {
     "query": "애플 어댑터",
-    "extraction": "embedded-json",
+    "extraction": "bff-json",
     "item_count": 1
   }
 }
@@ -92,6 +92,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
 ## 운영 팁
 
 - 모델명, 용량, 색상, 세대 정보를 검색어에 포함하면 가격 비교 품질이 좋아진다.
-- 네이버가 특정 서버/IP에 418/403을 반환하면 같은 요청을 반복해 우회하지 말고 사용자에게 수동 확인 또는 검색어 조정을 안내한다.
+- 네이버가 특정 서버/IP에 418/403 등을 반환하면 같은 요청을 반복해 우회하지 말고 사용자에게 수동 확인 또는 검색어 조정을 안내한다.
+- no-key fallback은 기존 `search.shopping.naver.com/search/all` HTML 페이지가 아니라 `ns-portal.shopping.naver.com/api/v2/shopping-paged-slot` JSON path를 사용한다.
 - proxy route는 public/read-only/no-auth이며 cache와 rate limit을 사용한다.
 - 운영 환경에는 가능하면 `NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET`을 설정해 공식 Search API 경로를 우선 사용한다.

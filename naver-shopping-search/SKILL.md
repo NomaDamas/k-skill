@@ -1,6 +1,6 @@
 ---
 name: naver-shopping-search
-description: 네이버 쇼핑 공개 검색 화면을 k-skill-proxy로 조회해 상품 후보, 최저가, 판매처 링크를 보수적으로 가격비교한다.
+description: 네이버 쇼핑 공개 BFF JSON을 k-skill-proxy로 조회해 상품 후보, 최저가, 판매처 링크를 보수적으로 가격비교한다.
 license: MIT
 metadata:
   category: retail
@@ -12,7 +12,7 @@ metadata:
 
 ## What this skill does
 
-`k-skill-proxy`가 네이버 검색 Open API 쇼핑 검색(`shop.json`)을 우선 사용하고, 키가 없을 때만 네이버 쇼핑의 로그인 없는 공개 검색 화면을 **단일 검색 요청**으로 가져와 HTML/embedded JSON에서 상품 후보를 정규화한다.
+`k-skill-proxy`가 네이버 검색 Open API 쇼핑 검색(`shop.json`)을 우선 사용하고, 키가 없을 때만 네이버 쇼핑/검색의 로그인 없는 공개 BFF JSON endpoint를 **단일 검색 요청**으로 가져와 상품 후보를 정규화한다.
 
 - 상품명/검색어로 네이버 쇼핑 후보를 찾는다.
 - 현재 노출 가격, 판매처, 링크, 이미지, 리뷰/구매 수(노출될 때만)를 정리한다.
@@ -68,7 +68,7 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-http://127.0.0.1:4020}/v1/naver-shoppi
 - `items[].url`
 - `items[].image_url`
 - `items[].review_count`, `purchase_count`, `score` (노출될 때만)
-- `meta.extraction` — `embedded-json`, `html-card`, `none`
+- `meta.extraction` — `naver-openapi`, `bff-json`, `embedded-json`, `html-card`, `none`
 
 ## Workflow
 
@@ -87,8 +87,9 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-http://127.0.0.1:4020}/v1/naver-shoppi
 
 ## Failure modes
 
-- 공식 Search API 키가 없어서 프론트엔드 fallback을 사용할 때는 네이버가 특정 IP/환경에 418/403 등 bot-block 응답을 줄 수 있다.
-- 검색 결과 HTML/embedded JSON 스키마는 비공식 프론트엔드 표면이라 바뀔 수 있다.
+- 공식 Search API 키가 없어서 BFF fallback을 사용할 때는 네이버가 특정 IP/환경에 418/403 등 bot-block 응답을 줄 수 있다.
+- no-key fallback은 `ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui` 공개 JSON path를 사용한다.
+- 검색 결과 BFF JSON 스키마는 비공식 프론트엔드 표면이라 바뀔 수 있다.
 - 가격/품절/배송 정보는 실시간으로 바뀐다.
 - 프록시는 접근 통제 우회를 하지 않는다. 공식 Search API 또는 단일 공개 검색 요청 + 캐시 + rate limit만 사용한다.
 

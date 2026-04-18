@@ -5,6 +5,7 @@ const {
   buildNaverShoppingSearchUrl,
   normalizeNaverShoppingOpenApiPayload,
   normalizeNaverShoppingSearchQuery,
+  parseNaverShoppingSearchPayload,
   parseNaverShoppingSearchHtml
 } = require("../src/naver-shopping");
 const { buildServer } = require("../src/server");
@@ -100,11 +101,73 @@ test("normalizeNaverShoppingSearchQuery validates q/query and clamps limit", () 
   });
 
   const url = buildNaverShoppingSearchUrl({ query: "아이폰 케이스", limit: 40, page: 1, sort: "price_asc" });
-  assert.equal(url.hostname, "search.shopping.naver.com");
-  assert.equal(url.pathname, "/search/all");
+  assert.equal(url.hostname, "ns-portal.shopping.naver.com");
+  assert.equal(url.pathname, "/api/v2/shopping-paged-slot");
   assert.equal(url.searchParams.get("query"), "아이폰 케이스");
-  assert.equal(url.searchParams.get("pagingSize"), "40");
-  assert.equal(url.searchParams.get("sort"), "price_asc");
+  assert.equal(url.searchParams.get("source"), "shp_gui");
+});
+
+test("parseNaverShoppingSearchPayload maps public BFF shopping-paged-slot cards", () => {
+  const result = parseNaverShoppingSearchPayload({
+    data: [
+      {
+        page: 1,
+        pageSize: 8,
+        slots: [
+          {
+            slotType: "CARD",
+            data: {
+              rank: 1,
+              nvMid: 89011025048,
+              productNameOrg: "애플 <mark>에어팟</mark> 4세대 ANC",
+              productUrl: {
+                pcUrl: "https://smartstore.naver.com/main/products/11466514676",
+                mobileUrl: "https://m.smartstore.naver.com/main/products/11466514676"
+              },
+              productClickUrl: {
+                pcUrl: "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=89011025048"
+              },
+              images: [
+                {
+                  imageUrl: "https://shopping-phinf.pstatic.net/main_8901102/89011025048.jpg",
+                  width: 1000,
+                  height: 1000
+                }
+              ],
+              mallName: "오렌지스펙트럼",
+              salePrice: 269000,
+              discountedSalePrice: 254900,
+              totalReviewCount: 820,
+              purchaseCount: 1214,
+              averageReviewScore: 4.91,
+              isBrandStore: true
+            }
+          }
+        ]
+      }
+    ]
+  }, { query: "에어팟", limit: 10 });
+
+  assert.equal(result.items.length, 1);
+  assert.deepEqual(result.items[0], {
+    rank: 1,
+    product_id: "89011025048",
+    title: "애플 에어팟 4세대 ANC",
+    price: 254900,
+    high_price: 269000,
+    price_text: "254,900원",
+    mall_name: "오렌지스펙트럼",
+    url: "https://smartstore.naver.com/main/products/11466514676",
+    image_url: "https://shopping-phinf.pstatic.net/main_8901102/89011025048.jpg",
+    review_count: 820,
+    purchase_count: 1214,
+    score: 4.91,
+    is_ad: false,
+    is_brand_store: true,
+    source: "bff-json"
+  });
+  assert.equal(result.meta.extraction, "bff-json");
+  assert.equal(result.meta.item_count, 1);
 });
 
 
@@ -149,29 +212,35 @@ test("naver shopping search endpoint returns normalized comparison payload from 
   global.fetch = async (url, options = {}) => {
     fetchCalls.push({ url: String(url), headers: options.headers });
     return new Response(
-      nextDataHtml({
-        props: {
-          pageProps: {
-            initialState: {
-              products: {
-                list: [
-                  {
-                    item: {
-                      productId: "987",
-                      productTitle: "네이버 테스트 상품",
-                      lowPrice: "12,340원",
-                      mallName: "테스트몰",
-                      productUrl: "https://search.shopping.naver.com/catalog/987",
-                      imgUrl: "https://shop-phinf.pstatic.net/test.jpg"
+      JSON.stringify({
+        data: [
+          {
+            page: 1,
+            pageSize: 8,
+            slots: [
+              {
+                slotType: "CARD",
+                data: {
+                  nvMid: "987",
+                  productTitle: "네이버 테스트 상품",
+                  salePrice: "12,340원",
+                  discountedSalePrice: "11,990원",
+                  mallName: "테스트몰",
+                  productUrl: {
+                    pcUrl: "https://smartstore.naver.com/test/products/987"
+                  },
+                  images: [
+                    {
+                      imageUrl: "https://shop-phinf.pstatic.net/test.jpg"
                     }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           }
-        }
+        ]
       }),
-      { status: 200, headers: { "content-type": "text/html;charset=UTF-8" } }
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
     );
   };
 
@@ -198,15 +267,17 @@ test("naver shopping search endpoint returns normalized comparison payload from 
   assert.equal(body.query.sort, "price_asc");
   assert.equal(body.items.length, 1);
   assert.equal(body.items[0].title, "네이버 테스트 상품");
-  assert.equal(body.items[0].price, 12340);
+  assert.equal(body.items[0].price, 11990);
+  assert.equal(body.items[0].high_price, 12340);
   assert.equal(body.items[0].mall_name, "테스트몰");
   assert.equal(body.proxy.cache.hit, false);
   assert.equal(body.upstream.status_code, 200);
+  assert.equal(body.upstream.provider, "naver-shopping-bff");
   assert.equal(fetchCalls.length, 1);
-  assert.match(fetchCalls[0].url, /^https:\/\/search\.shopping\.naver\.com\/search\/all\?/);
-  assert.match(fetchCalls[0].url, /pagingSize=40/);
+  assert.match(fetchCalls[0].url, /^https:\/\/ns-portal\.shopping\.naver\.com\/api\/v2\/shopping-paged-slot\?/);
+  assert.match(fetchCalls[0].url, /source=shp_gui/);
   assert.match(fetchCalls[0].headers["user-agent"], /Mozilla\/5\.0/);
-  assert.equal(fetchCalls[0].headers.referer, "https://search.shopping.naver.com/");
+  assert.match(fetchCalls[0].headers.referer, /^https:\/\/search\.naver\.com\/search\.naver\?/);
 });
 
 
