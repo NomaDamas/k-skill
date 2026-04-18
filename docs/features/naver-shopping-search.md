@@ -44,7 +44,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
 - `limit`: 반환 개수. 기본 10, 최대 40.
 - `page`: 페이지. 기본 1. no-key BFF fallback은 BFF `page`를 요청하고 해당 페이지 카드만 정규화한다.
 - `sort`: `rel`, `date`, `price_asc`, `price_dsc`, `review`.
-  - 공식 Search API 경로는 네이버 API sort를 그대로 사용한다.
+  - 공식 Search API 경로는 네이버 API sort를 사용한다. 다만 공식 API가 `review` 정렬을 제공하지 않으므로 `review` 요청은 upstream `sort=sim`으로 조회하고 `meta.sort_applied: "unsupported"`, `meta.upstream_sort: "sim"`으로 표시한다.
   - no-key BFF fallback은 `rel`은 BFF 노출 순서를 유지하고, `price_asc`/`price_dsc`/`review`는 선택된 BFF 페이지 안에서 로컬 정렬한다.
   - BFF에는 날짜 정렬용 카드 필드가 없어 no-key `date` 요청은 `meta.sort_applied: "unsupported"`로 표시하고 BFF 노출 순서를 유지한다.
 

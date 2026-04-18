@@ -507,3 +507,70 @@ test("naver shopping search endpoint prefers official Search API when server key
   assert.equal(fetchCalls[0].headers["X-Naver-Client-Id"], "client-id");
   assert.equal(fetchCalls[0].headers["X-Naver-Client-Secret"], "client-secret");
 });
+
+test("naver shopping official Search API marks review sort as unsupported instead of silently applying relevance", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url, options = {}) => {
+    fetchCalls.push({ url: String(url), headers: options.headers });
+    return new Response(
+      JSON.stringify({
+        lastBuildDate: "Sat, 18 Apr 2026 20:30:00 +0900",
+        total: 2,
+        start: 1,
+        display: 2,
+        items: [
+          {
+            title: "리뷰 정렬 요청 첫 번째 상품",
+            link: "https://search.shopping.naver.com/catalog/333",
+            image: "https://shopping-phinf.pstatic.net/main_333.jpg",
+            lprice: "30000",
+            mallName: "공식몰A",
+            productId: "333"
+          },
+          {
+            title: "리뷰 정렬 요청 두 번째 상품",
+            link: "https://search.shopping.naver.com/catalog/444",
+            image: "https://shopping-phinf.pstatic.net/main_444.jpg",
+            lprice: "20000",
+            mallName: "공식몰B",
+            productId: "444"
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      NAVER_SEARCH_CLIENT_ID: "client-id",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=%EB%A6%AC%EB%B7%B0%20%EC%A0%95%EB%A0%AC&limit=5&sort=review"
+  });
+
+  assert.equal(response.statusCode, 200);
+  const body = response.json();
+  assert.equal(body.query.sort, "review");
+  assert.equal(body.upstream.provider, "naver-search-api");
+  assert.equal(body.meta.extraction, "naver-openapi");
+  assert.equal(body.meta.sort, "review");
+  assert.equal(body.meta.upstream_sort, "sim");
+  assert.equal(body.meta.sort_applied, "unsupported");
+  assert.deepEqual(body.items.map((item) => item.product_id), ["333", "444"]);
+  assert.equal(fetchCalls.length, 1);
+  const upstreamUrl = new URL(fetchCalls[0].url);
+  assert.equal(upstreamUrl.hostname, "openapi.naver.com");
+  assert.equal(upstreamUrl.searchParams.get("sort"), "sim");
+});

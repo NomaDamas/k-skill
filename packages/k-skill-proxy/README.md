@@ -28,7 +28,7 @@
 - `KEDU_INFO_KEY` — 프록시 서버 쪽 나이스(NEIS) 교육정보 개방 포털 Open API 인증키 (`school-search`, `school-meal`)
 - `FOODSAFETYKOREA_API_KEY` — 프록시 서버 쪽 식품안전나라 회수정보 live key (`mfds/food-safety/search`; 없으면 sample feed fallback)
 - `KRX_API_KEY` — 프록시 서버 쪽 KRX Open API upstream key
-- `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 선택: 네이버 검색 Open API 쇼핑 검색(`shop.json`) 키. 설정되면 네이버 쇼핑 route가 bot-block 위험이 낮은 공식 API를 우선 사용하고, 없으면 공개 BFF JSON(`ns-portal.shopping.naver.com/api/v2/shopping-paged-slot`) 파서로 fallback. no-key fallback은 `page`를 BFF에 전달해 해당 페이지를 고르고, `price_asc`/`price_dsc`/`review`는 선택 페이지 안에서 로컬 정렬하며, `date`는 `meta.sort_applied: "unsupported"`로 표시
+- `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 선택: 네이버 검색 Open API 쇼핑 검색(`shop.json`) 키. 설정되면 네이버 쇼핑 route가 bot-block 위험이 낮은 공식 API를 우선 사용하고, 없으면 공개 BFF JSON(`ns-portal.shopping.naver.com/api/v2/shopping-paged-slot`) 파서로 fallback. 공식 API는 `review` 정렬을 지원하지 않아 `meta.sort_applied: "unsupported"`로 표시한다. no-key fallback은 `page`를 BFF에 전달해 해당 페이지를 고르고, `price_asc`/`price_dsc`/`review`는 선택 페이지 안에서 로컬 정렬하며, `date`는 `meta.sort_applied: "unsupported"`로 표시
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — 기본 `4020`
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`

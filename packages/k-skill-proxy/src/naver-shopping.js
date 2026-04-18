@@ -643,6 +643,13 @@ function normalizeOpenApiSort(sort) {
   return "sim";
 }
 
+function getOpenApiSortApplied(sort) {
+  if (sort === "review") {
+    return "unsupported";
+  }
+  return "upstream";
+}
+
 function buildNaverShoppingOpenApiUrl({ query, limit = DEFAULT_LIMIT, page = 1, sort = "rel" } = {}) {
   const url = new URL(NAVER_SHOPPING_OPEN_API_URL);
   const start = ((Math.max(page, 1) - 1) * limit) + 1;
@@ -653,10 +660,12 @@ function buildNaverShoppingOpenApiUrl({ query, limit = DEFAULT_LIMIT, page = 1, 
   return url;
 }
 
-function normalizeNaverShoppingOpenApiPayload(payload, { query = null, limit = DEFAULT_LIMIT } = {}) {
+function normalizeNaverShoppingOpenApiPayload(payload, { query = null, limit = DEFAULT_LIMIT, sort = "rel" } = {}) {
   const items = Array.isArray(payload?.items) ? payload.items : [];
   const normalized = [];
   const seen = new Set();
+  const normalizedSort = ALLOWED_SORTS.has(sort) ? sort : "rel";
+  const upstreamSort = normalizeOpenApiSort(normalizedSort);
 
   for (const item of items) {
     if (normalized.length >= limit) {
@@ -711,7 +720,10 @@ function normalizeNaverShoppingOpenApiPayload(payload, { query = null, limit = D
       total: parseDigits(payload?.total) ?? 0,
       start: parseDigits(payload?.start) ?? null,
       display: parseDigits(payload?.display) ?? null,
-      last_build_date: normalizeString(payload?.lastBuildDate)
+      last_build_date: normalizeString(payload?.lastBuildDate),
+      sort: normalizedSort,
+      upstream_sort: upstreamSort,
+      sort_applied: getOpenApiSortApplied(normalizedSort)
     }
   };
 }
@@ -756,7 +768,7 @@ async function fetchNaverShoppingOpenApiSearch({
     throw error;
   }
 
-  const parsed = normalizeNaverShoppingOpenApiPayload(payload, { query, limit });
+  const parsed = normalizeNaverShoppingOpenApiPayload(payload, { query, limit, sort });
   return {
     ...parsed,
     upstream: {

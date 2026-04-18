@@ -59,7 +59,7 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-http://127.0.0.1:4020}/v1/naver-shoppi
 - `limit` — 반환 개수. 기본 10, 최대 40으로 clamp.
 - `page` — 페이지. 기본 1. no-key BFF fallback에서는 BFF의 `page`를 요청하고 해당 페이지 카드만 정규화한다.
 - `sort` — `rel`, `date`, `price_asc`, `price_dsc`, `review` 중 하나. 알 수 없는 값은 `rel`.
-  - 공식 Search API 경로는 네이버 API sort를 사용한다.
+  - 공식 Search API 경로는 네이버 API sort를 사용한다. 단, 공식 API가 `review` 정렬을 지원하지 않아 `review` 요청은 upstream `sort=sim`으로 조회하고 `meta.sort_applied: "unsupported"`, `meta.upstream_sort: "sim"`으로 표시한다.
   - no-key BFF fallback은 `rel`은 BFF 노출 순서를 유지하고, `price_asc`/`price_dsc`/`review`는 선택된 BFF 페이지 카드 안에서 로컬 정렬한다. BFF 카드에 날짜 필드가 없어 `date`는 `meta.sort_applied: "unsupported"`로 표시하고 BFF 노출 순서를 유지한다.
 
 응답 주요 필드:
@@ -71,7 +71,7 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-http://127.0.0.1:4020}/v1/naver-shoppi
 - `items[].image_url`
 - `items[].review_count`, `purchase_count`, `score` (노출될 때만)
 - `meta.extraction` — `naver-openapi`, `bff-json`, `embedded-json`, `html-card`, `none`
-- `meta.sort_applied` — BFF fallback에서 `upstream`, `local`, `unsupported` 중 하나
+- `meta.sort_applied` — `upstream`, `local`, `unsupported` 중 하나
 
 ## Workflow
 
