@@ -3,7 +3,11 @@ const assert = require("node:assert/strict");
 
 const {
   buildServer,
+  normalizeData4LibraryBookDetailQuery,
+  normalizeData4LibraryBookExistsQuery,
   normalizeData4LibraryBookSearchQuery,
+  normalizeData4LibraryLibrariesByBookQuery,
+  normalizeData4LibraryLibrarySearchQuery,
   proxyAirKoreaRequest,
   proxyData4LibraryRequest,
   proxyHrfcoWaterLevelRequest,
@@ -2892,6 +2896,70 @@ test("data4library book-search normalizes query aliases and bounds pagination", 
   );
 });
 
+test("data4library remaining query normalizers preserve narrow aliases", () => {
+  assert.deepEqual(
+    normalizeData4LibraryBookDetailQuery({
+      isbn: "978-8971998557",
+      loanInfo: "y"
+    }),
+    {
+      isbn13: "9788971998557",
+      loaninfoYN: "Y"
+    }
+  );
+
+  assert.deepEqual(
+    normalizeData4LibraryLibrariesByBookQuery({
+      isbn13: "9788971998557",
+      region: "11",
+      detailRegion: "11010",
+      page: "2",
+      limit: "250"
+    }),
+    {
+      isbn: "9788971998557",
+      region: "11",
+      pageNo: 2,
+      pageSize: 100,
+      dtl_region: "11010"
+    }
+  );
+
+  assert.deepEqual(
+    normalizeData4LibraryLibrarySearchQuery({
+      libraryCode: "111001",
+      region: "11",
+      detailRegion: "11010",
+      page: "3",
+      limit: "20"
+    }),
+    {
+      pageNo: 3,
+      pageSize: 20,
+      libCode: "111001",
+      region: "11",
+      dtl_region: "11010"
+    }
+  );
+
+  assert.throws(
+    () => normalizeData4LibraryBookDetailQuery({ isbn13: "9788971998557", loanInfo: "maybe" }),
+    /loaninfoYN must be Y or N/
+  );
+  assert.throws(
+    () => normalizeData4LibraryBookExistsQuery({ libraryCode: "lib-1", isbn13: "9788971998557" }),
+    /Provide valid libraryCode/
+  );
+  assert.throws(
+    () => normalizeData4LibraryLibrariesByBookQuery({ isbn13: "9788971998557" }),
+    /Provide region/
+  );
+  assert.throws(
+    () => normalizeData4LibraryLibrarySearchQuery({ detailRegion: "seoul" }),
+    /Provide valid dtl_region/
+  );
+});
+
 test("data4library proxy helper injects authKey and strips caller auth overrides", async () => {
   const fetchCalls = [];
   const upstream = await proxyData4LibraryRequest({
@@ -3005,6 +3073,98 @@ test("data4library book-search endpoint proxies JSON and caches normalized query
   assert.equal(upstream.searchParams.get("authKey"), "server-key");
   assert.equal(upstream.searchParams.get("format"), "json");
   assert.equal(upstream.searchParams.get("authKey") === "caller-key", false);
+});
+
+test("data4library detail, libraries-by-book, and library-search endpoints proxy expected operations", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    return new Response(
+      JSON.stringify({
+        response: {
+          echoedPath: new URL(text).pathname
+        }
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      DATA4LIBRARY_AUTH_KEY: "server-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const detail = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-detail?isbn=978-8971998557&loanInfo=y&authKey=caller-key&format=xml"
+  });
+  const librariesByBook = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/libraries-by-book?isbn13=9788971998557&region=11&detailRegion=11010&page=2&limit=20"
+  });
+  const librarySearch = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/library-search?libraryCode=111001&region=11&detailRegion=11010&page=3&pageSize=30"
+  });
+
+  assert.equal(detail.statusCode, 200);
+  assert.equal(librariesByBook.statusCode, 200);
+  assert.equal(librarySearch.statusCode, 200);
+  assert.equal(fetchCalls.length, 3);
+
+  const [detailUrl, librariesByBookUrl, librarySearchUrl] = fetchCalls.map((entry) => new URL(entry));
+  assert.equal(detailUrl.origin + detailUrl.pathname, "https://data4library.kr/api/srchDtlList");
+  assert.equal(detailUrl.searchParams.get("isbn13"), "9788971998557");
+  assert.equal(detailUrl.searchParams.get("loaninfoYN"), "Y");
+
+  assert.equal(librariesByBookUrl.origin + librariesByBookUrl.pathname, "https://data4library.kr/api/libSrchByBook");
+  assert.equal(librariesByBookUrl.searchParams.get("isbn"), "9788971998557");
+  assert.equal(librariesByBookUrl.searchParams.get("region"), "11");
+  assert.equal(librariesByBookUrl.searchParams.get("dtl_region"), "11010");
+  assert.equal(librariesByBookUrl.searchParams.get("pageNo"), "2");
+  assert.equal(librariesByBookUrl.searchParams.get("pageSize"), "20");
+
+  assert.equal(librarySearchUrl.origin + librarySearchUrl.pathname, "https://data4library.kr/api/libSrch");
+  assert.equal(librarySearchUrl.searchParams.get("libCode"), "111001");
+  assert.equal(librarySearchUrl.searchParams.get("region"), "11");
+  assert.equal(librarySearchUrl.searchParams.get("dtl_region"), "11010");
+  assert.equal(librarySearchUrl.searchParams.get("pageNo"), "3");
+  assert.equal(librarySearchUrl.searchParams.get("pageSize"), "30");
+
+  for (const upstream of [detailUrl, librariesByBookUrl, librarySearchUrl]) {
+    assert.equal(upstream.searchParams.get("authKey"), "server-key");
+    assert.equal(upstream.searchParams.get("format"), "json");
+  }
+
+  assert.deepEqual(detail.json().query, {
+    isbn13: "9788971998557",
+    loaninfoYN: "Y"
+  });
+  assert.deepEqual(librariesByBook.json().query, {
+    isbn: "9788971998557",
+    region: "11",
+    pageNo: 2,
+    pageSize: 20,
+    dtl_region: "11010"
+  });
+  assert.deepEqual(librarySearch.json().query, {
+    pageNo: 3,
+    pageSize: 30,
+    libCode: "111001",
+    region: "11",
+    dtl_region: "11010"
+  });
 });
 
 test("data4library book-exists endpoint requires library code and isbn13 then proxies", async (t) => {
