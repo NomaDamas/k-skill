@@ -9,7 +9,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "lint": "node --check src/airkorea.js && node --check src/bluer.js && node --check src/hrfco.js && node --check src/krx-stock.js && node --check src/mfds.js && node --check src/molit.js && node --check src/region-lookup.js && node --check src/server.js && node --check test/airkorea.test.js && node --check test/hrfco.test.js && node --check test/molit.test.js && node --check test/region-lookup.test.js && node --check test/server.test.js",
+    "lint": "node --check src/airkorea.js && node --check src/bluer.js && node --check src/hrfco.js && node --check src/krx-stock.js && node --check src/mfds.js && node --check src/molit.js && node --check src/naver-shopping.js && node --check src/region-lookup.js && node --check src/server.js && node --check test/airkorea.test.js && node --check test/hrfco.test.js && node --check test/molit.test.js && node --check test/naver-shopping.test.js && node --check test/region-lookup.test.js && node --check test/server.test.js",
     "test": "node --test"
   },
   "dependencies": {

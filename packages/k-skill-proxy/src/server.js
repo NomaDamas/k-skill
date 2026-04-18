@@ -14,6 +14,7 @@ const {
   normalizeMfdsFoodSafetyQuery
 } = require("./mfds");
 const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
+const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const { searchRegionCode } = require("./region-lookup");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
 const AIR_KOREA_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
@@ -150,6 +151,8 @@ function buildConfig(env = process.env) {
     foodsafetyKoreaApiKey: trimOrNull(env.FOODSAFETYKOREA_API_KEY),
     keduInfoKey: trimOrNull(env.KEDU_INFO_KEY),
     krxApiKey: trimOrNull(env.KRX_API_KEY),
+    naverSearchClientId: trimOrNull(env.NAVER_SEARCH_CLIENT_ID ?? env.NAVER_CLIENT_ID),
+    naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -948,7 +951,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       molitConfigured: Boolean(config.molitApiKey),
       foodsafetyKoreaConfigured: Boolean(config.foodsafetyKoreaApiKey),
       neisSchoolMealConfigured: Boolean(config.keduInfoKey),
-      krxConfigured: Boolean(config.krxApiKey)
+      krxConfigured: Boolean(config.krxApiKey),
+      naverShoppingConfigured: true,
+      naverSearchApiConfigured: Boolean(config.naverSearchClientId && config.naverSearchClientSecret)
     },
     auth: {
       tokenRequired: false
@@ -2067,6 +2072,94 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
+
+  app.get("/v1/naver-shopping/search", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeNaverShoppingSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "naver-shopping-search",
+      q: normalized.query.toLowerCase(),
+      limit: normalized.limit,
+      page: normalized.page,
+      sort: normalized.sort
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetchNaverShoppingSearch({
+        ...normalized,
+        clientId: config.naverSearchClientId,
+        clientSecret: config.naverSearchClientSecret
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      const payload = {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+      if (error.upstreamStatusCode) {
+        payload.upstream = {
+          status_code: error.upstreamStatusCode,
+          body_snippet: error.upstreamBodySnippet || null
+        };
+      }
+      return payload;
+    }
+
+    const payload = {
+      items: result.items,
+      query: {
+        q: normalized.query,
+        limit: normalized.limit,
+        page: normalized.page,
+        sort: normalized.sort
+      },
+      meta: result.meta,
+      upstream: result.upstream,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
   app.get("/v1/neis/school-search", async (request, reply) => {
     let normalized;
 
@@ -2528,6 +2621,7 @@ module.exports = {
   normalizeOpinetDetailQuery,
   normalizeNeisSchoolMealQuery,
   normalizeNeisSchoolSearchQuery,
+  normalizeNaverShoppingSearchQuery,
   normalizeRealEstateQuery,
   normalizeRegionCodeQuery,
   normalizeSeoulSubwayQuery,
@@ -2536,6 +2630,7 @@ module.exports = {
   proxyNeisSchoolMealRequest,
   proxyNeisSchoolInfoRequest,
   proxyKmaWeatherRequest,
+  fetchNaverShoppingSearch,
   proxyOpinetRequest,
   proxySeoulSubwayRequest,
   resolveLatestKmaForecastBase,

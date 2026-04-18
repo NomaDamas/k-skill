@@ -133,3 +133,6 @@
 - SK렌터카 다이렉트 타고BUY inventory page: https://www.skdirect.co.kr/tb
 - 롯데오토옥션 공개 메인: https://www.lotteautoauction.net/hp/pub/cmm/viewMain.do
 - 레드캡렌터카 business rent portal: https://biz.redcap.co.kr/rent/
+
+- Naver Shopping public search frontend: `https://search.shopping.naver.com/search/all` (네이버 쇼핑 가격비교 스킬의 공개 검색 화면)
+- Naver Developers Search API shopping docs: https://developers.naver.com/docs/serviceapi/search/shopping/shopping.md
