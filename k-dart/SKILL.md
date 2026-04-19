@@ -40,8 +40,7 @@ metadata:
 
 DART API 대부분은 `corp_code`(8자리 고유번호)를 요구한다. 사용자가 종목명이나 종목코드(6자리)만 제공하면:
 
-1. `korean-stock-search` 스킬로 종목명/종목코드를 검색해 정확한 회사명과 종목코드를 확인한다.
-2. **고유번호 전체 목록(`corpCode.xml`)을 다운로드**해 `corp_code`를 조회한다:
+1. **고유번호 전체 목록(`corpCode.xml`)을 다운로드**해 회사명 또는 종목코드로 `corp_code`를 조회한다:
 
 **macOS / Linux (bash):**
 
@@ -80,11 +79,9 @@ $xml.result.list | Where-Object { $_.corp_name -like '*삼성전자*' -and $_.st
 # 출력: 00126380  005930  삼성전자
 ```
 
-3. 획득한 `corp_code`로 나머지 API 호출
+2. 획득한 `corp_code`로 나머지 API 호출
 
-> **참고:** `/tmp/dart_corp/CORPCODE.xml`이 이미 있으면 재다운로드 없이 재사용한다. 파일은 약 30MB이며 전체 법인 목록(상장+비상장)을 포함한다.
-
-`korean-stock-search` 스킬과 함께 사용하면 종목코드↔회사명 매핑을 별도로 관리할 필요가 없다.
+> **참고:** `/tmp/dart_corp/CORPCODE.xml`이 이미 있으면 재다운로드 없이 재사용한다. 파일은 약 30MB이며 전체 법인 목록(상장+비상장)을 포함한다. `corpCode.xml`에 회사명·종목코드·고유번호가 모두 포함되어 있으므로 별도 스킬 연계 없이 단독으로 corp_code를 확보할 수 있다.
 
 ## Supported endpoints
 
