@@ -1182,11 +1182,16 @@ test("coupang-product-search skill and docs use retention-corp coupang_partners 
     assert.match(doc, /coupang_partners_mcp\.py\s+init/);
     assert.match(doc, /search_coupang_products/);
     assert.match(doc, /로켓배송/);
+    assert.match(doc, /a\.retn\.kr\/v1\/public\/assist/);
+    assert.match(doc, /OPENCLAW_SHOPPING_/);
+    assert.match(doc, /(파트너스|어필리에이트|affiliate)/i);
+    assert.match(doc, /(hosted\s*fallback|호스티드\s*폴백|호스티드\s*fallback)/i);
     assert.doesNotMatch(doc, /yuju777-coupang-mcp\.hf\.space\/mcp/);
     assert.doesNotMatch(doc, /github\.com\/uju777\/coupang-mcp/);
   }
 
   assert.match(sources, /retention-corp\/coupang_partners/);
+  assert.match(sources, /a\.retn\.kr\/v1\/public\/assist/);
   assert.doesNotMatch(sources, /yuju777-coupang-mcp\.hf\.space\/mcp/);
 });
 
