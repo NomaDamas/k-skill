@@ -2693,3 +2693,123 @@ test("repository docs advertise the library-book-search skill", () => {
     assert.match(doc, /사용자.*시크릿.*없/);
   }
 });
+
+test("repository docs advertise the korean-privacy-terms thin-wrapper skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-privacy-terms.md");
+  const skillPath = path.join(repoRoot, "korean-privacy-terms", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-privacy-terms.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-privacy-terms/SKILL.md to exist");
+  assert.match(readme, /\| 한국 개인정보처리방침·이용약관 자동 생성 \|/);
+  assert.match(
+    readme,
+    /\[한국 개인정보처리방침·이용약관 자동 생성 가이드\]\(docs\/features\/korean-privacy-terms\.md\)/,
+  );
+  assert.match(install, /--skill korean-privacy-terms/);
+  assert.match(roadmap, /한국 개인정보처리방침.이용약관 스킬 출시/);
+  assert.match(sources, /https:\/\/github\.com\/kimlawtech\/korean-privacy-terms/);
+  assert.match(sources, /Apache-2\.0/);
+});
+
+test("korean-privacy-terms skill is a thin wrapper that cites upstream and enforces a legal disclaimer", () => {
+  const skillPath = path.join(repoRoot, "korean-privacy-terms", "SKILL.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected korean-privacy-terms/SKILL.md to exist");
+
+  const skill = read(path.join("korean-privacy-terms", "SKILL.md"));
+
+  assert.match(skill, /^name: korean-privacy-terms$/m);
+  assert.match(skill, /^license: Apache-2\.0$/m);
+  assert.match(skill, /^description: .*개인정보처리방침.*이용약관.*$/m);
+  assert.match(
+    skill,
+    /\[?kimlawtech\/korean-privacy-terms\]?.*https:\/\/github\.com\/kimlawtech\/korean-privacy-terms/,
+  );
+  assert.match(skill, /Apache-2\.0/);
+  assert.match(skill, /참고용 초안/);
+  assert.match(skill, /법률 자문/);
+  assert.match(skill, /변호사 검토/);
+  assert.match(skill, /2026\.9\.11/);
+  assert.match(skill, /되묻/);
+  assert.match(skill, /개인정보처리방침/);
+  assert.match(skill, /이용약관/);
+  assert.match(skill, /쿠키 배너/);
+  assert.match(skill, /~\/\.claude\/skills\/korean-privacy-terms/);
+  assert.match(skill, /~\/\.agents\/skills\/korean-privacy-terms/);
+  assert.match(skill, /scripts\/install\.sh/);
+  assert.match(skill, /scripts\/upstream\.pin/);
+  assert.match(skill, /DISCLAIMER\.md/);
+  assert.match(skill, /## Notes/);
+  assert.doesNotMatch(skill, /AskUserQuestion/);
+});
+
+test("korean-privacy-terms preserves upstream NOTICE and DISCLAIMER for Apache-2.0 compliance", () => {
+  const noticePath = path.join(repoRoot, "korean-privacy-terms", "NOTICE");
+  const disclaimerPath = path.join(repoRoot, "korean-privacy-terms", "DISCLAIMER.md");
+
+  assert.ok(fs.existsSync(noticePath), "expected korean-privacy-terms/NOTICE to exist");
+  assert.ok(fs.existsSync(disclaimerPath), "expected korean-privacy-terms/DISCLAIMER.md to exist");
+
+  const notice = fs.readFileSync(noticePath, "utf8");
+  const disclaimer = fs.readFileSync(disclaimerPath, "utf8");
+
+  assert.match(notice, /korean-privacy-terms/);
+  assert.match(notice, /Copyright 2026 kimlawtech/);
+  assert.match(notice, /Apache License, Version 2\.0/);
+  assert.match(notice, /kimlawtech/i);
+
+  assert.match(disclaimer, /한국어/);
+  assert.match(disclaimer, /English/);
+  assert.match(disclaimer, /참고용 초안/);
+  assert.match(disclaimer, /reference drafts/i);
+  assert.match(disclaimer, /legal advice/i);
+  assert.match(disclaimer, /개인정보보호법/);
+});
+
+test("korean-privacy-terms ships an install.sh wrapper and a pinned upstream SHA", () => {
+  const pinPath = path.join(repoRoot, "korean-privacy-terms", "scripts", "upstream.pin");
+  const installPath = path.join(repoRoot, "korean-privacy-terms", "scripts", "install.sh");
+
+  assert.ok(fs.existsSync(pinPath), "expected korean-privacy-terms/scripts/upstream.pin to exist");
+  assert.ok(fs.existsSync(installPath), "expected korean-privacy-terms/scripts/install.sh to exist");
+
+  const pin = fs.readFileSync(pinPath, "utf8").trim();
+
+  assert.match(pin, /^[0-9a-f]{40}$/, "upstream.pin must contain a single 40-char git SHA");
+
+  const install = fs.readFileSync(installPath, "utf8");
+
+  assert.match(install, /^#!\/(?:usr\/bin\/env bash|bin\/bash)/m, "install.sh must start with a bash shebang");
+  assert.match(install, /set -euo pipefail/, "install.sh must opt into strict bash mode");
+  assert.match(install, /~\/\.claude\/skills\/korean-privacy-terms/);
+  assert.match(install, /~\/\.agents\/skills\/korean-privacy-terms/);
+  assert.match(install, /kimlawtech\/korean-privacy-terms/);
+  assert.match(install, /upstream\.pin/);
+
+  const stat = fs.statSync(installPath);
+
+  assert.ok(
+    (stat.mode & 0o111) !== 0,
+    "install.sh must have the executable bit set on at least one of user/group/other",
+  );
+});
+
+test("korean-privacy-terms feature doc documents the thin-wrapper install flow and legal disclaimer", () => {
+  const featureDoc = read(path.join("docs", "features", "korean-privacy-terms.md"));
+
+  assert.match(featureDoc, /kimlawtech\/korean-privacy-terms/);
+  assert.match(featureDoc, /Apache-2\.0/);
+  assert.match(featureDoc, /~\/\.claude\/skills\/korean-privacy-terms/);
+  assert.match(featureDoc, /~\/\.agents\/skills\/korean-privacy-terms/);
+  assert.match(featureDoc, /scripts\/install\.sh/);
+  assert.match(featureDoc, /scripts\/upstream\.pin/);
+  assert.match(featureDoc, /참고용 초안/);
+  assert.match(featureDoc, /법률 자문/);
+  assert.match(featureDoc, /변호사 검토/);
+  assert.match(featureDoc, /2026\.9\.11/);
+  assert.match(featureDoc, /Next\.js/);
+});
