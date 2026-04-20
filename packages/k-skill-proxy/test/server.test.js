@@ -3,6 +3,9 @@ const assert = require("node:assert/strict");
 
 const {
   buildServer,
+  createMemoryCache,
+  isFailureResponse,
+  makeCacheKey,
   normalizeData4LibraryBookDetailQuery,
   normalizeData4LibraryBookExistsQuery,
   normalizeData4LibraryBookSearchQuery,
@@ -15,6 +18,132 @@ const {
   proxySeoulSubwayRequest
 } = require("../src/server");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
+
+test("makeCacheKey requires a non-empty route to prevent cross-route collisions", () => {
+  assert.throws(() => makeCacheKey({ q: "강남" }), /route/);
+  assert.throws(() => makeCacheKey({ route: "", q: "강남" }), /route/);
+  assert.throws(() => makeCacheKey(null), /route/);
+  assert.throws(() => makeCacheKey(undefined), /route/);
+
+  const sameShapeA = makeCacheKey({ route: "alpha", q: "x" });
+  const sameShapeB = makeCacheKey({ route: "beta", q: "x" });
+  assert.notEqual(sameShapeA, sameShapeB, "different routes must yield different cache keys");
+
+  const duplicate = makeCacheKey({ route: "alpha", q: "x" });
+  assert.equal(sameShapeA, duplicate, "same input must produce same key");
+});
+
+test("isFailureResponse flags explicit errors, upstream degradation, and empty-items-with-warnings", () => {
+  assert.equal(isFailureResponse({ error: "bad_request", message: "..." }), true);
+  assert.equal(isFailureResponse({ upstream: { degraded: true } }), true);
+  assert.equal(
+    isFailureResponse({ items: [], warnings: ["upstream invalid"] }),
+    true,
+    "empty items plus warnings must be treated as failure"
+  );
+
+  assert.equal(isFailureResponse({ items: [{ id: 1 }], warnings: ["sample feed"] }), false,
+    "non-empty items with warnings is a graceful fallback, not a failure");
+  assert.equal(isFailureResponse({ items: [] }), false, "empty items alone is valid (zero hits)");
+  assert.equal(isFailureResponse({ warnings: [] }), false);
+  assert.equal(isFailureResponse({ forecast: [], baseDate: "20260420" }), false,
+    "routes without items/warnings convention pass through");
+  assert.equal(isFailureResponse(null), false);
+  assert.equal(isFailureResponse("string"), false);
+});
+
+test("createMemoryCache refuses to store failure responses", () => {
+  const cache = createMemoryCache();
+
+  assert.equal(cache.set("k1", { items: [], warnings: ["upstream invalid"] }, 60000), false);
+  assert.equal(cache.get("k1"), null, "failure payload must not be persisted");
+
+  assert.equal(cache.set("k2", { error: "bad_request" }, 60000), false);
+  assert.equal(cache.get("k2"), null);
+
+  assert.equal(cache.set("k3", { upstream: { degraded: true } }, 60000), false);
+  assert.equal(cache.get("k3"), null);
+
+  assert.equal(cache.set("k4", { items: [{ id: 1 }] }, 60000), true);
+  assert.deepEqual(cache.get("k4"), { items: [{ id: 1 }] }, "successful payload must be stored");
+});
+
+test("food-safety search does not cache upstream failures so transient errors self-heal", async (t) => {
+  const originalFetch = global.fetch;
+  const recallCalls = [];
+  let recallMode = "fail";
+  global.fetch = async (url) => {
+    const text = String(url);
+    if (text.includes("PrsecImproptFoodInfoService03/getPrsecImproptFoodList01")) {
+      return new Response(
+        JSON.stringify({ body: { items: [] } }),
+        { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+      );
+    }
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I0490/json/1/50")) {
+      recallCalls.push(recallMode);
+      if (recallMode === "fail") {
+        return new Response(
+          "<script>alert('인증키가 유효하지 않습니다.'); history.back();</script>",
+          { status: 200, headers: { "content-type": "text/html" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          I0490: {
+            row: [
+              {
+                PRDLST_NM: "재시도 성공 식품",
+                BSSH_NM: "회복푸드",
+                RTRVLPRVNS: "회수 조치"
+              }
+            ]
+          }
+        }),
+        { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+      );
+    }
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      DATA_GO_KR_API_KEY: "data-go-key",
+      FOODSAFETYKOREA_API_KEY: "live-food-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = `/v1/mfds/food-safety/search?query=${encodeURIComponent("재시도 성공 식품")}&limit=3`;
+
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.json().items.length, 0);
+  assert.match(first.json().warnings.join(" "), /not valid JSON/);
+  assert.equal(first.json().proxy.cache.hit, false);
+
+  recallMode = "ok";
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(
+    second.json().proxy.cache.hit,
+    false,
+    "failure response must not have been cached - retry must hit upstream"
+  );
+  assert.equal(second.json().items.length, 1);
+  assert.equal(second.json().items[0].product_name, "재시도 성공 식품");
+
+  const third = await app.inject({ method: "GET", url });
+  assert.equal(third.json().proxy.cache.hit, true, "successful payload must now be cached");
+  assert.equal(third.json().items[0].product_name, "재시도 성공 식품");
+
+  assert.equal(recallCalls.length, 2, "upstream hit on first (fail) and second (recovered) - third served from cache");
+});
 
 test("health endpoint stays public and reports auth/upstream status", async (t) => {
   const app = buildServer({
