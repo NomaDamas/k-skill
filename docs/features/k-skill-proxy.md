@@ -25,10 +25,16 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/korean-stock/search`
 - `GET /v1/korean-stock/base-info`
 - `GET /v1/korean-stock/trade-info`
+- `GET /v1/naver-shopping/search` (네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 공개 BFF JSON 기반 상품/가격 후보 조회)
 - `GET /v1/opinet/around`
 - `GET /v1/opinet/detail`
 - `GET /v1/neis/school-search` (나이스 학교기본정보, `KEDU_INFO_KEY`)
 - `GET /v1/neis/school-meal` (나이스 급식식단정보, `KEDU_INFO_KEY`)
+- `GET /v1/data4library/library-search` (도서관 정보나루 정보공개 도서관 조회, `DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/data4library/book-search` (도서관 정보나루 도서 검색, `DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/data4library/book-detail` (도서관 정보나루 도서 상세 조회, `DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/data4library/libraries-by-book` (도서 소장 도서관 조회, `DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/data4library/book-exists` (도서관별 도서 소장여부, `DATA4LIBRARY_AUTH_KEY`)
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
 
 ## 권장 환경변수
@@ -47,7 +53,9 @@ client/skill -> k-skill-proxy -> upstream public API
 - `DATA_GO_KR_API_KEY=...`
 - `FOODSAFETYKOREA_API_KEY=...` (선택: 식품안전나라 회수 live 결과, 없으면 sample fallback)
 - `KEDU_INFO_KEY=...` (나이스 교육정보 개방 포털 Open API 인증키)
+- `DATA4LIBRARY_AUTH_KEY=...` (도서관 정보나루 Open API 인증키)
 - `KRX_API_KEY=...`
+- `NAVER_SEARCH_CLIENT_ID=...`, `NAVER_SEARCH_CLIENT_SECRET=...` (선택: 네이버 검색 Open API 쇼핑 검색)
 - `KSKILL_PROXY_PORT=4020`
 
 ## 프로덕션 배포 구조
@@ -185,6 +193,49 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/mfds/food-safety/search'
   --data-urlencode 'limit=5'
 ```
 
+
+
+도서관 정보나루 도서 검색 endpoint (`DATA4LIBRARY_AUTH_KEY` 필요):
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/data4library/book-search' \
+  --data-urlencode 'keyword=역사' \
+  --data-urlencode 'pageNo=1' \
+  --data-urlencode 'pageSize=10'
+```
+
+도서 상세/소장 조회 endpoint:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/data4library/book-detail' \
+  --data-urlencode 'isbn13=9788971998557' \
+  --data-urlencode 'loaninfoYN=Y'
+
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/data4library/libraries-by-book' \
+  --data-urlencode 'isbn=9788971998557' \
+  --data-urlencode 'region=11'
+
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/data4library/book-exists' \
+  --data-urlencode 'libraryCode=111001' \
+  --data-urlencode 'isbn13=9788971998557'
+```
+
+프록시는 caller가 넘긴 `authKey`/`format`을 무시하고 서버 쪽 `DATA4LIBRARY_AUTH_KEY`와 `format=json`을 주입한다.
+
+네이버 쇼핑 가격비교 endpoint (`NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET`이 있으면 공식 Search API 우선):
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/naver-shopping/search' \
+  --data-urlencode 'q=에어팟 프로 2세대' \
+  --data-urlencode 'limit=10'
+```
+
+키가 없는 no-key fallback은 `search.shopping.naver.com/search/all` HTML 페이지 대신
+`ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui`
+공개 JSON path를 사용한다. `page`는 BFF에 전달한 뒤 해당 페이지 카드만 정규화하고, no-key
+`price_asc`/`price_dsc`/`review` 정렬은 선택된 BFF 페이지 안에서 로컬 적용한다. BFF에는 날짜
+필드가 없어 no-key `date` 요청은 `meta.sort_applied: "unsupported"`로 표시한다.
+
 한국 주식 검색 endpoint:
 
 ```bash
@@ -220,5 +271,6 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/B552584/ArpltnInforInqireSv
 - upstream key는 프록시 서버에서만 관리합니다.
 - 한국 주식 route도 사용자에게 `KRX_API_KEY` 를 배포하지 않습니다.
 - client 쪽에는 upstream API key를 배포하지 않습니다.
+- 도서관 정보나루 route도 사용자에게 `DATA4LIBRARY_AUTH_KEY` 를 배포하지 않습니다.
 - public hosted route rollout 이 끝나기 전에는 서울 지하철/한국 날씨 예시를 local/self-host URL 로 검증합니다.
 - public hosted route rollout 이 끝나기 전에는 한강 수위 route도 local/self-host 또는 배포 확인이 끝난 proxy URL 로 검증합니다.

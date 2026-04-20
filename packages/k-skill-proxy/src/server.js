@@ -14,10 +14,13 @@ const {
   normalizeMfdsFoodSafetyQuery
 } = require("./mfds");
 const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
+const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
+const { fetchNearbyParkingLots } = require("./parking-lots");
 const { searchRegionCode } = require("./region-lookup");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
 const AIR_KOREA_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
 const DATA_GO_KR_UPSTREAM_BASE_URL = "https://apis.data.go.kr";
+const DATA4LIBRARY_UPSTREAM_BASE_URL = "https://data4library.kr/api";
 const SEOUL_OPEN_API_BASE_URL = "http://swopenapi.seoul.go.kr";
 const KMA_FORECAST_BASE_TIMES = ["0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300"];
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -147,9 +150,12 @@ function buildConfig(env = process.env) {
     opinetApiKey: trimOrNull(env.OPINET_API_KEY),
     blueRibbonSessionId: trimOrNull(env.BLUE_RIBBON_SESSION_ID),
     molitApiKey: trimOrNull(env.DATA_GO_KR_API_KEY),
+    data4libraryAuthKey: trimOrNull(env.DATA4LIBRARY_AUTH_KEY),
     foodsafetyKoreaApiKey: trimOrNull(env.FOODSAFETYKOREA_API_KEY),
     keduInfoKey: trimOrNull(env.KEDU_INFO_KEY),
     krxApiKey: trimOrNull(env.KRX_API_KEY),
+    naverSearchClientId: trimOrNull(env.NAVER_SEARCH_CLIENT_ID ?? env.NAVER_CLIENT_ID),
+    naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -255,6 +261,192 @@ function normalizeFineDustQuery(query) {
     regionHint,
     stationName
   };
+}
+
+function parseBoundedPositiveInteger(value, {
+  defaultValue,
+  min = 1,
+  max = 100,
+  label
+}) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return defaultValue;
+  }
+
+  const text = String(value).trim();
+  if (!/^\d+$/.test(text)) {
+    throw new Error(`Provide valid ${label}.`);
+  }
+
+  const parsed = Number.parseInt(text, 10);
+  if (parsed < min) {
+    return min;
+  }
+  if (parsed > max) {
+    return max;
+  }
+  return parsed;
+}
+
+function normalizeData4LibraryIsbn(value, label = "isbn13") {
+  const normalized = trimOrNull(value);
+  if (!normalized) {
+    throw new Error(`Provide ${label}.`);
+  }
+
+  const compact = normalized.replace(/-/g, "").toUpperCase();
+  if (!/^(?:\d{9}[\dX]|\d{13})$/.test(compact)) {
+    throw new Error(`Provide valid ${label} (10 or 13 digits).`);
+  }
+  return compact;
+}
+
+function parseData4LibraryIsbn10CheckValue(character) {
+  return character === "X" ? 10 : Number.parseInt(character, 10);
+}
+
+function isValidData4LibraryIsbn10(isbn10) {
+  const sum = [...isbn10].reduce((total, digit, index) => (
+    total + parseData4LibraryIsbn10CheckValue(digit) * (10 - index)
+  ), 0);
+  return sum % 11 === 0;
+}
+
+function convertData4LibraryIsbn10ToIsbn13(isbn10) {
+  const body = `978${isbn10.slice(0, 9)}`;
+  const sum = [...body].reduce((total, digit, index) => (
+    total + Number.parseInt(digit, 10) * (index % 2 === 0 ? 1 : 3)
+  ), 0);
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return `${body}${checkDigit}`;
+}
+
+function normalizeData4LibraryIsbn13(value, label = "isbn13") {
+  const isbn = normalizeData4LibraryIsbn(value, label);
+  if (isbn.length === 13) {
+    return isbn;
+  }
+  if (!isValidData4LibraryIsbn10(isbn)) {
+    throw new Error(`Provide valid ${label} (10 or 13 digits).`);
+  }
+  return convertData4LibraryIsbn10ToIsbn13(isbn);
+}
+
+function normalizeData4LibraryPage(query) {
+  return {
+    pageNo: parseBoundedPositiveInteger(query.pageNo ?? query.page_no ?? query.page, {
+      defaultValue: 1,
+      min: 1,
+      max: 1000,
+      label: "pageNo"
+    }),
+    pageSize: parseBoundedPositiveInteger(query.pageSize ?? query.page_size ?? query.limit, {
+      defaultValue: 10,
+      min: 1,
+      max: 100,
+      label: "pageSize"
+    })
+  };
+}
+
+function normalizeData4LibraryBookSearchQuery(query) {
+  const keyword = trimOrNull(query.keyword ?? query.q ?? query.query);
+  if (!keyword) {
+    throw new Error("Provide keyword.");
+  }
+
+  return {
+    keyword,
+    ...normalizeData4LibraryPage(query)
+  };
+}
+
+function normalizeData4LibraryBookDetailQuery(query) {
+  const isbn13 = normalizeData4LibraryIsbn(query.isbn13 ?? query.isbn, "isbn13");
+  const loaninfoYN = trimOrNull(query.loaninfoYN ?? query.loanInfoYN ?? query.loan_info_yn ?? query.loanInfo);
+
+  if (loaninfoYN && !/^[YN]$/i.test(loaninfoYN)) {
+    throw new Error("loaninfoYN must be Y or N.");
+  }
+
+  return {
+    isbn13,
+    loaninfoYN: loaninfoYN ? loaninfoYN.toUpperCase() : "N"
+  };
+}
+
+function normalizeData4LibraryBookExistsQuery(query) {
+  const libCode = trimOrNull(query.libCode ?? query.libraryCode ?? query.library_code);
+  if (!libCode) {
+    throw new Error("Provide libraryCode.");
+  }
+
+  if (!/^\d+$/.test(libCode)) {
+    throw new Error("Provide valid libraryCode.");
+  }
+
+  return {
+    libCode,
+    isbn13: normalizeData4LibraryIsbn13(query.isbn13 ?? query.isbn, "isbn13")
+  };
+}
+
+function normalizeData4LibraryLibrariesByBookQuery(query) {
+  const isbn = normalizeData4LibraryIsbn(query.isbn ?? query.isbn13, "isbn");
+  const region = trimOrNull(query.region);
+  if (!region) {
+    throw new Error("Provide region.");
+  }
+
+  if (!/^\d+$/.test(region)) {
+    throw new Error("Provide valid region.");
+  }
+
+  const normalized = {
+    isbn,
+    region,
+    ...normalizeData4LibraryPage(query)
+  };
+
+  const dtlRegion = trimOrNull(query.dtl_region ?? query.dtlRegion ?? query.detailRegion);
+  if (dtlRegion) {
+    if (!/^\d+$/.test(dtlRegion)) {
+      throw new Error("Provide valid dtl_region.");
+    }
+    normalized.dtl_region = dtlRegion;
+  }
+
+  return normalized;
+}
+
+function normalizeData4LibraryLibrarySearchQuery(query) {
+  const normalized = normalizeData4LibraryPage(query);
+  const libCode = trimOrNull(query.libCode ?? query.libraryCode ?? query.library_code);
+  const region = trimOrNull(query.region);
+  const dtlRegion = trimOrNull(query.dtl_region ?? query.dtlRegion ?? query.detailRegion);
+
+  if (libCode) {
+    if (!/^\d+$/.test(libCode)) {
+      throw new Error("Provide valid libraryCode.");
+    }
+    normalized.libCode = libCode;
+  }
+
+  if (region) {
+    if (!/^\d+$/.test(region)) {
+      throw new Error("Provide valid region.");
+    }
+    normalized.region = region;
+  }
+
+  if (dtlRegion) {
+    if (!/^\d+$/.test(dtlRegion)) {
+      throw new Error("Provide valid dtl_region.");
+    }
+    normalized.dtl_region = dtlRegion;
+  }
+
+  return normalized;
 }
 
 function normalizeSeoulSubwayQuery(query) {
@@ -515,6 +707,57 @@ function normalizeRealEstateQuery(query) {
   return { lawdCd, dealYmd, numOfRows };
 }
 
+function normalizeParkingLotSearchQuery(query) {
+  const latitude = parseFloatValue(query.latitude ?? query.lat);
+  const longitude = parseFloatValue(query.longitude ?? query.lon ?? query.lng);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("Provide latitude and longitude.");
+  }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    throw new Error("Provide valid latitude and longitude.");
+  }
+
+  const limit = parseInteger(query.limit, 5);
+  if (limit < 1 || limit > 50) {
+    throw new Error("limit must be between 1 and 50.");
+  }
+
+  const radius = parseInteger(query.radius ?? query.max_distance_meters ?? query.maxDistanceMeters, 2000);
+  if (radius < 1 || radius > 50000) {
+    throw new Error("radius must be between 1 and 50000.");
+  }
+
+  const numOfRows = parseInteger(query.numOfRows ?? query.num_of_rows, 1000);
+  if (numOfRows < 1 || numOfRows > 1000) {
+    throw new Error("numOfRows must be between 1 and 1000.");
+  }
+
+  const maxPages = parseInteger(query.maxPages ?? query.max_pages, 1);
+  if (maxPages < 1 || maxPages > 10) {
+    throw new Error("maxPages must be between 1 and 10.");
+  }
+
+  const publicOnlyRaw = trimOrNull(query.publicOnly ?? query.public_only);
+  const publicOnly = publicOnlyRaw
+    ? !["0", "false", "n", "no"].includes(publicOnlyRaw.toLowerCase())
+    : true;
+  const addressHint = trimOrNull(query.addressHint ?? query.address_hint);
+  const parkingType = trimOrNull(query.parkingType ?? query.parking_type);
+
+  return {
+    latitude,
+    longitude,
+    limit,
+    radius,
+    numOfRows,
+    maxPages,
+    publicOnly,
+    addressHint,
+    parkingType
+  };
+}
+
 function normalizeRegionCodeQuery(query) {
   const q = trimOrNull(query.q ?? query.query);
   if (!q) {
@@ -717,6 +960,71 @@ async function proxyKmaWeatherRequest({
   url.searchParams.set("base_time", baseTime);
   url.searchParams.set("nx", String(nx));
   url.searchParams.set("ny", String(ny));
+
+  const response = await fetchImpl(url, {
+    signal: AbortSignal.timeout(20000)
+  });
+
+  return {
+    statusCode: response.status,
+    contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
+    body: await response.text()
+  };
+}
+
+async function proxyData4LibraryRequest({
+  operation,
+  params = {},
+  authKey,
+  fetchImpl = global.fetch
+}) {
+  const allowedOperations = new Set([
+    "libSrch",
+    "srchBooks",
+    "srchDtlList",
+    "bookExist",
+    "libSrchByBook"
+  ]);
+
+  if (!allowedOperations.has(operation)) {
+    return {
+      statusCode: 404,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "not_found",
+        message: "That Data4Library route is not exposed by this proxy."
+      })
+    };
+  }
+
+  if (!authKey) {
+    return {
+      statusCode: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "upstream_not_configured",
+        message: "DATA4LIBRARY_AUTH_KEY is not configured on the proxy server."
+      })
+    };
+  }
+
+  const url = new URL(`${DATA4LIBRARY_UPSTREAM_BASE_URL}/${operation}`);
+  for (const [key, value] of Object.entries(params || {})) {
+    if (value === undefined || value === null || value === "" || key === "authKey" || key === "format") {
+      continue;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== undefined && item !== null && item !== "") {
+          url.searchParams.append(key, String(item));
+        }
+      }
+      continue;
+    }
+    url.searchParams.set(key, String(value));
+  }
+  url.searchParams.set("format", "json");
+  url.searchParams.set("authKey", authKey);
 
   const response = await fetchImpl(url, {
     signal: AbortSignal.timeout(20000)
@@ -973,9 +1281,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       hrfcoConfigured: Boolean(config.hrfcoApiKey),
       opinetConfigured: Boolean(config.opinetApiKey),
       molitConfigured: Boolean(config.molitApiKey),
+      data4libraryConfigured: Boolean(config.data4libraryAuthKey),
       foodsafetyKoreaConfigured: Boolean(config.foodsafetyKoreaApiKey),
       neisSchoolMealConfigured: Boolean(config.keduInfoKey),
-      krxConfigured: Boolean(config.krxApiKey)
+      krxConfigured: Boolean(config.krxApiKey),
+      naverShoppingConfigured: true,
+      naverSearchApiConfigured: Boolean(config.naverSearchClientId && config.naverSearchClientSecret)
     },
     auth: {
       tokenRequired: false
@@ -1595,6 +1906,101 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
+  app.get("/v1/parking-lots/search", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeParkingLotSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "parking-lot-search",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.molitApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "DATA_GO_KR_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetchNearbyParkingLots({
+        ...normalized,
+        serviceKey: config.molitApiKey
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.upstreamCode ? "upstream_error" : "proxy_error",
+        message: error.message,
+        upstream_code: error.upstreamCode || undefined,
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const payload = {
+      ...result,
+      query: {
+        latitude: normalized.latitude,
+        longitude: normalized.longitude,
+        limit: normalized.limit,
+        radius: normalized.radius,
+        public_only: normalized.publicOnly,
+        address_hint: normalized.addressHint,
+        parking_type: normalized.parkingType,
+        num_of_rows: normalized.numOfRows,
+        max_pages: normalized.maxPages
+      },
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
   app.get("/v1/household-waste/info", async (request, reply) => {
     const query = request.query || {};
     const sggNm = query["cond[SGG_NM::LIKE]"];
@@ -2097,6 +2503,245 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
+
+  app.get("/v1/naver-shopping/search", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeNaverShoppingSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "naver-shopping-search",
+      q: normalized.query.toLowerCase(),
+      limit: normalized.limit,
+      page: normalized.page,
+      sort: normalized.sort
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetchNaverShoppingSearch({
+        ...normalized,
+        clientId: config.naverSearchClientId,
+        clientSecret: config.naverSearchClientSecret
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      const payload = {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+      if (error.upstreamStatusCode) {
+        payload.upstream = {
+          status_code: error.upstreamStatusCode,
+          body_snippet: error.upstreamBodySnippet || null
+        };
+      }
+      return payload;
+    }
+
+    const payload = {
+      items: result.items,
+      query: {
+        q: normalized.query,
+        limit: normalized.limit,
+        page: normalized.page,
+        sort: normalized.sort
+      },
+      meta: result.meta,
+      upstream: result.upstream,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  async function handleData4LibraryRoute({
+    request,
+    reply,
+    route,
+    operation,
+    normalize,
+    queryPayload
+  }) {
+    let normalized;
+
+    try {
+      normalized = normalize(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route,
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.data4libraryAuthKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "DATA4LIBRARY_AUTH_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let upstream;
+    try {
+      upstream = await proxyData4LibraryRequest({
+        operation,
+        params: normalized,
+        authKey: config.data4libraryAuthKey
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+
+    const looksJson =
+      upstream.contentType.includes("json") ||
+      upstream.body.trimStart().startsWith("{") ||
+      upstream.body.trimStart().startsWith("[");
+
+    if (!looksJson) {
+      return upstream.body;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(upstream.body);
+    } catch {
+      return upstream.body;
+    }
+
+    const payload = parsed && !Array.isArray(parsed) && typeof parsed === "object"
+      ? { ...parsed }
+      : { upstream: parsed };
+    payload.query = queryPayload ? queryPayload(normalized) : normalized;
+    payload.proxy = {
+      name: config.proxyName,
+      cache: {
+        hit: false,
+        ttl_ms: config.cacheTtlMs
+      },
+      requested_at: new Date().toISOString()
+    };
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+
+    return payload;
+  }
+
+  app.get("/v1/data4library/library-search", async (request, reply) => handleData4LibraryRoute({
+    request,
+    reply,
+    route: "data4library-library-search",
+    operation: "libSrch",
+    normalize: normalizeData4LibraryLibrarySearchQuery
+  }));
+
+  app.get("/v1/data4library/book-search", async (request, reply) => handleData4LibraryRoute({
+    request,
+    reply,
+    route: "data4library-book-search",
+    operation: "srchBooks",
+    normalize: normalizeData4LibraryBookSearchQuery
+  }));
+
+  app.get("/v1/data4library/book-detail", async (request, reply) => handleData4LibraryRoute({
+    request,
+    reply,
+    route: "data4library-book-detail",
+    operation: "srchDtlList",
+    normalize: normalizeData4LibraryBookDetailQuery
+  }));
+
+  app.get("/v1/data4library/book-exists", async (request, reply) => handleData4LibraryRoute({
+    request,
+    reply,
+    route: "data4library-book-exists",
+    operation: "bookExist",
+    normalize: normalizeData4LibraryBookExistsQuery,
+    queryPayload: (normalized) => ({
+      library_code: normalized.libCode,
+      isbn13: normalized.isbn13
+    })
+  }));
+
+  app.get("/v1/data4library/libraries-by-book", async (request, reply) => handleData4LibraryRoute({
+    request,
+    reply,
+    route: "data4library-libraries-by-book",
+    operation: "libSrchByBook",
+    normalize: normalizeData4LibraryLibrariesByBookQuery
+  }));
+
   app.get("/v1/neis/school-search", async (request, reply) => {
     let normalized;
 
@@ -2552,6 +3197,11 @@ module.exports = {
   isFailureResponse,
   makeCacheKey,
   normalizeBlueRibbonNearbyQuery,
+  normalizeData4LibraryBookDetailQuery,
+  normalizeData4LibraryBookExistsQuery,
+  normalizeData4LibraryBookSearchQuery,
+  normalizeData4LibraryLibrariesByBookQuery,
+  normalizeData4LibraryLibrarySearchQuery,
   normalizeFineDustQuery,
   normalizeHanRiverWaterLevelQuery,
   normalizeKmaForecastQuery,
@@ -2561,14 +3211,18 @@ module.exports = {
   normalizeOpinetDetailQuery,
   normalizeNeisSchoolMealQuery,
   normalizeNeisSchoolSearchQuery,
+  normalizeNaverShoppingSearchQuery,
+  normalizeParkingLotSearchQuery,
   normalizeRealEstateQuery,
   normalizeRegionCodeQuery,
   normalizeSeoulSubwayQuery,
   proxyAirKoreaRequest,
+  proxyData4LibraryRequest,
   proxyHrfcoWaterLevelRequest,
   proxyNeisSchoolMealRequest,
   proxyNeisSchoolInfoRequest,
   proxyKmaWeatherRequest,
+  fetchNaverShoppingSearch,
   proxyOpinetRequest,
   proxySeoulSubwayRequest,
   resolveLatestKmaForecastBase,

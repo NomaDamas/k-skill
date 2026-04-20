@@ -28,6 +28,7 @@
 - `kordoc`: https://github.com/chrisryugj/kordoc
 - `pdfjs-dist`: https://www.npmjs.com/package/pdfjs-dist
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
+- korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
 - 한국장학재단 학자금 지원구간 산정절차: https://www.kosaf.go.kr/ko/tuition.do?pg=tuition04_09_01&type=tuition
 - 한국장학재단 학자금 지원구간 경곗값 확인: https://www.kosaf.go.kr/ko/tuition.do?naviParam=JH%2C01%2C01%2C03&pg=tuition04_09_07
@@ -89,8 +90,8 @@
 - daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
 - hola-poke-yeoksam reference repo: https://github.com/mnspkm/hola-poke-yeoksam-skill
 - hola-poke-yeoksam remote MCP endpoint: https://hola-poke-yeoksam-skill.onrender.com/mcp
-- coupang-mcp (MCP 서버): https://github.com/uju777/coupang-mcp
-- coupang-mcp endpoint: https://yuju777-coupang-mcp.hf.space/mcp
+- retention-corp/coupang_partners (Coupang Partners client and local MCP-compatible layer): https://github.com/retention-corp/coupang_partners
+- coupang_partners local MCP contract: local://coupang-mcp
 - bunjang-cli package: https://www.npmjs.com/package/bunjang-cli
 - bunjang-cli repo: https://github.com/pinion05/bunjangcli
 - 블루리본 메인: https://www.bluer.co.kr/
@@ -135,3 +136,12 @@
 - SK렌터카 다이렉트 타고BUY inventory page: https://www.skdirect.co.kr/tb
 - 롯데오토옥션 공개 메인: https://www.lotteautoauction.net/hp/pub/cmm/viewMain.do
 - 레드캡렌터카 business rent portal: https://biz.redcap.co.kr/rent/
+
+- Naver Shopping public BFF JSON: `https://ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui` (네이버 쇼핑 가격비교 스킬의 no-key fallback)
+- Naver Developers Search API shopping docs: https://developers.naver.com/docs/serviceapi/search/shopping/shopping.md
+
+- 도서관 정보나루 Open API 활용방법: https://www.data4library.kr/apiUtilization
+- 도서관 정보나루 도서 검색 endpoint: https://data4library.kr/api/srchBooks
+- 도서관 정보나루 도서 상세 endpoint: https://data4library.kr/api/srchDtlList
+- 도서관 정보나루 도서 소장 도서관 endpoint: https://data4library.kr/api/libSrchByBook
+- 도서관 정보나루 도서관별 도서 소장여부 endpoint: https://data4library.kr/api/bookExist

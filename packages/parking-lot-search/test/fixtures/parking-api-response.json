@@ -1,0 +1,94 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "NORMAL_SERVICE"
+    },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 4,
+      "totalCount": 4,
+      "items": [
+        {
+          "prkplceNo": "111-2-000001",
+          "prkplceNm": "종로구청 공영주차장",
+          "prkplceSe": "공영",
+          "prkplceType": "노외",
+          "rdnmadr": "서울특별시 종로구 삼봉로 43",
+          "lnmadr": "서울특별시 종로구 수송동 146-2",
+          "prkcmprt": "50",
+          "feedingSe": "1",
+          "enforceSe": "미시행",
+          "operDay": "평일+토요일+공휴일",
+          "weekdayOperOpenHhmm": "00:00",
+          "weekdayOperColseHhmm": "23:59",
+          "satOperOperOpenHhmm": "00:00",
+          "satOperCloseHhmm": "23:59",
+          "holidayOperOpenHhmm": "00:00",
+          "holidayCloseOpenHhmm": "23:59",
+          "parkingchrgeInfo": "유료",
+          "basicTime": "30",
+          "basicCharge": "1000",
+          "addUnitTime": "10",
+          "addUnitCharge": "500",
+          "dayCmmtktAdjTime": "24",
+          "dayCmmtkt": "10000",
+          "monthCmmtkt": "100000",
+          "metpay": "신용카드",
+          "spcmnt": "경차 할인",
+          "institutionNm": "서울특별시 종로구청",
+          "phoneNumber": "02-2148-0000",
+          "latitude": "37.57320",
+          "longitude": "126.97810",
+          "pwdbsPpkZoneYn": "Y",
+          "referenceDate": "2026-03-01",
+          "instt_code": "3000000",
+          "instt_nm": "서울특별시 종로구"
+        },
+        {
+          "prkplceNo": "111-2-000002",
+          "prkplceNm": "세종로 민영주차장",
+          "prkplceSe": "민영",
+          "prkplceType": "노외",
+          "rdnmadr": "서울특별시 종로구 세종대로 170",
+          "prkcmprt": "100",
+          "parkingchrgeInfo": "유료",
+          "latitude": "37.573714",
+          "longitude": "126.978339",
+          "referenceDate": "2026-03-01"
+        },
+        {
+          "prkplceNo": "111-2-000003",
+          "prkplceNm": "광화문광장 공영주차장",
+          "prkplceSe": "공영",
+          "prkplceType": "노상",
+          "rdnmadr": "서울특별시 종로구 세종대로 172",
+          "lnmadr": "서울특별시 종로구 세종로 1-68",
+          "prkcmprt": "20",
+          "operDay": "평일+토요일+공휴일",
+          "weekdayOperOpenHhmm": "09:00",
+          "weekdayOperColseHhmm": "21:00",
+          "parkingchrgeInfo": "무료",
+          "basicTime": "0",
+          "basicCharge": "0",
+          "institutionNm": "서울특별시 종로구청",
+          "latitude": "37.57375",
+          "longitude": "126.97836",
+          "pwdbsPpkZoneYn": "N",
+          "referenceDate": "2026-03-01",
+          "instt_nm": "서울특별시 종로구"
+        },
+        {
+          "prkplceNo": "111-2-000004",
+          "prkplceNm": "좌표없는 공영주차장",
+          "prkplceSe": "공영",
+          "prkplceType": "노외",
+          "rdnmadr": "서울특별시 종로구 새문안로 1",
+          "latitude": "",
+          "longitude": "",
+          "referenceDate": "2026-03-01"
+        }
+      ]
+    }
+  }
+}

@@ -54,6 +54,7 @@ npx --yes skills add <owner/repo> \
   --skill lotto-results \
   --skill kakaotalk-mac \
   --skill korean-law-search \
+  --skill korean-privacy-terms \
   --skill real-estate-search \
   --skill korean-scholarship-search \
   --skill korean-stock-search \
@@ -81,6 +82,7 @@ npx --yes skills add <owner/repo> \
   --skill bunjang-search \
   --skill used-car-price-search \
   --skill korean-spell-check \
+  --skill library-book-search \
   --skill k-schoollunch-menu \
   --skill korean-character-count
 ```
@@ -128,6 +130,8 @@ korean-law list
 `korean-stock-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `KRX_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/jjlabsio/korea-stock-mcp`. 자세한 사용법은 [한국 주식 정보 조회 가이드](features/korean-stock-search.md)를 본다.
 
 `household-waste-info` 는 별도 설치 없이 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 호출하고, `serviceKey`(`DATA_GO_KR_API_KEY`)는 proxy 서버에서만 원본 API(`apis.data.go.kr/1741000/household_waste_info/info`)로 주입한다. 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다. 자세한 사용법은 [생활쓰레기 배출정보 조회 가이드](features/household-waste-info.md)를 본다.
+
+`library-book-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `DATA4LIBRARY_AUTH_KEY` 는 불필요하고, self-host proxy 운영자만 프록시 서버 환경변수로 설정한다. 자세한 사용법은 [도서관 도서 조회 가이드](features/library-book-search.md)를 본다.
 
 ### `korean-stock-search` proxy quickstart
 
@@ -344,6 +348,7 @@ node scripts/korean_character_count.js --text $'첫 줄\n둘째 줄🙂' --profi
 - `cheap-gas-nearby`
 - `public-restroom-nearby`
 - `k-schoollunch-menu` (hosted proxy에 `KEDU_INFO_KEY`가 배포된 경우 사용자 시크릿 불필요)
+- `library-book-search` (hosted proxy에 `DATA4LIBRARY_AUTH_KEY`가 배포된 경우 사용자 시크릿 불필요)
 
 관련 문서:
 

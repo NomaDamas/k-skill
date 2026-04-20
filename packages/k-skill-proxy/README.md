@@ -10,6 +10,7 @@
 - `GET /v1/seoul-subway/arrival`
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` — 생활쓰레기 배출정보(`DATA_GO_KR_API_KEY`; `pageNo=1`, `numOfRows=100` 필수)
+- `GET /v1/parking-lots/search` — 전국주차장정보표준데이터 기반 근처 공영주차장 검색(`DATA_GO_KR_API_KEY`)
 - `GET /v1/neis/school-search` — 나이스 학교기본정보(교육청명·학교명 검색)
 - `GET /v1/neis/school-meal` — 나이스 급식식단정보(일자별 메뉴)
 - `GET /v1/mfds/drug-safety/lookup` — 식약처 의약품개요정보(e약은요) + 안전상비의약품 정보(`DATA_GO_KR_API_KEY`)
@@ -17,6 +18,12 @@
 - `GET /v1/korean-stock/search`
 - `GET /v1/korean-stock/base-info`
 - `GET /v1/korean-stock/trade-info`
+- `GET /v1/naver-shopping/search` — 네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 네이버 쇼핑 공개 BFF JSON 기반 상품/가격 후보 조회
+- `GET /v1/data4library/library-search` — 도서관 정보나루 정보공개 도서관 조회(`DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/data4library/book-search` — 도서관 정보나루 도서 검색(`DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/data4library/book-detail` — 도서관 정보나루 도서 상세 조회(`DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/data4library/libraries-by-book` — 도서 소장 도서관 조회(`DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/data4library/book-exists` — 도서관별 도서 소장여부(`DATA4LIBRARY_AUTH_KEY`)
 
 ## 환경변수
 
@@ -25,14 +32,16 @@
 - `SEOUL_OPEN_API_KEY` — 프록시 서버 쪽 서울 열린데이터 광장 upstream key
 - `HRFCO_OPEN_API_KEY` — 프록시 서버 쪽 한강홍수통제소 upstream key
 - `KEDU_INFO_KEY` — 프록시 서버 쪽 나이스(NEIS) 교육정보 개방 포털 Open API 인증키 (`school-search`, `school-meal`)
+- `DATA4LIBRARY_AUTH_KEY` — 프록시 서버 쪽 도서관 정보나루 Open API 인증키 (`data4library/*`)
 - `FOODSAFETYKOREA_API_KEY` — 프록시 서버 쪽 식품안전나라 회수정보 live key (`mfds/food-safety/search`; 없으면 sample feed fallback)
 - `KRX_API_KEY` — 프록시 서버 쪽 KRX Open API upstream key
+- `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 선택: 네이버 검색 Open API 쇼핑 검색(`shop.json`) 키. 설정되면 네이버 쇼핑 route가 bot-block 위험이 낮은 공식 API를 우선 사용하고, 없으면 공개 BFF JSON(`ns-portal.shopping.naver.com/api/v2/shopping-paged-slot`) 파서로 fallback. 공식 API는 `review` 정렬을 지원하지 않아 `meta.sort_applied: "unsupported"`로 표시한다. no-key fallback은 `page`를 BFF에 전달해 해당 페이지를 고르고, `price_asc`/`price_dsc`/`review`는 선택 페이지 안에서 로컬 정렬하며, `date`는 `meta.sort_applied: "unsupported"`로 표시
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — 기본 `4020`
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`
 - `KSKILL_PROXY_RATE_LIMIT_WINDOW_MS` — 기본 `60000`
 - `KSKILL_PROXY_RATE_LIMIT_MAX` — 기본 `60`
-- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `real-estate`, `mfds-drug-safety`, `mfds-food-safety`)
+- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `parking-lots`, `real-estate`, `mfds-drug-safety`, `mfds-food-safety`)
 
 기본 정책은 **무료 API 공개 프록시 = 무인증** 이다. 대신 endpoint scope 를 좁게 유지하고, cache + rate limit 으로 남용을 늦춘다.
 
@@ -94,6 +103,18 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/household-waste/info' \
   --data-urlencode 'numOfRows=100'
 ```
 
+
+공영주차장 검색 예시 (`DATA_GO_KR_API_KEY` 필요):
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/parking-lots/search' \
+  --data-urlencode 'latitude=37.573713' \
+  --data-urlencode 'longitude=126.978338' \
+  --data-urlencode 'address_hint=서울특별시 종로구' \
+  --data-urlencode 'limit=3' \
+  --data-urlencode 'radius=1500'
+```
+
 의약품 안전 체크 예시 (`DATA_GO_KR_API_KEY` 필요):
 
 ```bash
@@ -109,6 +130,37 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/mfds/drug-safety/lookup' \
 curl -fsS --get 'http://127.0.0.1:4020/v1/mfds/food-safety/search' \
   --data-urlencode 'query=김밥' \
   --data-urlencode 'limit=5'
+```
+
+
+네이버 쇼핑 가격비교 예시 (`NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET`이 있으면 공식 Search API를 우선 사용):
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
+  --data-urlencode 'q=에어팟 프로 2세대' \
+  --data-urlencode 'limit=10'
+```
+
+
+도서관 정보나루 도서 검색 예시 (`DATA4LIBRARY_AUTH_KEY` 필요):
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-search' \
+  --data-urlencode 'keyword=역사' \
+  --data-urlencode 'pageNo=1' \
+  --data-urlencode 'pageSize=10'
+```
+
+도서관 정보나루 상세/소장 확인 예시:
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-detail' \
+  --data-urlencode 'isbn13=9788971998557' \
+  --data-urlencode 'loaninfoYN=Y'
+
+curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-exists' \
+  --data-urlencode 'libraryCode=111001' \
+  --data-urlencode 'isbn13=9788971998557'
 ```
 
 한국 주식 검색 예시:

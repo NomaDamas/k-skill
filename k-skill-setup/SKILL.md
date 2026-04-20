@@ -85,9 +85,13 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 한국 주식 정보 조회는 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 경유하므로 사용자 쪽 `KRX_API_KEY` 가 불필요하다. self-host proxy 운영자만 서버 환경변수 `KRX_API_KEY` 를 사용한다.
 
+도서관 도서 조회는 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 경유하므로 사용자 쪽 `DATA4LIBRARY_AUTH_KEY` 가 불필요하다. self-host proxy 운영자만 서버 환경변수 `DATA4LIBRARY_AUTH_KEY` 를 사용한다.
+
 생활쓰레기 배출정보 조회는 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 호출하고, `serviceKey`(`DATA_GO_KR_API_KEY`)는 proxy 서버에서 주입/관리하므로 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다.
 
 학교 급식 식단 조회는 `k-skill-proxy`의 `/v1/neis/school-search`·`/v1/neis/school-meal`을 호출하고, `KEDU_INFO_KEY`는 프록시 서버에만 두므로 사용자 쪽에 둘 필요가 없다.
+
+도서관 도서 조회는 `k-skill-proxy`의 `/v1/data4library/*` 라우트를 호출하고, `DATA4LIBRARY_AUTH_KEY`는 프록시 서버에만 두므로 사용자 쪽에 둘 필요가 없다.
 
 근처 가장 싼 주유소 찾기는 기본 hosted proxy를 경유하므로 사용자 쪽 `OPINET_API_KEY` 가 불필요하다.
 
@@ -113,6 +117,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 - 한국 주식 정보 조회: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KRX_API_KEY`)
 - 생활쓰레기 배출정보 조회: 사용자 시크릿 불필요 (`serviceKey`는 proxy 서버 주입, 호출 시 `pageNo=1`·`numOfRows=100` 필수)
 - 학교 급식 식단 조회: 사용자 시크릿 불필요 (`KEDU_INFO_KEY`는 proxy 서버만)
+- 도서관 도서 조회: 사용자 시크릿 불필요 (`DATA4LIBRARY_AUTH_KEY`는 proxy 서버만)
 - 의약품 안전 체크: 사용자 시크릿 불필요 (`DATA_GO_KR_API_KEY`는 proxy 서버만)
 - 식품 안전 체크: 사용자 시크릿 불필요 (`DATA_GO_KR_API_KEY`와 선택적 `FOODSAFETYKOREA_API_KEY`는 proxy 서버만)
 - 근처 가장 싼 주유소 찾기: 사용자 시크릿 불필요 (기본 hosted proxy 사용)
