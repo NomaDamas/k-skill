@@ -157,7 +157,30 @@ function buildConfig(env = process.env) {
 }
 
 function makeCacheKey(payload) {
+  if (!payload || typeof payload !== "object" || typeof payload.route !== "string" || !payload.route) {
+    throw new Error(
+      "makeCacheKey requires payload.route as a non-empty string to prevent cross-route key collisions."
+    );
+  }
   return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+function isFailureResponse(value) {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  if (value.error) {
+    return true;
+  }
+  if (value.upstream && value.upstream.degraded) {
+    return true;
+  }
+  const hasWarnings = Array.isArray(value.warnings) && value.warnings.length > 0;
+  const emptyItems = Array.isArray(value.items) && value.items.length === 0;
+  if (hasWarnings && emptyItems) {
+    return true;
+  }
+  return false;
 }
 
 function createMemoryCache() {
@@ -178,10 +201,14 @@ function createMemoryCache() {
       return cached.value;
     },
     set(key, value, ttlMs) {
+      if (isFailureResponse(value)) {
+        return false;
+      }
       entries.set(key, {
         value,
         expiresAt: Date.now() + ttlMs
       });
+      return true;
     }
   };
 }
@@ -983,7 +1010,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const cacheKey = makeCacheKey(normalized);
+    const cacheKey = makeCacheKey({
+      route: "fine-dust-report",
+      ...normalized
+    });
     const cached = cache.get(cacheKey);
     if (cached) {
       return {
@@ -2518,6 +2548,9 @@ module.exports = {
   buildConfig,
   buildServer,
   convertLatLonToKmaGrid,
+  createMemoryCache,
+  isFailureResponse,
+  makeCacheKey,
   normalizeBlueRibbonNearbyQuery,
   normalizeFineDustQuery,
   normalizeHanRiverWaterLevelQuery,
