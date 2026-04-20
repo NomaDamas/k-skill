@@ -53,6 +53,14 @@ metadata:
 bash korean-privacy-terms/scripts/install.sh
 ```
 
+레포를 로컬에 clone 하지 않고 이미 홈 디렉토리 스킬 번들만 가진 상태에서도 설치할 수 있다 (installer 는 `${BASH_SOURCE[0]}` 로 절대경로를 해석하므로 cwd 에 구애받지 않는다):
+
+```bash
+bash ~/.claude/skills/korean-privacy-terms/scripts/install.sh
+# 또는
+bash ~/.agents/skills/korean-privacy-terms/scripts/install.sh
+```
+
 스크립트는 `korean-privacy-terms/scripts/upstream.pin` 에 기록된 40자리 커밋 SHA 만 체크아웃한다. 두 경로 모두에서 `git -C <path> rev-parse HEAD` 가 pin 과 동일해야 설치 성공.
 
 오프라인 환경이나 네트워크 차단 상황에서는 업스트림 clone 이 실패하므로 이 스킬의 생성 흐름을 실행할 수 없다. 스크립트가 명시적인 실패 메시지를 남기고 비정상 종료한다.
@@ -125,4 +133,6 @@ git -C ~/.agents/skills/korean-privacy-terms/upstream rev-parse HEAD
 - installer: [`scripts/install.sh`](./scripts/install.sh)
 - 법률 면책 전문: [`./DISCLAIMER.md`](./DISCLAIMER.md)
 - upstream 저자·커뮤니티 attribution: [`./NOTICE`](./NOTICE) (@kimlawtech, SpeciAI)
-- 본 스킬은 업스트림 산출물의 재배포에 해당하므로 Apache License, Version 2.0 §4 요건 (NOTICE 포함, 라이선스 고지) 을 준수한다.
+- Apache-2.0 전문 (업스트림 `LICENSE` verbatim): [`./LICENSE.upstream`](./LICENSE.upstream) — Apache License, Version 2.0 §4(a) ("give any other recipients of the Work or Derivative Works a copy of this License") 준수를 위해 `install.sh` 실행 전에도 레포 트리에 번들해 둔다. 레포 루트의 [`../LICENSE`](../LICENSE) (MIT) 는 k-skill 자체 라이선스이며 이 스킬 상부에 적용되지 않는다.
+- 본 스킬은 업스트림 산출물의 재배포에 해당하므로 Apache License, Version 2.0 §4 요건 (LICENSE 번들, NOTICE 포함, 라이선스 고지) 을 준수한다.
+- 중첩 `SKILL.md` 안내: `install.sh` 실행 후 `~/.claude/skills/korean-privacy-terms/upstream/SKILL.md` 가 존재하게 되지만, Claude Code / Codex / Vercel Agent Skills 등 에이전트 플랫폼은 top-level `SKILL.md` 만 discovery 대상으로 삼는다. 중첩 업스트림 `SKILL.md` 는 직접 호출되지 않는다.

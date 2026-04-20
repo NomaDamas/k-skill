@@ -2780,6 +2780,16 @@ test("korean-privacy-terms ships an install.sh wrapper and a pinned upstream SHA
   const pin = fs.readFileSync(pinPath, "utf8").trim();
 
   assert.match(pin, /^[0-9a-f]{40}$/, "upstream.pin must contain a single 40-char git SHA");
+  assert.notStrictEqual(
+    pin,
+    "0".repeat(40),
+    "upstream.pin must not be a placeholder all-zero SHA",
+  );
+  assert.notStrictEqual(
+    pin,
+    "f".repeat(40),
+    "upstream.pin must not be a placeholder all-f SHA",
+  );
 
   const install = fs.readFileSync(installPath, "utf8");
 
@@ -2787,7 +2797,16 @@ test("korean-privacy-terms ships an install.sh wrapper and a pinned upstream SHA
   assert.match(install, /set -euo pipefail/, "install.sh must opt into strict bash mode");
   assert.match(install, /~\/\.claude\/skills\/korean-privacy-terms/);
   assert.match(install, /~\/\.agents\/skills\/korean-privacy-terms/);
-  assert.match(install, /kimlawtech\/korean-privacy-terms/);
+  assert.match(
+    install,
+    /https:\/\/github\.com\/kimlawtech\/korean-privacy-terms\.git/,
+    "install.sh must reference the full upstream clone URL",
+  );
+  assert.match(
+    install,
+    /git clone --filter=blob:none/,
+    "install.sh must perform a blobless git clone of the upstream repo",
+  );
   assert.match(install, /upstream\.pin/);
 
   const stat = fs.statSync(installPath);
@@ -2795,6 +2814,39 @@ test("korean-privacy-terms ships an install.sh wrapper and a pinned upstream SHA
   assert.ok(
     (stat.mode & 0o111) !== 0,
     "install.sh must have the executable bit set on at least one of user/group/other",
+  );
+});
+
+test("korean-privacy-terms bundles the Apache-2.0 LICENSE per §4(a) redistribution requirement", () => {
+  const licensePath = path.join(repoRoot, "korean-privacy-terms", "LICENSE.upstream");
+
+  assert.ok(
+    fs.existsSync(licensePath),
+    "expected korean-privacy-terms/LICENSE.upstream to exist (Apache-2.0 §4(a) requires redistributors to give recipients a copy of this License)",
+  );
+
+  const license = fs.readFileSync(licensePath, "utf8");
+
+  assert.match(license, /Apache License/);
+  assert.match(license, /Version 2\.0, January 2004/);
+  assert.match(license, /http:\/\/www\.apache\.org\/licenses\/LICENSE-2\.0/);
+  assert.match(license, /TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION/);
+  assert.match(license, /Redistribution\. You may reproduce and distribute/);
+  assert.match(license, /END OF TERMS AND CONDITIONS/);
+  assert.match(license, /Copyright 2026 kimlawtech/);
+
+  const skill = read(path.join("korean-privacy-terms", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "korean-privacy-terms.md"));
+
+  assert.match(
+    skill,
+    /LICENSE\.upstream/,
+    "SKILL.md Notes section must link to LICENSE.upstream so §4(a) is satisfied even before install.sh runs",
+  );
+  assert.match(
+    featureDoc,
+    /LICENSE\.upstream/,
+    "docs/features/korean-privacy-terms.md must reference LICENSE.upstream",
   );
 });
 

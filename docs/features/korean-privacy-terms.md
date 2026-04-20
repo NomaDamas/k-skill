@@ -83,4 +83,5 @@ git ls-remote --tags https://github.com/kimlawtech/korean-privacy-terms.git
 - upstream pin 파일: `korean-privacy-terms/scripts/upstream.pin`
 - 업스트림 저자 · 커뮤니티 attribution: `korean-privacy-terms/NOTICE` (@kimlawtech, SpeciAI community)
 - 법률 면책 전문 (한 / 영): `korean-privacy-terms/DISCLAIMER.md`
-- Apache License, Version 2.0 §4 요건 (LICENSE 고지, NOTICE 포함) 을 준수한다.
+- Apache-2.0 전문 (업스트림 `LICENSE` verbatim 복사): `korean-privacy-terms/LICENSE.upstream` — Apache License, Version 2.0 §4(a) 는 재배포자가 "give any other recipients of the Work or Derivative Works a copy of this License" 하도록 요구한다. `install.sh` 실행 전에도 레포 체크아웃 상태에서 이 요건이 충족되도록 번들해 두었다.
+- 레포 루트 `LICENSE` (MIT) 는 k-skill 자체 라이선스이며 이 스킬 하위에는 적용되지 않는다. 본 스킬은 업스트림 산출물의 재배포이므로 Apache License, Version 2.0 §4 요건 (LICENSE 번들, NOTICE 포함, 수정 고지) 을 준수한다.
