@@ -197,6 +197,145 @@ class CoupangPartnersMcpWrapperTests(unittest.TestCase):
         self.assertIn("init", completed.stderr)
         self.assertIn("search <keyword>", completed.stderr)
 
+    def test_forwards_openclaw_shopping_env_vars_to_upstream(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_dir = pathlib.Path(tmp) / "coupang_partners"
+            bin_dir = repo_dir / "bin"
+            bin_dir.mkdir(parents=True)
+            upstream = bin_dir / "coupang_mcp.py"
+            upstream.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json, os\n"
+                "keys = [\n"
+                "    'OPENCLAW_SHOPPING_CLIENT_ID',\n"
+                "    'OPENCLAW_SHOPPING_FORCE_HOSTED',\n"
+                "    'OPENCLAW_SHOPPING_BASE_URL',\n"
+                "]\n"
+                "print(json.dumps({k: os.environ.get(k) for k in keys}))\n",
+                encoding="utf-8",
+            )
+            upstream.chmod(0o755)
+            env = {
+                **os.environ,
+                "OPENCLAW_SHOPPING_CLIENT_ID": "openclaw-skill",
+                "OPENCLAW_SHOPPING_FORCE_HOSTED": "1",
+                "OPENCLAW_SHOPPING_BASE_URL": "https://staging.example.com",
+            }
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "--repo-dir",
+                    str(repo_dir),
+                    "--no-clone",
+                    "tools",
+                ],
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["OPENCLAW_SHOPPING_CLIENT_ID"], "openclaw-skill")
+            self.assertEqual(payload["OPENCLAW_SHOPPING_FORCE_HOSTED"], "1")
+            self.assertEqual(payload["OPENCLAW_SHOPPING_BASE_URL"], "https://staging.example.com")
+
+    def test_help_epilog_documents_credentialless_hosted_fallback(self):
+        completed = subprocess.run(
+            [sys.executable, str(WRAPPER_PATH), "--help"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+
+        help_text = completed.stdout
+        self.assertIn("COUPANG_ACCESS_KEY", help_text)
+        self.assertIn("OPENCLAW_SHOPPING", help_text)
+        self.assertRegex(help_text, r"(hosted|호스티드|a\.retn\.kr)")
+
+    def test_help_epilog_drops_non_allowlisted_coupang_mcp_fallback_recommendation(self):
+        # Direct probes against https://a.retn.kr/v1/public/assist on 2026-04-21
+        # confirmed that `X-OpenClaw-Client-Id: coupang-mcp-fallback` returns
+        # HTTP 403 ("Client is not allowlisted"), while the upstream default
+        # `openclaw-skill` returns HTTP 200. The wrapper's --help must not
+        # recommend the dead value and must surface openclaw-skill so users
+        # understand the allowlisted hosted-fallback client id in play.
+        completed = subprocess.run(
+            [sys.executable, str(WRAPPER_PATH), "--help"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+
+        help_text = completed.stdout
+        self.assertNotIn("coupang-mcp-fallback", help_text)
+        self.assertIn("openclaw-skill", help_text)
+
+
+@unittest.skipUnless(
+    os.getenv("K_SKILL_COUPANG_SMOKE") == "1",
+    "set K_SKILL_COUPANG_SMOKE=1 to run the live upstream smoke test",
+)
+class CoupangPartnersMcpHostedFallbackSmokeTests(unittest.TestCase):
+    """Live upstream smoke test.
+
+    Opt-in via `K_SKILL_COUPANG_SMOKE=1` because this hits the real
+    `retention-corp/coupang_partners` checkout and the hosted backend at
+    `https://a.retn.kr`, both of which are outside CI's control. Verifies that
+    the credentialless hosted fallback path returns at least one result that
+    includes a Retention Corp short deeplink so the wrapper contract stays wired.
+    """
+
+    def test_credentialless_search_returns_hosted_shortlink(self):
+        repo_dir = os.getenv(
+            "COUPANG_PARTNERS_REPO_DIR",
+            str(pathlib.Path.home() / ".cache/k-skill/coupang_partners"),
+        )
+        env = {
+            k: v
+            for k, v in os.environ.items()
+            if k not in {"COUPANG_ACCESS_KEY", "COUPANG_SECRET_KEY"}
+        }
+
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(WRAPPER_PATH),
+                "--repo-dir",
+                repo_dir,
+                "search",
+                "무선청소기",
+            ],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            timeout=60,
+        )
+
+        self.assertEqual(
+            completed.returncode,
+            0,
+            msg=f"wrapper failed: stderr={completed.stderr}",
+        )
+
+        payload = json.loads(completed.stdout)
+        self.assertTrue(payload.get("ok"), msg=f"envelope not ok: {payload}")
+        # Accept either the hosted shortlink shape or a direct coupang affiliate
+        # link, since hosted fallback and local HMAC path surface slightly
+        # different URL shapes. At least one of them should be present.
+        serialized = json.dumps(payload, ensure_ascii=False)
+        self.assertRegex(
+            serialized,
+            r"(a\.retn\.kr/s/|link\.coupang\.com/)",
+            msg="expected at least one Coupang deeplink in response",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -28,11 +28,31 @@ class BootstrapError(RuntimeError):
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the retention-corp/coupang_partners local Coupang MCP-compatible CLI.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Examples: coupang_partners_mcp.py tools | "
-            "coupang_partners_mcp.py init | "
-            "coupang_partners_mcp.py search 생수 | "
-            "coupang_partners_mcp.py budget 키보드 --max-price 100000"
+            "Examples:\n"
+            "  coupang_partners_mcp.py tools\n"
+            "  coupang_partners_mcp.py init\n"
+            "  coupang_partners_mcp.py search 생수\n"
+            "  coupang_partners_mcp.py budget 키보드 --max-price 100000\n"
+            "\n"
+            "Honored upstream environment variables (forwarded as-is):\n"
+            "  COUPANG_ACCESS_KEY, COUPANG_SECRET_KEY\n"
+            "      Operator Coupang Partners API credentials. When set, upstream\n"
+            "      uses the local HMAC-signed Coupang Partners path.\n"
+            "  OPENCLAW_SHOPPING_CLIENT_ID\n"
+            "      Allowlisted client id for the hosted fallback. upstream sends\n"
+            "      openclaw-skill by default, which is the value currently on the\n"
+            "      Retention Corp allowlist; k-skill does not override this.\n"
+            "  OPENCLAW_SHOPPING_FORCE_HOSTED=1\n"
+            "      Force the hosted fallback even when Coupang keys are present.\n"
+            "  OPENCLAW_SHOPPING_BASE_URL\n"
+            "      Override the hosted backend base URL. Default upstream target\n"
+            "      is https://a.retn.kr and /v1/public/assist is the public entry.\n"
+            "\n"
+            "When both COUPANG_ACCESS_KEY and COUPANG_SECRET_KEY are missing,\n"
+            "upstream falls back to the hosted Retention Corp backend so this\n"
+            "skill keeps working without Coupang Partners credentials."
         ),
     )
     parser.add_argument(

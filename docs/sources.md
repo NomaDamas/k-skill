@@ -92,6 +92,8 @@
 - hola-poke-yeoksam remote MCP endpoint: https://hola-poke-yeoksam-skill.onrender.com/mcp
 - retention-corp/coupang_partners (Coupang Partners client and local MCP-compatible layer): https://github.com/retention-corp/coupang_partners
 - coupang_partners local MCP contract: local://coupang-mcp
+- coupang_partners hosted fallback (credentialless, allowlist-gated): https://a.retn.kr/v1/public/assist
+- coupang_partners hosted fallback PR (merged): https://github.com/retention-corp/coupang_partners/pull/1
 - bunjang-cli package: https://www.npmjs.com/package/bunjang-cli
 - bunjang-cli repo: https://github.com/pinion05/bunjangcli
 - 블루리본 메인: https://www.bluer.co.kr/
