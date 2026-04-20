@@ -147,13 +147,44 @@ async function requestJson(url, { params, fetchImpl = global.fetch } = {}) {
 }
 
 function extractDataGoItems(payload) {
-  const raw = payload?.body?.items?.item;
-  if (Array.isArray(raw)) {
-    return raw.filter((item) => item && typeof item === "object");
+  const items = payload?.body?.items;
+  if (!items) {
+    return [];
   }
-  if (raw && typeof raw === "object") {
-    return [raw];
+
+  // Shape A (legacy XML→JSON autoconvert): body.items = { item: [...] | {...} }
+  if (!Array.isArray(items) && typeof items === "object") {
+    const inner = items.item;
+    if (Array.isArray(inner)) {
+      return inner.filter((entry) => entry && typeof entry === "object");
+    }
+    if (inner && typeof inner === "object") {
+      return [inner];
+    }
+    return [];
   }
+
+  // Shape B (native JSON): body.items = [...] flat array of entries.
+  // Shape C (wrapped JSON): body.items = [{ item: {...} }, ...] where each entry has a single `item` key.
+  if (Array.isArray(items)) {
+    return items
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") {
+          return null;
+        }
+        if (
+          entry.item &&
+          typeof entry.item === "object" &&
+          !Array.isArray(entry.item) &&
+          Object.keys(entry).length === 1
+        ) {
+          return entry.item;
+        }
+        return entry;
+      })
+      .filter((entry) => entry && typeof entry === "object");
+  }
+
   return [];
 }
 

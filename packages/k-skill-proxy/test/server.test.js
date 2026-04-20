@@ -2292,16 +2292,14 @@ test("mfds drug-safety lookup endpoint proxies official drug surfaces and caches
       return new Response(
         JSON.stringify({
           body: {
-            items: {
-              item: [
-                {
-                  itemName: "타이레놀정160밀리그램",
-                  entpName: "한국얀센",
-                  efcyQesitm: "감기로 인한 발열 및 동통에 사용합니다.",
-                  intrcQesitm: "다른 해열진통제와 함께 복용하지 마십시오."
-                }
-              ]
-            }
+            items: [
+              {
+                itemName: "타이레놀정160밀리그램",
+                entpName: "한국얀센",
+                efcyQesitm: "감기로 인한 발열 및 동통에 사용합니다.",
+                intrcQesitm: "다른 해열진통제와 함께 복용하지 마십시오."
+              }
+            ]
           }
         }),
         {
@@ -2315,16 +2313,14 @@ test("mfds drug-safety lookup endpoint proxies official drug surfaces and caches
       return new Response(
         JSON.stringify({
           body: {
-            items: {
-              item: [
-                {
-                  PRDLST_NM: "판콜에스내복액",
-                  BSSH_NM: "동화약품",
-                  EFCY_QESITM: "감기 증상 완화",
-                  INTRC_QESITM: "다른 감기약과 병용 주의"
-                }
-              ]
-            }
+            items: [
+              {
+                PRDLST_NM: "판콜에스내복액",
+                BSSH_NM: "동화약품",
+                EFCY_QESITM: "감기 증상 완화",
+                INTRC_QESITM: "다른 감기약과 병용 주의"
+              }
+            ]
           }
         }),
         {
@@ -2362,6 +2358,78 @@ test("mfds drug-safety lookup endpoint proxies official drug surfaces and caches
   assert.equal(first.json().items[0].source, "drug_easy_info");
   assert.equal(first.json().items[1].source, "safe_standby_medicine");
   assert.ok(fetchCalls.every((entry) => entry.includes("test-key")));
+});
+
+test("mfds drug-safety lookup endpoint still parses legacy body.items.item shape", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    const text = String(url);
+    if (text.includes("DrbEasyDrugInfoService/getDrbEasyDrugList")) {
+      return new Response(
+        JSON.stringify({
+          body: {
+            items: {
+              item: [
+                {
+                  itemName: "레거시타이레놀",
+                  entpName: "레거시얀센"
+                }
+              ]
+            }
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    if (text.includes("SafeStadDrugService/getSafeStadDrugInq")) {
+      return new Response(
+        JSON.stringify({
+          body: {
+            items: {
+              item: {
+                PRDLST_NM: "레거시판콜",
+                BSSH_NM: "레거시동화"
+              }
+            }
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      DATA_GO_KR_API_KEY: "legacy-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/mfds/drug-safety/lookup?itemName=%ED%83%80%EC%9D%B4%EB%A0%88%EB%86%80&limit=5"
+  });
+
+  assert.equal(response.statusCode, 200);
+  const items = response.json().items;
+  assert.equal(items.length, 2);
+  assert.equal(items[0].source, "drug_easy_info");
+  assert.equal(items[0].item_name, "레거시타이레놀");
+  assert.equal(items[1].source, "safe_standby_medicine");
+  assert.equal(items[1].item_name, "레거시판콜");
 });
 
 test("mfds food-safety search endpoint requires query", async (t) => {
@@ -2444,16 +2512,16 @@ test("mfds food-safety search endpoint uses live recall key when configured", as
       return new Response(
         JSON.stringify({
           body: {
-            items: {
-              item: [
-                {
+            items: [
+              {
+                item: {
                   PRDUCT: "예시 유부초밥",
                   ENTRPS: "예시푸드",
                   IMPROPT_ITM: "황색포도상구균",
                   INSPCT_RESULT: "기준 부적합"
                 }
-              ]
-            }
+              }
+            ]
           }
         }),
         {
