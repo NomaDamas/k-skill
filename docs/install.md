@@ -54,6 +54,7 @@ npx --yes skills add <owner/repo> \
   --skill lotto-results \
   --skill kakaotalk-mac \
   --skill korean-law-search \
+  --skill korean-privacy-terms \
   --skill real-estate-search \
   --skill korean-scholarship-search \
   --skill korean-stock-search \

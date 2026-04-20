@@ -28,6 +28,7 @@
 - `kordoc`: https://github.com/chrisryugj/kordoc
 - `pdfjs-dist`: https://www.npmjs.com/package/pdfjs-dist
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
+- korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
 - 한국장학재단 학자금 지원구간 산정절차: https://www.kosaf.go.kr/ko/tuition.do?pg=tuition04_09_01&type=tuition
 - 한국장학재단 학자금 지원구간 경곗값 확인: https://www.kosaf.go.kr/ko/tuition.do?naviParam=JH%2C01%2C01%2C03&pg=tuition04_09_07
