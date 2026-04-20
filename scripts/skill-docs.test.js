@@ -1195,6 +1195,27 @@ test("coupang-product-search skill and docs use retention-corp coupang_partners 
   assert.doesNotMatch(sources, /yuju777-coupang-mcp\.hf\.space\/mcp/);
 });
 
+test("coupang-product-search docs drop non-allowlisted coupang-mcp-fallback and document openclaw-skill as the allowlisted hosted fallback client-id", () => {
+  // Direct probes against https://a.retn.kr/v1/public/assist on 2026-04-21 show that
+  // `X-OpenClaw-Client-Id: coupang-mcp-fallback` returns HTTP 403 ("Client is not
+  // allowlisted"), while `openclaw-skill` (the upstream default that ships with
+  // retention-corp/coupang_partners) returns HTTP 200. Until Retention Corp
+  // re-allowlists `coupang-mcp-fallback`, k-skill docs must not recommend it and
+  // must document `openclaw-skill` as the value the hosted fallback path uses.
+  const skill = read(path.join("coupang-product-search", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "coupang-product-search.md"));
+  const wrapper = read(path.join("coupang-product-search", "scripts", "coupang_partners_mcp.py"));
+  const sources = read(path.join("docs", "sources.md"));
+
+  for (const doc of [skill, featureDoc, wrapper, sources]) {
+    assert.doesNotMatch(doc, /coupang-mcp-fallback/);
+  }
+
+  for (const doc of [skill, featureDoc, wrapper]) {
+    assert.match(doc, /openclaw-skill/);
+  }
+});
+
 test("root pack:dry-run script covers all publishable workspaces", () => {
   const packageJson = readJson("package.json");
 

@@ -22,7 +22,7 @@ Codex/Claude Code → coupang_partners_mcp.py → retention-corp/coupang_partner
 - **구형 hosted endpoint 제거** — 이전 HF Space 기반 MCP 서버를 사용하지 않는다.
 - **upstream 고정** — 래퍼는 `https://github.com/retention-corp/coupang_partners.git`를 clone/update한 뒤 upstream CLI에 위임한다.
 - **이중 실행 경로** — `COUPANG_ACCESS_KEY`/`COUPANG_SECRET_KEY`가 둘 다 있으면 upstream이 로컬 HMAC으로 Coupang Partners API를 호출하고, 없으면 자동으로 Retention Corp의 hosted 백엔드(`https://a.retn.kr/v1/public/assist`)로 떨어져 공개 추천/검색을 반환한다(hosted fallback). 래퍼는 두 경로를 자동 선택한다.
-- **allowlist** — hosted fallback은 `X-OpenClaw-Client-Id` allowlist로 게이트되어 있다. upstream 기본값은 `openclaw-skill`, k-skill 전용 allowlist 값은 `coupang-mcp-fallback`이다. 필요 시 `OPENCLAW_SHOPPING_CLIENT_ID=coupang-mcp-fallback`으로 오버라이드한다.
+- **allowlist** — hosted fallback은 `X-OpenClaw-Client-Id` allowlist로 게이트되어 있다. upstream이 기본으로 실어 보내는 `openclaw-skill` 값이 현재 Retention Corp allowlist에 등록되어 있어 credentialless 호출이 200을 받는다. k-skill 래퍼는 이 기본값을 그대로 사용하고 `OPENCLAW_SHOPPING_CLIENT_ID`를 오버라이드하지 않는다. Retention Corp 측 allowlist 정책이 바뀌면 그때 맞춰 가이드를 갱신한다.
 - **secret은 runtime 환경변수** — 운영자 모드에서는 `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`를 환경변수로 주입한다. 키를 저장소나 답변에 노출하지 않는다.
 - **계약 확인 우선** — `tools`/`init` 명령으로 로컬 MCP 호환 도구 목록과 JSON-RPC payload 형태를 먼저 확인한다.
 
@@ -39,7 +39,7 @@ local://coupang-mcp
 | 환경변수 | 역할 | 기본값 |
 |---------|------|--------|
 | `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY` | 운영자 Coupang Partners API 크리덴셜. 둘 다 있을 때만 로컬 HMAC 경로가 활성화된다. | 없음 (없으면 hosted fallback) |
-| `OPENCLAW_SHOPPING_CLIENT_ID` | hosted fallback의 `X-OpenClaw-Client-Id`. k-skill 권장값 `coupang-mcp-fallback`. | `openclaw-skill` |
+| `OPENCLAW_SHOPPING_CLIENT_ID` | hosted fallback의 `X-OpenClaw-Client-Id`. upstream이 `openclaw-skill`을 기본으로 실어 보내며 이 값이 현재 Retention Corp allowlist에 등록되어 있다. k-skill 래퍼는 이 변수를 오버라이드하지 않는다. | `openclaw-skill` |
 | `OPENCLAW_SHOPPING_FORCE_HOSTED` | `1`이면 키가 있어도 hosted 경로를 강제한다. | 비어있음 |
 | `OPENCLAW_SHOPPING_BASE_URL` | hosted 백엔드 base URL 오버라이드. 스테이징/로컬 backend 테스트용. | `https://a.retn.kr` |
 
@@ -97,9 +97,8 @@ python3 coupang-product-search/scripts/coupang_partners_mcp.py search "생수"
 # 5. 로켓배송 필터
 python3 coupang-product-search/scripts/coupang_partners_mcp.py rocket "에어팟"
 
-# 6. hosted fallback 강제 + k-skill 전용 allowlist client-id
+# 6. hosted fallback 강제 (upstream 기본 allowlist client-id 유지)
 OPENCLAW_SHOPPING_FORCE_HOSTED=1 \
-OPENCLAW_SHOPPING_CLIENT_ID=coupang-mcp-fallback \
 python3 coupang-product-search/scripts/coupang_partners_mcp.py search "무선청소기"
 ```
 

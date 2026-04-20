@@ -217,7 +217,7 @@ class CoupangPartnersMcpWrapperTests(unittest.TestCase):
             upstream.chmod(0o755)
             env = {
                 **os.environ,
-                "OPENCLAW_SHOPPING_CLIENT_ID": "coupang-mcp-fallback",
+                "OPENCLAW_SHOPPING_CLIENT_ID": "openclaw-skill",
                 "OPENCLAW_SHOPPING_FORCE_HOSTED": "1",
                 "OPENCLAW_SHOPPING_BASE_URL": "https://staging.example.com",
             }
@@ -239,7 +239,7 @@ class CoupangPartnersMcpWrapperTests(unittest.TestCase):
             )
 
             payload = json.loads(completed.stdout)
-            self.assertEqual(payload["OPENCLAW_SHOPPING_CLIENT_ID"], "coupang-mcp-fallback")
+            self.assertEqual(payload["OPENCLAW_SHOPPING_CLIENT_ID"], "openclaw-skill")
             self.assertEqual(payload["OPENCLAW_SHOPPING_FORCE_HOSTED"], "1")
             self.assertEqual(payload["OPENCLAW_SHOPPING_BASE_URL"], "https://staging.example.com")
 
@@ -256,6 +256,25 @@ class CoupangPartnersMcpWrapperTests(unittest.TestCase):
         self.assertIn("COUPANG_ACCESS_KEY", help_text)
         self.assertIn("OPENCLAW_SHOPPING", help_text)
         self.assertRegex(help_text, r"(hosted|호스티드|a\.retn\.kr)")
+
+    def test_help_epilog_drops_non_allowlisted_coupang_mcp_fallback_recommendation(self):
+        # Direct probes against https://a.retn.kr/v1/public/assist on 2026-04-21
+        # confirmed that `X-OpenClaw-Client-Id: coupang-mcp-fallback` returns
+        # HTTP 403 ("Client is not allowlisted"), while the upstream default
+        # `openclaw-skill` returns HTTP 200. The wrapper's --help must not
+        # recommend the dead value and must surface openclaw-skill so users
+        # understand the allowlisted hosted-fallback client id in play.
+        completed = subprocess.run(
+            [sys.executable, str(WRAPPER_PATH), "--help"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+
+        help_text = completed.stdout
+        self.assertNotIn("coupang-mcp-fallback", help_text)
+        self.assertIn("openclaw-skill", help_text)
 
 
 @unittest.skipUnless(
