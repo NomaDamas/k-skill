@@ -2833,6 +2833,7 @@ test("korean-privacy-terms bundles the Apache-2.0 LICENSE per §4(a) redistribut
   assert.match(license, /TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION/);
   assert.match(license, /Redistribution\. You may reproduce and distribute/);
   assert.match(license, /END OF TERMS AND CONDITIONS/);
+  assert.match(license, /APPENDIX: How to apply the Apache License/);
   assert.match(license, /Copyright 2026 kimlawtech/);
 
   const skill = read(path.join("korean-privacy-terms", "SKILL.md"));
