@@ -1,6 +1,6 @@
 {
   "name": "parking-lot-search",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official Data.go.kr based public parking lot lookup for Korean location queries",
   "license": "MIT",
   "main": "src/index.js",
