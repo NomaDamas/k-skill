@@ -728,16 +728,6 @@ function normalizeParkingLotSearchQuery(query) {
     throw new Error("radius must be between 1 and 50000.");
   }
 
-  const numOfRows = parseInteger(query.numOfRows ?? query.num_of_rows, 1000);
-  if (numOfRows < 1 || numOfRows > 1000) {
-    throw new Error("numOfRows must be between 1 and 1000.");
-  }
-
-  const maxPages = parseInteger(query.maxPages ?? query.max_pages, 1);
-  if (maxPages < 1 || maxPages > 10) {
-    throw new Error("maxPages must be between 1 and 10.");
-  }
-
   const publicOnlyRaw = trimOrNull(query.publicOnly ?? query.public_only);
   const publicOnly = publicOnlyRaw
     ? !["0", "false", "n", "no"].includes(publicOnlyRaw.toLowerCase())
@@ -750,8 +740,6 @@ function normalizeParkingLotSearchQuery(query) {
     longitude,
     limit,
     radius,
-    numOfRows,
-    maxPages,
     publicOnly,
     addressHint,
     parkingType
@@ -1983,9 +1971,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         radius: normalized.radius,
         public_only: normalized.publicOnly,
         address_hint: normalized.addressHint,
-        parking_type: normalized.parkingType,
-        num_of_rows: normalized.numOfRows,
-        max_pages: normalized.maxPages
+        parking_type: normalized.parkingType
       },
       proxy: {
         name: config.proxyName,

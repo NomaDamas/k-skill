@@ -3474,64 +3474,75 @@ test("data4library book-exists endpoint requires library code and isbn13 then pr
   });
 });
 
-test("parking lot search endpoint normalizes, caches, and keeps the proxy public", async (t) => {
-  const originalFetch = global.fetch;
-  const fetchCalls = [];
-  global.fetch = async (url) => {
+function buildParkingDatasetFetchMock({ fetchCalls, totalCount, seoulRow, otherRows = [] }) {
+  return async (url) => {
     const resolved = String(url);
     fetchCalls.push(resolved);
-    assert.match(resolved, /^http:\/\/api\.data\.go\.kr\/openapi\/tn_pubr_prkplce_info_api\?/);
     const urlObject = new URL(resolved);
+    assert.match(resolved, /^https:\/\/api\.data\.go\.kr\/openapi\/tn_pubr_prkplce_info_api\?/);
     assert.equal(urlObject.searchParams.get("serviceKey"), "data-key");
     assert.equal(urlObject.searchParams.get("type"), "json");
-    assert.equal(urlObject.searchParams.get("prkplceSe"), "공영");
-    assert.equal(urlObject.searchParams.get("rdnmadr"), "서울특별시 종로구");
+    assert.ok(!urlObject.searchParams.has("rdnmadr"));
+    assert.ok(!urlObject.searchParams.has("lnmadr"));
+    assert.ok(!urlObject.searchParams.has("prkplceSe"));
 
+    const pageNo = Number(urlObject.searchParams.get("pageNo") || 1);
+    const items = pageNo === 1 ? [seoulRow, ...otherRows] : [];
     return new Response(JSON.stringify({
       response: {
         header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
         body: {
-          pageNo: 1,
-          numOfRows: 1000,
-          totalCount: 2,
-          items: [
-            {
-              prkplceNo: "111-2-000001",
-              prkplceNm: "종로구청 공영주차장",
-              prkplceSe: "공영",
-              prkplceType: "노외",
-              rdnmadr: "서울특별시 종로구 삼봉로 43",
-              prkcmprt: "50",
-              parkingchrgeInfo: "유료",
-              basicTime: "30",
-              basicCharge: "1000",
-              institutionNm: "서울특별시 종로구청",
-              latitude: "37.57320",
-              longitude: "126.97810",
-              pwdbsPpkZoneYn: "Y",
-              referenceDate: "2026-03-01"
-            },
-            {
-              prkplceNo: "111-2-000003",
-              prkplceNm: "광화문광장 공영주차장",
-              prkplceSe: "공영",
-              prkplceType: "노상",
-              rdnmadr: "서울특별시 종로구 세종대로 172",
-              prkcmprt: "20",
-              parkingchrgeInfo: "무료",
-              latitude: "37.57375",
-              longitude: "126.97836",
-              pwdbsPpkZoneYn: "N",
-              referenceDate: "2026-03-01"
-            }
-          ]
+          pageNo,
+          numOfRows: items.length,
+          totalCount,
+          items
         }
       }
-    }), {
-      status: 200,
-      headers: { "content-type": "application/json;charset=UTF-8" }
-    });
+    }), { status: 200, headers: { "content-type": "application/json" } });
   };
+}
+
+test("parking lot search endpoint caches the full dataset and serves nearby queries from memory", async (t) => {
+  const { resetParkingDatasetCacheForTests } = require("../src/parking-lots");
+  resetParkingDatasetCacheForTests();
+
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const seoulRow = {
+    prkplceNo: "111-2-000003",
+    prkplceNm: "광화문광장 공영주차장",
+    prkplceSe: "공영",
+    prkplceType: "노상",
+    rdnmadr: "서울특별시 종로구 세종대로 172",
+    prkcmprt: "20",
+    parkingchrgeInfo: "무료",
+    institutionNm: "서울특별시 종로구청",
+    latitude: "37.57375",
+    longitude: "126.97836",
+    pwdbsPpkZoneYn: "N",
+    referenceDate: "2026-03-01",
+    insttCode: "3000000",
+    insttNm: "서울특별시 종로구"
+  };
+  const jejuRow = {
+    prkplceNo: "500-2-000001",
+    prkplceNm: "제주공영주차장",
+    prkplceSe: "공영",
+    prkplceType: "노외",
+    rdnmadr: "제주특별자치도 제주시 연동 1",
+    prkcmprt: "100",
+    parkingchrgeInfo: "무료",
+    latitude: "33.4761",
+    longitude: "126.5472",
+    pwdbsPpkZoneYn: "N",
+    referenceDate: "2026-03-01"
+  };
+  global.fetch = buildParkingDatasetFetchMock({
+    fetchCalls,
+    totalCount: 2,
+    seoulRow,
+    otherRows: [jejuRow]
+  });
 
   const app = buildServer({
     env: {
@@ -3542,27 +3553,99 @@ test("parking lot search endpoint normalizes, caches, and keeps the proxy public
 
   t.after(async () => {
     global.fetch = originalFetch;
+    resetParkingDatasetCacheForTests();
     await app.close();
   });
 
   const first = await app.inject({
     method: "GET",
-    url: "/v1/parking-lots/search?latitude=37.57371315593711&longitude=126.97833785777944&address_hint=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C%20%EC%A2%85%EB%A1%9C%EA%B5%AC&limit=2&radius=1000"
+    url: "/v1/parking-lots/search?latitude=37.57371315593711&longitude=126.97833785777944&limit=2&radius=1000"
   });
   const second = await app.inject({
     method: "GET",
-    url: "/v1/parking-lots/search?lat=37.57371315593711&lon=126.97833785777944&addressHint=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C%20%EC%A2%85%EB%A1%9C%EA%B5%AC&limit=2&radius=1000"
+    url: "/v1/parking-lots/search?lat=37.57371315593711&lon=126.97833785777944&limit=2&radius=1000"
+  });
+  const third = await app.inject({
+    method: "GET",
+    url: "/v1/parking-lots/search?latitude=37.58&longitude=126.98&limit=2&radius=2000"
   });
 
   assert.equal(first.statusCode, 200);
   assert.equal(second.statusCode, 200);
-  assert.equal(fetchCalls.length, 1);
+  assert.equal(third.statusCode, 200);
+  assert.equal(first.json().items.length, 1);
   assert.equal(first.json().items[0].name, "광화문광장 공영주차장");
-  assert.equal(first.json().items[0].feeInfo, "무료");
-  assert.equal(first.json().items[1].basicCharge, 1000);
-  assert.equal(first.json().query.address_hint, "서울특별시 종로구");
+  assert.equal(first.json().items[0].providerName, "서울특별시 종로구");
+  assert.equal(first.json().meta.datasetCacheHit, false);
+  assert.equal(third.json().meta.datasetCacheHit, true);
+  assert.equal(fetchCalls.length, 1);
   assert.equal(first.json().proxy.cache.hit, false);
   assert.equal(second.json().proxy.cache.hit, true);
+});
+
+test("parking lot search endpoint filters cached dataset by radius and excludes private lots by default", async (t) => {
+  const { resetParkingDatasetCacheForTests } = require("../src/parking-lots");
+  resetParkingDatasetCacheForTests();
+
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const privateSeoulRow = {
+    prkplceNo: "111-2-000002",
+    prkplceNm: "세종로 민영주차장",
+    prkplceSe: "민영",
+    prkplceType: "노외",
+    rdnmadr: "서울특별시 종로구 세종대로 170",
+    prkcmprt: "100",
+    parkingchrgeInfo: "유료",
+    latitude: "37.573714",
+    longitude: "126.978339",
+    referenceDate: "2026-03-01"
+  };
+  const publicSeoulRow = {
+    prkplceNo: "111-2-000003",
+    prkplceNm: "광화문광장 공영주차장",
+    prkplceSe: "공영",
+    prkplceType: "노상",
+    rdnmadr: "서울특별시 종로구 세종대로 172",
+    prkcmprt: "20",
+    parkingchrgeInfo: "무료",
+    latitude: "37.57375",
+    longitude: "126.97836",
+    pwdbsPpkZoneYn: "N",
+    referenceDate: "2026-03-01"
+  };
+  global.fetch = buildParkingDatasetFetchMock({
+    fetchCalls,
+    totalCount: 2,
+    seoulRow: publicSeoulRow,
+    otherRows: [privateSeoulRow]
+  });
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-key" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    resetParkingDatasetCacheForTests();
+    await app.close();
+  });
+
+  const publicOnly = await app.inject({
+    method: "GET",
+    url: "/v1/parking-lots/search?latitude=37.57375&longitude=126.97836&limit=5&radius=500"
+  });
+  const includePrivate = await app.inject({
+    method: "GET",
+    url: "/v1/parking-lots/search?latitude=37.57375&longitude=126.97836&limit=5&radius=500&public_only=false"
+  });
+
+  assert.equal(publicOnly.statusCode, 200);
+  assert.equal(includePrivate.statusCode, 200);
+  assert.equal(publicOnly.json().items.length, 1);
+  assert.equal(publicOnly.json().items[0].name, "광화문광장 공영주차장");
+  const includedCategories = includePrivate.json().items.map((item) => item.category);
+  assert.equal(includePrivate.json().items.length, 2);
+  assert.ok(includedCategories.includes("공영"));
+  assert.ok(includedCategories.includes("민영"));
 });
 
 test("parking lot search endpoint validates coordinates before upstream calls", async (t) => {

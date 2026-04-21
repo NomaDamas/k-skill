@@ -40,7 +40,7 @@ test("buildOfficialParkingLotApiUrl targets the standard public parking API with
     publicOnly: true
   }));
 
-  assert.equal(url.origin + url.pathname, "http://api.data.go.kr/openapi/tn_pubr_prkplce_info_api");
+  assert.equal(url.origin + url.pathname, "https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api");
   assert.equal(url.searchParams.get("serviceKey"), "data-key");
   assert.equal(url.searchParams.get("type"), "json");
   assert.equal(url.searchParams.get("pageNo"), "2");
@@ -65,6 +65,10 @@ test("normalizeParkingLotRows keeps public parking metadata and sorts by distanc
   assert.equal(items[0].hasAccessibleParking, false);
   assert.equal(items[1].basicCharge, 1000);
   assert.equal(items[1].hasAccessibleParking, true);
+  assert.equal(items[0].providerCode, "3000000");
+  assert.equal(items[0].providerName, "서울특별시 종로구");
+  assert.equal(items[1].providerCode, "3000000");
+  assert.equal(items[1].providerName, "서울특별시 종로구");
   assert.equal(
     items[0].mapUrl,
     "https://map.kakao.com/link/map/%EA%B4%91%ED%99%94%EB%AC%B8%EA%B4%91%EC%9E%A5%20%EA%B3%B5%EC%98%81%EC%A3%BC%EC%B0%A8%EC%9E%A5,37.57375,126.97836"
@@ -99,7 +103,7 @@ test("searchNearbyParkingLotsByCoordinates uses the official API directly when a
   assert.equal(result.items[0].name, "광화문광장 공영주차장");
   assert.equal(result.meta.total, 2);
   assert.equal(result.meta.source, "data.go.kr");
-  assert.match(calls[0], /^http:\/\/api\.data\.go\.kr\/openapi\/tn_pubr_prkplce_info_api\?/);
+    assert.match(calls[0], /^https:\/\/api\.data\.go\.kr\/openapi\/tn_pubr_prkplce_info_api\?/);
   assert.match(calls[0], /rdnmadr=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C\+%EC%A2%85%EB%A1%9C%EA%B5%AC/);
 });
 
@@ -145,7 +149,7 @@ test("searchNearbyParkingLotsByLocationQuery resolves a Kakao anchor and derives
       return makeResponse(anchorPanel, "application/json");
     }
 
-    if (resolved.startsWith("http://api.data.go.kr/openapi/tn_pubr_prkplce_info_api?")) {
+    if (resolved.startsWith("https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api?")) {
       const urlObject = new URL(resolved);
       assert.equal(urlObject.searchParams.get("rdnmadr"), "서울특별시 종로구");
       return makeResponse(parkingApiResponse);

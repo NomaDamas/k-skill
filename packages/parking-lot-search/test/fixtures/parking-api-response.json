@@ -76,7 +76,8 @@
           "longitude": "126.97836",
           "pwdbsPpkZoneYn": "N",
           "referenceDate": "2026-03-01",
-          "instt_nm": "서울특별시 종로구"
+          "insttCode": "3000000",
+          "insttNm": "서울특별시 종로구"
         },
         {
           "prkplceNo": "111-2-000004",

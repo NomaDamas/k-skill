@@ -60,4 +60,4 @@ Issue #135에서 모두의주차장 연동 가능성이 언급되었지만 v1은
 
 - 표준데이터: <https://www.data.go.kr/data/15012896/standard.do>
 - Open API: <https://www.data.go.kr/data/15012896/openapi.do>
-- Endpoint: `http://api.data.go.kr/openapi/tn_pubr_prkplce_info_api`
+- Endpoint: `https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api`
