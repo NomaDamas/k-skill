@@ -1,0 +1,472 @@
+{
+  "schema_version": "1.0",
+  "source": "https://namu.wiki/w/%EB%B6%84%EB%A5%98:%EC%9C%A0%ED%96%89%EC%96%B4 (분류:유행어) + 큐레이션",
+  "last_reviewed": "2026-04-22",
+  "notes": "v1 시드 인덱스. 에이전트는 필요 시 slang_lookup.py 로 namuwiki 원문 요약을 확인한다. safety 수준이 risky 인 항목은 포함하지 않는다.",
+  "entries": [
+    {
+      "term": "중꺾마",
+      "aliases": ["중요한 건 꺾이지 않는 마음", "중꺾그마"],
+      "meaning_short": "어려운 상황에서도 포기하지 않는 불굴의 의지.",
+      "usage_context": ["격려", "스포츠", "동기부여", "SNS"],
+      "mood_tags": ["긍정", "의지", "감동"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "힘들지만 중꺾마 정신으로 끝까지 간다!",
+        "중꺾마, 올해도 잘 버텨보자."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%A4%91%EA%BA%BE%EB%A7%88",
+      "era": "2022",
+      "still_usable": true
+    },
+    {
+      "term": "갓생",
+      "aliases": ["갓생 살기", "갓생러"],
+      "meaning_short": "신(God)처럼 부지런하고 생산적인 삶.",
+      "usage_context": ["동기부여", "일상", "자기계발", "SNS"],
+      "mood_tags": ["긍정", "의지", "성실"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "오늘부터 갓생 산다.",
+        "갓생러들의 아침 루틴 모음."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EA%B0%93%EC%83%9D",
+      "era": "2021",
+      "still_usable": true
+    },
+    {
+      "term": "오운완",
+      "aliases": ["오늘 운동 완료"],
+      "meaning_short": "오늘의 운동을 마쳤다는 성취 인증.",
+      "usage_context": ["일상", "운동", "헬스", "SNS"],
+      "mood_tags": ["긍정", "성취", "뿌듯함"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "오운완! 오늘도 해냈다.",
+        "#오운완 #헬창의일상"
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%98%A4%EC%9A%B4%EC%99%84",
+      "era": "2020",
+      "still_usable": true
+    },
+    {
+      "term": "꾸안꾸",
+      "aliases": ["꾸민 듯 안 꾸민 듯"],
+      "meaning_short": "꾸민 티 안 나게 자연스럽게 꾸민 스타일.",
+      "usage_context": ["패션", "뷰티", "일상"],
+      "mood_tags": ["중성", "세련"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "꾸안꾸 데일리룩 추천해드려요.",
+        "꾸안꾸가 제일 어렵다."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EA%BE%B8%EC%95%88%EA%BE%B8",
+      "era": "2019",
+      "still_usable": true
+    },
+    {
+      "term": "TMI",
+      "aliases": ["티엠아이", "Too Much Information"],
+      "meaning_short": "굳이 안 궁금한 너무 많은 정보.",
+      "usage_context": ["대화", "SNS", "유머"],
+      "mood_tags": ["중성", "유머"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "TMI지만 저 오늘 양말 짝짝이로 신었어요.",
+        "TMI 주의, 스크롤 내리세요."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/TMI",
+      "era": "2018",
+      "still_usable": true
+    },
+    {
+      "term": "현타",
+      "aliases": ["현실 자각 타임", "현자타임"],
+      "meaning_short": "몰두하던 일 끝에 몰려오는 공허함이나 현실 자각.",
+      "usage_context": ["일상", "감정표현", "유머"],
+      "mood_tags": ["부정", "허무", "자조"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "카드값 보고 갑자기 현타 왔다.",
+        "몰아보기 끝나고 오는 그 현타..."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%ED%98%84%ED%83%80",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "갑분싸",
+      "aliases": ["갑자기 분위기 싸해짐"],
+      "meaning_short": "한순간에 분위기가 어색하거나 썰렁해진 상황.",
+      "usage_context": ["유머", "대화", "일상"],
+      "mood_tags": ["부정", "어색", "유머"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "아재 개그 한 번에 갑분싸 됐어.",
+        "갑분싸 만들기 장인"
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EA%B0%91%EB%B6%84%EC%8B%B8",
+      "era": "2018",
+      "still_usable": true
+    },
+    {
+      "term": "워라밸",
+      "aliases": ["Work-Life Balance", "일과 삶의 균형"],
+      "meaning_short": "일과 개인 삶 사이의 균형.",
+      "usage_context": ["직장", "일상", "자기계발"],
+      "mood_tags": ["중성", "가치관"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "이 회사는 워라밸이 확실히 좋다.",
+        "워라밸 지키면서 일하기."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%9B%8C%EB%9D%BC%EB%B0%B8",
+      "era": "2017",
+      "still_usable": true
+    },
+    {
+      "term": "존버",
+      "aliases": ["존나게 버티기"],
+      "meaning_short": "힘들어도 끝까지 버티는 행동. 비속어 어근이 섞여 있어 격식 상황에서는 주의.",
+      "usage_context": ["투자", "업무", "의지"],
+      "mood_tags": ["중성", "의지", "인내"],
+      "intensity": "strong",
+      "safety": "spicy",
+      "example_usage": [
+        "주가 떨어져도 일단 존버 중.",
+        "존버는 승리한다."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%A1%B4%EB%B2%84",
+      "era": "2018",
+      "still_usable": true
+    },
+    {
+      "term": "만반잘부",
+      "aliases": ["만나서 반가워 잘 부탁해"],
+      "meaning_short": "새로 만난 사이 캐주얼 인사말.",
+      "usage_context": ["인사", "자기소개", "SNS"],
+      "mood_tags": ["긍정", "친근"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "저 오늘 새로 왔습니다. 만반잘부!",
+        "만반잘부 💕"
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EB%A7%8C%EB%B0%98%EC%9E%98%EB%B6%80",
+      "era": "2020",
+      "still_usable": true
+    },
+    {
+      "term": "억텐",
+      "aliases": ["억지 텐션"],
+      "meaning_short": "무리해서 끌어올린 과장된 텐션.",
+      "usage_context": ["유머", "자조", "SNS"],
+      "mood_tags": ["유머", "자조"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "오늘 피곤한데 억텐으로 버틴다.",
+        "억텐 아니고 찐텐이야."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%96%B5%ED%85%90",
+      "era": "2021",
+      "still_usable": true
+    },
+    {
+      "term": "찐텐",
+      "aliases": ["진짜 텐션"],
+      "meaning_short": "꾸밈없이 진심으로 올라온 텐션.",
+      "usage_context": ["유머", "SNS", "일상"],
+      "mood_tags": ["긍정", "진심"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "이거 찐텐이야, 진짜 웃겨.",
+        "찐텐 터지는 순간"
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%B0%90%ED%85%90",
+      "era": "2021",
+      "still_usable": true
+    },
+    {
+      "term": "손절",
+      "aliases": ["손절하다"],
+      "meaning_short": "인간관계를 단호하게 끊는 행위. 주식 용어에서 전이됨.",
+      "usage_context": ["관계", "일상", "투자"],
+      "mood_tags": ["부정", "단호"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "그런 친구는 그냥 손절해.",
+        "이 주식 손절할까 고민 중."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%86%90%EC%A0%88",
+      "era": "2018",
+      "still_usable": true
+    },
+    {
+      "term": "입덕",
+      "aliases": ["입덕하다"],
+      "meaning_short": "어떤 대상/스타의 팬이 되어 빠지기 시작하는 것.",
+      "usage_context": ["취미", "덕질", "SNS"],
+      "mood_tags": ["긍정", "애정"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "이 아이돌 무대 보고 바로 입덕했어.",
+        "입덕 축하해요!"
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%9E%85%EB%8D%95",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "덕질",
+      "aliases": ["덕후질"],
+      "meaning_short": "좋아하는 대상을 열정적으로 파고드는 활동.",
+      "usage_context": ["취미", "SNS", "일상"],
+      "mood_tags": ["긍정", "애정", "열정"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "오늘도 덕질 중입니다.",
+        "덕질은 돈이 참 많이 드는 취미야."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EB%8D%95%EC%A7%88",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "아아",
+      "aliases": ["아이스 아메리카노"],
+      "meaning_short": "아이스 아메리카노. 한국인 카페 주문 공식 음료.",
+      "usage_context": ["일상", "카페", "음료"],
+      "mood_tags": ["중성", "일상"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "무조건 아아 한 잔.",
+        "한겨울에도 아아 시키는 한국인."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%95%84%EC%9D%B4%EC%8A%A4%20%EC%95%84%EB%A9%94%EB%A6%AC%EC%B9%B4%EB%85%B8",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "존맛탱",
+      "aliases": ["JMT", "존맛"],
+      "meaning_short": "엄청나게 맛있다는 강조 표현. 비속어 어근 포함으로 격식 상황 주의.",
+      "usage_context": ["음식", "SNS", "리뷰"],
+      "mood_tags": ["긍정", "감탄", "맛"],
+      "intensity": "strong",
+      "safety": "spicy",
+      "example_usage": [
+        "여기 김치찌개 JMT!",
+        "존맛탱! 다시 올 거야."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%A1%B4%EB%A7%9B%ED%83%B1",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "노잼",
+      "aliases": ["노잼이다"],
+      "meaning_short": "재미없다는 뜻의 부정 평가.",
+      "usage_context": ["평가", "SNS", "유머"],
+      "mood_tags": ["부정", "평가"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "그 영화 노잼이었어.",
+        "오늘 하루 진짜 노잼."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EB%85%B8%EC%9E%BC",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "꿀잼",
+      "aliases": ["꿀잼이다"],
+      "meaning_short": "매우 재미있다는 긍정 평가.",
+      "usage_context": ["평가", "SNS", "유머"],
+      "mood_tags": ["긍정", "유머"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "이번 주 예능 꿀잼!",
+        "이거 생각보다 꿀잼이네."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EA%BF%80%EC%9E%BC",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "스불재",
+      "aliases": ["스스로 불러온 재앙"],
+      "meaning_short": "자기 탓에 일어난 불행을 유머러스하게 표현한 말.",
+      "usage_context": ["유머", "자조", "SNS"],
+      "mood_tags": ["유머", "자조", "부정"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "시험기간에 드라마 몰아보기… 이거 스불재다.",
+        "스불재지만 어쩌겠어."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%8A%A4%EB%B6%88%EC%9E%AC",
+      "era": "2019",
+      "still_usable": true
+    },
+    {
+      "term": "마상",
+      "aliases": ["마음의 상처"],
+      "meaning_short": "사소한 한마디에 받은 속상한 감정.",
+      "usage_context": ["유머", "감정표현", "일상"],
+      "mood_tags": ["부정", "유머", "소심"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "그 말 듣고 마상 왔어.",
+        "너 그러면 나 마상 입어."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EB%A7%88%EC%83%81",
+      "era": "2020",
+      "still_usable": true
+    },
+    {
+      "term": "럭키비키",
+      "aliases": ["Lucky Vicky"],
+      "meaning_short": "어떤 일도 긍정적으로 '운 좋았다'로 해석하는 초긍정 태도. 장원영의 인터뷰 밈에서 유래.",
+      "usage_context": ["긍정", "일상", "SNS", "마케팅"],
+      "mood_tags": ["긍정", "낙관", "유머"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "버스 방금 놓쳤는데 다음 거 앉아서 왔네, 럭키비키잖아!",
+        "이것도 럭키비키야."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EB%9F%AD%ED%82%A4%EB%B9%84%ED%82%A4",
+      "era": "2024",
+      "still_usable": true
+    },
+    {
+      "term": "꼰대",
+      "aliases": [],
+      "meaning_short": "권위적인 태도로 훈계하거나 가르치려 드는 사람에 대한 비하 표현.",
+      "usage_context": ["세대", "직장", "관계"],
+      "mood_tags": ["부정", "풍자"],
+      "intensity": "medium",
+      "safety": "spicy",
+      "example_usage": [
+        "꼰대 같은 말은 하지 말자.",
+        "스스로 꼰대가 되지 않기 위해 노력 중."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EA%BC%B0%EB%8C%80",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "현생",
+      "aliases": ["현실 생활"],
+      "meaning_short": "덕질/게임/몰두하는 취미 밖의 일상적 현실 생활.",
+      "usage_context": ["일상", "덕질", "SNS"],
+      "mood_tags": ["중성", "일상"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "현생 바빠서 오늘은 덕질 못 해.",
+        "현생 리셋 시간."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%ED%98%84%EC%83%9D",
+      "era": "2018",
+      "still_usable": true
+    },
+    {
+      "term": "킹받다",
+      "aliases": ["킹받네"],
+      "meaning_short": "'열받다'를 강조한 유행 표현. 짜증이나 약오름을 유머러스하게 나타냄.",
+      "usage_context": ["유머", "감정표현", "SNS"],
+      "mood_tags": ["부정", "유머", "짜증"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "이거 왜 안 되는 거야, 킹받네.",
+        "진짜 킹받는다 오늘."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%ED%82%B9%EB%B0%9B%EB%8B%A4",
+      "era": "2021",
+      "still_usable": true
+    },
+    {
+      "term": "어쩔티비",
+      "aliases": ["어쩔TV", "저쩔티비"],
+      "meaning_short": "상대의 말에 '어쩌라고'로 응수하는 초딩풍 유행어. 과하면 유치해 보일 수 있음.",
+      "usage_context": ["유머", "반박"],
+      "mood_tags": ["유머", "반박"],
+      "intensity": "strong",
+      "safety": "spicy",
+      "example_usage": [
+        "그래서 어쩔티비.",
+        "어쩔티비 저쩔티비."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%96%B4%EC%A9%94%ED%8B%B0%EB%B9%84",
+      "era": "2021",
+      "still_usable": true
+    },
+    {
+      "term": "혼밥",
+      "aliases": ["혼자 밥 먹기"],
+      "meaning_short": "혼자 식사하는 것. 이제는 널리 정착된 생활방식 표현.",
+      "usage_context": ["일상", "음식", "라이프스타일"],
+      "mood_tags": ["중성", "일상"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "오늘은 혼밥 해야지.",
+        "혼밥 하기 좋은 가게 추천해줘."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%ED%98%BC%EB%B0%A5",
+      "era": "2015",
+      "still_usable": true
+    },
+    {
+      "term": "인싸",
+      "aliases": ["인사이더"],
+      "meaning_short": "모임·무리 안에서 잘 어울려 주도하는 사람. 반대말은 아싸.",
+      "usage_context": ["사회", "학교", "직장"],
+      "mood_tags": ["중성"],
+      "intensity": "subtle",
+      "safety": "safe",
+      "example_usage": [
+        "저 친구는 진짜 인싸야.",
+        "인싸템 하나 사볼까."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%9D%B8%EC%8B%B8",
+      "era": "2017",
+      "still_usable": true
+    },
+    {
+      "term": "역대급",
+      "aliases": [],
+      "meaning_short": "역사상 최고 수준이라는 감탄. 긍·부정 모두에 쓸 수 있음.",
+      "usage_context": ["감탄", "리뷰", "SNS"],
+      "mood_tags": ["감탄", "강조"],
+      "intensity": "medium",
+      "safety": "safe",
+      "example_usage": [
+        "이번 공연 역대급이었다.",
+        "역대급 폭염."
+      ],
+      "namuwiki_url": "https://namu.wiki/w/%EC%97%AD%EB%8C%80%EA%B8%89",
+      "era": "2015",
+      "still_usable": true
+    }
+  ]
+}
