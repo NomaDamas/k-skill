@@ -7,6 +7,7 @@ import json
 import pathlib
 import sys
 import unittest
+import urllib.parse
 from unittest import mock
 
 
@@ -26,13 +27,17 @@ def _load(module_name: str, script_name: str):
     script_parent = str(SCRIPTS_DIR)
     if script_parent not in sys.path:
         sys.path.insert(0, script_parent)
+    # Register under file-stem name too so intra-skill imports
+    # (e.g. slang_lookup -> _slang_http) share the same module object
+    # and exception classes compare identical across test boundaries.
+    sys.modules[path.stem] = module
     spec.loader.exec_module(module)
     return module
 
 
+slang_http = _load("korean_slang_writing_http", "_slang_http.py")
 slang_search = _load("korean_slang_writing_search", "slang_search.py")
 slang_lookup = _load("korean_slang_writing_lookup", "slang_lookup.py")
-slang_http = _load("korean_slang_writing_http", "_slang_http.py")
 
 
 def make_entry(
@@ -456,7 +461,9 @@ class HttpUtilitiesTest(unittest.TestCase):
     def test_build_namuwiki_url_encodes_korean_title(self) -> None:
         url = slang_http.build_namuwiki_url("중꺾마")
         self.assertTrue(url.startswith("https://namu.wiki/w/"))
-        self.assertIn("%EC%A4%91%EA%BF%BA%EB%A7%88", url)
+        expected_suffix = urllib.parse.quote("중꺾마", safe="/")
+        self.assertEqual(url, f"https://namu.wiki/w/{expected_suffix}")
+        self.assertIn("%", url)
 
     def test_build_namuwiki_url_leaves_existing_url_alone(self) -> None:
         existing = "https://namu.wiki/w/%ED%85%8C%EC%8A%A4%ED%8A%B8"
