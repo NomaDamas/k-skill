@@ -1,3 +1,17 @@
+---
+name: catchtable-sniper
+description: Monitor Catchtable for open reservation slots and attempt booking using a logged-in Chrome session.
+license: MIT
+metadata:
+  category: lifestyle
+  subcategory: food
+  locale: ko-KR
+  phase: v1
+  requires:
+    - Chrome MCP
+    - Logged-in Catchtable Chrome session
+---
+
 # catchtable-sniper
 
 ## 📋 기본 정보
