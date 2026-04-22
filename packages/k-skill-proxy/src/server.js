@@ -13,6 +13,12 @@ const {
   normalizeMfdsDrugLookupQuery,
   normalizeMfdsFoodSafetyQuery
 } = require("./mfds");
+const {
+  fetchLhNoticeDetail,
+  fetchLhNoticeList,
+  normalizeLhNoticeDetailQuery,
+  normalizeLhNoticeSearchQuery
+} = require("./lh-notice");
 const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const { fetchNearbyParkingLots } = require("./parking-lots");
@@ -1281,6 +1287,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       hrfcoConfigured: Boolean(config.hrfcoApiKey),
       opinetConfigured: Boolean(config.opinetApiKey),
       molitConfigured: Boolean(config.molitApiKey),
+      lhNoticeConfigured: Boolean(config.molitApiKey),
       data4libraryConfigured: Boolean(config.data4libraryAuthKey),
       foodsafetyKoreaConfigured: Boolean(config.foodsafetyKoreaApiKey),
       neisSchoolMealConfigured: Boolean(config.keduInfoKey),
@@ -2083,6 +2090,168 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       proxy: {
         name: config.proxyName,
         cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/lh-notice/search", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeLhNoticeSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "lh-notice-search",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.molitApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "DATA_GO_KR_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let body;
+    try {
+      body = await fetchLhNoticeList({
+        serviceKey: config.molitApiKey,
+        filters: normalized
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message,
+        upstream_code: error.upstreamCode || undefined,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    const payload = {
+      ...body,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/lh-notice/detail", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeLhNoticeDetailQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "lh-notice-detail",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.molitApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "DATA_GO_KR_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let body;
+    try {
+      body = await fetchLhNoticeDetail({
+        serviceKey: config.molitApiKey,
+        filters: normalized
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message,
+        upstream_code: error.upstreamCode || undefined,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    const payload = {
+      ...body,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
         requested_at: new Date().toISOString()
       }
     };
@@ -3207,6 +3376,8 @@ module.exports = {
   normalizeKmaForecastQuery,
   normalizeKoreanStockLookupQuery,
   normalizeKoreanStockSearchQuery,
+  normalizeLhNoticeDetailQuery,
+  normalizeLhNoticeSearchQuery,
   normalizeOpinetAroundQuery,
   normalizeOpinetDetailQuery,
   normalizeNeisSchoolMealQuery,

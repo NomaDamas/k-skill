@@ -56,6 +56,11 @@
 - MOLIT 단독/다가구 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcSHTrade/getRTMSDataSvcSHTrade
 - MOLIT 단독/다가구 전월세 API: https://apis.data.go.kr/1613000/RTMSDataSvcSHRent/getRTMSDataSvcSHRent
 - MOLIT 상업업무용 매매 API: https://apis.data.go.kr/1613000/RTMSDataSvcNrgTrade/getRTMSDataSvcNrgTrade
+- LH 청약플러스 공고 목록: https://apply.lh.or.kr/lhapply/apply/wt/wrtanc/selectWrtancList.do?mi=1026
+- 공공데이터포털 한국토지주택공사 임대공고문 정보 API: https://www.data.go.kr/data/15058530/openapi.do
+- LH 임대공고문 목록 endpoint: http://apis.data.go.kr/B552555/lhLeaseNoticeInfo1/lhLeaseNoticeInfo1
+- LH 임대공고문 상세(공급정보) endpoint: http://apis.data.go.kr/B552555/lhLeaseNoticeDtlInfo1/getLeaseNoticeDtlInfo1
+- LH 청약 샘플 reference 구현(heereal/Bunyang_MoeumZip): https://github.com/heereal/Bunyang_MoeumZip
 - beopmang: https://api.beopmang.org
 - `silver-flight-group/kakaocli`: https://github.com/silver-flight-group/kakaocli
 - KakaoTalk Mac 설치 참고(`mas`): https://velog.io/@bonjugi/%EB%A7%A5%EB%B6%81-M1%EC%97%90-homebrew%EB%A1%9C-node-vscode-%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1-%EC%84%A4%EC%B9%98%ED%95%98%EA%B8%B0

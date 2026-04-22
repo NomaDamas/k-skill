@@ -24,6 +24,8 @@
 - `GET /v1/data4library/book-detail` — 도서관 정보나루 도서 상세 조회(`DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/libraries-by-book` — 도서 소장 도서관 조회(`DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/book-exists` — 도서관별 도서 소장여부(`DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/lh-notice/search` — LH 청약 공고 목록(`DATA_GO_KR_API_KEY`)
+- `GET /v1/lh-notice/detail` — LH 청약 공고 상세(`DATA_GO_KR_API_KEY`)
 
 ## 환경변수
 
@@ -41,7 +43,7 @@
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`
 - `KSKILL_PROXY_RATE_LIMIT_WINDOW_MS` — 기본 `60000`
 - `KSKILL_PROXY_RATE_LIMIT_MAX` — 기본 `60`
-- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `parking-lots`, `real-estate`, `mfds-drug-safety`, `mfds-food-safety`)
+- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `parking-lots`, `real-estate`, `mfds-drug-safety`, `mfds-food-safety`, `lh-notice`). 각 서비스는 공공데이터포털에서 별도 "활용신청" 승인이 필요하다. 키를 발급받은 뒤에는 [LH 임대공고문 정보](https://www.data.go.kr/data/15058530/openapi.do) 페이지에서도 활용신청을 눌러 동일 키를 활성화해야 `lh-notice` 라우트가 성공한다. 미활성 상태에서는 upstream이 HTTP 403 Forbidden을 돌려주고 proxy는 `upstream_error`로 변환한다.
 
 기본 정책은 **무료 API 공개 프록시 = 무인증** 이다. 대신 endpoint scope 를 좁게 유지하고, cache + rate limit 으로 남용을 늦춘다.
 
@@ -169,6 +171,25 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-exists' \
 curl -fsS --get 'http://127.0.0.1:4020/v1/korean-stock/search' \
   --data-urlencode 'q=삼성전자' \
   --data-urlencode 'bas_dd=20260408'
+```
+
+LH 청약 공고 목록 예시 (`DATA_GO_KR_API_KEY` 필요):
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/search' \
+  --data-urlencode 'panSs=공고중' \
+  --data-urlencode 'uppAisTpCd=06' \
+  --data-urlencode 'cnpCdNm=부산광역시' \
+  --data-urlencode 'pageSize=20'
+```
+
+LH 청약 공고 상세:
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/detail' \
+  --data-urlencode 'panId=2015122300019828' \
+  --data-urlencode 'ccrCnntSysDsCd=03' \
+  --data-urlencode 'splInfTpCd=051'
 ```
 
 프록시는 내부적으로 `waterlevel/info.json` 으로 관측소를 해석하고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 수위/유량을 조회합니다. 한국 주식 route는 KRX Open API에 `AUTH_KEY` 헤더를 서버 쪽에서만 주입합니다.
