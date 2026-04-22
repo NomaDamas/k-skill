@@ -12,16 +12,23 @@ Commands:
   info <input>                                Print document info as JSON
   list-paragraphs <input> [--section N]       List paragraph lengths in a section
   search <input> --query TEXT [--from-section N] [--from-paragraph N] [--from-char N]
-                                              Find first occurrence (forward)
+                                              Find first occurrence (forward, body paragraphs only)
   insert-text <input> <output> --section N --paragraph N --offset N --text TEXT
   delete-text <input> <output> --section N --paragraph N --offset N --count N
   replace-all <input> <output> --query TEXT --replacement TEXT [--case-sensitive]
+                                              Replace every occurrence (body paragraphs only;
+                                              rejects replacements with newline/paragraph breaks)
   create-table <input> <output> --section N --paragraph N --offset N --rows N --cols N
   set-cell-text <input> <output> --section N --parent-paragraph N --control N --cell N
                 --text TEXT [--cell-paragraph N] [--no-replace]
   create-blank <output>                       Write a blank HWP document to <output>
   render <input> [--page N] [--format svg|html]
                                               Print rendered SVG/HTML to stdout
+
+Scope note:
+  'search' and 'replace-all' scan body paragraphs only. Text inside table cells,
+  headers/footers, and footnotes is NOT covered. For cell text, use 'info' or
+  'list-paragraphs' to locate the table, then 'set-cell-text' to write.
 
 Global options:
   --json           Output machine-readable JSON (default for info/list/search)

@@ -50,6 +50,20 @@ Every editing subcommand writes a brand-new HWP file (never overwrites the
 input) and prints a JSON summary including `ok`, post-edit cursor position,
 `bytesWritten`, and the resolved `outputPath`.
 
+### Scope of `search` and `replace-all`
+
+Both `search` and `replace-all` operate on **body paragraphs only**. Text
+inside table cells, headers/footers, or footnotes is not scanned. This
+mirrors the upstream `@rhwp/core` `searchText` scope. For cell text, use
+`info` or `list-paragraphs` to locate the table and then `set-cell-text` to
+write. `replace-all` also rejects any `--replacement` that contains newline
+or paragraph-break characters (`\n`, `\r`, U+2028, U+2029) because they would
+split a paragraph — split those into multiple `insert-text` calls instead.
+`replace-all` uses **non-overlapping** replacement semantics: matches are
+computed against the original text before any replacement runs, so
+`--query a --replacement aa` against `aaa` replaces 3 originals and yields
+`aaaaaa`, not an infinite loop.
+
 ## Node API
 
 ```js

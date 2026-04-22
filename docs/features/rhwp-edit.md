@@ -52,7 +52,9 @@ npx k-skill-rhwp replace-all ./draft.hwp ./out/2026.hwp \
   --query 2025 --replacement 2026
 ```
 
-대소문자 구분이 필요하면 `--case-sensitive` 를 붙인다.
+대소문자 구분이 필요하면 `--case-sensitive` 를 붙인다. 길이가 다른 치환(예: `2026` → `이천이십칠`)도 문제없이 동작한다.
+
+**스코프 주의** — `replace-all` 은 **본문(body) 문단만** 스캔한다. 업스트림 `searchText` 가 본문만 커버하기 때문에 같은 스코프를 따른다. 표 셀, 머리말/꼬리말, 각주 본문의 텍스트는 `replace-all` 이 건드리지 않는다. 셀 내용을 바꾸려면 아래 4) 의 `set-cell-text` 를 쓴다.
 
 ### 4) 표 추가 후 특정 셀 채우기
 
@@ -78,6 +80,8 @@ npx k-skill-rhwp info ./draft.hwp
 npx k-skill-rhwp list-paragraphs ./draft.hwp --section 0
 npx k-skill-rhwp search ./draft.hwp --query "2025"
 ```
+
+`search` 도 `replace-all` 과 마찬가지로 **본문 문단만** 스캔한다. 표 셀/머리말/꼬리말/각주 안의 텍스트는 `search` 가 찾지 않는다. 셀 내용은 `info` 또는 `list-paragraphs` 로 표 좌표(`paraIdx` / `controlIdx`) 를 확인한 뒤 `set-cell-text` 로 직접 쓴다.
 
 ## Node API
 

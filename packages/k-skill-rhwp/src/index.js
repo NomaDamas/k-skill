@@ -97,6 +97,20 @@ async function deleteText(options) {
   }
 }
 
+function findAllMatchOffsets(text, query, caseSensitive) {
+  const hay = caseSensitive ? text : text.toLowerCase();
+  const needle = caseSensitive ? query : query.toLowerCase();
+  const offsets = [];
+  let i = 0;
+  while (i <= hay.length - needle.length) {
+    const idx = hay.indexOf(needle, i);
+    if (idx < 0) break;
+    offsets.push(idx);
+    i = idx + needle.length;
+  }
+  return offsets;
+}
+
 async function replaceAll(options) {
   const {
     input,
@@ -108,12 +122,35 @@ async function replaceAll(options) {
   if (typeof query !== "string" || query.length === 0) {
     throw new Error("replaceAll: query must be a non-empty string");
   }
+  const replacementText = replacement == null ? "" : String(replacement);
+  if (/[\n\r\u2028\u2029]/.test(replacementText)) {
+    throw new Error(
+      "replaceAll: replacement must not contain newline or paragraph-break characters; split into multiple edits instead"
+    );
+  }
+  const caseSensitiveFlag = caseSensitive === true;
   const doc = await loadDocument(input);
   try {
-    const raw = doc.replaceAll(query, replacement ?? "", caseSensitive === true);
-    const result = parseJsonResult(raw, "replaceAll");
+    let count = 0;
+    const sectionCount = doc.getSectionCount();
+    for (let s = 0; s < sectionCount; s += 1) {
+      const paraCount = doc.getParagraphCount(s);
+      for (let p = 0; p < paraCount; p += 1) {
+        const len = doc.getParagraphLength(s, p);
+        if (len < query.length) continue;
+        const text = doc.getTextRange(s, p, 0, len);
+        const offsets = findAllMatchOffsets(text, query, caseSensitiveFlag);
+        for (let m = offsets.length - 1; m >= 0; m -= 1) {
+          parseJsonResult(
+            doc.replaceText(s, p, offsets[m], query.length, replacementText),
+            "replaceText"
+          );
+          count += 1;
+        }
+      }
+    }
     const written = writeHwp(doc, output);
-    return { ...result, ...written };
+    return { ok: true, count, ...written };
   } finally {
     doc.free();
   }

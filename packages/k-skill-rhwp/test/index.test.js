@@ -2,6 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -35,6 +36,10 @@ test.after(() => {
 
 function tempPath(name) {
   return path.join(tmpRoot, name);
+}
+
+function sha1(filePath) {
+  return crypto.createHash("sha1").update(fs.readFileSync(filePath)).digest("hex");
 }
 
 async function newBlankFixture(name = "blank.hwp") {
@@ -165,10 +170,10 @@ test("deleteText rejects non-positive counts", async () => {
   );
 });
 
-test("replaceAll rewrites matched text and reports replacement count", async () => {
-  const src = await newBlankFixture("replace-src.hwp");
-  const mid = tempPath("replace-mid.hwp");
-  const dst = tempPath("replace-dst.hwp");
+test("replaceAll persists same-length replacement into the output bytes (regression for silent no-op)", async () => {
+  const src = await newBlankFixture("replace-same-src.hwp");
+  const mid = tempPath("replace-same-mid.hwp");
+  const dst = tempPath("replace-same-dst.hwp");
   await insertText({
     input: src,
     output: mid,
@@ -184,8 +189,193 @@ test("replaceAll rewrites matched text and reports replacement count", async () 
     replacement: "2026"
   });
   assert.equal(result.ok, true);
+  assert.equal(result.count, 3, `expected 3 replacements, got ${result.count}`);
   const info = await getDocumentInfo(dst);
   assert.equal(info.sections[0].paragraphs[0].length, "2026 2026 2026".length);
+  assert.notEqual(sha1(mid), sha1(dst), "replaceAll output must differ from input bytes");
+  const hitNew = await searchText({ input: dst, query: "2026" });
+  assert.equal(hitNew.found, true, "replacement 2026 must be findable after replaceAll");
+  assert.equal(hitNew.sec, 0);
+  assert.equal(hitNew.para, 0);
+  const hitOld = await searchText({ input: dst, query: "2025" });
+  assert.equal(hitOld.found, false, "query 2025 must not be findable after replaceAll");
+});
+
+test("replaceAll persists LONGER-length replacement and grows paragraph length by the correct amount", async () => {
+  const src = await newBlankFixture("replace-longer-src.hwp");
+  const mid = tempPath("replace-longer-mid.hwp");
+  const dst = tempPath("replace-longer-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "2026년 테스트"
+  });
+  const result = await replaceAll({
+    input: mid,
+    output: dst,
+    query: "2026",
+    replacement: "이천이십칠"
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 1);
+  const info = await getDocumentInfo(dst);
+  assert.equal(
+    info.sections[0].paragraphs[0].length,
+    "이천이십칠년 테스트".length,
+    "paragraph length must grow when replacement is longer than query"
+  );
+  assert.notEqual(sha1(mid), sha1(dst));
+  assert.equal((await searchText({ input: dst, query: "이천이십칠" })).found, true);
+  assert.equal((await searchText({ input: dst, query: "2026" })).found, false);
+});
+
+test("replaceAll persists SHORTER-length replacement and shrinks paragraph length by the correct amount", async () => {
+  const src = await newBlankFixture("replace-shorter-src.hwp");
+  const mid = tempPath("replace-shorter-mid.hwp");
+  const dst = tempPath("replace-shorter-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "longlonglong tail"
+  });
+  const result = await replaceAll({
+    input: mid,
+    output: dst,
+    query: "longlonglong",
+    replacement: "AB"
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 1);
+  const info = await getDocumentInfo(dst);
+  assert.equal(info.sections[0].paragraphs[0].length, "AB tail".length);
+  assert.notEqual(sha1(mid), sha1(dst));
+});
+
+test("replaceAll with empty replacement deletes every match (delete-to-empty)", async () => {
+  const src = await newBlankFixture("replace-delete-src.hwp");
+  const mid = tempPath("replace-delete-mid.hwp");
+  const dst = tempPath("replace-delete-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "foo-X-bar-X-baz"
+  });
+  const result = await replaceAll({
+    input: mid,
+    output: dst,
+    query: "-X-",
+    replacement: ""
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 2);
+  const info = await getDocumentInfo(dst);
+  assert.equal(info.sections[0].paragraphs[0].length, "foobarbaz".length);
+  assert.equal((await searchText({ input: dst, query: "-X-" })).found, false);
+});
+
+test("replaceAll handles replacement containing the query without infinite loop (non-overlapping semantics)", async () => {
+  const src = await newBlankFixture("replace-contains-src.hwp");
+  const mid = tempPath("replace-contains-mid.hwp");
+  const dst = tempPath("replace-contains-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "aaa"
+  });
+  const result = await replaceAll({
+    input: mid,
+    output: dst,
+    query: "a",
+    replacement: "aa"
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 3, "non-overlapping replace: each original 'a' matched once, not each expanded one");
+  const info = await getDocumentInfo(dst);
+  assert.equal(info.sections[0].paragraphs[0].length, 6, "'aaa' with a→aa produces 'aaaaaa' under non-overlapping semantics");
+});
+
+test("replaceAll with zero matches writes output and reports count 0", async () => {
+  const src = await newBlankFixture("replace-none-src.hwp");
+  const mid = tempPath("replace-none-mid.hwp");
+  const dst = tempPath("replace-none-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "no matches here"
+  });
+  const result = await replaceAll({
+    input: mid,
+    output: dst,
+    query: "XYZ",
+    replacement: "ABC"
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 0);
+  const info = await getDocumentInfo(dst);
+  assert.equal(info.sections[0].paragraphs[0].length, "no matches here".length);
+});
+
+test("replaceAll honors case-sensitive flag", async () => {
+  const src = await newBlankFixture("replace-case-src.hwp");
+  const mid = tempPath("replace-case-mid.hwp");
+  const dst = tempPath("replace-case-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "abc ABC abc"
+  });
+  const result = await replaceAll({
+    input: mid,
+    output: dst,
+    query: "abc",
+    replacement: "xyz",
+    caseSensitive: true
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 2, "case-sensitive replacement must skip ABC");
+  assert.equal((await searchText({ input: dst, query: "ABC", caseSensitive: true })).found, true);
+});
+
+test("replaceAll rejects replacement containing newlines (paragraph-break scope guard)", async () => {
+  const src = await newBlankFixture("replace-newline-src.hwp");
+  const mid = tempPath("replace-newline-mid.hwp");
+  const dst = tempPath("replace-newline-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "hello"
+  });
+  await assert.rejects(
+    replaceAll({
+      input: mid,
+      output: dst,
+      query: "hello",
+      replacement: "multi\nline"
+    }),
+    /newline|paragraph/i,
+    "replaceAll must refuse replacements containing paragraph-break characters"
+  );
 });
 
 test("searchText reports a match location for present text", async () => {
