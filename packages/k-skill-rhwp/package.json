@@ -1,0 +1,43 @@
+{
+  "name": "k-skill-rhwp",
+  "version": "0.1.0",
+  "description": "Node-side HWP editing CLI that wraps @rhwp/core WASM bindings for the rhwp-edit and rhwp-advanced skills",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "k-skill-rhwp": "bin/k-skill-rhwp.js"
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "hwp",
+    "hwpx",
+    "hancom",
+    "hangul",
+    "rhwp",
+    "editor",
+    "wasm"
+  ],
+  "dependencies": {
+    "@rhwp/core": "^0.7.3"
+  },
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/cli.js && node --check src/wasm-init.js && node --check bin/k-skill-rhwp.js && node --check test/index.test.js && node --check test/cli.test.js",
+    "test": "node --test"
+  }
+}

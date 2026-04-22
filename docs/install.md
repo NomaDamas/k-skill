@@ -45,6 +45,8 @@ k-skill-setup 스킬을 사용해서 공통 설정을 진행해줘.
 ```bash
 npx --yes skills add <owner/repo> \
   --skill hwp \
+  --skill rhwp-edit \
+  --skill rhwp-advanced \
   --skill kbo-results \
   --skill kbl-results \
   --skill kleague-results \

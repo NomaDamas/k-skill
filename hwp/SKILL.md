@@ -1,6 +1,6 @@
 ---
 name: hwp
-description: Use kordoc for agent-native HWP/HWPX document parsing, JSON extraction, diffing, form-field extraction, and Markdown→HWPX reverse conversion.
+description: Use kordoc for agent-native HWP/HWPX document parsing, JSON extraction, diffing, form-field extraction, and Markdown→HWPX reverse conversion (read/convert only — for binary editing use rhwp-edit).
 license: MIT
 metadata:
   category: documents
@@ -17,6 +17,10 @@ metadata:
 
 이 스킬의 기본 엔진은 **항상 `kordoc`** 이다. 문서 변환, 비교, 필드 추출, 역변환까지 같은 도구로 일관되게 처리한다.
 
+> **스킬 라우팅** — 이 `hwp` 스킬은 **조회/변환(read-only)** 전용이다.
+> HWP 바이너리 **편집**(본문 텍스트 삽입/삭제, 표 생성, 셀 수정, replace-all)은 [`rhwp-edit`](../rhwp-edit/SKILL.md) 스킬이,
+> 레이아웃 디버깅·IR 덤프·썸네일·배포용 문서 잠금 해제 같은 **고급 검사**는 [`rhwp-advanced`](../rhwp-advanced/SKILL.md) 스킬이 맡는다.
+
 ## When to use
 
 - "이 HWP 파일을 Markdown으로 바꿔줘"
@@ -31,6 +35,8 @@ metadata:
 - OCR이 필수인데 OCR provider 연결이 전혀 없는 이미지 기반 PDF만 있는 경우
 - `.docx`, `.xlsx`, `.pdf` 만 다루더라도 문서 파싱 자체가 아니라 편집기 GUI 자동화가 필요한 경우
 - 원본 프로그램의 실시간 UI 제어가 반드시 필요한 경우
+- **본문 텍스트 직접 삽입·삭제·치환 또는 표 구조 변경** — `rhwp-edit` 스킬의 `k-skill-rhwp` CLI 를 사용한다.
+- **페이지 SVG 렌더 디버깅·IR 덤프·ir-diff·썸네일 추출** — `rhwp-advanced` 스킬의 업스트림 `rhwp` CLI 를 사용한다.
 
 ## Prerequisites
 
