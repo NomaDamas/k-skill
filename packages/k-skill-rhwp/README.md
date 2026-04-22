@@ -64,6 +64,17 @@ computed against the original text before any replacement runs, so
 `--query a --replacement aa` against `aaa` replaces 3 originals and yields
 `aaaaaa`, not an infinite loop.
 
+Case-insensitive matching (the default) relies on `String.prototype.toLowerCase()`
+preserving UTF-16 length so offsets taken in the lowercased haystack still apply
+to the original text. A handful of Unicode characters (notably Turkish `İ`
+U+0130, which lowercases to `i` + combining dot above U+0307) violate that
+invariant. When either the query or a paragraph contains such a character,
+`replace-all` refuses the operation with exit code 1 and a `case-insensitive
+matching is unsafe because case folding changes the UTF-16 length` message
+rather than silently drifting every subsequent offset. Rerun with
+`--case-sensitive`, or normalize the input. ASCII, Hangul, and the common HWP
+use cases (e.g. `2025 → 2026`) are not affected.
+
 ## Node API
 
 ```js

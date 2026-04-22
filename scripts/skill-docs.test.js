@@ -2911,6 +2911,11 @@ test("rhwp-edit skill pins the k-skill-rhwp CLI as the editing engine and discla
   assert.match(skill, /본문 문단만/, "SKILL.md must document body-only scope for search/replace-all");
   assert.match(skill, /set-cell-text/, "SKILL.md must reference set-cell-text for cell content workflow");
   assert.match(skill, /non-overlapping|개행|문단 경계/, "SKILL.md must document replace-all edge cases");
+  assert.match(
+    skill,
+    /UTF-?16|U\+0130|İ|case[ -]?fold/i,
+    "SKILL.md must disclose the case-insensitive UTF-16 length-drift guard (Unicode follow-up)"
+  );
 });
 
 test("rhwp-advanced skill pins the upstream rhwp Rust CLI debug/dump/convert surface", () => {
@@ -2961,6 +2966,11 @@ test("rhwp feature docs, README, install, roadmap, and sources are wired for the
     editDoc,
     /본문\S* 문단만|본문 \(body\) 문단만|body paragraphs only/,
     "rhwp-edit feature doc must disclose search/replace-all body-only scope"
+  );
+  assert.match(
+    editDoc,
+    /UTF-?16|U\+0130|İ|case[ -]?fold/i,
+    "rhwp-edit feature doc must disclose the case-insensitive UTF-16 length-drift guard (Unicode follow-up)"
   );
 
   assert.match(advancedDoc, /cargo install rhwp/);

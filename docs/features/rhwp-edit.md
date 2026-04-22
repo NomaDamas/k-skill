@@ -56,6 +56,8 @@ npx k-skill-rhwp replace-all ./draft.hwp ./out/2026.hwp \
 
 **스코프 주의** — `replace-all` 은 **본문(body) 문단만** 스캔한다. 업스트림 `searchText` 가 본문만 커버하기 때문에 같은 스코프를 따른다. 표 셀, 머리말/꼬리말, 각주 본문의 텍스트는 `replace-all` 이 건드리지 않는다. 셀 내용을 바꾸려면 아래 4) 의 `set-cell-text` 를 쓴다.
 
+**Unicode 대소문자 무시 주의** — 기본(`--case-sensitive` 없이) 모드는 `String.prototype.toLowerCase()` 의 UTF-16 길이 보존을 전제한다. 본문이나 쿼리에 터키어 `İ`(U+0130) 처럼 소문자화 시 길이가 늘어나는 문자가 섞여 있으면, 오프셋 드리프트로 인한 조용한 손상을 막기 위해 `replace-all` 은 exit code 1 과 함께 `case-insensitive matching is unsafe because case folding changes the UTF-16 length` 를 돌려준다. 이 경우 `--case-sensitive` 로 재실행하거나 입력을 미리 정규화한다. 한글·ASCII 본문에는 해당하지 않는다.
+
 ### 4) 표 추가 후 특정 셀 채우기
 
 `create-table` 은 만든 표의 `paraIdx` / `controlIdx` 를 같이 돌려준다. 그 두 값을 `set-cell-text` 에 그대로 넣으면 된다.

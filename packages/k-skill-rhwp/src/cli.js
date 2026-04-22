@@ -29,6 +29,10 @@ Scope note:
   'search' and 'replace-all' scan body paragraphs only. Text inside table cells,
   headers/footers, and footnotes is NOT covered. For cell text, use 'info' or
   'list-paragraphs' to locate the table, then 'set-cell-text' to write.
+  Case-insensitive 'replace-all' (the default) refuses inputs whose case folding
+  changes UTF-16 length (e.g. Turkish 'İ' U+0130) because those inputs would
+  silently drift every subsequent offset. Rerun with --case-sensitive for those
+  documents. ASCII and Hangul workflows are unaffected.
 
 Global options:
   --json           Output machine-readable JSON (default for info/list/search)

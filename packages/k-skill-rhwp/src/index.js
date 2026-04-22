@@ -98,8 +98,27 @@ async function deleteText(options) {
 }
 
 function findAllMatchOffsets(text, query, caseSensitive) {
-  const hay = caseSensitive ? text : text.toLowerCase();
-  const needle = caseSensitive ? query : query.toLowerCase();
+  let hay;
+  let needle;
+  if (caseSensitive) {
+    hay = text;
+    needle = query;
+  } else {
+    hay = text.toLowerCase();
+    needle = query.toLowerCase();
+    // Unicode safety: offsets are collected in the lowercased haystack but applied
+    // back to the original text via replaceText(...). That only round-trips when
+    // String.prototype.toLowerCase() preserves UTF-16 length. A handful of Unicode
+    // characters (e.g. 'İ' U+0130 → 'i' U+0069 + combining dot above U+0307) violate
+    // this, so every subsequent offset drifts and silently corrupts the document.
+    // Refuse the operation in that case — the user can rerun with caseSensitive:true
+    // or normalize the input.
+    if (hay.length !== text.length || needle.length !== query.length) {
+      throw new Error(
+        "replaceAll: case-insensitive matching is unsafe because case folding changes the UTF-16 length of the query or a paragraph (e.g. 'İ' U+0130 lowercases to 'i' + combining dot above U+0307). Rerun with caseSensitive:true or normalize the input first."
+      );
+    }
+  }
   const offsets = [];
   let i = 0;
   while (i <= hay.length - needle.length) {

@@ -378,6 +378,127 @@ test("replaceAll rejects replacement containing newlines (paragraph-break scope 
   );
 });
 
+test("replaceAll refuses case-insensitive matching when source text contains case-folding length-changing chars (e.g. Turkish İ U+0130)", async () => {
+  // Regression: without the guard, `ABCİABCİXYZ` + case-insensitive `İ → Z` reported
+  // { ok:true, count:2 } but silently produced `ABCZABCİZYZ` (the X at index 8 was
+  // corrupted while the second İ was left untouched). This is because
+  // String.prototype.toLowerCase() maps İ (U+0130) to i + combining dot above
+  // (U+0069 U+0307), which changes UTF-16 length and drifts every subsequent offset.
+  const src = await newBlankFixture("replace-unicode-drift-src.hwp");
+  const mid = tempPath("replace-unicode-drift-mid.hwp");
+  const dst = tempPath("replace-unicode-drift-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "ABCİABCİXYZ"
+  });
+  await assert.rejects(
+    replaceAll({
+      input: mid,
+      output: dst,
+      query: "İ",
+      replacement: "Z"
+    }),
+    /case.?insensitive|case.?fold|UTF-?16|U\+0130/i,
+    "replaceAll must refuse case-insensitive matching on inputs with length-changing case folding"
+  );
+  assert.equal(
+    fs.existsSync(dst),
+    false,
+    "no output file should be written when replaceAll rejects case-insensitive drift"
+  );
+});
+
+test("replaceAll refuses case-insensitive matching when the query itself contains case-folding length-changing chars", async () => {
+  const src = await newBlankFixture("replace-unicode-query-src.hwp");
+  const mid = tempPath("replace-unicode-query-mid.hwp");
+  const dst = tempPath("replace-unicode-query-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "plain ascii text"
+  });
+  await assert.rejects(
+    replaceAll({
+      input: mid,
+      output: dst,
+      query: "İ",
+      replacement: "X"
+    }),
+    /case.?insensitive|case.?fold|UTF-?16|U\+0130/i,
+    "replaceAll must refuse case-insensitive matching when the query has length-changing case folding"
+  );
+  assert.equal(fs.existsSync(dst), false);
+});
+
+test("replaceAll with --case-sensitive succeeds on inputs containing İ (guard only applies to case-insensitive path)", async () => {
+  const src = await newBlankFixture("replace-unicode-case-src.hwp");
+  const mid = tempPath("replace-unicode-case-mid.hwp");
+  const dst = tempPath("replace-unicode-case-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "ABCİABCİXYZ"
+  });
+  const result = await replaceAll({
+    input: mid,
+    output: dst,
+    query: "İ",
+    replacement: "Z",
+    caseSensitive: true
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 2, "case-sensitive replacement must hit both İ occurrences");
+  const info = await getDocumentInfo(dst);
+  assert.equal(
+    info.sections[0].paragraphs[0].length,
+    "ABCZABCZXYZ".length,
+    "paragraph length must match fully-replaced output (both İ → Z, X stays)"
+  );
+  assert.equal(
+    (await searchText({ input: dst, query: "İ", caseSensitive: true })).found,
+    false,
+    "İ must be gone from case-sensitive output"
+  );
+  assert.equal(
+    (await searchText({ input: dst, query: "X", caseSensitive: true })).found,
+    true,
+    "X must be preserved (not corrupted by offset drift)"
+  );
+});
+
+test("replaceAll case-insensitive still works for normal ASCII/Hangul that do not change UTF-16 length under toLowerCase", async () => {
+  // Regression guard: the Unicode fix must not break the common case.
+  const src = await newBlankFixture("replace-unicode-ok-src.hwp");
+  const mid = tempPath("replace-unicode-ok-mid.hwp");
+  const dst = tempPath("replace-unicode-ok-dst.hwp");
+  await insertText({
+    input: src,
+    output: mid,
+    section: 0,
+    paragraph: 0,
+    offset: 0,
+    text: "hello WORLD 안녕 HELLO"
+  });
+  const result = await replaceAll({
+    input: mid,
+    output: dst,
+    query: "hello",
+    replacement: "hi"
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 2, "case-insensitive must still match both 'hello' and 'HELLO'");
+});
+
 test("searchText reports a match location for present text", async () => {
   const src = await newBlankFixture("search-src.hwp");
   const edited = tempPath("search-edited.hwp");

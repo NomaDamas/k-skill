@@ -153,6 +153,7 @@ Node 18+, `@rhwp/core` WASM 은 첫 호출 시 한 번만 초기화된다. WASM 
 - **`search` / `replace-all` 은 본문 문단만 스캔한다**: 업스트림 `searchText` 가 본문(body) 범위로 제한되어 있고, `k-skill-rhwp replace-all` 도 같은 스코프를 그대로 따른다. **표(cell) 안의 텍스트, 머리말/꼬리말, 각주 본문**에서는 `search` 가 `found:false` 를 돌려주고 `replace-all` 도 해당 위치를 건드리지 않는다. 셀 내용이 대상이라면 `list-paragraphs` 또는 `info` 로 표 좌표를 잡고 `set-cell-text` 로 직접 쓴다.
 - **문단 경계 / 개행 치환 금지**: `replace-all` 은 한 문단 안에서의 치환만 보장한다. `--replacement` 에 개행(`\n`, `\r`, U+2028, U+2029) 이 들어오면 CLI 는 exit code 1 과 "replacement must not contain newline or paragraph-break characters" 메시지를 돌려준다. 여러 문단을 만들고 싶으면 `insert-text` 를 여러 번 호출한다.
 - **치환은 원본 매칭 기준 non-overlapping**: 예를 들어 query `a` / replacement `aa` / 원본 `aaa` 는 원본의 각 `a` 를 한 번씩 교체해 `aaaaaa` 가 된다. 치환으로 새로 들어온 문자열은 다시 매칭하지 않는다.
+- **대소문자 무시 매칭은 UTF-16 길이가 보존되는 문자에만 안전하다**: 기본값인 대소문자 무시(`--case-sensitive` 없이) 모드는 `String.prototype.toLowerCase()` 가 UTF-16 길이를 그대로 유지한다는 전제 위에서 오프셋을 계산한다. 터키어 `İ`(U+0130) 처럼 소문자화 시 `i` + 결합 점(U+0307) 로 길이가 늘어나는 문자가 본문 또는 쿼리에 포함되면, 조용한 문서 손상을 방지하기 위해 `replace-all` 이 exit code 1 과 함께 `case-insensitive matching is unsafe because case folding changes the UTF-16 length` 메시지를 돌려준다. 이런 문서에는 `--case-sensitive` 로 다시 실행하거나, 입력을 미리 정규화한다. 한글·ASCII 본문에는 해당하지 않으며, `2025 → 2026` 같은 실제 사업 신청서 워크플로우는 아무 영향을 받지 않는다.
 
 ## Notes
 
