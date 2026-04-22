@@ -3810,6 +3810,18 @@ test("lh-notice detail endpoint requires all three codes and caches successful l
   assert.equal(fetchCalls.length, 1, "cached detail must not retrigger upstream");
 });
 
+// Pins the /v1/lh-notice/detail failure-not-cached contract against BOTH
+// cache-protection layers:
+//   (a) the early-return catch block in the route handler (no `cache.set`
+//       is reached on upstream failure; see src/server.js lh-notice/detail
+//       route), and
+//   (b) the `isFailureResponse()` guard inside `cache.set` (refuses any
+//       payload with `.error` set; see src/server.js createMemoryCache).
+// Bypassing either layer alone makes the State 2 self-heal assertion
+// ("detail failure must not have been cached — retry must hit upstream")
+// fail — proven by independent sabotage audit in PR #158 Round 3 review.
+// See the sibling /search failure-not-cached test above for symmetric
+// coverage across the two lh-notice routes.
 test("lh-notice detail does not cache upstream XML auth errors so retries self-heal", async (t) => {
   const originalFetch = global.fetch;
   const xmlError = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
