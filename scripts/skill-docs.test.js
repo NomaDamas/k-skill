@@ -207,8 +207,8 @@ test("hwp docs match the published kordoc install and runtime contract", () => {
   assert.match(install, /npm install -g kordoc pdfjs-dist /);
   assert.match(install, /HWP Node API 예시는 전역 `NODE_PATH` 대신 로컬 프로젝트에 `npm install kordoc pdfjs-dist` 후 실행/);
   assert.match(install, /`kordoc` CLI를 일회성으로만 쓸 때는 `npx --yes --package kordoc --package pdfjs-dist kordoc \.\.\.` 형태를 사용한다\./);
-  assert.match(readme, /\| HWP 문서 처리 \| .*양식 필드 추출.*Markdown→HWPX 역변환/);
-  assert.doesNotMatch(readme, /\| HWP 문서 처리 \| .*양식 채우기/);
+  assert.match(readme, /\| HWP 문서 조회\/변환 \| .*양식 필드 추출.*Markdown→HWPX 역변환/);
+  assert.doesNotMatch(readme, /\| HWP 문서 조회\/변환 \| .*양식 채우기/);
   assert.match(sources, /kordoc/);
   assert.match(sources, /pdfjs-dist/);
 });
@@ -220,8 +220,8 @@ test("repository docs advertise the hwp skill", () => {
   const featureDoc = read(path.join("docs", "features", "hwp.md"));
 
   assert.ok(fs.existsSync(featureDocPath), "expected docs/features/hwp.md to exist");
-  assert.match(readme, /\| HWP 문서 처리 \|/);
-  assert.match(readme, /\[HWP 문서 처리\]\(docs\/features\/hwp\.md\)/);
+  assert.match(readme, /\| HWP 문서 조회\/변환 \|/);
+  assert.match(readme, /\[HWP 문서 처리 가이드\]\(docs\/features\/hwp\.md\)/);
   assert.match(install, /--skill hwp/);
   assert.match(featureDoc, /\bkordoc\b/);
   assert.doesNotMatch(featureDoc, /@ohah\/hwpjs/);
@@ -2891,4 +2891,110 @@ test("korean-privacy-terms feature doc documents the thin-wrapper install flow a
   assert.match(featureDoc, /변호사 검토/);
   assert.match(featureDoc, /2026\.9\.11/);
   assert.match(featureDoc, /Next\.js/);
+});
+
+test("rhwp-edit skill pins the k-skill-rhwp CLI as the editing engine and disclaims kordoc/rhwp-advanced routing", () => {
+  const skill = read(path.join("rhwp-edit", "SKILL.md"));
+
+  assert.match(skill, /^---\nname: rhwp-edit\n/);
+  assert.match(skill, /k-skill-rhwp/);
+  assert.match(skill, /@rhwp\/core/);
+  assert.match(skill, /hwp\/SKILL\.md/);
+  assert.match(skill, /rhwp-advanced\/SKILL\.md/);
+  assert.match(skill, /insert-text/);
+  assert.match(skill, /delete-text/);
+  assert.match(skill, /replace-all/);
+  assert.match(skill, /create-table/);
+  assert.match(skill, /set-cell-text/);
+  assert.match(skill, /create-blank/);
+  assert.match(skill, /#196/);
+  assert.match(skill, /본문 문단만/, "SKILL.md must document body-only scope for search/replace-all");
+  assert.match(skill, /set-cell-text/, "SKILL.md must reference set-cell-text for cell content workflow");
+  assert.match(skill, /non-overlapping|개행|문단 경계/, "SKILL.md must document replace-all edge cases");
+  assert.match(
+    skill,
+    /UTF-?16|U\+0130|İ|case[ -]?fold/i,
+    "SKILL.md must disclose the case-insensitive UTF-16 length-drift guard (Unicode follow-up)"
+  );
+});
+
+test("rhwp-advanced skill pins the upstream rhwp Rust CLI debug/dump/convert surface", () => {
+  const skill = read(path.join("rhwp-advanced", "SKILL.md"));
+
+  assert.match(skill, /^---\nname: rhwp-advanced\n/);
+  assert.match(skill, /cargo install rhwp/);
+  assert.match(skill, /export-svg/);
+  assert.match(skill, /--debug-overlay/);
+  assert.match(skill, /\brhwp dump\b/);
+  assert.match(skill, /dump-pages/);
+  assert.match(skill, /ir-diff/);
+  assert.match(skill, /thumbnail/);
+  assert.match(skill, /\brhwp convert\b/);
+  assert.match(skill, /편집 서브커맨드[가는]? (없다|부재|제공하지 않는다|않는다)/);
+  assert.match(skill, /rhwp-edit/);
+});
+
+test("rhwp feature docs, README, install, roadmap, and sources are wired for the new skills", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const editDoc = read(path.join("docs", "features", "rhwp-edit.md"));
+  const advancedDoc = read(path.join("docs", "features", "rhwp-advanced.md"));
+
+  assert.match(readme, /\| HWP 문서 편집 \|/);
+  assert.match(readme, /\| HWP 레이아웃·IR 디버깅 \|/);
+  assert.match(readme, /\[HWP 문서 편집\]\(docs\/features\/rhwp-edit\.md\)/);
+  assert.match(readme, /\[HWP 레이아웃·IR 디버깅\]\(docs\/features\/rhwp-advanced\.md\)/);
+
+  assert.match(install, /--skill rhwp-edit/);
+  assert.match(install, /--skill rhwp-advanced/);
+
+  assert.match(roadmap, /rhwp-edit/);
+  assert.match(roadmap, /rhwp-advanced/);
+  assert.match(roadmap, /#155/);
+
+  assert.match(sources, /edwardkim\/rhwp/);
+  assert.match(sources, /@rhwp\/core/);
+  assert.match(sources, /issues\/196/);
+
+  assert.match(editDoc, /k-skill-rhwp/);
+  assert.match(editDoc, /insert-text/);
+  assert.match(editDoc, /create-table/);
+  assert.match(editDoc, /#196/);
+  assert.match(
+    editDoc,
+    /본문\S* 문단만|본문 \(body\) 문단만|body paragraphs only/,
+    "rhwp-edit feature doc must disclose search/replace-all body-only scope"
+  );
+  assert.match(
+    editDoc,
+    /UTF-?16|U\+0130|İ|case[ -]?fold/i,
+    "rhwp-edit feature doc must disclose the case-insensitive UTF-16 length-drift guard (Unicode follow-up)"
+  );
+
+  assert.match(advancedDoc, /cargo install rhwp/);
+  assert.match(advancedDoc, /export-svg/);
+  assert.match(advancedDoc, /ir-diff/);
+  assert.match(advancedDoc, /편집/);
+});
+
+test("k-skill-rhwp package ships CLI bin, WASM-init shim, and minor semver changeset", () => {
+  const packagePath = path.join(repoRoot, "packages", "k-skill-rhwp", "package.json");
+  assert.ok(fs.existsSync(packagePath), "expected packages/k-skill-rhwp/package.json");
+  const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+
+  assert.equal(pkg.name, "k-skill-rhwp");
+  assert.ok(pkg.bin && pkg.bin["k-skill-rhwp"] === "bin/k-skill-rhwp.js", "expected bin mapping");
+  assert.ok(pkg.dependencies && pkg.dependencies["@rhwp/core"], "expected @rhwp/core dependency");
+  assert.ok(pkg.engines && /\^|>=\s*1[89]/.test(pkg.engines.node || ""), "expected Node 18+");
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, "packages", "k-skill-rhwp", "src", "wasm-init.js")),
+    "expected src/wasm-init.js"
+  );
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, "packages", "k-skill-rhwp", "bin", "k-skill-rhwp.js")),
+    "expected bin/k-skill-rhwp.js"
+  );
+
 });

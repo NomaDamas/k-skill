@@ -27,6 +27,11 @@
 - Oracle's Elixir data glossary: https://oracleselixir.com/tools/downloads
 - `kordoc`: https://github.com/chrisryugj/kordoc
 - `pdfjs-dist`: https://www.npmjs.com/package/pdfjs-dist
+- `rhwp` upstream (Rust + WebAssembly HWP parser/renderer/editor, MIT, by Edward Kim): https://github.com/edwardkim/rhwp
+- `rhwp` CLI source (upstream subcommand truth table): https://github.com/edwardkim/rhwp/blob/main/src/main.rs
+- `@rhwp/core` npm (WASM bindings used by `k-skill-rhwp`): https://www.npmjs.com/package/@rhwp/core
+- `@rhwp/editor` npm (upstream iframe editor — not wrapped by this repo, documented for reference): https://www.npmjs.com/package/@rhwp/editor
+- rhwp HWPX-save-disabled issue #196 (data-safety gate until #197 ships): https://github.com/edwardkim/rhwp/issues/196
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
