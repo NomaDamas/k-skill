@@ -539,6 +539,162 @@ class LookupParsingTest(unittest.TestCase):
         self.assertNotIn("navigation sidebar noise", summary)
         self.assertNotIn("상세 섹션은 제외되어야 합니다", summary)
 
+    def test_extract_summary_ignores_h2_without_numbered_section_prefix(
+        self,
+    ) -> None:
+        """Sidebar/nav ``<h2>`` widgets without a numbered section prefix
+        (``<h2>관련 문서</h2>``, ``<h2>외부 링크</h2>`` etc.) MUST NOT be treated
+        as section boundaries. When no numbered h2 is present, the extractor
+        falls through to the class-based tier.
+        """
+        html = """
+        <html><head><title>test - 나무위키</title></head>
+        <body>
+          <h2>관련 문서</h2>
+          <div class="navigation-sidebar-chrome">unrelated sidebar body</div>
+          <h2>바로가기</h2>
+          <div class="wiki-paragraph">
+            <p>실제 본문은 여기에 있습니다.</p>
+          </div>
+        </body></html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=2000)
+        self.assertIn("실제 본문", summary)
+        self.assertNotIn("unrelated sidebar body", summary)
+        self.assertNotIn("관련 문서", summary)
+        self.assertNotIn("바로가기", summary)
+
+    def test_extract_summary_numbered_h2_gate_skips_sidebar_h2_before_section_one(
+        self,
+    ) -> None:
+        """Regression for the reviewer-flagged edge case: a sidebar-style
+        ``<h2>관련 문서</h2>`` placed BEFORE the section ``<h2>1. 개요</h2>``
+        must not anchor the extractor. Only numbered section headers
+        (``\\d+(?:\\.\\d+)*\\.\\s``) can act as section boundaries.
+        """
+        html = """
+        <html><head><title>test - 나무위키</title></head>
+        <body>
+          <h2>관련 문서</h2>
+          <ul><li>link1</li><li>link2</li></ul>
+          <h2>1. 개요[편집]</h2>
+          <p>진짜 개요 본문입니다.</p>
+          <h2>2. 상세[편집]</h2>
+          <p>상세 섹션은 제외됩니다.</p>
+        </body></html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=2000)
+        self.assertIn("진짜 개요 본문", summary)
+        self.assertNotIn("link1", summary)
+        self.assertNotIn("link2", summary)
+        self.assertNotIn("상세 섹션은 제외됩니다", summary)
+
+    def test_extract_summary_strips_category_nav_template_markers(self) -> None:
+        """Namu Wiki inline category nav templates render as
+        ``[펼치기 · 접기] item · item · item`` inline on one line. The marker
+        itself AND the trailing category items on the same line (its "aftermath")
+        must both be stripped so the agent sees the real prose.
+        """
+        html = """
+        <html><head><title>꿀잼 - 나무위키</title></head>
+        <body>
+          <h2>1. 개요[편집]</h2>
+          <p>문화 및 유행어 [펼치기 · 접기] 밈 모음 (ㄱ항목 · ㄴ항목 · 꿀잼 · ㄹ항목)</p>
+          <p>꿀잼은 '꿀'과 '재미'의 합성어로, 정말 재미있을 때 사용하는 유행어이다.</p>
+          <h2>2. 상세[편집]</h2>
+        </body></html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=2000)
+        self.assertNotIn("[펼치기 · 접기]", summary)
+        self.assertNotIn("ㄱ항목", summary)
+        self.assertNotIn("ㄹ항목", summary)
+        self.assertNotIn("밈 모음", summary)
+        self.assertIn("꿀잼은", summary)
+        self.assertIn("재미있을 때", summary)
+
+    def test_extract_summary_category_nav_strip_preserves_surrounding_content(
+        self,
+    ) -> None:
+        """Category-nav stripping must only affect the marker-containing line.
+        Content on *other* lines (both before and after) must be preserved.
+        """
+        html = """
+        <html><head><title>test - 나무위키</title></head>
+        <body>
+          <h2>1. 개요[편집]</h2>
+          <p>도입문입니다. 중요한 소개 문장.</p>
+          <p>분류 [펼치기 · 접기] 카테고리A · 카테고리B · 카테고리C</p>
+          <p>이 문단은 반드시 보존되어야 합니다.</p>
+          <h2>2. 상세[편집]</h2>
+        </body></html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=2000)
+        self.assertIn("도입문입니다", summary)
+        self.assertIn("중요한 소개 문장", summary)
+        self.assertIn("이 문단은 반드시 보존", summary)
+        self.assertNotIn("[펼치기 · 접기]", summary)
+        self.assertNotIn("카테고리A", summary)
+        self.assertNotIn("카테고리C", summary)
+
+    def test_extract_summary_strips_details_block_wrapping_pelchigi_summary(
+        self,
+    ) -> None:
+        """Live Namu Wiki wraps category-nav templates in a ``<details>`` block
+        whose ``<summary>`` label is ``[펼치기 · 접기]``. The entire ``<details>``
+        block (summary + all its body rows/cells) must be stripped, not just
+        the marker line, so multi-line category dumps don't survive into the
+        agent-visible summary.
+        """
+        html = """
+        <html><head><title>꿀잼 - 나무위키</title></head>
+        <body>
+          <h2>1. 개요[편집]</h2>
+          <div class="nav-wrapper">
+            <details class="cat-nav">
+              <summary>[펼치기 · 접기]</summary>
+              <div>문화 및 유행어</div>
+              <div>기타</div>
+              <div>item1 · item2 · item3</div>
+              <div>ㄱ</div>
+              <div>가놈 · 가성비 댓글</div>
+            </details>
+          </div>
+          <p>무언가가 매우 재미있다는 의미의 인터넷 유행어이다.</p>
+          <h2>2. 상세[편집]</h2>
+        </body></html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=2000)
+        self.assertNotIn("[펼치기 · 접기]", summary)
+        self.assertNotIn("문화 및 유행어", summary)
+        self.assertNotIn("item1", summary)
+        self.assertNotIn("가놈", summary)
+        self.assertNotIn("가성비 댓글", summary)
+        self.assertIn("매우 재미있다는 의미", summary)
+        self.assertIn("인터넷 유행어", summary)
+
+    def test_extract_summary_keeps_details_block_without_pelchigi_summary(
+        self,
+    ) -> None:
+        """``<details>`` blocks whose ``<summary>`` does NOT contain ``펼치기``
+        (e.g. spoilers, footnotes) must be preserved — only the specific
+        category-nav pattern is stripped.
+        """
+        html = """
+        <html><head><title>test - 나무위키</title></head>
+        <body>
+          <h2>1. 개요[편집]</h2>
+          <details>
+            <summary>스포일러 주의</summary>
+            <p>이 내용은 스포일러 정보를 포함합니다.</p>
+          </details>
+          <p>일반 본문도 있습니다.</p>
+          <h2>2. 상세[편집]</h2>
+        </body></html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=2000)
+        self.assertIn("스포일러", summary)
+        self.assertIn("일반 본문", summary)
+
 
 class LookupNetworkTest(unittest.TestCase):
     def test_lookup_returns_structured_result_on_success(self) -> None:

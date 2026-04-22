@@ -33,8 +33,17 @@ BR_RE = re.compile(r"<br\s*/?>", re.IGNORECASE)
 WHITESPACE_RE = re.compile(r"[ \t]+")
 BLANK_LINES_RE = re.compile(r"\n{3,}")
 H2_TAG_RE = re.compile(r"<h2\b[^>]*>.*?</h2>", re.DOTALL | re.IGNORECASE)
+NUMBERED_H2_INNER_TEXT_RE = re.compile(r"^\s*\d+(?:\.\d+)*\.\s+\S")
 SECTION_NUMBER_PREFIX_RE = re.compile(r"^\s*\d+(?:\.\d+)*\.\s+", re.MULTILINE)
 EDIT_AFFORDANCE_RE = re.compile(r"\[\s*편집\s*\]")
+CATEGORY_NAV_RE = re.compile(r"\[\s*펼치기\s*[·・•]\s*접기\s*\][^\n]*")
+DETAILS_PELCHIGI_RE = re.compile(
+    r"<details\b[^>]*>"
+    r"\s*<summary\b[^>]*>[^<]*펼치기[^<]*</summary>"
+    r".*?"
+    r"</details>",
+    re.DOTALL | re.IGNORECASE,
+)
 OG_DESCRIPTION_RE = re.compile(
     r'<meta\s+[^>]*property\s*=\s*"og:description"\s+[^>]*content\s*=\s*"([^"]*)"',
     re.IGNORECASE,
@@ -84,12 +93,24 @@ def _find_main_content(cleaned_html: str) -> str:
     return ""
 
 
+def _h2_inner_text(h2_tag_html: str) -> str:
+    opening_end = h2_tag_html.index(">") + 1
+    closing_start = h2_tag_html.rindex("<")
+    inner = h2_tag_html[opening_end:closing_start]
+    return unescape(TAG_RE.sub("", inner)).strip()
+
+
+def _is_numbered_section_h2(h2_tag_html: str) -> bool:
+    return bool(NUMBERED_H2_INNER_TEXT_RE.match(_h2_inner_text(h2_tag_html)))
+
+
 def _extract_first_section_between_h2(cleaned_html: str) -> str:
-    matches = list(H2_TAG_RE.finditer(cleaned_html))
-    if not matches:
+    all_matches = list(H2_TAG_RE.finditer(cleaned_html))
+    numbered = [m for m in all_matches if _is_numbered_section_h2(m.group(0))]
+    if not numbered:
         return ""
-    start = matches[0].end()
-    end = matches[1].start() if len(matches) > 1 else len(cleaned_html)
+    start = numbered[0].end()
+    end = numbered[1].start() if len(numbered) > 1 else len(cleaned_html)
     return cleaned_html[start:end]
 
 
@@ -106,6 +127,7 @@ def _html_fragment_to_text(fragment: str) -> str:
     text = TAG_RE.sub("", text)
     text = unescape(text)
     text = EDIT_AFFORDANCE_RE.sub("", text)
+    text = CATEGORY_NAV_RE.sub("", text)
     text = SECTION_NUMBER_PREFIX_RE.sub("", text)
     lines: list[str] = []
     for line in text.split("\n"):
@@ -124,6 +146,7 @@ def _truncate(text: str, max_length: int) -> str:
 
 def extract_summary(html: str, *, max_length: int = DEFAULT_MAX_LENGTH) -> str:
     cleaned = SCRIPT_STYLE_RE.sub("", html)
+    cleaned = DETAILS_PELCHIGI_RE.sub("", cleaned)
 
     h2_section = _extract_first_section_between_h2(cleaned)
     if h2_section:
