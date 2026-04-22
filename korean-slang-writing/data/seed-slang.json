@@ -16,7 +16,7 @@
         "힘들지만 중꺾마 정신으로 끝까지 간다!",
         "중꺾마, 올해도 잘 버텨보자."
       ],
-      "namuwiki_url": "https://namu.wiki/w/%EC%A4%91%EA%BF%BA%EB%A7%88",
+      "namuwiki_url": "https://namu.wiki/w/%EC%A4%91%EA%BA%BE%EB%A7%88",
       "era": "2022",
       "still_usable": true
     },
@@ -256,7 +256,7 @@
         "무조건 아아 한 잔.",
         "한겨울에도 아아 시키는 한국인."
       ],
-      "namuwiki_url": "https://namu.wiki/w/%EC%95%84%EC%9D%B4%EC%8A%A4%20%EC%95%84%EB%A9%94%EB%A6%AC%EC%B9%B8%EB%85%B8",
+      "namuwiki_url": "https://namu.wiki/w/%EC%95%84%EC%9D%B4%EC%8A%A4%20%EC%95%84%EB%A9%94%EB%A6%AC%EC%B9%B4%EB%85%B8",
       "era": "2015",
       "still_usable": true
     },
@@ -357,22 +357,6 @@
       "still_usable": true
     },
     {
-      "term": "당모치",
-      "aliases": ["당연히 모든 치킨은 옳다"],
-      "meaning_short": "어떤 치킨이든 다 맛있다는 긍정적 선언.",
-      "usage_context": ["음식", "유머", "SNS"],
-      "mood_tags": ["긍정", "유머", "맛"],
-      "intensity": "medium",
-      "safety": "safe",
-      "example_usage": [
-        "뭐 먹지 고민은 사치, 당모치!",
-        "당모치 정신으로 아무거나 시키자."
-      ],
-      "namuwiki_url": "https://namu.wiki/w/%EB%8B%B9%EB%AA%A8%EC%B9%98",
-      "era": "2020",
-      "still_usable": true
-    },
-    {
       "term": "꼰대",
       "aliases": [],
       "meaning_short": "권위적인 태도로 훈계하거나 가르치려 드는 사람에 대한 비하 표현.",
@@ -432,7 +416,7 @@
         "그래서 어쩔티비.",
         "어쩔티비 저쩔티비."
       ],
-      "namuwiki_url": "https://namu.wiki/w/%EC%96%B4%EC%A9%8C%ED%8B%B0%EB%B9%84",
+      "namuwiki_url": "https://namu.wiki/w/%EC%96%B4%EC%A9%94%ED%8B%B0%EB%B9%84",
       "era": "2021",
       "still_usable": true
     },

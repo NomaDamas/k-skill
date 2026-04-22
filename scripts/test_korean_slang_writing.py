@@ -120,6 +120,47 @@ class SeedIndexShapeTest(unittest.TestCase):
         risky = [e["term"] for e in self.seed["entries"] if e["safety"] == "risky"]
         self.assertEqual(risky, [], "v1 seed must exclude risky-safety entries")
 
+    def test_each_seed_url_decodes_to_term_or_alias(self) -> None:
+        """Regression guard: every seed namuwiki_url must decode to either the
+        entry's term or one of its aliases.
+
+        This catches URL-encoding bugs (wrong Hangul codepoint, missing receiving
+        consonant, shortened vowel, etc.) that the mocked lookup tests would never
+        notice because they replace fetch_page. It does NOT hit the network.
+        """
+        prefix = "https://namu.wiki/w/"
+        for entry in self.seed["entries"]:
+            url = entry["namuwiki_url"]
+            self.assertTrue(
+                url.startswith(prefix),
+                f"{entry['term']!r} namuwiki_url must start with {prefix}: got {url!r}",
+            )
+            path_segment = url[len(prefix):]
+            decoded = urllib.parse.unquote(path_segment)
+            candidates = {entry["term"], *entry.get("aliases", [])}
+            self.assertIn(
+                decoded,
+                candidates,
+                (
+                    f"{entry['term']!r} namuwiki_url decodes to {decoded!r}, "
+                    f"which is neither the term nor one of its aliases "
+                    f"{sorted(candidates)!r}. Check URL encoding."
+                ),
+            )
+
+    def test_no_seed_entry_points_at_known_missing_namuwiki_page(self) -> None:
+        """Regression guard: we dropped entries that had no canonical Namu Wiki page.
+
+        Keep them dropped so nobody re-adds a 404-returning URL. Extend this list
+        only after live-verifying the new URL returns 200.
+        """
+        terms = [e["term"] for e in self.seed["entries"]]
+        self.assertNotIn(
+            "당모치",
+            terms,
+            "'당모치' has no live Namu Wiki article; do not re-add without a valid URL.",
+        )
+
 
 class SearchQueryMatchingTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -396,14 +437,15 @@ class LookupParsingTest(unittest.TestCase):
 class LookupNetworkTest(unittest.TestCase):
     def test_lookup_returns_structured_result_on_success(self) -> None:
         html = LookupParsingTest.HTML_SAMPLE
+        expected_url = slang_http.build_namuwiki_url("중꺾마")
 
         def fake_fetch(url: str, timeout: int):
-            self.assertEqual(url, "https://namu.wiki/w/%EC%A4%91%EA%BF%BA%EB%A7%88")
+            self.assertEqual(url, expected_url)
             return html
 
         with mock.patch.object(slang_lookup, "fetch_page", side_effect=fake_fetch):
             result = slang_lookup.lookup(
-                term_or_url="https://namu.wiki/w/%EC%A4%91%EA%BF%BA%EB%A7%88",
+                term_or_url=expected_url,
                 timeout=15,
                 max_length=1500,
             )
@@ -411,7 +453,9 @@ class LookupNetworkTest(unittest.TestCase):
         self.assertTrue(result["fetched"])
         self.assertEqual(result["title"], "중꺾마")
         self.assertIn("꺾이지 않는 마음", result["summary"])
-        self.assertEqual(result["url"], "https://namu.wiki/w/%EC%A4%91%EA%BF%BA%EB%A7%88")
+        self.assertEqual(result["url"], expected_url)
+        decoded_path = urllib.parse.unquote(expected_url.rsplit("/", 1)[-1])
+        self.assertEqual(decoded_path, "중꺾마")
 
     def test_lookup_handles_http_403_as_blocked(self) -> None:
         def fake_fetch(url: str, timeout: int):

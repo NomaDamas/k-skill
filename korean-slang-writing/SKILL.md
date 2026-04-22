@@ -94,7 +94,7 @@ metadata:
 ```json
 {
   "input": "중꺾마",
-  "url": "https://namu.wiki/w/%EC%A4%91%EA%BE%BE%EB%A7%88",
+  "url": "https://namu.wiki/w/%EC%A4%91%EA%BA%BE%EB%A7%88",
   "fetched": true,
   "title": "중꺾마",
   "summary": "중꺾마는 ...",
@@ -139,7 +139,7 @@ python3 scripts/slang_search.py --mood "긍정,유머" --context "SNS,마케팅"
 
 ```bash
 python3 scripts/slang_lookup.py "중꺾마" --format json
-python3 scripts/slang_lookup.py "https://namu.wiki/w/%EC%A4%91%EA%BE%BE%EB%A7%88" --max-length 800
+python3 scripts/slang_lookup.py "https://namu.wiki/w/%EC%A4%91%EA%BA%BE%EB%A7%88" --max-length 800
 ```
 
 - 성공 시 `title`, `summary` 를 돌려준다.
