@@ -20,6 +20,7 @@ const {
   normalizeLhNoticeSearchQuery
 } = require("./lh-notice");
 const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
+const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const { fetchNearbyParkingLots } = require("./parking-lots");
 const { searchRegionCode } = require("./region-lookup");
@@ -1293,7 +1294,8 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       neisSchoolMealConfigured: Boolean(config.keduInfoKey),
       krxConfigured: Boolean(config.krxApiKey),
       naverShoppingConfigured: true,
-      naverSearchApiConfigured: Boolean(config.naverSearchClientId && config.naverSearchClientSecret)
+      naverSearchApiConfigured: Boolean(config.naverSearchClientId && config.naverSearchClientSecret),
+      naverNewsApiConfigured: Boolean(config.naverSearchClientId && config.naverSearchClientSecret)
     },
     auth: {
       tokenRequired: false
@@ -2742,6 +2744,94 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         q: normalized.query,
         limit: normalized.limit,
         page: normalized.page,
+        sort: normalized.sort
+      },
+      meta: result.meta,
+      upstream: result.upstream,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+
+  app.get("/v1/naver-news/search", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeNaverNewsSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "naver-news-search",
+      q: normalized.query.toLowerCase(),
+      display: normalized.display,
+      start: normalized.start,
+      sort: normalized.sort
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetchNaverNewsSearch({
+        ...normalized,
+        clientId: config.naverSearchClientId,
+        clientSecret: config.naverSearchClientSecret
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      const payload = {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+      if (error.upstreamStatusCode) {
+        payload.upstream = {
+          status_code: error.upstreamStatusCode,
+          body_snippet: error.upstreamBodySnippet || null
+        };
+      }
+      return payload;
+    }
+
+    const payload = {
+      items: result.items,
+      query: {
+        q: normalized.query,
+        display: normalized.display,
+        start: normalized.start,
         sort: normalized.sort
       },
       meta: result.meta,
