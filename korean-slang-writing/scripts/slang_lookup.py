@@ -32,6 +32,17 @@ BLOCK_END_RE = re.compile(r"</(p|div|li|h[1-6])>", re.IGNORECASE)
 BR_RE = re.compile(r"<br\s*/?>", re.IGNORECASE)
 WHITESPACE_RE = re.compile(r"[ \t]+")
 BLANK_LINES_RE = re.compile(r"\n{3,}")
+H2_TAG_RE = re.compile(r"<h2\b[^>]*>.*?</h2>", re.DOTALL | re.IGNORECASE)
+SECTION_NUMBER_PREFIX_RE = re.compile(r"^\s*\d+(?:\.\d+)*\.\s+", re.MULTILINE)
+EDIT_AFFORDANCE_RE = re.compile(r"\[\s*편집\s*\]")
+OG_DESCRIPTION_RE = re.compile(
+    r'<meta\s+[^>]*property\s*=\s*"og:description"\s+[^>]*content\s*=\s*"([^"]*)"',
+    re.IGNORECASE,
+)
+OG_DESCRIPTION_REVERSED_RE = re.compile(
+    r'<meta\s+[^>]*content\s*=\s*"([^"]*)"\s+[^>]*property\s*=\s*"og:description"',
+    re.IGNORECASE,
+)
 
 MAIN_CONTENT_CLASSES = (
     "wiki-paragraph",
@@ -73,11 +84,29 @@ def _find_main_content(cleaned_html: str) -> str:
     return ""
 
 
+def _extract_first_section_between_h2(cleaned_html: str) -> str:
+    matches = list(H2_TAG_RE.finditer(cleaned_html))
+    if not matches:
+        return ""
+    start = matches[0].end()
+    end = matches[1].start() if len(matches) > 1 else len(cleaned_html)
+    return cleaned_html[start:end]
+
+
+def _extract_og_description(html: str) -> str:
+    match = OG_DESCRIPTION_RE.search(html) or OG_DESCRIPTION_REVERSED_RE.search(html)
+    if not match:
+        return ""
+    return unescape(match.group(1)).strip()
+
+
 def _html_fragment_to_text(fragment: str) -> str:
     text = BR_RE.sub("\n", fragment)
     text = BLOCK_END_RE.sub("\n", text)
     text = TAG_RE.sub("", text)
     text = unescape(text)
+    text = EDIT_AFFORDANCE_RE.sub("", text)
+    text = SECTION_NUMBER_PREFIX_RE.sub("", text)
     lines: list[str] = []
     for line in text.split("\n"):
         stripped = WHITESPACE_RE.sub(" ", line).strip()
@@ -87,17 +116,32 @@ def _html_fragment_to_text(fragment: str) -> str:
     return BLANK_LINES_RE.sub("\n\n", joined).strip()
 
 
-def extract_summary(html: str, *, max_length: int = DEFAULT_MAX_LENGTH) -> str:
-    cleaned = SCRIPT_STYLE_RE.sub("", html)
-    region = _find_main_content(cleaned)
-    if not region:
-        return ""
-    text = _html_fragment_to_text(region)
-    if not text:
-        return ""
+def _truncate(text: str, max_length: int) -> str:
     if max_length > 0 and len(text) > max_length:
         return text[:max_length] + "..."
     return text
+
+
+def extract_summary(html: str, *, max_length: int = DEFAULT_MAX_LENGTH) -> str:
+    cleaned = SCRIPT_STYLE_RE.sub("", html)
+
+    h2_section = _extract_first_section_between_h2(cleaned)
+    if h2_section:
+        text = _html_fragment_to_text(h2_section)
+        if text:
+            return _truncate(text, max_length)
+
+    region = _find_main_content(cleaned)
+    if region:
+        text = _html_fragment_to_text(region)
+        if text:
+            return _truncate(text, max_length)
+
+    og_description = _extract_og_description(html)
+    if og_description:
+        return _truncate(og_description, max_length)
+
+    return ""
 
 
 def _is_url(value: str) -> bool:

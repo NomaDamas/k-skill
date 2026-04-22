@@ -409,6 +409,36 @@ class LookupParsingTest(unittest.TestCase):
     </html>
     """
 
+    HTML_CURRENT_NAMUWIKI = """
+    <!doctype html>
+    <html>
+    <head>
+      <title>중요한 것은 꺾이지 않는 마음 - 나무위키</title>
+      <meta property="og:description" content="RGE전 패배는 괜찮다. 중요한 것은 꺾이지 않는 마음">
+    </head>
+    <body>
+    <div class="_36R8DWTn">
+      <h1 class="_2HZC0kyI"><a href="/w/test" class="kPIqc4b-"><span>중요한 것은 꺾이지 않는 마음</span></a></h1>
+      <div class="RW63SZFE">최근 수정 시각: 2026-03-29 13:14:18</div>
+      <div class="W6XTddIf">
+        <span><a href="/star">별표</a></span>
+        <span><a href="/edit">편집 요청</a></span>
+      </div>
+      <h2 class="_sectionHeading"><span>1. 개요</span><a class="edit-link">[편집]</a></h2>
+      <div class="_sectionBody">
+        <p>'중요한 것은 꺾이지 않는 마음'은 리그 오브 레전드 2022 월드 챔피언십에 참가한 프로게임단
+        DRX 소속 프로게이머 김혁규(Deft) 선수의 인터뷰를 담은 영상의 제목에서 유래된 유행어다.</p>
+        <p>포기하지 않는 불굴의 의지를 의미한다.</p>
+      </div>
+      <h2 class="_sectionHeading"><span>2. 발생 양상</span><a class="edit-link">[편집]</a></h2>
+      <div class="_sectionBody">
+        <p>2022년 LoL 월드 챔피언십에서 DRX가 디펜딩 챔피언 T1을 꺾고 우승하며 회자되었다.</p>
+      </div>
+    </div>
+    </body>
+    </html>
+    """
+
     def test_extract_title_strips_namuwiki_suffix(self) -> None:
         title = slang_lookup.extract_title(self.HTML_SAMPLE)
         self.assertEqual(title, "중꺾마")
@@ -432,6 +462,82 @@ class LookupParsingTest(unittest.TestCase):
     def test_extract_summary_returns_empty_on_unknown_structure(self) -> None:
         summary = slang_lookup.extract_summary("<html><body></body></html>", max_length=1500)
         self.assertEqual(summary, "")
+
+    def test_extract_summary_uses_h2_section_boundaries_on_current_namuwiki_layout(
+        self,
+    ) -> None:
+        """Must use numbered-h2 anchors when Namu Wiki class names are obfuscated."""
+        summary = slang_lookup.extract_summary(
+            self.HTML_CURRENT_NAMUWIKI, max_length=2000
+        )
+        self.assertIn("중요한 것은 꺾이지 않는 마음", summary)
+        self.assertIn("DRX", summary)
+        self.assertIn("포기하지 않는 불굴의 의지", summary)
+        self.assertNotIn("T1을 꺾고 우승", summary)
+        self.assertNotIn("최근 수정 시각", summary)
+        self.assertNotIn("편집 요청", summary)
+        self.assertNotIn("별표", summary)
+
+    def test_extract_summary_strips_section_heading_edit_affordances(self) -> None:
+        """[편집] edit affordances and N. section numbering must not leak through."""
+        summary = slang_lookup.extract_summary(
+            self.HTML_CURRENT_NAMUWIKI, max_length=2000
+        )
+        self.assertNotIn("[편집]", summary)
+        self.assertNotIn("1. 개요", summary)
+
+    def test_extract_summary_falls_back_to_og_description_when_no_h2_or_classes(
+        self,
+    ) -> None:
+        """og:description is the final structural fallback before giving up."""
+        html = """
+        <html>
+        <head>
+          <title>럭키비키 - 나무위키</title>
+          <meta property="og:description" content="완전 럭키비키잖아~! 장원영 IVE 의 멤버 장원영 의 발언에서 유래한 초긍정적 마인드를 표현하는 인터넷 밈.">
+        </head>
+        <body>
+          <div class="obfuscated-x1y2z3">navigation chrome only, no real body.</div>
+        </body>
+        </html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=500)
+        self.assertIn("럭키비키", summary)
+        self.assertIn("장원영", summary)
+        self.assertNotIn("&amp;", summary)
+        self.assertNotIn("<", summary)
+
+    def test_extract_summary_handles_single_h2_page(self) -> None:
+        """Single-section pages must still extract body text after the lone h2."""
+        html = """
+        <html><head><title>짧은유행어 - 나무위키</title></head>
+        <body>
+          <h1>짧은유행어</h1>
+          <h2>1. 개요[편집]</h2>
+          <p>이 유행어는 짧은 설명을 가진 유행어이다.</p>
+          <p>두 번째 문단도 포함되어야 한다.</p>
+        </body></html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=2000)
+        self.assertIn("짧은 설명", summary)
+        self.assertIn("두 번째 문단", summary)
+
+    def test_extract_summary_prefers_h2_strategy_over_class_strategy(self) -> None:
+        """h2 boundaries must beat MAIN_CONTENT_CLASSES when both are present."""
+        html = """
+        <html><head><title>test - 나무위키</title></head>
+        <body>
+          <div class="wiki-paragraph">navigation sidebar noise goes here.</div>
+          <h2>1. 개요[편집]</h2>
+          <p>정확한 개요 본문입니다.</p>
+          <h2>2. 상세[편집]</h2>
+          <p>상세 섹션은 제외되어야 합니다.</p>
+        </body></html>
+        """
+        summary = slang_lookup.extract_summary(html, max_length=2000)
+        self.assertIn("정확한 개요 본문", summary)
+        self.assertNotIn("navigation sidebar noise", summary)
+        self.assertNotIn("상세 섹션은 제외되어야 합니다", summary)
 
 
 class LookupNetworkTest(unittest.TestCase):
