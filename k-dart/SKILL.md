@@ -90,12 +90,15 @@ $xml.result.list | Where-Object { $_.corp_name -like '*삼성전자*' -and $_.st
 ### 1. 공시검색
 
 ```http
-GET /api/list.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}&page_no=1&page_count=10
+GET /api/list.json?crtfc_key={key}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}&page_no=1&page_count=10
+     [&corp_code={code}] [&pblntf_ty=...] [&corp_cls=...] [&sort=...] [&sort_mth=...] [&last_reprt_at=Y]
 ```
 
-선택 파라미터: `pblntf_ty`(공시유형), `pblntf_detail_ty`, `corp_cls`(Y:유가, K:코스닥, N:코넥스, E:기타), `sort`(date|crp|rpt), `sort_mth`(asc|desc), `last_reprt_at`(Y|N)
+선택 파라미터: `corp_code`, `pblntf_ty`(공시유형), `pblntf_detail_ty`, `corp_cls`(Y:유가, K:코스닥, N:코넥스, E:기타), `sort`(date|crp|rpt), `sort_mth`(asc|desc), `last_reprt_at`(Y|N)
 
-> **주의:** `list.json`은 `corp_name` 파라미터를 검색 필터로 지원하지 않는다. 회사명만 알고 있다면 위 "corp_code 확보 절차"로 먼저 `corp_code`(8자리 고유번호)를 얻은 뒤 호출해야 한다.
+> **주의 1:** `list.json`은 `corp_name` 파라미터를 검색 필터로 지원하지 않는다. 회사명을 기준으로 특정 기업 공시만 좁혀 보려면 위 "corp_code 확보 절차"로 먼저 `corp_code`(8자리 고유번호)를 얻은 뒤 호출한다.
+>
+> **주의 2:** `corp_code` 는 선택사항이다. 다만 `corp_code` 를 지정하지 **않은** 호출은 검색 기간이 **3개월 이내**(bgn_de ~ end_de 차이 ≤ 3개월)로 제한된다. 전체 시장의 최근 공시 목록을 빠르게 훑을 때는 `corp_code` 없이 호출하는 편이 효율적이다.
 
 ### 2. 기업개황
 
@@ -136,43 +139,53 @@ GET /api/tesstkAcqsDspsSttus.json?crtfc_key={key}&corp_code={code}&bsns_year={YY
 GET /api/accnutAdtorNmNdAdtOpinion.json?crtfc_key={key}&corp_code={code}&bsns_year={YYYY}&reprt_code={code}
 ```
 
-### 8. 유무상증자 결정
+### 8. 직원 현황
 
 ```http
-GET /api/piicDecsn.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}
+GET /api/empSttus.json?crtfc_key={key}&corp_code={code}&bsns_year={YYYY}&reprt_code={code}
 ```
 
-### 9. 소송 등의 제기
+부문별·성별 정규직/계약직 인원수, 평균 근속연수, 1인 평균 급여 등을 반환한다.
+
+### 9. 유무상증자 결정
+
+```http
+GET /api/pifricDecsn.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}
+```
+
+> **주의:** `pifricDecsn.json` 은 **유무상증자 결정** 전용 endpoint다. 유상증자만 따로 조회하려면 `piicDecsn.json` (유상증자 결정), 무상증자만 따로 조회하려면 `fricDecsn.json` (무상증자 결정)을 호출한다.
+
+### 10. 소송 등의 제기
 
 ```http
 GET /api/lwstLg.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}
 ```
 
-### 10. 해외 증권시장 주권등 상장 결정
+### 11. 해외 증권시장 주권등 상장 결정
 
 ```http
 GET /api/ovLstDecsn.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}
 ```
 
-### 11. 해외 증권시장 주권등 상장폐지 결정
+### 12. 해외 증권시장 주권등 상장폐지 결정
 
 ```http
 GET /api/ovDlstDecsn.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}
 ```
 
-### 12. 전환사채권 발행결정
+### 13. 전환사채권 발행결정
 
 ```http
 GET /api/cvbdIsDecsn.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}
 ```
 
-### 13. 교환사채권 발행결정
+### 14. 교환사채권 발행결정
 
 ```http
 GET /api/exbdIsDecsn.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}
 ```
 
-### 14. 회사분할합병 결정
+### 15. 회사분할합병 결정
 
 ```http
 GET /api/cmpDvmgDecsn.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&end_de={YYYYMMDD}
@@ -184,13 +197,25 @@ GET /api/cmpDvmgDecsn.json?crtfc_key={key}&corp_code={code}&bgn_de={YYYYMMDD}&en
 
 ```bash
 # 1. 먼저 위 "corp_code 확보 절차"로 corp_code(예: 삼성전자=00126380) 획득
-# 2. corp_code로 기간 내 공시 조회
+# 2. corp_code로 기간 내 공시 조회 (corp_code 지정 시 기간 제한 없음)
 curl -fsS --get 'https://opendart.fss.or.kr/api/list.json' \
   --data-urlencode "crtfc_key=$API_K_DART" \
   --data-urlencode 'corp_code=00126380' \
   --data-urlencode 'bgn_de=20260101' \
   --data-urlencode 'end_de=20260419' \
   --data-urlencode 'page_count=5'
+```
+
+공시검색 (전체 시장 최근 공시, corp_code 미지정 시 검색 기간 ≤ 3개월 제한):
+
+```bash
+curl -fsS --get 'https://opendart.fss.or.kr/api/list.json' \
+  --data-urlencode "crtfc_key=$API_K_DART" \
+  --data-urlencode 'bgn_de=20260301' \
+  --data-urlencode 'end_de=20260419' \
+  --data-urlencode 'pblntf_ty=A' \
+  --data-urlencode 'corp_cls=Y' \
+  --data-urlencode 'page_count=10'
 ```
 
 기업개황:
@@ -220,6 +245,26 @@ curl -fsS --get 'https://opendart.fss.or.kr/api/alotMatter.json' \
   --data-urlencode 'corp_code=00126380' \
   --data-urlencode 'bsns_year=2024' \
   --data-urlencode 'reprt_code=11011'
+```
+
+직원 현황 (사업보고서 기준):
+
+```bash
+curl -fsS --get 'https://opendart.fss.or.kr/api/empSttus.json' \
+  --data-urlencode "crtfc_key=$API_K_DART" \
+  --data-urlencode 'corp_code=00126380' \
+  --data-urlencode 'bsns_year=2024' \
+  --data-urlencode 'reprt_code=11011'
+```
+
+유무상증자 결정 (`pifricDecsn.json` — 유상증자만 보려면 `piicDecsn.json`):
+
+```bash
+curl -fsS --get 'https://opendart.fss.or.kr/api/pifricDecsn.json' \
+  --data-urlencode "crtfc_key=$API_K_DART" \
+  --data-urlencode 'corp_code=00126380' \
+  --data-urlencode 'bgn_de=20200101' \
+  --data-urlencode 'end_de=20260419'
 ```
 
 전환사채 발행결정:
@@ -256,7 +301,7 @@ curl -fsS --get 'https://opendart.fss.or.kr/api/cvbdIsDecsn.json' \
 | 012 | 접근할 수 없는 IP |
 | 013 | 조회된 데이터 없음 |
 | 014 | 파일이 존재하지 않음 |
-| 020 | 요청 제한 초과 (일일 한도 또는 분당 throttle) |
+| 020 | 요청 제한 초과 (일반적으로 20,000건 이상 요청 시) |
 | 021 | 조회 가능한 회사 개수 초과 (최대 100개) |
 | 100 | 필드 오류 (필드의 부적절한 값) |
 | 800 | 원천 시스템 점검 중 |
@@ -317,11 +362,11 @@ curl -fsS --get 'https://opendart.fss.or.kr/api/cvbdIsDecsn.json' \
 
 - `status`가 `"000"`이 아니면 에러 메시지를 사용자에게 안내한다.
 - `status: "013"` (조회된 데이터 없음) 이면 기간/보고서 종류/`corp_code` 를 재확인하도록 안내한다.
-- `status: "020"` (요청 제한 초과)이면 일일 한도 또는 분당 throttle을 알리고 잠시 후 재시도를 안내한다.
+- `status: "020"` (요청 제한 초과)이면 일일 호출 한도(공식 가이드: 일반적으로 20,000건/일) 도달 가능성을 안내하고 잠시 후 재시도하도록 한다.
 - 종목명만 알고 있다면 위 "corp_code 확보 절차"의 `corpCode.xml` 파싱으로 먼저 `corp_code`를 확보한 뒤 후속 API를 호출한다 (`list.json`은 `corp_name` 검색 필터를 지원하지 않는다).
 - 재무제표 조회 시 `reprt_code` 를 사용자가 지정하지 않으면 사업보고서(11011)를 기본값으로 사용한다.
 - `fs_div`를 지정하지 않으면 연결(CFS)을 기본값으로 사용한다.
-- 주요사항보고서(8~14번)는 날짜 범위가 필요하다. 사용자가 기간을 지정하지 않으면 최근 1년을 기본으로 한다.
+- 주요사항보고서(9~15번)는 날짜 범위가 필요하다. 사용자가 기간을 지정하지 않으면 최근 1년을 기본으로 한다.
 - 숫자는 읽기 쉬운 단위(억, 조, 주)로 풀어주되 원본 수치도 유지한다.
 - 답변 말미에 "금감원 DART 공시 데이터 기준 / 투자 조언 아님" 을 짧게 남긴다.
 
@@ -350,5 +395,4 @@ curl -fsS --get 'https://opendart.fss.or.kr/api/cvbdIsDecsn.json' \
 
 - 공식 데이터 출처: [DART OpenAPI](https://opendart.fss.or.kr/intro/main.do)
 - 이 스킬은 read-only 조회 전용이다.
-- DART API 요청 한도: 개인 인증키 기준 **일일 20,000건** + **분당 약 1,000회** throttle. 기업 인증키는 별도 한도 신청 가능.
-- 정확한 최신 한도는 [오픈API 이용현황](https://opendart.fss.or.kr/mng/apiUsageStatusView.do) 페이지에서 확인할 수 있다.
+- DART API 요청 한도: 공식 가이드는 "**일반적으로 20,000건 이상의 요청** 에 대해 `020` (요청 제한 초과)이 발생한다" 고만 명시한다 (분당 throttle 등 세부 제약은 공개 가이드에 별도로 명시되어 있지 않음). 본인 키의 정확한 사용 현황은 로그인 후 [OpenDART 이용현황](https://opendart.fss.or.kr/mng/apiUsageStatusView.do) 페이지에서 확인할 수 있다.
