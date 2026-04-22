@@ -287,6 +287,13 @@ function extractNoticeEnvelope(parsed) {
     const code = trimOrNull(cmn.CODE ?? cmn.code);
     const errMsg = trimOrNull(cmn.ERR_MSG ?? cmn.errMsg);
 
+    // The LH catalog has historically surfaced `CMN.CODE` as one of
+    // `"SUCCESS"`, `"0"`, `"00"`, or `"000"` across different data.go.kr
+    // platform eras. Treating all four as success is deliberate — NOT
+    // redundant — so that a future data.go.kr normalization that flips the
+    // code from `"SUCCESS"` to a numeric form does not start 502'ing
+    // otherwise-valid responses. See tests `extractNoticeEnvelope treats
+    // array-envelope CMN.CODE="…" as success` for coverage.
     if (code && code !== "SUCCESS" && code !== "0" && code !== "00" && code !== "000") {
       throw buildError({
         message: errMsg || `LH upstream rejected the request (${code}).`,

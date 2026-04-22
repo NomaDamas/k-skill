@@ -324,6 +324,84 @@ test("extractNoticeEnvelope throws an error for CMN.CODE != SUCCESS", () => {
   assert.throws(() => extractNoticeEnvelope(payload), /Service key invalid/);
 });
 
+// Regression: the LH catalog has historically surfaced `CMN.CODE` as one of
+// `"SUCCESS"`, `"0"`, `"00"`, or `"000"` depending on which era of the
+// data.go.kr platform the upstream deploy is on. All four MUST be treated as
+// success so that we do not erroneously 502 when data.go.kr normalizes the
+// array envelope to the standard numeric code. See the inline comment above
+// `extractNoticeEnvelope`'s success-code check for the historical context.
+for (const successCode of ["SUCCESS", "0", "00", "000"]) {
+  test(`extractNoticeEnvelope treats array-envelope CMN.CODE="${successCode}" as success`, () => {
+    const payload = [
+      { CMN: { CODE: successCode, ERR_MSG: "", TOTAL_CNT: 1 } },
+      {
+        dsList: [
+          {
+            PAN_ID: "1234567890",
+            PAN_NM: "success-code regression fixture",
+            UPP_AIS_TP_CD: "06"
+          }
+        ]
+      }
+    ];
+    const envelope = extractNoticeEnvelope(payload);
+    assert.equal(envelope.totalCount, 1);
+    assert.equal(envelope.items.length, 1);
+    assert.equal(envelope.items[0].PAN_ID, "1234567890");
+  });
+}
+
+// Same regression for the standard data.go.kr `{response:{header,body:{items}}}`
+// envelope. Upstream has been seen returning `resultCode` in all three
+// numeric forms; XML-based services also tolerate `"0"` despite the catalog
+// documenting `"00"` for `B552555`. All three MUST be treated as success so
+// that the fallback parser does not erroneously flag a valid response as an
+// upstream error.
+for (const headerCode of ["0", "00", "000"]) {
+  test(`extractNoticeEnvelope treats object-envelope header.resultCode="${headerCode}" as success`, () => {
+    const payload = {
+      response: {
+        header: { resultCode: headerCode, resultMsg: "NORMAL SERVICE." },
+        body: {
+          totalCount: 1,
+          items: [
+            {
+              PAN_ID: "9999",
+              PAN_NM: "object-envelope regression fixture"
+            }
+          ]
+        }
+      }
+    };
+    const envelope = extractNoticeEnvelope(payload);
+    assert.equal(envelope.totalCount, 1);
+    assert.equal(envelope.items.length, 1);
+    assert.equal(envelope.items[0].PAN_ID, "9999");
+  });
+}
+
+test("extractNoticeEnvelope rejects numeric-like non-success codes (e.g. 22, 10)", () => {
+  // Not every `resultCode` that LOOKS numeric is success — data.go.kr uses
+  // non-zero integer strings like "22", "10", "30" to signal specific upstream
+  // errors (LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR, etc.).
+  const arrayPayload = [
+    { CMN: { CODE: "22", ERR_MSG: "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR", TOTAL_CNT: 0 } },
+    { dsList: [] }
+  ];
+  assert.throws(
+    () => extractNoticeEnvelope(arrayPayload),
+    /LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR/
+  );
+
+  const objectPayload = {
+    response: {
+      header: { resultCode: "10", resultMsg: "APPLICATION ERROR" },
+      body: { items: [] }
+    }
+  };
+  assert.throws(() => extractNoticeEnvelope(objectPayload), /APPLICATION ERROR/);
+});
+
 test("extractNoticeEnvelope also handles the standard data.go.kr response/body shape", () => {
   const envelope = extractNoticeEnvelope(STANDARD_JSON_ENVELOPE);
   assert.equal(envelope.totalCount, 1);
