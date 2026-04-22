@@ -28,6 +28,16 @@
 - `GET /v1/lh-notice/search` — LH 청약 공고 목록(`DATA_GO_KR_API_KEY`)
 - `GET /v1/lh-notice/detail` — LH 청약 공고 상세(`DATA_GO_KR_API_KEY`)
 
+## `/health` 업스트림 플래그 의미
+
+`/health` 의 `upstreams` 는 각 라우트의 **운영 가능 여부**를 보고하며, 같은 환경변수를 공유하는 라우트라도 **폴백 유무에 따라 의미가 달라진다**:
+
+- `naverShoppingConfigured` — 네이버 쇼핑 라우트는 공개 BFF JSON fallback 이 있어서 **항상 `true`** 다. 키가 없어도 public BFF 경로로 응답이 나간다.
+- `naverSearchApiConfigured` — 네이버 검색 Open API 키(`NAVER_SEARCH_CLIENT_ID` + `NAVER_SEARCH_CLIENT_SECRET`) 설정 여부. 네이버 쇼핑 라우트는 이 값이 `true` 면 공식 API 를 선호하고, `false` 면 BFF fallback 으로 자동 전환한다. 즉 이 플래그는 **쇼핑 쪽에서는 advisory** 다.
+- `naverNewsApiConfigured` — 네이버 뉴스 라우트의 **운영 가능 여부**. 뉴스에는 fallback 이 없어서 키가 없으면 뉴스 라우트는 `503 upstream_not_configured` 를 돌려준다.
+
+`naverSearchApiConfigured` 와 `naverNewsApiConfigured` 는 같은 환경변수에 의존하므로 현재 boolean 값은 항상 일치하지만, **의미(semantic contract)는 다르다**: 전자는 "공식 키가 있는지" 를, 후자는 "뉴스 라우트가 실제로 응답을 돌려줄 수 있는지" 를 보고한다. 향후 검색 키가 분리되거나 fallback 정책이 바뀌어도 이 두 플래그는 분리된 채 유지된다.
+
 ## 환경변수
 
 - `AIR_KOREA_OPEN_API_KEY` — 프록시 서버 쪽 AirKorea upstream key

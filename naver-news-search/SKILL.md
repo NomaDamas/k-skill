@@ -58,7 +58,7 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
 
 - `q` 또는 `query` — 검색어. 2글자 이상.
 - `display` — 반환 건수. 기본 10, 범위 1~100.
-- `start` — 검색 시작 위치(1-indexed). 기본 1, 최대 1000. `start + display` 는 네이버 API 상 최대 1000 까지만 접근 가능하다.
+- `start` — 검색 시작 위치(1-indexed). 기본 1, 최대 1000. **`start + display - 1` 은 1000 을 넘을 수 없다**: 예를 들어 `start=1000 & display=100` 은 `1099`번째 아이템을 요구하므로 proxy가 업스트림 호출 전에 `400 bad_request`("start + display exceeds Naver's 1000-item search window")로 거절한다. 아주 오래된 기사를 찾으려면 검색어를 좁히는 것이 낫다.
 - `sort` — `sim`(유사도 순, 기본값) 또는 `date`(최신순). 그 외 값은 `sim` 으로 fallback.
 
 응답 주요 필드:
@@ -91,7 +91,7 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
 
 ## Failure modes
 
-- `400 bad_request` — 검색어 누락, 2글자 미만, 허용되지 않는 파라미터. 에러 메시지를 그대로 사용자에게 노출한다.
+- `400 bad_request` — 검색어 누락, 2글자 미만, 허용되지 않는 파라미터, 혹은 `start + display - 1 > 1000` 조합(네이버 1000-item search window 초과). 에러 메시지를 그대로 사용자에게 노출한다.
 - `503 upstream_not_configured` — 프록시 서버에 `NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET` 가 없는 경우. 운영자가 키를 등록해야 한다. 사용자에게는 "잠시 후 다시 시도해 주세요" 정도로 안내한다.
 - `401 upstream_error` — 프록시 서버의 Client ID/Secret 이 잘못된 경우(`errorCode: 024`). 운영자가 재발급해야 한다.
 - `429 upstream_error` — 네이버 검색 API 일일 쿼터(25,000 호출/일) 초과(`errorCode: 010`). 재시도 루프는 금지. 잠시 후 다시 시도하도록 안내한다.

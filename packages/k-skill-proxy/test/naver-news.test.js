@@ -15,10 +15,20 @@ test("normalizeNaverNewsSearchQuery validates q/query and clamps display/start/s
   assert.throws(() => normalizeNaverNewsSearchQuery({ q: "a" }), /at least 2/);
 
   assert.deepEqual(
-    normalizeNaverNewsSearchQuery({ query: "  인공지능  ", display: "999", start: "9999", sort: "date" }),
+    normalizeNaverNewsSearchQuery({ query: "  인공지능  ", display: "999", start: "1", sort: "date" }),
     {
       query: "인공지능",
       display: 100,
+      start: 1,
+      sort: "date"
+    }
+  );
+
+  assert.deepEqual(
+    normalizeNaverNewsSearchQuery({ query: "주식", display: "1", start: "9999", sort: "date" }),
+    {
+      query: "주식",
+      display: 1,
       start: 1000,
       sort: "date"
     }
@@ -55,15 +65,59 @@ test("normalizeNaverNewsSearchQuery validates q/query and clamps display/start/s
   );
 });
 
-test("normalizeNaverNewsSearchQuery aliases keyword and caps start+display at 1000 window", () => {
+test("normalizeNaverNewsSearchQuery accepts keyword as an alias for q/query", () => {
   assert.deepEqual(
-    normalizeNaverNewsSearchQuery({ keyword: "스타트업", display: "50", start: "1000" }),
+    normalizeNaverNewsSearchQuery({ keyword: "스타트업" }),
     {
       query: "스타트업",
-      display: 50,
-      start: 1000,
+      display: 10,
+      start: 1,
       sort: "sim"
     }
+  );
+
+  assert.deepEqual(
+    normalizeNaverNewsSearchQuery({ keyword: "반도체", display: "20", start: "5", sort: "date" }),
+    {
+      query: "반도체",
+      display: 20,
+      start: 5,
+      sort: "date"
+    }
+  );
+});
+
+test("normalizeNaverNewsSearchQuery rejects start+display combinations exceeding Naver's 1000-item window", () => {
+  // Boundary values that are still valid (start + display - 1 === 1000 or below) must pass.
+  assert.deepEqual(
+    normalizeNaverNewsSearchQuery({ q: "경계", start: "1000", display: "1" }),
+    { query: "경계", display: 1, start: 1000, sort: "sim" }
+  );
+  assert.deepEqual(
+    normalizeNaverNewsSearchQuery({ q: "경계", start: "901", display: "100" }),
+    { query: "경계", display: 100, start: 901, sort: "sim" }
+  );
+  assert.deepEqual(
+    normalizeNaverNewsSearchQuery({ q: "경계", start: "500", display: "100" }),
+    { query: "경계", display: 100, start: 500, sort: "sim" }
+  );
+
+  // One past the boundary (start + display - 1 > 1000) must throw preflight 400.
+  assert.throws(
+    () => normalizeNaverNewsSearchQuery({ q: "초과", start: "902", display: "100" }),
+    /1000-item|window|Naver/i
+  );
+  assert.throws(
+    () => normalizeNaverNewsSearchQuery({ q: "초과", start: "1000", display: "2" }),
+    /1000-item|window|Naver/i
+  );
+  assert.throws(
+    () => normalizeNaverNewsSearchQuery({ q: "초과", start: "1000", display: "100" }),
+    /1000-item|window|Naver/i
+  );
+  assert.throws(
+    () => normalizeNaverNewsSearchQuery({ q: "초과", start: "950", display: "60" }),
+    /1000-item|window|Naver/i
   );
 });
 
@@ -186,6 +240,99 @@ test("normalizeNaverNewsSearchPayload skips items without title or link and dedu
   assert.equal(result.items[0].title, "정상 기사");
 });
 
+test("normalizeNaverNewsSearchPayload dedupes links that differ only in query-param order, trailing slash, or host casing", () => {
+  const result = normalizeNaverNewsSearchPayload(
+    {
+      lastBuildDate: "Mon, 22 Apr 2026 00:00:00 +0900",
+      total: 5,
+      start: 1,
+      display: 5,
+      items: [
+        {
+          title: "원본 기사",
+          originallink: "https://publisher.example.com/42",
+          link: "https://news.example.com/articles/42?a=1&b=2",
+          description: "본문",
+          pubDate: "Mon, 22 Apr 2026 00:00:00 +0900"
+        },
+        {
+          title: "쿼리 파라미터 순서만 다른 중복",
+          originallink: "https://publisher.example.com/42-b",
+          link: "https://news.example.com/articles/42?b=2&a=1",
+          description: "본문",
+          pubDate: "Mon, 22 Apr 2026 00:00:00 +0900"
+        },
+        {
+          title: "trailing slash 만 다른 중복",
+          originallink: "https://publisher.example.com/42-c",
+          link: "https://news.example.com/articles/42/?a=1&b=2",
+          description: "본문",
+          pubDate: "Mon, 22 Apr 2026 00:00:00 +0900"
+        },
+        {
+          title: "host 대소문자·fragment 만 다른 중복",
+          originallink: "https://publisher.example.com/42-d",
+          link: "https://NEWS.example.com/articles/42?a=1&b=2#comments",
+          description: "본문",
+          pubDate: "Mon, 22 Apr 2026 00:00:00 +0900"
+        },
+        {
+          title: "진짜 다른 기사",
+          originallink: "https://publisher.example.com/43",
+          link: "https://news.example.com/articles/43?a=1&b=2",
+          description: "본문",
+          pubDate: "Mon, 22 Apr 2026 00:00:00 +0900"
+        }
+      ]
+    },
+    { query: "중복", display: 10, start: 1, sort: "sim" }
+  );
+
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].title, "원본 기사");
+  assert.equal(result.items[1].title, "진짜 다른 기사");
+});
+
+test("normalizeNaverNewsSearchPayload preserves items that differ by path or by a non-redundant query param", () => {
+  const result = normalizeNaverNewsSearchPayload(
+    {
+      lastBuildDate: "Mon, 22 Apr 2026 00:00:00 +0900",
+      total: 3,
+      start: 1,
+      display: 3,
+      items: [
+        {
+          title: "첫 번째",
+          originallink: "https://publisher.example.com/1",
+          link: "https://news.example.com/articles/42?a=1",
+          description: "본문",
+          pubDate: "Mon, 22 Apr 2026 00:00:00 +0900"
+        },
+        {
+          title: "다른 쿼리 값",
+          originallink: "https://publisher.example.com/2",
+          link: "https://news.example.com/articles/42?a=2",
+          description: "본문",
+          pubDate: "Mon, 22 Apr 2026 00:00:00 +0900"
+        },
+        {
+          title: "다른 경로",
+          originallink: "https://publisher.example.com/3",
+          link: "https://news.example.com/articles/42/related?a=1",
+          description: "본문",
+          pubDate: "Mon, 22 Apr 2026 00:00:00 +0900"
+        }
+      ]
+    },
+    { query: "서로다른", display: 10, start: 1, sort: "sim" }
+  );
+
+  assert.equal(result.items.length, 3);
+  assert.equal(result.items[0].title, "첫 번째");
+  assert.equal(result.items[1].title, "다른 쿼리 값");
+  assert.equal(result.items[2].title, "다른 경로");
+});
+
 test("normalizeNaverNewsSearchPayload handles missing optional fields gracefully", () => {
   const result = normalizeNaverNewsSearchPayload(
     {
@@ -246,6 +393,38 @@ test("naver news search endpoint returns 503 when proxy credentials are missing"
   const body = response.json();
   assert.equal(body.error, "upstream_not_configured");
   assert.match(body.message, /NAVER_SEARCH_CLIENT_ID/);
+});
+
+test("naver news search endpoint returns 400 preflight when start+display exceeds Naver's 1000-item window", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCount = 0;
+  global.fetch = async () => {
+    fetchCount += 1;
+    return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  const app = buildServer({
+    env: {
+      NAVER_SEARCH_CLIENT_ID: "client-id",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-news/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90&start=1000&display=100"
+  });
+  assert.equal(response.statusCode, 400);
+  const body = response.json();
+  assert.equal(body.error, "bad_request");
+  assert.match(body.message, /1000-item|window|Naver/i);
+  assert.equal(fetchCount, 0, "must not call upstream when preflight fails");
 });
 
 test("naver news search endpoint proxies to official API with correct headers and params", async (t) => {

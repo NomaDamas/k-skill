@@ -5,6 +5,7 @@ const MAX_DISPLAY = 100;
 const DEFAULT_START = 1;
 const MIN_START = 1;
 const MAX_START = 1000;
+const MAX_SEARCH_WINDOW = 1000;
 const ALLOWED_SORTS = new Set(["sim", "date"]);
 
 function parseInteger(value, fallback) {
@@ -64,6 +65,22 @@ function normalizeUrl(value) {
   return null;
 }
 
+function canonicalizeLinkForDedup(link) {
+  try {
+    const u = new URL(link);
+    const params = [...u.searchParams.entries()];
+    params.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    u.search = params.length ? new URLSearchParams(params).toString() : "";
+    if (u.pathname.length > 1 && u.pathname.endsWith("/")) {
+      u.pathname = u.pathname.replace(/\/+$/, "") || "/";
+    }
+    u.hash = "";
+    return u.toString().toLowerCase();
+  } catch {
+    return String(link).toLowerCase();
+  }
+}
+
 function parsePubDateIso(rfc822) {
   if (!rfc822) {
     return null;
@@ -89,10 +106,21 @@ function normalizeNaverNewsSearchQuery(query) {
   const requestedSort = trimOrNull(query.sort) || "sim";
   const sort = ALLOWED_SORTS.has(requestedSort) ? requestedSort : "sim";
 
+  const display = clamp(rawDisplay, MIN_DISPLAY, MAX_DISPLAY);
+  const start = clamp(rawStart, MIN_START, MAX_START);
+
+  if (start + display - 1 > MAX_SEARCH_WINDOW) {
+    throw new Error(
+      `start + display exceeds Naver's ${MAX_SEARCH_WINDOW}-item search window ` +
+        `(start=${start} + display=${display} would fetch item ${start + display - 1}, ` +
+        `max accessible item is ${MAX_SEARCH_WINDOW}). Narrow the search or reduce start/display.`
+    );
+  }
+
   return {
     query: q,
-    display: clamp(rawDisplay, MIN_DISPLAY, MAX_DISPLAY),
-    start: clamp(rawStart, MIN_START, MAX_START),
+    display,
+    start,
     sort
   };
 }
@@ -127,7 +155,7 @@ function normalizeNaverNewsSearchPayload(
     const pubDate = trimOrNull(item.pubDate);
     const pubDateIso = parsePubDateIso(pubDate);
 
-    const dedupKey = link.toLowerCase();
+    const dedupKey = canonicalizeLinkForDedup(link);
     if (seenLinks.has(dedupKey)) {
       continue;
     }

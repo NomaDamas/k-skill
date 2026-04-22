@@ -1276,32 +1276,35 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     }
   });
 
-  app.get("/health", async () => ({
-    ok: true,
-    service: config.proxyName,
-    port: config.port,
-    upstreams: {
-      airKoreaConfigured: Boolean(config.airKoreaApiKey),
-      kmaOpenApiConfigured: Boolean(config.kmaOpenApiKey),
-      blueRibbonConfigured: Boolean(config.blueRibbonSessionId),
-      seoulOpenApiConfigured: Boolean(config.seoulOpenApiKey),
-      hrfcoConfigured: Boolean(config.hrfcoApiKey),
-      opinetConfigured: Boolean(config.opinetApiKey),
-      molitConfigured: Boolean(config.molitApiKey),
-      lhNoticeConfigured: Boolean(config.molitApiKey),
-      data4libraryConfigured: Boolean(config.data4libraryAuthKey),
-      foodsafetyKoreaConfigured: Boolean(config.foodsafetyKoreaApiKey),
-      neisSchoolMealConfigured: Boolean(config.keduInfoKey),
-      krxConfigured: Boolean(config.krxApiKey),
-      naverShoppingConfigured: true,
-      naverSearchApiConfigured: Boolean(config.naverSearchClientId && config.naverSearchClientSecret),
-      naverNewsApiConfigured: Boolean(config.naverSearchClientId && config.naverSearchClientSecret)
-    },
-    auth: {
-      tokenRequired: false
-    },
-    timestamp: new Date().toISOString()
-  }));
+  app.get("/health", async () => {
+    const naverSearchKeysPresent = Boolean(config.naverSearchClientId && config.naverSearchClientSecret);
+    return {
+      ok: true,
+      service: config.proxyName,
+      port: config.port,
+      upstreams: {
+        airKoreaConfigured: Boolean(config.airKoreaApiKey),
+        kmaOpenApiConfigured: Boolean(config.kmaOpenApiKey),
+        blueRibbonConfigured: Boolean(config.blueRibbonSessionId),
+        seoulOpenApiConfigured: Boolean(config.seoulOpenApiKey),
+        hrfcoConfigured: Boolean(config.hrfcoApiKey),
+        opinetConfigured: Boolean(config.opinetApiKey),
+        molitConfigured: Boolean(config.molitApiKey),
+        lhNoticeConfigured: Boolean(config.molitApiKey),
+        data4libraryConfigured: Boolean(config.data4libraryAuthKey),
+        foodsafetyKoreaConfigured: Boolean(config.foodsafetyKoreaApiKey),
+        neisSchoolMealConfigured: Boolean(config.keduInfoKey),
+        krxConfigured: Boolean(config.krxApiKey),
+        naverShoppingConfigured: true,
+        naverSearchApiConfigured: naverSearchKeysPresent,
+        naverNewsApiConfigured: naverSearchKeysPresent
+      },
+      auth: {
+        tokenRequired: false
+      },
+      timestamp: new Date().toISOString()
+    };
+  });
 
   app.get("/B552584/:service/:operation", async (request, reply) => {
     const { service, operation } = request.params;

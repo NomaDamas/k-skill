@@ -38,7 +38,7 @@ description: k-skill-proxy 경유 네이버 검색 Open API 뉴스 검색으로 
 | --- | --- | --- | --- |
 | `q` / `query` / `keyword` | string | (필수) | 검색어. 2글자 이상 |
 | `display` / `limit` / `size` | int | 10 | 반환 건수. 1 ~ 100 으로 clamp |
-| `start` / `offset` | int | 1 | 검색 시작 위치(1-indexed). 최대 1000 |
+| `start` / `offset` | int | 1 | 검색 시작 위치(1-indexed). 최대 1000. `start + display - 1 > 1000` 이면 proxy 가 업스트림 호출 전에 `400 bad_request` 로 거절 |
 | `sort` | string | `sim` | `sim`(관련도순) 또는 `date`(최신순). 그 외 값은 `sim` fallback |
 
 ## 기본 호출
@@ -125,7 +125,8 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-news/search' \
 
 - 사용자 요구가 "오늘", "최신" 이면 `sort=date` 로 호출하는 것이 보통 더 만족스럽다.
 - `display` 가 클수록 네이버 API 쿼터를 빨리 소모한다. 기본 10 에서 벗어날 필요 없는 경우가 많다.
-- `start + display` 조합이 1000 을 넘는 위치는 네이버 API 가 결과를 돌려주지 않는다. 아주 오래된 기사를 찾을 때는 검색어를 좁히는 것이 낫다.
+- `start + display - 1` 이 1000 을 넘는 조합(예: `start=1000&display=100`)은 proxy가 업스트림 호출 전에 `400 bad_request`(`"start + display exceeds Naver's 1000-item search window"`) 로 거절한다. 네이버 API 는 1000번째 아이템까지만 열람 가능하므로, 더 오래된 기사를 찾을 때는 검색어를 좁히는 것이 낫다.
+- 뉴스 `link` 중복 제거는 쿼리 파라미터 순서와 trailing slash 를 무시한 **canonical URL** 기준으로 수행된다(`?a=1&b=2` 와 `?b=2&a=1` 은 같은 기사로 간주). 실제 페이로드의 `link` 필드는 네이버가 돌려준 원문 그대로 노출한다.
 - `pub_date` 는 RFC822 형식, `pub_date_iso` 는 UTC ISO-8601 이다. 사용자에게 보여줄 때는 KST(UTC+9) 로 변환한다.
 - proxy route 는 public/read-only/no-auth 이며 5분 캐시 + 분당 60 회 rate limit 으로 남용을 막는다.
 - 기사 원문 풀텍스트가 필요하면 이 스킬로는 얻을 수 없다. 사용자가 링크를 직접 방문하도록 안내한다.
