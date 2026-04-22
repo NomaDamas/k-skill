@@ -3810,6 +3810,92 @@ test("lh-notice detail endpoint requires all three codes and caches successful l
   assert.equal(fetchCalls.length, 1, "cached detail must not retrigger upstream");
 });
 
+test("lh-notice detail does not cache upstream XML auth errors so retries self-heal", async (t) => {
+  const originalFetch = global.fetch;
+  const xmlError = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OpenAPI_ServiceResponse>
+  <cmmMsgHeader>
+    <errMsg>SERVICE ERROR</errMsg>
+    <returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg>
+    <returnReasonCode>30</returnReasonCode>
+  </cmmMsgHeader>
+</OpenAPI_ServiceResponse>`;
+
+  let mode = "fail";
+  const fetchCalls = [];
+  const successPayload = [
+    { CMN: { CODE: "SUCCESS", ERR_MSG: "", TOTAL_CNT: 1 } },
+    {
+      dsList: [
+        {
+          PAN_ID: "2015122300019828",
+          PAN_NM: "영구임대 예비입주자 모집 (recovered)",
+          UPP_AIS_TP_CD: "06",
+          AIS_TP_CD_NM: "영구임대",
+          HOUSE_TY: "29㎡",
+          SPL_CNT: "120"
+        }
+      ]
+    }
+  ];
+
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    if (mode === "fail") {
+      return new Response(xmlError, { status: 200, headers: { "content-type": "text/xml" } });
+    }
+    return new Response(JSON.stringify(successPayload), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const detailUrl =
+    "/v1/lh-notice/detail?panId=2015122300019828&ccrCnntSysDsCd=03&splInfTpCd=051";
+
+  const first = await app.inject({ method: "GET", url: detailUrl });
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_error");
+  assert.equal(first.json().upstream_code, "30");
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(fetchCalls.length, 1, "first call must hit upstream exactly once");
+
+  mode = "ok";
+
+  const second = await app.inject({ method: "GET", url: detailUrl });
+  assert.equal(second.statusCode, 200);
+  assert.equal(
+    second.json().proxy.cache.hit,
+    false,
+    "detail failure must not have been cached — retry must hit upstream"
+  );
+  assert.equal(second.json().notice.pan_id, "2015122300019828");
+  assert.match(second.json().notice.pan_nm, /recovered/);
+  assert.equal(
+    fetchCalls.length,
+    2,
+    "second call must hit upstream again (no cache for failure)"
+  );
+
+  mode = "fail";
+
+  const third = await app.inject({ method: "GET", url: detailUrl });
+  assert.equal(
+    third.statusCode,
+    200,
+    "third call must hit cache (success was cached)"
+  );
+  assert.equal(third.json().proxy.cache.hit, true);
+  assert.equal(
+    fetchCalls.length,
+    2,
+    "third call must serve from cache (no new upstream fetch)"
+  );
+});
+
 test("health endpoint reports lhNoticeConfigured when DATA_GO_KR_API_KEY is set", async (t) => {
   const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
   t.after(async () => { await app.close(); });
