@@ -44,7 +44,7 @@ metadata:
 
 - 표준데이터 안내: `https://www.data.go.kr/data/15012896/standard.do`
 - Open API 안내: `https://www.data.go.kr/data/15012896/openapi.do`
-- Open API endpoint: `http://api.data.go.kr/openapi/tn_pubr_prkplce_info_api`
+- Open API endpoint: `https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api`
 - k-skill proxy: `/v1/parking-lots/search`
 - Kakao Map 모바일 검색: `https://m.map.kakao.com/actions/searchView?q=<query>`
 - Kakao Map 장소 패널 JSON: `https://place-api.map.kakao.com/places/panel3/<confirmId>`

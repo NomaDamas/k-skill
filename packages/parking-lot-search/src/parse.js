@@ -288,8 +288,8 @@ function normalizeParkingLotRows(payload, origin, options = {}) {
         phone: String(row.phoneNumber ?? row["전화번호"] ?? "").trim() || null,
         hasAccessibleParking: toBooleanYesNo(row.pwdbsPpkZoneYn ?? row["장애인전용주차구역보유여부"]),
         referenceDate: String(row.referenceDate ?? row["데이터기준일자"] ?? "").trim() || null,
-        providerCode: String(row.instt_code ?? row["제공기관코드"] ?? "").trim() || null,
-        providerName: String(row.instt_nm ?? row["제공기관기관명"] ?? row["제공기관명"] ?? "").trim() || null,
+        providerCode: String(row.insttCode ?? row.instt_code ?? row["제공기관코드"] ?? "").trim() || null,
+        providerName: String(row.insttNm ?? row.instt_nm ?? row["제공기관기관명"] ?? row["제공기관명"] ?? "").trim() || null,
         mapUrl: buildMapUrl(name, itemLatitude, itemLongitude)
       };
     })

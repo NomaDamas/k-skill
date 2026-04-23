@@ -9,7 +9,7 @@ const {
 
 const SEARCH_VIEW_URL = "https://m.map.kakao.com/actions/searchView";
 const PLACE_PANEL_URL_BASE = "https://place-api.map.kakao.com/places/panel3";
-const OFFICIAL_API_URL = "http://api.data.go.kr/openapi/tn_pubr_prkplce_info_api";
+const OFFICIAL_API_URL = "https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api";
 const DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org";
 const DEFAULT_BROWSER_HEADERS = {
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

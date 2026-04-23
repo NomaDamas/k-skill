@@ -14,7 +14,7 @@ Korean parking-lot lookup backed first by the official Data.go.kr `전국주차�
 
 - Data.go.kr standard dataset: `https://www.data.go.kr/data/15012896/standard.do`
 - Data.go.kr Open API docs: `https://www.data.go.kr/data/15012896/openapi.do`
-- Open API endpoint: `http://api.data.go.kr/openapi/tn_pubr_prkplce_info_api`
+- Open API endpoint: `https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api`
 - Kakao Map mobile search: `https://m.map.kakao.com/actions/searchView?q=<query>`
 - Kakao Map place panel JSON: `https://place-api.map.kakao.com/places/panel3/<confirmId>`
 
