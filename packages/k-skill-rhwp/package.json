@@ -1,6 +1,6 @@
 {
   "name": "k-skill-rhwp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Node-side HWP editing CLI that wraps @rhwp/core WASM bindings for the rhwp-edit and rhwp-advanced skills",
   "license": "MIT",
   "main": "src/index.js",
