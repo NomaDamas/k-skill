@@ -1,6 +1,6 @@
 {
   "name": "k-skill-proxy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Fastify proxy for k-skill upstream APIs",
   "license": "MIT",
