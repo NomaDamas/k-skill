@@ -2938,7 +2938,12 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(skill, /조사보고서/);
   assert.match(skill, /등록면허세/);
   assert.match(skill, /과밀억제권역/);
+  assert.match(skill, /지방세법 제28조/);
   assert.match(skill, /소프트웨어/);
+  assert.match(skill, /주민등록번호/);
+  assert.match(skill, /마스킹/);
+  assert.match(skill, /전자서명|세금 납부|등기 제출/);
+  assert.match(skill, /최종 법률.*세무 판단/);
   assert.match(skill, /rhwp-edit/);
   assert.match(skill, /k-skill-rhwp/);
   assert.match(skill, /법인명/);
@@ -2949,16 +2954,23 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(articlesTemplate, /\{\{COMPANY_NAME\}\}/);
   assert.match(articlesTemplate, /발기인/);
   assert.match(articlesTemplate, /1주의 금액/);
+  assert.match(articlesTemplate, /3명 이상.*이사회/);
+  assert.match(articlesTemplate, /2명.*이사회/);
+  assert.match(articlesTemplate, /관할 등기소|전문가/);
   assert.match(documentPackTemplate, /취임승낙서/);
   assert.match(documentPackTemplate, /인감신고서/);
   assert.match(documentPackTemplate, /등록면허세/);
+  assert.match(documentPackTemplate, /개인정보|민감정보/);
+  assert.match(documentPackTemplate, /레포.*커밋/);
 
   assert.match(featureDoc, /법인등기 신청 컨설팅/);
   assert.match(featureDoc, /표준 정관/);
   assert.match(featureDoc, /등록면허세/);
   assert.match(featureDoc, /과밀억제권역/);
   assert.match(featureDoc, /조세특례제한법 제6조/);
-  assert.match(featureDoc, /지방세법/);
+  assert.match(featureDoc, /지방세법 제28조/);
+  assert.match(featureDoc, /전자서명|세금 납부|등기 제출/);
+  assert.match(featureDoc, /개인정보|민감정보/);
   assert.match(featureDoc, /인터넷등기소|온라인법인설립시스템/);
   assert.match(featureDoc, /참고용/);
 
