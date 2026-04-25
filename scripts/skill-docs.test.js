@@ -2893,6 +2893,132 @@ test("korean-privacy-terms feature doc documents the thin-wrapper install flow a
   assert.match(featureDoc, /Next\.js/);
 });
 
+test("corporate-registration-consulting skill covers court registry workflow, tax pitfalls, and rhwp automation", () => {
+  const skillPath = path.join(repoRoot, "corporate-registration-consulting", "SKILL.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "corporate-registration-consulting.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected corporate-registration-consulting/SKILL.md to exist");
+  assert.ok(fs.existsSync(featureDocPath), "expected corporate-registration-consulting feature doc to exist");
+  const articlesTemplatePath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "standard-articles-of-incorporation.md",
+  );
+  const documentPackTemplatePath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "incorporation-document-pack.md",
+  );
+
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, articlesTemplatePath)),
+    "expected a standard articles template artifact",
+  );
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, documentPackTemplatePath)),
+    "expected an incorporation document pack template artifact",
+  );
+
+  const articlesTemplate = read(articlesTemplatePath);
+  const documentPackTemplate = read(documentPackTemplatePath);
+  const skill = read(path.join("corporate-registration-consulting", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "corporate-registration-consulting.md"));
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+
+  assert.match(skill, /^---\nname: corporate-registration-consulting\n/);
+  assert.match(skill, /참고용/);
+  assert.match(skill, /법률 자문/);
+  assert.match(skill, /변호사|법무사|세무사/);
+  assert.match(skill, /상호/);
+  assert.match(skill, /정관/);
+  assert.match(skill, /잔고증명|주금납입/);
+  assert.match(skill, /취임승낙서/);
+  assert.match(skill, /조사보고서/);
+  assert.match(skill, /등록면허세/);
+  assert.match(skill, /과밀억제권역/);
+  assert.match(skill, /지방세법 제28조/);
+  assert.match(skill, /소프트웨어/);
+  assert.match(skill, /주민등록번호/);
+  assert.match(skill, /마스킹/);
+  assert.match(skill, /에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*수행하지 않는다/);
+  assert.match(skill, /사용자 사칭[\s\S]*수행하지 않는다/);
+  assert.match(skill, /최종 법률 판단[\s\S]*수행하지 않는다/);
+  assert.match(skill, /최종 세무 판단[\s\S]*수행하지 않는다/);
+  assert.match(skill, /모집설립/);
+  assert.match(skill, /현물출자/);
+  assert.match(skill, /변태설립사항/);
+  assert.match(skill, /자본금 10억/);
+  assert.match(skill, /주식회사 외/);
+  assert.match(skill, /지점/);
+  assert.match(skill, /외국인/);
+  assert.match(skill, /인허가 업종/);
+  assert.match(skill, /rhwp-edit/);
+  assert.match(skill, /k-skill-rhwp/);
+  assert.match(skill, /replace-all.*본문/);
+  assert.match(skill, /set-cell-text/);
+  assert.match(skill, /표.*셀/);
+  assert.match(skill, /mktemp -d/);
+  assert.match(skill, /chmod 700/);
+  assert.match(skill, /레포.*밖|레포.*외부|저장소.*밖|저장소.*외부/);
+  assert.doesNotMatch(skill, /\.\/out\/court-form-filled\.hwp/);
+  assert.match(skill, /법인명/);
+  assert.match(skill, /이사/);
+  assert.match(skill, /주소/);
+  assert.match(skill, /쉬운 말/);
+  assert.match(skill, /사용자 결정/);
+  assert.match(articlesTemplate, /\{\{COMPANY_NAME\}\}/);
+  assert.match(articlesTemplate, /발기인/);
+  assert.match(articlesTemplate, /1주의 금액/);
+  assert.match(articlesTemplate, /3명 이상.*이사회/);
+  assert.match(articlesTemplate, /2명.*이사회가 없는/);
+  assert.match(articlesTemplate, /이사회 결의라는 표현은 쓰지 않는다/);
+  assert.match(articlesTemplate, /1명.*그 이사가 회사를 대표/);
+  assert.match(articlesTemplate, /관할 등기소|전문가/);
+  assert.match(documentPackTemplate, /취임승낙서/);
+  assert.match(documentPackTemplate, /인감신고서/);
+  assert.match(documentPackTemplate, /등록면허세/);
+  assert.match(documentPackTemplate, /개인정보|민감정보/);
+  assert.match(documentPackTemplate, /레포.*커밋/);
+  assert.match(documentPackTemplate, /\{\{INSPECTION_CONCLUSION_AFTER_USER_OR_EXPERT_REVIEW\}\}/);
+  assert.doesNotMatch(documentPackTemplate, /중대한 흠이 없음을 보고합니다/);
+
+  assert.match(featureDoc, /법인등기 신청 컨설팅/);
+  assert.match(featureDoc, /표준 정관/);
+  assert.match(featureDoc, /등록면허세/);
+  assert.match(featureDoc, /과밀억제권역/);
+  assert.match(featureDoc, /조세특례제한법 제6조/);
+  assert.match(featureDoc, /지방세법 제28조/);
+  assert.match(featureDoc, /에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*지원하지 않는다|에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*수행하지 않는다/);
+  assert.match(featureDoc, /사용자 사칭[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
+  assert.match(featureDoc, /최종 법률 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
+  assert.match(featureDoc, /최종 세무 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
+  assert.match(featureDoc, /개인정보|민감정보/);
+  assert.match(featureDoc, /모집설립/);
+  assert.match(featureDoc, /현물출자/);
+  assert.match(featureDoc, /변태설립사항/);
+  assert.match(featureDoc, /자본금 10억/);
+  assert.match(featureDoc, /주식회사 외/);
+  assert.match(featureDoc, /지점/);
+  assert.match(featureDoc, /외국인/);
+  assert.match(featureDoc, /인허가 업종/);
+  assert.match(featureDoc, /replace-all.*본문/);
+  assert.match(featureDoc, /set-cell-text/);
+  assert.match(featureDoc, /표.*셀/);
+  assert.match(featureDoc, /사용자\/전문가가.*신고.*납부|사용자.*신고.*납부/);
+  assert.match(featureDoc, /사용자\/전문가가.*제출|사용자.*제출/);
+  assert.match(featureDoc, /인터넷등기소|온라인법인설립시스템/);
+  assert.match(featureDoc, /참고용/);
+
+  assert.match(readme, /\| 법인등기 신청 컨설팅 \|/);
+  assert.match(readme, /docs\/features\/corporate-registration-consulting\.md/);
+  assert.match(install, /--skill corporate-registration-consulting/);
+  assert.match(sources, /corporate-registration-consulting/);
+  assert.match(sources, /startbiz\.go\.kr/);
+  assert.match(sources, /law\.go\.kr/);
+});
+
 test("rhwp-edit skill pins the k-skill-rhwp CLI as the editing engine and disclaims kordoc/rhwp-advanced routing", () => {
   const skill = read(path.join("rhwp-edit", "SKILL.md"));
 
@@ -3010,6 +3136,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["사용자 위치 미세먼지 조회", "fine-dust-location"],
   ["한강 수위 정보 조회", "han-river-water-level"],
   ["한국 법령 검색", "korean-law-search"],
+  ["법인등기 신청 컨설팅", "corporate-registration-consulting"],
   ["한국 개인정보처리방침·이용약관 자동 생성", "korean-privacy-terms"],
   ["한국 부동산 실거래가 조회", "real-estate-search"],
   ["LH 청약 공고문 조회", "lh-notice-search"],
