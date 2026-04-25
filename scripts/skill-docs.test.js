@@ -2942,13 +2942,10 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(skill, /소프트웨어/);
   assert.match(skill, /주민등록번호/);
   assert.match(skill, /마스킹/);
-  assert.match(skill, /로그인/);
-  assert.match(skill, /전자서명/);
-  assert.match(skill, /세금 납부/);
-  assert.match(skill, /등기 제출/);
-  assert.match(skill, /사용자 사칭/);
-  assert.match(skill, /최종 법률 판단/);
-  assert.match(skill, /최종 세무 판단/);
+  assert.match(skill, /에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*수행하지 않는다/);
+  assert.match(skill, /사용자 사칭[\s\S]*수행하지 않는다/);
+  assert.match(skill, /최종 법률 판단[\s\S]*수행하지 않는다/);
+  assert.match(skill, /최종 세무 판단[\s\S]*수행하지 않는다/);
   assert.match(skill, /모집설립/);
   assert.match(skill, /현물출자/);
   assert.match(skill, /변태설립사항/);
@@ -2962,6 +2959,10 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(skill, /replace-all.*본문/);
   assert.match(skill, /set-cell-text/);
   assert.match(skill, /표.*셀/);
+  assert.match(skill, /mktemp -d/);
+  assert.match(skill, /chmod 700/);
+  assert.match(skill, /레포.*밖|레포.*외부|저장소.*밖|저장소.*외부/);
+  assert.doesNotMatch(skill, /\.\/out\/court-form-filled\.hwp/);
   assert.match(skill, /법인명/);
   assert.match(skill, /이사/);
   assert.match(skill, /주소/);
@@ -2980,6 +2981,8 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(documentPackTemplate, /등록면허세/);
   assert.match(documentPackTemplate, /개인정보|민감정보/);
   assert.match(documentPackTemplate, /레포.*커밋/);
+  assert.match(documentPackTemplate, /\{\{INSPECTION_CONCLUSION_AFTER_USER_OR_EXPERT_REVIEW\}\}/);
+  assert.doesNotMatch(documentPackTemplate, /중대한 흠이 없음을 보고합니다/);
 
   assert.match(featureDoc, /법인등기 신청 컨설팅/);
   assert.match(featureDoc, /표준 정관/);
@@ -2987,13 +2990,10 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(featureDoc, /과밀억제권역/);
   assert.match(featureDoc, /조세특례제한법 제6조/);
   assert.match(featureDoc, /지방세법 제28조/);
-  assert.match(featureDoc, /로그인/);
-  assert.match(featureDoc, /전자서명/);
-  assert.match(featureDoc, /세금 납부/);
-  assert.match(featureDoc, /등기 제출/);
-  assert.match(featureDoc, /사용자 사칭/);
-  assert.match(featureDoc, /최종 법률 판단/);
-  assert.match(featureDoc, /최종 세무 판단/);
+  assert.match(featureDoc, /에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*지원하지 않는다|에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*수행하지 않는다/);
+  assert.match(featureDoc, /사용자 사칭[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
+  assert.match(featureDoc, /최종 법률 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
+  assert.match(featureDoc, /최종 세무 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
   assert.match(featureDoc, /개인정보|민감정보/);
   assert.match(featureDoc, /모집설립/);
   assert.match(featureDoc, /현물출자/);
@@ -3006,6 +3006,8 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(featureDoc, /replace-all.*본문/);
   assert.match(featureDoc, /set-cell-text/);
   assert.match(featureDoc, /표.*셀/);
+  assert.match(featureDoc, /사용자\/전문가가.*신고.*납부|사용자.*신고.*납부/);
+  assert.match(featureDoc, /사용자\/전문가가.*제출|사용자.*제출/);
   assert.match(featureDoc, /인터넷등기소|온라인법인설립시스템/);
   assert.match(featureDoc, /참고용/);
 

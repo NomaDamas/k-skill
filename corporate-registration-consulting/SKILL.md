@@ -70,9 +70,9 @@ metadata:
 4. **발기인 결정서·주식인수·주금납입**: 발기인이 주식을 인수하고 자본금을 입금한 뒤 잔고증명서 또는 주금납입보관증명에 준하는 증빙을 준비한다.
 5. **임원 취임승낙서·인감·주민등록/주소 증빙 준비**: 이사·대표이사·감사가 취임을 승낙했다는 서류와 인감 관련 서류를 준비한다. 주민등록번호·신분증·인감증명 같은 민감정보는 원문을 대화나 로그에 남기지 말고 제출 직전 로컬 문서에만 반영한다.
 6. **조사보고서/이사회·발기인 의사록 작성**: 현물출자 등 특수 사정이 없더라도 설립 경과를 확인하는 문서를 준비한다. 1인 회사면 결정을 단순화한다.
-7. **등록면허세 신고·납부**: 위택스 또는 관할 지자체에서 등록면허세와 지방교육세를 납부하고 영수필확인서를 확보한다.
+7. **등록면허세 신고·납부 준비**: 위택스 또는 관할 지자체 납부 화면에 넣을 금액·근거·체크리스트를 정리한다. 사용자/전문가가 실제 신고와 세금 납부를 직접 수행하고 영수필확인서를 확보한다.
 8. **등기신청서 작성·첨부서류 묶기**: `templates/incorporation-document-pack.md`의 순서대로 신청서, 정관, 취임승낙서, 조사보고서, 주금납입 증빙, 인감신고서, 세금 영수증을 점검한다.
-9. **인터넷등기소/관할 등기소 제출**: 전자신청이면 인증서·전자서명·스캔본 품질을 확인하고, 방문이면 원본/사본과 도장을 확인한다.
+9. **인터넷등기소/관할 등기소 제출 준비**: 전자신청이면 인증서·전자서명·스캔본 품질 체크리스트를 만들고, 방문이면 원본/사본과 도장 확인 목록을 만든다. 사용자/전문가가 실제 로그인, 전자서명, 등기 제출 절차를 직접 완료한다.
 10. **보정 대응**: 등기소가 보정명령을 내리면 문구·첨부서류·세금 계산을 수정한다. 보정 사유를 쉬운 말로 풀고 다음 조치만 제시한다.
 11. **등기 완료 후 후속 작업**: 법인등기사항증명서, 법인인감증명서, 사업자등록, 4대보험, 은행 법인계좌, 통신판매업/소프트웨어사업자 신고 등 후속 일정을 안내한다.
 
@@ -103,13 +103,17 @@ metadata:
 2. `templates/standard-articles-of-incorporation.md`와 `templates/incorporation-document-pack.md`의 `{{PLACEHOLDER}}`를 채워 Markdown 초안을 만든다.
 3. HWPX가 필요하면 `hwp` 스킬의 kordoc `markdownToHwpx` 경로를 사용한다.
 4. 기존 HWP 양식을 편집해야 하면 `rhwp-edit` 스킬의 `k-skill-rhwp replace-all` 또는 `set-cell-text`로 자리표시자를 채운다. `replace-all`은 본문 문단 자리표시자 치환에만 우선 사용하고, 표/셀 안의 입력란은 `k-skill-rhwp info`로 구조를 확인한 뒤 `set-cell-text` 같은 셀 인식 명령으로 채운다. 법원·등기소 공식 HWP 양식은 표가 많으므로 제출 전에는 반드시 사람이 열어 레이아웃과 누락 셀을 검토한다.
+5. 채워진 HWP에는 이름·주소·생년월일 같은 개인정보가 들어갈 수 있으므로 레포 밖의 비공개 임시 디렉터리나 사용자가 지정한 안전한 로컬 폴더에만 저장한다. 예시는 `mktemp -d`와 `chmod 700`으로 저장소 외부 작업 디렉터리를 만든 뒤 사용한다.
 
 ```bash
-npx k-skill-rhwp replace-all ./templates/court-form.hwp ./out/court-form-filled.hwp \
+workdir="$(mktemp -d "${TMPDIR:-/tmp}/corp-reg.XXXXXX")"
+chmod 700 "$workdir"
+npx k-skill-rhwp replace-all ./templates/court-form.hwp "$workdir/court-form-filled.hwp" \
   --query '{{COMPANY_NAME}}' --replacement '예시소프트 주식회사'
+k-skill-rhwp info "$workdir/court-form-filled.hwp"
 ```
 
-5. 생성 직후 `k-skill-rhwp info ./out/court-form-filled.hwp`로 round-trip 여부를 확인하고, 사용자가 제출 전 읽을 수 있도록 쉬운 말 요약본을 함께 만든다.
+6. 생성 직후 `k-skill-rhwp info "$workdir/court-form-filled.hwp"`로 round-trip 여부를 확인하고, 사용자가 제출 전 읽을 수 있도록 쉬운 말 요약본을 함께 만든다. 채워진 산출물 경로는 PR·테스트 로그·공유 요약에 노출하지 않는다.
 
 ## 응답 끝에 항상 붙일 문구
 
