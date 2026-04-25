@@ -3124,3 +3124,120 @@ test("k-skill-rhwp package ships CLI bin, WASM-init shim, and minor semver chang
   );
 
 });
+
+const README_SKILL_NAME_COLUMN_MAPPING = [
+  ["SRT 예매", "srt-booking"],
+  ["KTX 예매", "ktx-booking"],
+  ["카카오톡 Mac CLI", "kakaotalk-mac"],
+  ["서울 지하철 도착정보 조회", "seoul-subway-arrival"],
+  ["지하철 분실물 조회", "subway-lost-property"],
+  ["긱뉴스 조회", "geeknews-search"],
+  ["한국 날씨 조회", "korea-weather"],
+  ["사용자 위치 미세먼지 조회", "fine-dust-location"],
+  ["한강 수위 정보 조회", "han-river-water-level"],
+  ["한국 법령 검색", "korean-law-search"],
+  ["법인등기 신청 컨설팅", "corporate-registration-consulting"],
+  ["한국 개인정보처리방침·이용약관 자동 생성", "korean-privacy-terms"],
+  ["한국 부동산 실거래가 조회", "real-estate-search"],
+  ["LH 청약 공고문 조회", "lh-notice-search"],
+  ["장학금 검색 및 조회", "korean-scholarship-search"],
+  ["생활쓰레기 배출정보 조회", "household-waste-info"],
+  ["학교 급식 식단 조회", "k-schoollunch-menu"],
+  ["도서관 도서 조회", "library-book-search"],
+  ["의약품 안전 체크", "mfds-drug-safety"],
+  ["식품 안전 체크", "mfds-food-safety"],
+  ["한국 주식 정보 조회", "korean-stock-search"],
+  ["금감원 DART 전자공시 조회", "k-dart"],
+  ["조선왕조실록 검색", "joseon-sillok-search"],
+  ["한국 특허 정보 검색", "korean-patent-search"],
+  ["근처 가장 싼 주유소 찾기", "cheap-gas-nearby"],
+  ["근처 공중화장실 찾기", "public-restroom-nearby"],
+  ["근처 공영주차장 찾기", "parking-lot-search"],
+  ["KBO 경기 결과 조회", "kbo-results"],
+  ["KBL 경기 결과 조회", "kbl-results"],
+  ["K리그 경기 결과 조회", "kleague-results"],
+  ["LCK 경기 분석", "lck-analytics"],
+  ["토스증권 조회", "toss-securities"],
+  ["하이패스 영수증 발급", "hipass-receipt"],
+  ["캐치테이블 예약 스나이핑", "catchtable-sniper"],
+  ["로또 당첨 확인", "lotto-results"],
+  ["HWP 문서 조회/변환", "hwp"],
+  ["HWP 문서 편집", "rhwp-edit"],
+  ["HWP 레이아웃·IR 디버깅", "rhwp-advanced"],
+  ["근처 술집 조회", "kakao-bar-nearby"],
+  ["우편번호 검색", "zipcode-search"],
+  ["다이소 상품 조회", "daiso-product-search"],
+  ["마켓컬리 상품 조회", "market-kurly-search"],
+  ["올리브영 검색", "olive-young-search"],
+  ["올라포케 역삼 포케", "hola-poke-yeoksam"],
+  ["택배 배송조회", "delivery-tracking"],
+  ["쿠팡 상품 검색", "coupang-product-search"],
+  ["번개장터 검색", "bunjang-search"],
+  ["중고차 가격 조회", "used-car-price-search"],
+  ["한국어 맞춤법 검사", "korean-spell-check"],
+  ["네이버 블로그 리서치", "naver-blog-research"],
+  ["네이버 쇼핑 가격비교", "naver-shopping-search"],
+  ["네이버 뉴스 검색", "naver-news-search"],
+  ["한국어 글자 수 세기", "korean-character-count"],
+  ["한국어 유행어 글쓰기", "korean-slang-writing"],
+];
+
+test("README skill table header advertises the new 스킬 이름 column (issue #165)", () => {
+  const readme = read("README.md");
+
+  assert.match(
+    readme,
+    /\| 할 수 있는 일 \| 스킬 이름 \| 설명 \| 사용자 로그인 \| 문서 \|\n\| --- \| --- \| --- \| --- \| --- \|/,
+    "expected the 어떤 걸 할 수 있나 table header to include 스킬 이름 between 할 수 있는 일 and 설명 with a 5-column separator",
+  );
+});
+
+test("README skill table includes inline-code skill names for every documented row (issue #165)", () => {
+  const readme = read("README.md");
+
+  for (const [label, skillName] of README_SKILL_NAME_COLUMN_MAPPING) {
+    const escapedLabel = escapeRegex(label);
+    const escapedName = escapeRegex(skillName);
+
+    assert.match(
+      readme,
+      new RegExp(`\\| ${escapedLabel} \\| \`${escapedName}\` \\|`),
+      `expected README row "${label}" to surface skill name \`${skillName}\` as the second column`,
+    );
+  }
+});
+
+test("README skill table strikes through the deprecated blue-ribbon-nearby skill name (issue #165)", () => {
+  const readme = read("README.md");
+
+  assert.match(
+    readme,
+    /\| ~~근처 블루리본 맛집~~ ⚠️ 지원 중단 \| ~~`blue-ribbon-nearby`~~ \|/,
+    "expected the deprecated blue-ribbon-nearby row to keep the strikethrough on its skill-name cell as well",
+  );
+});
+
+test("README skill table skill-name column entries match real on-disk skill directories (issue #165)", () => {
+  const allEntries = [
+    ...README_SKILL_NAME_COLUMN_MAPPING.map(([, skillName]) => skillName),
+    "blue-ribbon-nearby",
+  ];
+
+  for (const skillName of allEntries) {
+    const skillFile = path.join(repoRoot, skillName, "SKILL.md");
+
+    assert.ok(
+      fs.existsSync(skillFile),
+      `expected ${skillName}/SKILL.md to exist on disk so the README table never advertises a non-existent skill identifier`,
+    );
+
+    const frontmatterMatch = read(path.join(skillName, "SKILL.md")).match(/^name:\s*(\S+)\s*$/m);
+
+    assert.ok(frontmatterMatch, `expected ${skillName}/SKILL.md to declare a name in frontmatter`);
+    assert.equal(
+      frontmatterMatch[1].replace(/^"|"$/g, ""),
+      skillName,
+      `expected ${skillName}/SKILL.md frontmatter name to match the directory name (validate-skills.sh invariant)`,
+    );
+  }
+});
