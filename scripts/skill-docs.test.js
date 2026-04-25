@@ -2893,6 +2893,83 @@ test("korean-privacy-terms feature doc documents the thin-wrapper install flow a
   assert.match(featureDoc, /Next\.js/);
 });
 
+test("corporate-registration-consulting skill covers court registry workflow, tax pitfalls, and rhwp automation", () => {
+  const skillPath = path.join(repoRoot, "corporate-registration-consulting", "SKILL.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "corporate-registration-consulting.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected corporate-registration-consulting/SKILL.md to exist");
+  assert.ok(fs.existsSync(featureDocPath), "expected corporate-registration-consulting feature doc to exist");
+  const articlesTemplatePath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "standard-articles-of-incorporation.md",
+  );
+  const documentPackTemplatePath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "incorporation-document-pack.md",
+  );
+
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, articlesTemplatePath)),
+    "expected a standard articles template artifact",
+  );
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, documentPackTemplatePath)),
+    "expected an incorporation document pack template artifact",
+  );
+
+  const articlesTemplate = read(articlesTemplatePath);
+  const documentPackTemplate = read(documentPackTemplatePath);
+  const skill = read(path.join("corporate-registration-consulting", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "corporate-registration-consulting.md"));
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+
+  assert.match(skill, /^---\nname: corporate-registration-consulting\n/);
+  assert.match(skill, /참고용/);
+  assert.match(skill, /법률 자문/);
+  assert.match(skill, /변호사|법무사|세무사/);
+  assert.match(skill, /상호/);
+  assert.match(skill, /정관/);
+  assert.match(skill, /잔고증명|주금납입/);
+  assert.match(skill, /취임승낙서/);
+  assert.match(skill, /조사보고서/);
+  assert.match(skill, /등록면허세/);
+  assert.match(skill, /과밀억제권역/);
+  assert.match(skill, /소프트웨어/);
+  assert.match(skill, /rhwp-edit/);
+  assert.match(skill, /k-skill-rhwp/);
+  assert.match(skill, /법인명/);
+  assert.match(skill, /이사/);
+  assert.match(skill, /주소/);
+  assert.match(skill, /쉬운 말/);
+  assert.match(skill, /사용자 결정/);
+  assert.match(articlesTemplate, /\{\{COMPANY_NAME\}\}/);
+  assert.match(articlesTemplate, /발기인/);
+  assert.match(articlesTemplate, /1주의 금액/);
+  assert.match(documentPackTemplate, /취임승낙서/);
+  assert.match(documentPackTemplate, /인감신고서/);
+  assert.match(documentPackTemplate, /등록면허세/);
+
+  assert.match(featureDoc, /법인등기 신청 컨설팅/);
+  assert.match(featureDoc, /표준 정관/);
+  assert.match(featureDoc, /등록면허세/);
+  assert.match(featureDoc, /과밀억제권역/);
+  assert.match(featureDoc, /조세특례제한법 제6조/);
+  assert.match(featureDoc, /지방세법/);
+  assert.match(featureDoc, /인터넷등기소|온라인법인설립시스템/);
+  assert.match(featureDoc, /참고용/);
+
+  assert.match(readme, /\| 법인등기 신청 컨설팅 \|/);
+  assert.match(readme, /docs\/features\/corporate-registration-consulting\.md/);
+  assert.match(install, /--skill corporate-registration-consulting/);
+  assert.match(sources, /corporate-registration-consulting/);
+  assert.match(sources, /startbiz\.go\.kr/);
+  assert.match(sources, /law\.go\.kr/);
+});
+
 test("rhwp-edit skill pins the k-skill-rhwp CLI as the editing engine and disclaims kordoc/rhwp-advanced routing", () => {
   const skill = read(path.join("rhwp-edit", "SKILL.md"));
 

@@ -34,6 +34,12 @@
 - rhwp HWPX-save-disabled issue #196 (data-safety gate until #197 ships): https://github.com/edwardkim/rhwp/issues/196
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
+- corporate-registration-consulting skill: local://corporate-registration-consulting
+- 대법원 인터넷등기소: https://www.iros.go.kr
+- 온라인법인설립시스템: https://www.startbiz.go.kr
+- 위택스 등록면허세 신고/납부: https://www.wetax.go.kr
+- 국가법령정보센터 지방세법/지방세법 시행령/상법/상업등기법/조세특례제한법: https://www.law.go.kr
+- 국세청 창업중소기업 세액감면 안내: https://www.nts.go.kr
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
 - 한국장학재단 학자금 지원구간 산정절차: https://www.kosaf.go.kr/ko/tuition.do?pg=tuition04_09_01&type=tuition
 - 한국장학재단 학자금 지원구간 경곗값 확인: https://www.kosaf.go.kr/ko/tuition.do?naviParam=JH%2C01%2C01%2C03&pg=tuition04_09_07
