@@ -1,6 +1,6 @@
 ---
 name: ktx-booking
-description: Search, reserve, inspect, and cancel KTX or Korail tickets in Korea with the korail2 + pycryptodome Python packages. Use when the user asks for KTX seats, Korail bookings, train changes, or reservation status.
+description: Search, reserve, inspect, and cancel KTX, ITX-청춘, ITX-새마을, 무궁화 and other Korail tickets in Korea with the korail2 + pycryptodome Python packages. Use when the user asks for KTX/ITX seats, Korail bookings, train changes, or reservation status.
 license: MIT
 metadata:
   category: travel
@@ -19,6 +19,7 @@ metadata:
 ## When to use
 
 - "서울에서 부산 가는 KTX 찾아줘"
+- "남춘천에서 용산 가는 ITX-청춘 찾아줘"
 - "코레일 예약 확인해줘"
 - "KTX 취소해줘"
 - "오전 9시 이후 KTX 중 제일 빠른 거 잡아줘"
@@ -133,6 +134,7 @@ python3 scripts/ktx_booking.py cancel <reservation_id>
 ## Notes
 
 - `scripts/ktx_booking.py` 는 upstream `korail2` anti-bot 회귀를 보완하는 helper 다
-- `korail2` 는 KTX/Korail 전용 표면이라 train type 과 passenger model 이 분명하다
+- 조회는 KTX뿐 아니라 ITX-청춘·ITX-새마을·무궁화호 등 전체 열차(`TrainType.ALL`)를 대상으로 한다
+- `korail2` 는 Korail 전용 표면이라 train type 과 passenger model 이 분명하다
 - 결제 완료까지는 자동화하지 않는다
 - aggressive polling 은 피한다
