@@ -113,6 +113,16 @@ RESERVE_OPTION_MAP = {
     "special-first": ReserveOption.SPECIAL_FIRST,
     "special-only": ReserveOption.SPECIAL_ONLY,
 }
+TRAIN_TYPE_MAP = {
+    "ktx": TrainType.KTX,                       # 100 — KTX/KTX-산천
+    "itx-saemaeul": TrainType.ITX_SAEMAEUL,     # 101 — ITX-새마을
+    "mugunghwa": TrainType.MUGUNGHWA,           # 102 — 무궁화호
+    "nuriro": TrainType.NURIRO,                 # 102 — 누리로
+    "tonggeun": TrainType.TONGGUEN,             # 103 — 통근열차
+    "itx-cheongchun": TrainType.ITX_CHEONGCHUN, # 104 — ITX-청춘
+    "airport": TrainType.AIRPORT,               # 105 — 공항직통
+    "all": TrainType.ALL,                       # 109 — 전체
+}
 TRAIN_ID_PREFIX = "ktx:v1:"
 TRAIN_ID_INVALID_MESSAGE = "train_id is invalid; rerun search and copy a fresh train_id"
 TRAIN_ID_STALE_MESSAGE = "train_id no longer matches any current search result; rerun search and choose a fresh train_id"
@@ -643,7 +653,7 @@ def command_search(args: argparse.Namespace) -> None:
         args.arr,
         args.date,
         args.time,
-        train_type=TrainType.KTX,
+        train_type=TRAIN_TYPE_MAP[args.train_type],
         passengers=passengers,
         include_no_seats=args.include_no_seats,
         include_waiting_list=args.include_waiting_list,
@@ -664,7 +674,7 @@ def command_reserve(args: argparse.Namespace) -> None:
         args.arr,
         args.date,
         args.time,
-        train_type=TrainType.KTX,
+        train_type=TRAIN_TYPE_MAP[args.train_type],
         passengers=passengers,
         include_no_seats=args.include_no_seats,
         include_waiting_list=include_waiting_list,
@@ -715,9 +725,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Patched KTX/Korail booking helper for k-skill")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    search_parser = subparsers.add_parser("search", help="KTX 열차를 조회합니다")
+    search_parser = subparsers.add_parser("search", help="KTX/Korail 열차를 조회합니다")
     add_common_trip_args(search_parser)
     search_parser.add_argument("--limit", type=int, default=5, help="출력할 최대 열차 수")
+    search_parser.add_argument(
+        "--train-type",
+        choices=sorted(TRAIN_TYPE_MAP),
+        default="ktx",
+        help="조회할 열차 종류 (기본 ktx). ITX-청춘 노선은 itx-cheongchun, 무궁화는 mugunghwa, 전체는 all 사용",
+    )
     search_parser.add_argument("--include-no-seats", action="store_true", help="매진 열차도 포함")
     search_parser.add_argument("--include-waiting-list", action="store_true", help="예약 대기 가능 열차도 포함")
     search_parser.set_defaults(func=command_search)
@@ -726,6 +742,12 @@ def build_parser() -> argparse.ArgumentParser:
     add_common_trip_args(reserve_parser)
     reserve_parser.add_argument("--train-id", required=True, help="search 결과에서 복사한 stable train_id")
     reserve_parser.add_argument("--seat-option", choices=sorted(RESERVE_OPTION_MAP), default="general-first")
+    reserve_parser.add_argument(
+        "--train-type",
+        choices=sorted(TRAIN_TYPE_MAP),
+        default="ktx",
+        help="재조회할 열차 종류 — search 단계에서 사용한 값과 동일하게 지정 (기본 ktx)",
+    )
     reserve_parser.add_argument("--include-no-seats", action="store_true", help="검색 시 매진 열차도 포함")
     reserve_parser.add_argument("--include-waiting-list", action="store_true", help="검색 시 예약대기 열차도 포함")
     reserve_parser.add_argument(
