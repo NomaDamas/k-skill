@@ -114,6 +114,7 @@ class KtxBookingTests(unittest.TestCase):
             seniors=0,
             train_id=train_id,
             seat_option="general-first",
+            train_type="ktx",
             include_no_seats=False,
             include_waiting_list=False,
             try_waiting=False,
@@ -140,6 +141,7 @@ class KtxBookingTests(unittest.TestCase):
         ])
 
         self.assertEqual(args.train_id, "ktx:v1:test")
+        self.assertEqual(args.train_type, "ktx")
 
     def test_command_reserve_targets_exact_train_id_even_if_order_changes(self):
         sold_out_first = FakeTrain(
@@ -172,6 +174,21 @@ class KtxBookingTests(unittest.TestCase):
                     ktx_booking.command_reserve(self.make_args(train_id))
 
         self.assertIn("train_id", str(exc.exception))
+
+
+    def test_command_reserve_replays_selected_train_type(self):
+        selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        client = FakeClient([selected])
+        args = self.make_args(train_id)
+        args.train_type = "itx-cheongchun"
+
+        with patch.object(ktx_booking, "build_client", return_value=client):
+            with redirect_stdout(io.StringIO()):
+                ktx_booking.command_reserve(args)
+
+        self.assertEqual(client.search_calls[-1]["train_type"], ktx_booking.TRAIN_TYPE_MAP["itx-cheongchun"])
+        self.assertIs(client.reserved_train, selected)
 
     def test_command_reserve_try_waiting_replays_search_with_waiting_list_enabled(self):
         waiting_only = FakeTrain(
