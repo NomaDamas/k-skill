@@ -32,6 +32,8 @@
 
 `~/.claude/skills/korean-jangbu-for/upstream/` 와 `~/.agents/skills/korean-jangbu-for/upstream/` 양쪽에 pinned SHA 로 업스트림을 설치한다. 동시에 업스트림 `skills/jangbu-*` 를 `~/.claude/skills/<skill-name>` 및 `~/.agents/skills/<skill-name>` top-level 경로로 등록해 slash skill discovery 가 중첩 `upstream/` 탐색에 의존하지 않게 한다. `/korean-jangbu-for` 는 wrapper top-level skill 로 유지한다.
 
+홈 디렉터리 wrapper 에는 재실행 가능한 `scripts/install.sh`, `scripts/upstream.pin`, `LICENSE.upstream`, `DISCLAIMER.md`, `NOTICE` 까지 함께 복사된다. Promoted `jangbu-*` top-level 스킬은 wrapper 가 이전에 설치한 managed copy 만 자동 갱신하며, 같은 이름의 unrelated/user-authored 스킬이 있으면 덮어쓰지 않고 중단한다. 의도적으로 교체해야 하는 경우에만 `KOREAN_JANGBU_FOR_OVERWRITE_SKILLS=1` 로 재실행한다.
+
 ```bash
 bash korean-jangbu-for/scripts/install.sh
 ```

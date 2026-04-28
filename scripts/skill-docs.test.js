@@ -3070,6 +3070,19 @@ test("korean-jangbu-for installer registers upstream subskills for Claude and ag
       `${root} should replace conflicting upstream korean-jangbu-for symlinks with a wrapper directory`,
     );
 
+    for (const requiredPath of [
+      "scripts/install.sh",
+      "scripts/upstream.pin",
+      "LICENSE.upstream",
+      "DISCLAIMER.md",
+      "NOTICE",
+    ]) {
+      assert.ok(
+        fs.existsSync(path.join(skillRoot, "korean-jangbu-for", requiredPath)),
+        `${root} should install wrapper support payload ${requiredPath}`,
+      );
+    }
+
     for (const skillName of upstreamSubskills) {
       const installedSubskillPath = path.join(skillRoot, skillName, "SKILL.md");
       assert.ok(
@@ -3087,6 +3100,80 @@ test("korean-jangbu-for installer registers upstream subskills for Claude and ag
       assert.match(installedSubskill, /세무신고/);
     }
   }
+
+  for (const installedRoot of [".claude", ".agents"]) {
+    childProcess.execFileSync("bash", [path.join(homeDir, installedRoot, "skills", "korean-jangbu-for", "scripts", "install.sh")], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        HOME: homeDir,
+        KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+        KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+      },
+      stdio: "pipe",
+    });
+  }
+});
+
+test("korean-jangbu-for installer refuses to overwrite unrelated promoted subskills", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "korean-jangbu-for-collision-"));
+  const homeDir = path.join(tmpDir, "home");
+  const upstreamDir = path.join(tmpDir, "upstream");
+  const installPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "install.sh");
+  const upstreamSubskills = [
+    "jangbu-connect",
+    "jangbu-dash",
+    "jangbu-import",
+    "jangbu-jongso",
+    "jangbu-tag",
+    "jangbu-tax",
+  ];
+
+  for (const skillName of upstreamSubskills) {
+    fs.mkdirSync(path.join(upstreamDir, "skills", skillName), { recursive: true });
+    fs.writeFileSync(
+      path.join(upstreamDir, "skills", skillName, "SKILL.md"),
+      `---\nname: ${skillName}\n---\n\n# ${skillName}\n`,
+    );
+  }
+
+  fs.mkdirSync(path.join(upstreamDir, "scripts"), { recursive: true });
+  fs.writeFileSync(path.join(upstreamDir, "scripts", "verify.sh"), "#!/usr/bin/env bash\nexit 0\n");
+
+  childProcess.execFileSync("git", ["init"], { cwd: upstreamDir, stdio: "ignore" });
+  childProcess.execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["config", "user.name", "Test"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["add", "."], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["commit", "-m", "seed upstream skills"], { cwd: upstreamDir, stdio: "ignore" });
+  const upstreamSha = childProcess.execFileSync("git", ["rev-parse", "HEAD"], { cwd: upstreamDir, encoding: "utf8" }).trim();
+
+  const unrelatedSkillDir = path.join(homeDir, ".claude", "skills", "jangbu-tax");
+  fs.mkdirSync(unrelatedSkillDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(unrelatedSkillDir, "SKILL.md"),
+    "---\nname: jangbu-tax\n---\n\n# user-authored jangbu-tax\n",
+  );
+
+  assert.throws(
+    () =>
+      childProcess.execFileSync("bash", [installPath], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+          KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+        },
+        stdio: "pipe",
+      }),
+    /refusing to overwrite unrelated skill/,
+  );
+
+  assert.match(
+    fs.readFileSync(path.join(unrelatedSkillDir, "SKILL.md"), "utf8"),
+    /user-authored jangbu-tax/,
+    "unrelated existing subskill should be preserved after installer refusal",
+  );
 });
 
 test("korean-jangbu-for feature doc documents source-first use and mandatory attribution", () => {

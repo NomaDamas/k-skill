@@ -48,6 +48,8 @@ metadata:
 
 업스트림을 `~/.claude/skills/korean-jangbu-for/upstream/` 와 `~/.agents/skills/korean-jangbu-for/upstream/` 양쪽에 pinned SHA 로 체크아웃한다. 또한 업스트림 `skills/jangbu-*` 를 양쪽 홈 디렉터리의 top-level skill 로 등록해 `/jangbu-connect`, `/jangbu-import`, `/jangbu-tag`, `/jangbu-tax`, `/jangbu-dash`, `/jangbu-jongso` 라우팅이 agent-compatible 런타임에서도 발견되게 한다. `/korean-jangbu-for` 는 이 wrapper 의 top-level skill 로 유지한다. 레포 내부에는 업스트림 payload 를 커밋하지 않는다.
 
+홈 디렉터리 wrapper 에는 `SKILL.md`, `scripts/install.sh`, `scripts/upstream.pin`, `LICENSE.upstream`, `DISCLAIMER.md`, `NOTICE` 를 함께 설치한다. Promoted `jangbu-*` top-level 경로에 사용자가 만든 다른 스킬이 이미 있으면 installer 는 덮어쓰지 않고 중단한다. wrapper 가 이전에 설치한 managed 스킬만 자동 갱신하며, 의도적으로 교체해야 할 때만 `KOREAN_JANGBU_FOR_OVERWRITE_SKILLS=1` 을 설정한다.
+
 ```bash
 bash korean-jangbu-for/scripts/install.sh
 ```

@@ -17,8 +17,10 @@ set -euo pipefail
 
 UPSTREAM_REPO="${KOREAN_JANGBU_FOR_UPSTREAM_REPO:-https://github.com/kimlawtech/korean-jangbu-for.git}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WRAPPER_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PIN_FILE="${SCRIPT_DIR}/upstream.pin"
 SKILL_NAME="korean-jangbu-for"
+MANAGED_MARKER="k-skill wrapper attribution and disclaimer"
 
 if [[ ! -f "${PIN_FILE}" ]]; then
   echo "[korean-jangbu-for] upstream.pin not found at ${PIN_FILE}" >&2
@@ -56,6 +58,52 @@ sync_dir() {
   else
     cp -a "${source_dir}/" "${target_dir}/"
   fi
+}
+
+copy_file_if_different() {
+  local source_file="$1"
+  local target_file="$2"
+
+  if [[ -e "${target_file}" ]] && [[ "$(cd "$(dirname "${source_file}")" && pwd -P)/$(basename "${source_file}")" == "$(cd "$(dirname "${target_file}")" && pwd -P)/$(basename "${target_file}")" ]]; then
+    return 0
+  fi
+
+  cp "${source_file}" "${target_file}"
+}
+
+install_wrapper_payload() {
+  local target_dir="$1"
+
+  mkdir -p "${target_dir}/scripts"
+  copy_file_if_different "${WRAPPER_DIR}/SKILL.md" "${target_dir}/SKILL.md"
+  copy_file_if_different "${WRAPPER_DIR}/LICENSE.upstream" "${target_dir}/LICENSE.upstream"
+  copy_file_if_different "${WRAPPER_DIR}/DISCLAIMER.md" "${target_dir}/DISCLAIMER.md"
+  copy_file_if_different "${WRAPPER_DIR}/NOTICE" "${target_dir}/NOTICE"
+  copy_file_if_different "${WRAPPER_DIR}/scripts/install.sh" "${target_dir}/scripts/install.sh"
+  copy_file_if_different "${WRAPPER_DIR}/scripts/upstream.pin" "${target_dir}/scripts/upstream.pin"
+  chmod +x "${target_dir}/scripts/install.sh"
+}
+
+is_managed_promoted_skill() {
+  local target_dir="$1"
+  local skill_file="${target_dir}/SKILL.md"
+
+  [[ -f "${skill_file}" ]] && grep -q "${MANAGED_MARKER}" "${skill_file}"
+}
+
+sync_promoted_skill() {
+  local source_dir="$1"
+  local target_dir="$2"
+
+  if [[ -e "${target_dir}" || -L "${target_dir}" ]]; then
+    if [[ "${KOREAN_JANGBU_FOR_OVERWRITE_SKILLS:-}" != "1" ]] && ! is_managed_promoted_skill "${target_dir}"; then
+      echo "[korean-jangbu-for] refusing to overwrite unrelated skill: ${target_dir}" >&2
+      echo "  Set KOREAN_JANGBU_FOR_OVERWRITE_SKILLS=1 to replace this top-level skill." >&2
+      exit 1
+    fi
+  fi
+
+  sync_dir "${source_dir}" "${target_dir}"
 }
 
 append_response_policy() {
@@ -110,8 +158,7 @@ for HOME_SKILL_DIR in "${HOME_DIRS[@]}"; do
   if [[ -L "${HOME_SKILL_DIR}" ]]; then
     rm -f "${HOME_SKILL_DIR}"
   fi
-  mkdir -p "${HOME_SKILL_DIR}"
-  cp "${SCRIPT_DIR}/../SKILL.md" "${HOME_SKILL_DIR}/SKILL.md"
+  install_wrapper_payload "${HOME_SKILL_DIR}"
 
   sync_dir "${CLONE_DIR}" "${HOME_UPSTREAM}"
 
@@ -133,7 +180,7 @@ for HOME_SKILL_DIR in "${HOME_DIRS[@]}"; do
       exit 1
     fi
 
-    sync_dir "${UPSTREAM_SKILL_DIR}" "${HOME_UPSTREAM_SKILL_DIR}"
+    sync_promoted_skill "${UPSTREAM_SKILL_DIR}" "${HOME_UPSTREAM_SKILL_DIR}"
     append_response_policy "${HOME_UPSTREAM_SKILL_DIR}/SKILL.md"
 
     echo "[korean-jangbu-for] registered upstream skill /${UPSTREAM_SKILL} -> ${HOME_UPSTREAM_SKILL_DIR}"
