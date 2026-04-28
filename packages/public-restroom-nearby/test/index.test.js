@@ -257,6 +257,200 @@ test("searchNearbyPublicRestroomsByLocationQuery still surfaces non-HTTP Kakao p
   );
 });
 
+
+test("searchNearbyPublicRestroomsByCoordinates merges CSV, Kakao restroom keywords, and Kakao gas stations", async () => {
+  const calls = [];
+  const fetchImpl = async (url, requestOptions = {}) => {
+    const resolved = String(url);
+    calls.push({ url: resolved, authorization: requestOptions.headers?.Authorization });
+
+    if (resolved === "https://file.localdata.go.kr/file/download/public_restroom_info/info") {
+      return makeResponse(Buffer.from(csvFixture, "utf8"));
+    }
+
+    if (resolved.startsWith("https://dapi.kakao.com/v2/local/search/keyword.json?")) {
+      const parsed = new URL(resolved);
+      const query = parsed.searchParams.get("query");
+      assert.equal(parsed.searchParams.get("x"), "126.97833785777944");
+      assert.equal(parsed.searchParams.get("y"), "37.57371315593711");
+      assert.equal(parsed.searchParams.get("radius"), "1000");
+      assert.equal(parsed.searchParams.get("sort"), "distance");
+      assert.equal(parsed.searchParams.get("size"), "15");
+
+      if (query === "공중화장실") {
+        return makeResponse({ documents: [kakaoDocument({ id: "pub-far", name: "멀리 보이는 공중화장실", lat: 37.579, lon: 126.987, distance: "1" })] }, "application/json");
+      }
+
+      if (query === "개방화장실") {
+        return makeResponse({ documents: [kakaoDocument({ id: "open-near", name: "가까운 개방화장실", lat: 37.5739, lon: 126.9784, distance: "9999" })] }, "application/json");
+      }
+    }
+
+    if (resolved.startsWith("https://dapi.kakao.com/v2/local/search/category.json?")) {
+      const parsed = new URL(resolved);
+      assert.equal(parsed.searchParams.get("category_group_code"), "OL7");
+      return makeResponse({ documents: [kakaoDocument({ id: "gas-1", name: "광화문주유소", lat: 37.574, lon: 126.979, category: "주유소" })] }, "application/json");
+    }
+
+    throw new Error(`unexpected url: ${resolved}`);
+  };
+
+  const result = await searchNearbyPublicRestroomsByCoordinates({
+    latitude: 37.57371315593711,
+    longitude: 126.97833785777944,
+    limit: 5,
+    maxDistanceMeters: 2000,
+    kakaoRestApiKey: "test-key",
+    fetchImpl
+  });
+
+  assert.equal(result.meta.sources.csv, 3);
+  assert.equal(result.meta.sources.kakaoKeyword, 2);
+  assert.equal(result.meta.sources.kakaoGasStation, 1);
+  assert.deepEqual(
+    result.items.map((item) => item.name).slice(0, 2),
+    ["가까운 개방화장실", "광화문주유소"]
+  );
+  assert.notEqual(result.items[0].name, "멀리 보이는 공중화장실");
+  assert.equal(result.items[0].source, "kakao_keyword");
+  assert.equal(result.items[0].sourceLayer, 2);
+  assert.ok(result.items[0].distanceMeters < result.items[2].distanceMeters, "local haversine distance, not Kakao distance, controls sorting");
+  assert.ok(calls.filter((call) => call.url.includes("dapi.kakao.com")).every((call) => call.authorization === "KakaoAK test-key"));
+});
+
+test("searchNearbyPublicRestroomsByCoordinates deduplicates merged sources within 50 meters with CSV priority", async () => {
+  const fetchImpl = async (url) => {
+    const resolved = String(url);
+
+    if (resolved === "https://file.localdata.go.kr/file/download/public_restroom_info/info") {
+      return makeResponse(Buffer.from(csvFixture, "utf8"));
+    }
+
+    if (resolved.includes("keyword.json")) {
+      return makeResponse({ documents: [kakaoDocument({ id: "dup", name: "통인시장 고객만족센터", lat: 37.58077, lon: 126.96995 })] }, "application/json");
+    }
+
+    if (resolved.includes("category.json")) {
+      return makeResponse({ documents: [] }, "application/json");
+    }
+
+    throw new Error(`unexpected url: ${resolved}`);
+  };
+
+  const result = await searchNearbyPublicRestroomsByCoordinates({
+    latitude: 37.57371315593711,
+    longitude: 126.97833785777944,
+    limit: 10,
+    kakaoRestApiKey: "test-key",
+    fetchImpl
+  });
+
+  const duplicates = result.items.filter((item) => item.name === "통인시장 고객만족센터");
+  assert.equal(duplicates.length, 1);
+  assert.equal(duplicates[0].source, "csv");
+  assert.equal(duplicates[0].sourceLayer, 1);
+});
+
+test("searchNearbyPublicRestroomsByCoordinates can correct CSV display names and addresses with Kakao coord2address", async () => {
+  const fetchImpl = async (url) => {
+    const resolved = String(url);
+
+    if (resolved === "https://file.localdata.go.kr/file/download/public_restroom_info/info") {
+      return makeResponse(Buffer.from(csvFixture, "utf8"));
+    }
+
+    if (resolved.startsWith("https://dapi.kakao.com/v2/local/geo/coord2address.json?")) {
+      return makeResponse({
+        documents: [{
+          road_address: {
+            building_name: "도곡근린공원 실내배드민턴장",
+            address_name: "서울특별시 강남구 도곡로 99"
+          },
+          address: { address_name: "서울특별시 강남구 도곡동 1" }
+        }]
+      }, "application/json");
+    }
+
+    if (resolved.includes("keyword.json") || resolved.includes("category.json")) {
+      return makeResponse({ documents: [] }, "application/json");
+    }
+
+    throw new Error(`unexpected url: ${resolved}`);
+  };
+
+  const result = await searchNearbyPublicRestroomsByCoordinates({
+    latitude: 37.57371315593711,
+    longitude: 126.97833785777944,
+    limit: 1,
+    kakaoRestApiKey: "test-key",
+    correctCsvWithKakao: true,
+    fetchImpl
+  });
+
+  assert.equal(result.items[0].name, "도곡근린공원 실내배드민턴장");
+  assert.equal(result.items[0].address, "서울특별시 강남구 도곡로 99");
+  assert.equal(result.items[0].originalName, "통인시장 고객만족센터");
+  assert.equal(result.items[0].source, "csv");
+});
+
+test("Kakao map links encode special place names before coordinates", () => {
+  const items = normalizePublicRestroomRows(`관리번호,구분명,화장실명,소재지도로명주소,WGS84위도,WGS84경도\n1,개방화장실,양재천 영동2교(남단) 개방화장실,서울특별시 강남구,37.477,127.035\n`, {
+    latitude: 37.477,
+    longitude: 127.035
+  });
+
+  assert.equal(
+    items[0].mapUrl,
+    "https://map.kakao.com/link/map/%EC%96%91%EC%9E%AC%EC%B2%9C%20%EC%98%81%EB%8F%992%EA%B5%90(%EB%82%A8%EB%8B%A8)%20%EA%B0%9C%EB%B0%A9%ED%99%94%EC%9E%A5%EC%8B%A4,37.477,127.035"
+  );
+});
+
+
+test("searchNearbyPublicRestroomsByCoordinates applies maxDistanceMeters after Kakao source merge", async () => {
+  const fetchImpl = async (url) => {
+    const resolved = String(url);
+
+    if (resolved === "https://file.localdata.go.kr/file/download/public_restroom_info/info") {
+      return makeResponse(Buffer.from(csvFixture, "utf8"));
+    }
+
+    if (resolved.includes("keyword.json")) {
+      return makeResponse({ documents: [kakaoDocument({ id: "far-kakao", name: "먼 카카오 화장실", lat: 37.59, lon: 126.99 })] }, "application/json");
+    }
+
+    if (resolved.includes("category.json")) {
+      return makeResponse({ documents: [] }, "application/json");
+    }
+
+    throw new Error(`unexpected url: ${resolved}`);
+  };
+
+  const result = await searchNearbyPublicRestroomsByCoordinates({
+    latitude: 37.57371315593711,
+    longitude: 126.97833785777944,
+    limit: 5,
+    maxDistanceMeters: 100,
+    kakaoRestApiKey: "test-key",
+    fetchImpl
+  });
+
+  assert.equal(result.items.length, 0);
+  assert.equal(result.meta.total, 0);
+});
+
+function kakaoDocument({ id, name, lat, lon, distance = "0", category = "공중화장실" }) {
+  return {
+    id,
+    place_name: name,
+    category_name: category,
+    road_address_name: `${name} 도로명주소`,
+    address_name: `${name} 지번주소`,
+    y: String(lat),
+    x: String(lon),
+    distance
+  };
+}
+
 function makeResponse(body, contentType = "text/csv;charset=UTF-8") {
   return {
     ok: true,

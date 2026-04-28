@@ -1,8 +1,10 @@
 const {
   buildDatasetDownloadUrl,
+  buildMapUrl,
   decodeDatasetBuffer,
   extractDistrict,
   inferRegion,
+  haversineDistanceMeters,
   normalizeAnchorPanel,
   normalizePublicRestroomRows,
   parseCoordinateQuery,
@@ -12,6 +14,12 @@ const {
 
 const SEARCH_VIEW_URL = "https://m.map.kakao.com/actions/searchView";
 const PLACE_PANEL_URL_BASE = "https://place-api.map.kakao.com/places/panel3";
+const KAKAO_LOCAL_API_BASE = "https://dapi.kakao.com/v2/local";
+const KAKAO_RESTROOM_KEYWORDS = ["공중화장실", "개방화장실"];
+const KAKAO_GAS_STATION_CATEGORY = "OL7";
+const SOURCE_CSV = "csv";
+const SOURCE_KAKAO_KEYWORD = "kakao_keyword";
+const SOURCE_KAKAO_GAS_STATION = "kakao_category_gas_station";
 const DEFAULT_BROWSER_HEADERS = {
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "accept-language": "ko,en-US;q=0.9,en;q=0.8",
@@ -142,6 +150,247 @@ function normalizeLimit(limit) {
   return parsed;
 }
 
+
+function resolveKakaoRestApiKey(options = {}) {
+  return (
+    options.kakaoRestApiKey ||
+    options.kakaoApiKey ||
+    process.env.KAKAO_REST_API_KEY ||
+    process.env.KAKAO_REST_APIKEY ||
+    null
+  );
+}
+
+function buildKakaoUrl(pathname, params = {}) {
+  const url = new URL(`${KAKAO_LOCAL_API_BASE}${pathname}`);
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  }
+
+  return url.toString();
+}
+
+async function fetchKakaoJson(pathname, params, options = {}) {
+  const kakaoRestApiKey = resolveKakaoRestApiKey(options);
+
+  if (!kakaoRestApiKey) {
+    return null;
+  }
+
+  return request(
+    buildKakaoUrl(pathname, params),
+    {
+      ...options,
+      headers: {
+        Authorization: `KakaoAK ${kakaoRestApiKey}`,
+        ...(options.headers || {})
+      }
+    },
+    "json",
+  );
+}
+
+function normalizeRadius(radius) {
+  const parsed = Number(radius ?? 1000);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error("radius must be a positive number.");
+  }
+
+  return Math.min(Math.round(parsed), 20000);
+}
+
+function normalizeKakaoSize(size) {
+  const parsed = Number(size ?? 15);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error("kakao size must be a positive number.");
+  }
+
+  return Math.min(Math.round(parsed), 15);
+}
+
+function normalizeKakaoPoi(document, origin, { source, sourceLayer, type }) {
+  const latitude = Number(document?.y);
+  const longitude = Number(document?.x);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  const name = String(document.place_name || "").trim();
+
+  if (!name) {
+    return null;
+  }
+
+  const address = String(document.road_address_name || document.address_name || "").trim();
+
+  return {
+    id: `kakao:${document.id || source}:${latitude},${longitude}`,
+    name,
+    type,
+    address,
+    roadAddress: String(document.road_address_name || "").trim() || null,
+    lotAddress: String(document.address_name || "").trim() || null,
+    latitude,
+    longitude,
+    distanceMeters: haversineDistanceMeters(origin.latitude, origin.longitude, latitude, longitude),
+    source,
+    sourceLayer,
+    category: String(document.category_name || "").trim() || null,
+    phone: String(document.phone || "").trim() || null,
+    managementAgency: null,
+    openTimeCategory: null,
+    openTimeDetail: source === SOURCE_KAKAO_GAS_STATION ? "주유소는 공중화장실법 시행령상 개방 의무 시설입니다." : null,
+    hasEmergencyBell: false,
+    hasBabyChangingTable: false,
+    hasAccessibleFacility: false,
+    mapUrl: buildMapUrl(name, latitude, longitude)
+  };
+}
+
+async function fetchKakaoLayerItems(origin, options = {}) {
+  const kakaoRestApiKey = resolveKakaoRestApiKey(options);
+
+  if (!kakaoRestApiKey || options.includeKakaoSources === false) {
+    return [];
+  }
+
+  const radius = normalizeRadius(options.radiusMeters ?? 1000);
+  const size = normalizeKakaoSize(options.kakaoSize);
+  const requests = [];
+
+  for (const keyword of KAKAO_RESTROOM_KEYWORDS) {
+    requests.push(fetchKakaoJson("/search/keyword.json", {
+      query: keyword,
+      x: origin.longitude,
+      y: origin.latitude,
+      radius,
+      sort: "distance",
+      size
+    }, options).then((payload) => ({ payload, source: SOURCE_KAKAO_KEYWORD, sourceLayer: 2, type: keyword })));
+  }
+
+  requests.push(fetchKakaoJson("/search/category.json", {
+    category_group_code: KAKAO_GAS_STATION_CATEGORY,
+    x: origin.longitude,
+    y: origin.latitude,
+    radius,
+    sort: "distance",
+    size
+  }, options).then((payload) => ({ payload, source: SOURCE_KAKAO_GAS_STATION, sourceLayer: 3, type: "주유소 화장실" })));
+
+  const settled = await Promise.all(requests);
+  return settled.flatMap(({ payload, source, sourceLayer, type }) => (payload?.documents || [])
+    .map((document) => normalizeKakaoPoi(document, origin, { source, sourceLayer, type }))
+    .filter(Boolean));
+}
+
+async function fetchKakaoCoord2Address(latitude, longitude, options = {}) {
+  return fetchKakaoJson("/geo/coord2address.json", {
+    x: longitude,
+    y: latitude,
+    input_coord: "WGS84"
+  }, options);
+}
+
+function applyKakaoAddressCorrection(item, payload) {
+  const firstDocument = payload?.documents?.[0];
+  const roadAddress = firstDocument?.road_address;
+  const lotAddress = firstDocument?.address;
+  const buildingName = String(roadAddress?.building_name || "").trim();
+  const correctedRoadAddress = String(roadAddress?.address_name || "").trim();
+  const correctedLotAddress = String(lotAddress?.address_name || "").trim();
+  const correctedAddress = correctedRoadAddress || correctedLotAddress;
+
+  if (!buildingName && !correctedAddress) {
+    return item;
+  }
+
+  const correctedName = buildingName || item.name;
+
+  return {
+    ...item,
+    originalName: item.originalName || item.name,
+    originalAddress: item.originalAddress || item.address,
+    name: correctedName,
+    address: correctedAddress || item.address,
+    roadAddress: correctedRoadAddress || item.roadAddress,
+    lotAddress: correctedLotAddress || item.lotAddress,
+    mapUrl: buildMapUrl(correctedName, item.latitude, item.longitude)
+  };
+}
+
+async function correctCsvItemsWithKakao(items, options = {}) {
+  if (!resolveKakaoRestApiKey(options) || options.correctCsvWithKakao !== true) {
+    return items;
+  }
+
+  const limit = Math.max(0, Math.min(Number(options.csvCorrectionLimit ?? items.length) || 0, items.length));
+  const corrected = [...items];
+
+  for (let index = 0; index < limit; index += 1) {
+    const item = corrected[index];
+    const payload = await fetchKakaoCoord2Address(item.latitude, item.longitude, options);
+    corrected[index] = applyKakaoAddressCorrection(item, payload);
+  }
+
+  return corrected;
+}
+
+function areSameFacility(left, right, thresholdMeters = 50) {
+  return haversineDistanceMeters(left.latitude, left.longitude, right.latitude, right.longitude) <= thresholdMeters;
+}
+
+function mergeAndDeduplicateSources(sourceItems, options = {}) {
+  const thresholdMeters = Number(options.deduplicateDistanceMeters ?? 50);
+  const maxDistanceMeters = Number.isFinite(Number(options.maxDistanceMeters))
+    ? Number(options.maxDistanceMeters)
+    : null;
+  const sortedForPriority = sourceItems
+    .filter((item) => (maxDistanceMeters === null ? true : item.distanceMeters <= maxDistanceMeters))
+    .sort((left, right) => {
+    if (left.sourceLayer !== right.sourceLayer) {
+      return left.sourceLayer - right.sourceLayer;
+    }
+
+    return left.distanceMeters - right.distanceMeters;
+  });
+  const kept = [];
+
+  for (const item of sortedForPriority) {
+    if (kept.some((candidate) => areSameFacility(candidate, item, thresholdMeters))) {
+      continue;
+    }
+
+    kept.push(item);
+  }
+
+  return kept.sort((left, right) => {
+    if (left.distanceMeters !== right.distanceMeters) {
+      return left.distanceMeters - right.distanceMeters;
+    }
+
+    if (left.sourceLayer !== right.sourceLayer) {
+      return left.sourceLayer - right.sourceLayer;
+    }
+
+    return left.name.localeCompare(right.name, "ko");
+  });
+}
+
+function summarizeSources(items) {
+  return {
+    csv: items.filter((item) => item.source === SOURCE_CSV).length,
+    kakaoKeyword: items.filter((item) => item.source === SOURCE_KAKAO_KEYWORD).length,
+    kakaoGasStation: items.filter((item) => item.source === SOURCE_KAKAO_GAS_STATION).length
+  };
+}
+
 async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
   const latitude = Number(options.latitude);
   const longitude = Number(options.longitude);
@@ -151,11 +400,14 @@ async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
     throw new Error("latitude and longitude must be finite numbers.");
   }
 
+  const origin = { latitude, longitude };
   const dataset = await fetchDatasetCsv(options);
-  const allItems = normalizePublicRestroomRows(dataset.csvText, { latitude, longitude }, {
+  const csvItems = await correctCsvItemsWithKakao(normalizePublicRestroomRows(dataset.csvText, origin, {
     maxDistanceMeters: options.maxDistanceMeters,
     preferredDistrict: options.preferredDistrict
-  });
+  }), options);
+  const kakaoItems = await fetchKakaoLayerItems(origin, options);
+  const allItems = mergeAndDeduplicateSources([...csvItems, ...kakaoItems], options);
 
   return {
     anchor: {
@@ -169,7 +421,9 @@ async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
       total: allItems.length,
       limit,
       datasetUrl: dataset.datasetUrl,
-      region: options.region || null
+      region: options.region || null,
+      sources: summarizeSources(allItems),
+      kakaoEnabled: Boolean(resolveKakaoRestApiKey(options)) && options.includeKakaoSources !== false
     }
   };
 }

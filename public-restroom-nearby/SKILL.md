@@ -16,7 +16,8 @@ metadata:
 
 - 위치는 자동으로 추정하지 않는다.
 - **반드시 먼저 현재 위치를 질문**한다.
-- 화장실 데이터는 공식 `공중화장실정보` 표준데이터를 사용한다.
+- 화장실 데이터는 공식 `공중화장실정보` 표준데이터를 기본으로 사용한다.
+- `KAKAO_REST_API_KEY` 또는 `kakaoRestApiKey` 옵션이 있으면 Kakao Local REST API로 `공중화장실`, `개방화장실`, `OL7` 주유소를 추가 조회해 병합한다.
 - 위치 문자열은 Kakao Map anchor 검색으로 좌표를 잡고, 가능한 경우 해당 시도 데이터만 좁혀서 조회한다.
 - 좌표를 직접 받으면 바로 nearby 계산으로 들어간다.
 
@@ -48,8 +49,10 @@ metadata:
 1. 유저에게 반드시 현재 위치를 묻는다.
 2. 위치 문자열을 받으면 Kakao Map으로 anchor 후보를 고르고 좌표를 확보한다.
 3. anchor 주소에서 시도(서울/경기/부산 등)를 추론할 수 있으면 해당 지역 CSV로 좁힌다.
-4. 공식 `공중화장실정보` CSV를 내려받아 위·경도 기준 거리순으로 정렬한다.
-5. 보통 3~5개만 짧게 정리하고, 필요하면 지도 링크(`map.kakao.com/link/map/...`)를 같이 준다.
+4. 공식 `공중화장실정보` CSV를 내려받고, Kakao REST API 키가 있으면 `keyword.json?query=공중화장실`, `keyword.json?query=개방화장실`, `category.json?category_group_code=OL7` 결과를 추가한다.
+5. Kakao `distance` 필드는 버리고 모든 결과를 위·경도 haversine 거리로 직접 재계산한다.
+6. 좌표 50m 이내 중복은 동일 시설로 보고 CSV 결과를 우선 보존한다.
+7. 보통 3~5개만 짧게 정리하고, 필요하면 URL 인코딩된 지도 링크(`map.kakao.com/link/map/...`)를 같이 준다.
 
 ## Responding
 
@@ -90,6 +93,7 @@ main().catch((error) => {
 
 ## Failure modes
 
+- Kakao REST API 키가 없으면 CSV 단일 소스로 동작하므로 누락 POI가 있을 수 있다.
 - Kakao Map anchor 가 애매하면 위치 기준점이 흔들릴 수 있다.
 - 공개 표준데이터는 실시간 점유/잠금 상태를 주지 않으므로 개방시간 중심으로만 안내해야 한다.
 - CSV 인코딩/컬럼 구조가 바뀌면 정규화 로직을 다시 확인해야 한다.
