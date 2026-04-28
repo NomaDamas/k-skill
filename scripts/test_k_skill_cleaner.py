@@ -1,4 +1,7 @@
 import json
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -105,6 +108,45 @@ class KSkillCleanerTest(unittest.TestCase):
         for source in AGENT_USAGE_SOURCES:
             self.assertTrue(source["paths"] or source["fallback"])
             self.assertIn("confidence", source)
+
+    def test_skill_local_helper_autodetects_parent_skills_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skills_root = Path(tmp)
+            cleaner_dir = skills_root / "k-skill-cleaner"
+            cleaner_scripts = cleaner_dir / "scripts"
+            cleaner_scripts.mkdir(parents=True)
+            (cleaner_dir / "SKILL.md").write_text("---\nname: k-skill-cleaner\n", encoding="utf-8")
+            shutil.copyfile(
+                Path(__file__).resolve().parents[1] / "k-skill-cleaner" / "scripts" / "k_skill_cleaner.py",
+                cleaner_scripts / "k_skill_cleaner.py",
+            )
+
+            for skill in ["kbo-results", "k-skill-setup"]:
+                skill_dir = skills_root / skill
+                skill_dir.mkdir()
+                (skill_dir / "SKILL.md").write_text(f"---\nname: {skill}\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/k_skill_cleaner.py",
+                    "--skills-root",
+                    ".",
+                    "--never-use",
+                    "kbo-results",
+                    "--keep",
+                    "k-skill-setup",
+                ],
+                cwd=cleaner_dir,
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            report = json.loads(result.stdout)
+
+            self.assertEqual(report["skill_count"], 3)
+            self.assertEqual(report["candidates"][0]["skill"], "kbo-results")
+            self.assertEqual(report["candidates"][0]["action"], "remove")
 
 
 if __name__ == "__main__":

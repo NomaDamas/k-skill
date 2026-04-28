@@ -71,10 +71,33 @@ AGENT_USAGE_SOURCES = [
 ]
 
 
+def resolve_skills_root(root: Path | str) -> Path:
+    """Resolve the directory that contains installable skill directories.
+
+    Standalone installs tell users to run this helper from inside the
+    ``k-skill-cleaner`` directory with ``--skills-root .``. In that layout, the
+    current directory is itself a skill, while sibling skill directories live in
+    the parent directory. Treat that self-skill root as shorthand for its parent
+    so the advertised standalone command scans the installed skill bundle.
+    """
+
+    root_path = Path(root).expanduser().resolve()
+    if (root_path / "SKILL.md").is_file():
+        parent = root_path.parent
+        if any(
+            child.is_dir()
+            and child.name not in EXCLUDED_ROOT_DIRS
+            and (child / "SKILL.md").is_file()
+            for child in parent.iterdir()
+        ):
+            return parent
+    return root_path
+
+
 def find_skill_dirs(root: Path | str) -> list[str]:
     """Return root-level directories that look like installable skills."""
 
-    root_path = Path(root)
+    root_path = resolve_skills_root(root)
     skills: list[str] = []
     for child in root_path.iterdir():
         if not child.is_dir() or child.name in EXCLUDED_ROOT_DIRS:
@@ -316,7 +339,11 @@ def _resolve_since(days: int | None, since: str | None, now: datetime | None = N
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Suggest K-skill cleanup candidates from interviews and usage logs.")
-    parser.add_argument("--skills-root", default=".", help="Repository root containing root-level skill directories")
+    parser.add_argument(
+        "--skills-root",
+        default=".",
+        help="Directory containing root-level skills; a skill directory with SKILL.md auto-scans its parent",
+    )
     parser.add_argument("--usage-json", help="Optional JSON object mapping skill names to trigger counts")
     parser.add_argument("--log", action="append", default=[], help="Agent log file to scan; repeatable")
     parser.add_argument("--scan-default-logs", action="store_true", help="Best-effort scan known local agent log locations")
