@@ -1,6 +1,6 @@
 # public-restroom-nearby
 
-공식 `공중화장실정보` 표준데이터와 Kakao Map anchor 검색을 사용해 근처 공중화장실/개방화장실을 찾는 Node.js 패키지입니다.
+공식 `공중화장실정보` 표준데이터를 기본으로 사용하고, Kakao REST API 키가 있으면 Kakao 키워드/주유소 검색까지 병합해 근처 공중화장실/개방화장실을 찾는 Node.js 패키지입니다.
 
 ## 설치
 
@@ -21,6 +21,8 @@ npm install
 - 유저 위치는 자동으로 추적하지 않습니다.
 - 먼저 현재 위치를 묻고, 받은 동네/역명/랜드마크/위도·경도를 사용하세요.
 - 화장실 데이터는 공식 `공중화장실정보` CSV를 직접 사용합니다.
+- `kakaoRestApiKey` 옵션 또는 `KAKAO_REST_API_KEY` 환경변수가 있으면 3계층(`CSV` + Kakao `공중화장실`/`개방화장실` 키워드 + Kakao `OL7` 주유소 카테고리)을 병합합니다.
+- Kakao 응답의 `distance` 필드는 신뢰하지 않고 모든 결과를 WGS84 좌표 기준 haversine 거리로 다시 계산해 정렬합니다.
 - 위치 문자열은 Kakao Map anchor 검색으로 좌표를 구하고, 가능하면 해당 시도 CSV로 좁혀서 조회합니다.
 
 ## 공식 표면
@@ -31,6 +33,9 @@ npm install
 - 지역별 CSV: `https://file.localdata.go.kr/file/download/public_restroom_info/info?orgCode=<시도코드>`
 - Kakao Map 모바일 검색: `https://m.map.kakao.com/actions/searchView`
 - Kakao Map 장소 패널 JSON: `https://place-api.map.kakao.com/places/panel3/<confirmId>`
+- Kakao Local 키워드 검색: `https://dapi.kakao.com/v2/local/search/keyword.json` (`공중화장실`, `개방화장실`)
+- Kakao Local 카테고리 검색: `https://dapi.kakao.com/v2/local/search/category.json` (`category_group_code=OL7`)
+- Kakao 좌표→주소 보정: `https://dapi.kakao.com/v2/local/geo/coord2address.json`
 
 ## 사용 예시
 
@@ -62,7 +67,8 @@ async function main() {
   const result = await searchNearbyPublicRestroomsByCoordinates({
     latitude: 37.57103,
     longitude: 126.97679,
-    limit: 3
+    limit: 3,
+    kakaoRestApiKey: process.env.KAKAO_REST_API_KEY
   });
 
   console.log(result.items);
@@ -73,6 +79,13 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 ```
+
+
+Kakao 키가 설정된 경우 기본 Kakao 검색 반경은 1,000m이며 `radiusMeters` 로 조정할 수 있습니다. `maxDistanceMeters` 는 병합 후 전체 결과 필터링에 사용됩니다. CSV 좌표의 실제 건물명/주소를 Kakao `coord2address` 로 보정하려면 `correctCsvWithKakao: true` 를 넘기세요. 기본 보정 범위는 최종 요청 `limit` 개수로 제한되며, 더 넓게 보정해야 할 때만 `csvCorrectionLimit` 을 명시하세요.
+
+병합 중복 제거는 좌표 50m 이내를 같은 시설로 보고 CSV(Layer 1)를 우선 보존합니다. 지도 링크는 장소명을 URL 인코딩해 공백/괄호/한국어 이름이 좌표 파싱을 깨지 않도록 생성합니다.
+
+Kakao 키워드/주유소 보강은 선택 계층입니다. Kakao Local API가 401/429/5xx 등으로 실패해도 공식 CSV 결과는 반환되며, 실패한 계층은 `result.meta.kakaoErrors` 에 `source`, `status`, `message`, `url` 로 기록됩니다.
 
 거리 제한이 필요하면 `maxDistanceMeters` 를 함께 넘겨서 반경 바깥 결과를 잘라낼 수 있습니다.
 

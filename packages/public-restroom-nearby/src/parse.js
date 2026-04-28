@@ -292,6 +292,10 @@ function buildMapUrl(name, latitude, longitude) {
   return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${latitude},${longitude}`;
 }
 
+function haversineDistanceMetersPublic(latitudeA, longitudeA, latitudeB, longitudeB) {
+  return haversineDistanceMeters(latitudeA, longitudeA, latitudeB, longitudeB);
+}
+
 function extractDistrict(address) {
   const match = String(address || "")
     .trim()
@@ -337,6 +341,8 @@ function normalizePublicRestroomRows(csvText, origin, options = {}) {
         latitude: itemLatitude,
         longitude: itemLongitude,
         distanceMeters,
+        source: "csv",
+        sourceLayer: 1,
         phone: String(row["전화번호"] || "").trim() || null,
         managementAgency: String(row["관리기관명"] || "").trim() || null,
         openTimeCategory: String(row["개방시간"] || "").trim() || null,
@@ -400,6 +406,8 @@ module.exports = {
   decodeDatasetBuffer,
   extractDistrict,
   inferRegion,
+  haversineDistanceMeters: haversineDistanceMetersPublic,
+  buildMapUrl,
   normalizeAnchorPanel,
   normalizePublicRestroomRows,
   parseCoordinateQuery,
