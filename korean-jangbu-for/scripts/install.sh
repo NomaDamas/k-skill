@@ -91,9 +91,8 @@ is_managed_promoted_skill() {
   [[ -f "${skill_file}" ]] && grep -q "${MANAGED_MARKER}" "${skill_file}"
 }
 
-sync_promoted_skill() {
-  local source_dir="$1"
-  local target_dir="$2"
+assert_promoted_skill_writable() {
+  local target_dir="$1"
 
   if [[ -e "${target_dir}" || -L "${target_dir}" ]]; then
     if [[ "${KOREAN_JANGBU_FOR_OVERWRITE_SKILLS:-}" != "1" ]] && ! is_managed_promoted_skill "${target_dir}"; then
@@ -102,8 +101,44 @@ sync_promoted_skill() {
       exit 1
     fi
   fi
+}
 
+sync_promoted_skill() {
+  local source_dir="$1"
+  local target_dir="$2"
+
+  assert_promoted_skill_writable "${target_dir}"
   sync_dir "${source_dir}" "${target_dir}"
+}
+
+preflight_promoted_skill() {
+  local source_dir="$1"
+  local target_dir="$2"
+
+  if [[ ! -f "${source_dir}/SKILL.md" ]]; then
+    echo "[korean-jangbu-for] missing upstream skill: ${source_dir}/SKILL.md" >&2
+    exit 1
+  fi
+
+  assert_promoted_skill_writable "${target_dir}"
+}
+
+preflight_promoted_skills() {
+  local home_skill_dir
+  local home_skills_root
+  local upstream_skill
+  local upstream_skill_dir
+  local home_upstream_skill_dir
+
+  for home_skill_dir in "${HOME_DIRS[@]}"; do
+    home_skills_root="$(dirname "${home_skill_dir}")"
+
+    for upstream_skill in "${UPSTREAM_SUBSKILLS[@]}"; do
+      upstream_skill_dir="${CLONE_DIR}/skills/${upstream_skill}"
+      home_upstream_skill_dir="${home_skills_root}/${upstream_skill}"
+      preflight_promoted_skill "${upstream_skill_dir}" "${home_upstream_skill_dir}"
+    done
+  done
 }
 
 append_response_policy() {
@@ -152,6 +187,8 @@ HOME_DIRS=(
   "${HOME}/.agents/skills/${SKILL_NAME}"
 )
 
+preflight_promoted_skills
+
 for HOME_SKILL_DIR in "${HOME_DIRS[@]}"; do
   HOME_UPSTREAM="${HOME_SKILL_DIR}/upstream"
   HOME_SKILLS_ROOT="$(dirname "${HOME_SKILL_DIR}")"
@@ -193,6 +230,7 @@ echo "  pinned upstream SHA: ${UPSTREAM_SHA}"
 echo "  upstream repo:       ${UPSTREAM_REPO}"
 echo "  runtime install:     bash ~/.claude/skills/korean-jangbu-for/upstream/scripts/install.sh"
 echo "  verify command:      bash ~/.claude/skills/korean-jangbu-for/upstream/scripts/verify.sh"
+echo "  namespace note:      Re-run this wrapper installer after upstream runtime install to restore wrapper-managed top-level skills."
 echo "  subskills:           /korean-jangbu-for /jangbu-connect /jangbu-import /jangbu-tag /jangbu-tax /jangbu-dash /jangbu-jongso"
 echo "  원저작자: @kimlawtech (SpeciAI) — 응답마다 원본 링크와 함께 언급해야 한다."
 echo "  생성물은 참고용 초안이며 공식 회계감사·세무신고를 대체하지 않는다."

@@ -2995,6 +2995,7 @@ test("korean-jangbu-for ships an install.sh wrapper and a pinned upstream SHA", 
   assert.match(install, /git clone --filter=blob:none/);
   assert.match(install, /upstream\.pin/);
   assert.match(install, /verify\.sh/);
+  assert.match(install, /Re-run this wrapper installer after upstream runtime install/);
 
   const stat = fs.statSync(installPath);
   assert.ok((stat.mode & 0o111) !== 0, "install.sh must be executable");
@@ -3115,7 +3116,7 @@ test("korean-jangbu-for installer registers upstream subskills for Claude and ag
   }
 });
 
-test("korean-jangbu-for installer refuses to overwrite unrelated promoted subskills", () => {
+test("korean-jangbu-for installer preflights promoted subskill collisions before home writes", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "korean-jangbu-for-collision-"));
   const homeDir = path.join(tmpDir, "home");
   const upstreamDir = path.join(tmpDir, "upstream");
@@ -3147,7 +3148,7 @@ test("korean-jangbu-for installer refuses to overwrite unrelated promoted subski
   childProcess.execFileSync("git", ["commit", "-m", "seed upstream skills"], { cwd: upstreamDir, stdio: "ignore" });
   const upstreamSha = childProcess.execFileSync("git", ["rev-parse", "HEAD"], { cwd: upstreamDir, encoding: "utf8" }).trim();
 
-  const unrelatedSkillDir = path.join(homeDir, ".claude", "skills", "jangbu-tax");
+  const unrelatedSkillDir = path.join(homeDir, ".agents", "skills", "jangbu-tax");
   fs.mkdirSync(unrelatedSkillDir, { recursive: true });
   fs.writeFileSync(
     path.join(unrelatedSkillDir, "SKILL.md"),
@@ -3174,6 +3175,21 @@ test("korean-jangbu-for installer refuses to overwrite unrelated promoted subski
     /user-authored jangbu-tax/,
     "unrelated existing subskill should be preserved after installer refusal",
   );
+
+  for (const root of [".claude", ".agents"]) {
+    const skillRoot = path.join(homeDir, root, "skills");
+    assert.ok(
+      !fs.existsSync(path.join(skillRoot, "korean-jangbu-for")),
+      `${root} should not create the wrapper directory after a promoted-subskill preflight failure`,
+    );
+
+    for (const skillName of upstreamSubskills.filter((name) => name !== "jangbu-tax")) {
+      assert.ok(
+        !fs.existsSync(path.join(skillRoot, skillName)),
+        `${root} should not create promoted subskill ${skillName} after a promoted-subskill preflight failure`,
+      );
+    }
+  }
 });
 
 test("korean-jangbu-for feature doc documents source-first use and mandatory attribution", () => {
