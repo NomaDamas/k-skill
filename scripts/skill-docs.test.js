@@ -3066,6 +3066,16 @@ test("iros-registry-automation skill documents safe IROS registry certificate au
   assert.match(skill, /scripts\/upstream\.pin/, "skill should document where the reviewed upstream pin lives");
   assert.match(skill, /pin update|핀 업데이트|업스트림 핀|review/i, "skill should require review before updating the pin");
   assert.match(skill, /\$workdir\/corp-input\.json/, "skill should put real corporate inputs under the private workdir");
+  assert.match(
+    skill,
+    /\$workdir\/companies-input\.json[\s\S]*(iros_download\.py|결제 후|열람|저장)/,
+    "skill should prepare the company-name list required by iros_download.py before the download flow after payment",
+  );
+  assert.match(
+    skill,
+    /"excel_path":\s*str\(workdir \/ "customer-list\.xlsx"\)/,
+    "skill should redirect upstream customer Excel input to the private workdir",
+  );
   assert.match(skill, /\$workdir\/downloads/, "skill should point save_dir/download output at the private workdir");
   assert.match(skill, /config\.json[\s\S]*save_dir[\s\S]*\$workdir/, "skill should wire config.json save_dir to the private workdir");
   assert.match(skill, /upstream repo `data\/`|upstream `data\/`|data\/.*실제/, "skill should warn not to use upstream data/ for real inputs");
@@ -3089,6 +3099,16 @@ test("iros-registry-automation skill documents safe IROS registry certificate au
   assert.match(featureDoc, /i?ros_cart_realty\.py|부동산 장바구니/);
   assert.match(featureDoc, /저장소 밖|레포 밖|커밋하지/);
   assert.match(featureDoc, /\$workdir\/corp-input\.json/, "feature doc should put real corporate inputs under the private workdir");
+  assert.match(
+    featureDoc,
+    /\$workdir\/companies-input\.json[\s\S]*(iros_download\.py|결제 후|열람|저장)/,
+    "feature doc should prepare the company-name list required by iros_download.py before the download flow after payment",
+  );
+  assert.match(
+    featureDoc,
+    /"excel_path":\s*str\(workdir \/ "customer-list\.xlsx"\)/,
+    "feature doc should redirect upstream customer Excel input to the private workdir",
+  );
   assert.match(featureDoc, /\$workdir\/downloads/, "feature doc should point save_dir/download output at the private workdir");
   assert.match(featureDoc, /config\.json[\s\S]*save_dir[\s\S]*\$workdir/, "feature doc should wire config.json save_dir to the private workdir");
   assert.match(featureDoc, /upstream repo `data\/`|upstream `data\/`|data\/.*실제/, "feature doc should warn not to use upstream data/ for real inputs");

@@ -60,10 +60,12 @@ cp config.json.example config.json
 ```bash
 workdir="$(mktemp -d "${TMPDIR:-/tmp}/iros-registry.XXXXXX")"
 chmod 700 "$workdir"
-mkdir -p "$workdir/downloads" "$workdir/logs" "$workdir/output"
+mkdir -p "$workdir/downloads" "$workdir/logs" "$workdir/output" "$workdir/tmp-downloads"
 ```
 
 법인등록번호 기반 입력은 upstream repo `data/`가 아니라 `$workdir/corp-input.json` 같은 저장소 밖 파일에 둔다. 실제 법인등록번호/주소 원문을 upstream `data/` 디렉터리, git 저장소, PR 첨부, 테스트 로그에 넣지 않는다.
+
+`iros_download.py`는 결제 후 열람·저장 단계에서 `companies_list`를 열어 저장 파일명을 맞춘다. 법인등록번호 흐름을 쓰더라도 결제 전 `$workdir/companies-input.json`을 함께 만들어 둔다.
 
 ```bash
 cat > "$workdir/corp-input.json" <<'JSON'
@@ -72,9 +74,24 @@ cat > "$workdir/corp-input.json" <<'JSON'
   "1101117654321": "샘플 주식회사"
 }
 JSON
+
+python3 - "$workdir" <<'PY'
+import json
+import pathlib
+import sys
+
+workdir = pathlib.Path(sys.argv[1])
+corp_input = json.loads((workdir / "corp-input.json").read_text())
+companies = list(corp_input.values())
+(workdir / "companies-input.json").write_text(
+    json.dumps(companies, ensure_ascii=False, indent=2) + "\n"
+)
+PY
 ```
 
 부동산 주소 기반 입력 예시는 동/호수까지 필요한 경우가 있으므로 `data/iros_realties.json` 형식을 upstream README에서 확인하되, 실제 주소 원문은 `$workdir/realty-input.json` 같은 로컬 파일에만 둔다.
+
+사업자번호 조회나 종합 리포트 마법사 흐름에서 쓰는 고객 Excel도 upstream repo `data/`가 아니라 `$workdir/customer-list.xlsx` 같은 저장소 밖 파일에 둔다. 실제 고객 목록을 upstream `data/고객리스트.xlsx`에 복사하지 않는다.
 
 `config.json`도 저장소에 커밋하지 않는 로컬 파일로 두고, 민감 입력·로그·산출물 경로를 모두 `$workdir` 아래로 돌린다.
 
@@ -90,6 +107,7 @@ config.update({
     "corpnum_list": str(workdir / "corp-input.json"),
     "companies_list": str(workdir / "companies-input.json"),
     "realty_list": str(workdir / "realty-input.json"),
+    "excel_path": str(workdir / "customer-list.xlsx"),
     "save_dir": str(workdir / "downloads"),
     "realty_save_dir": str(workdir / "downloads" / "realty"),
     "pdf_dir": str(workdir / "downloads"),
@@ -135,7 +153,7 @@ python iros_cart.py
 python iros_download.py
 ```
 
-저장 경로는 `config.json`의 `save_dir`로 관리하되, 위 예시처럼 `$workdir/downloads`를 사용하고 공개 저장소 하위 경로를 사용하지 않는다.
+저장 경로는 `config.json`의 `save_dir`로 관리하되, 위 예시처럼 `$workdir/downloads`를 사용하고 공개 저장소 하위 경로를 사용하지 않는다. `companies_list`가 `$workdir/companies-input.json`을 가리키는지 결제 전에 확인하면 결제 후 `iros_download.py`가 `FileNotFoundError`로 중단되는 일을 피할 수 있다.
 
 ### 5. 부동산등기부등본 장바구니 담기
 
@@ -161,8 +179,8 @@ python iros_wizard.py
 - 법인등기부등본 — 결제 후 열람·저장
 - 부동산등기부등본 — 장바구니 담기
 - 부동산등기부등본 — 결제 후 열람·저장
-- 사업자번호 → 법인정보 조회
-- 다운로드된 법인 PDF → 종합 리포트 엑셀 생성
+- 사업자번호 → 법인정보 조회 (`excel_path`는 `$workdir/customer-list.xlsx`)
+- 다운로드된 법인 PDF → 종합 리포트 엑셀 생성 (`excel_path`와 `pdf_dir`는 저장소 밖 경로)
 
 ## Response policy
 

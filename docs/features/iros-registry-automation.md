@@ -46,10 +46,10 @@ Chrome/Chromium, Python 3.10+, IROS 로그인 수단, 결제 카드, TouchEn nxK
 ```bash
 workdir="$(mktemp -d "${TMPDIR:-/tmp}/iros-registry.XXXXXX")"
 chmod 700 "$workdir"
-mkdir -p "$workdir/downloads" "$workdir/logs" "$workdir/output"
+mkdir -p "$workdir/downloads" "$workdir/logs" "$workdir/output" "$workdir/tmp-downloads"
 ```
 
-실제 입력은 upstream repo `data/`가 아니라 `$workdir/corp-input.json`, `$workdir/realty-input.json`처럼 저장소 밖에 둔다. upstream `data/` 디렉터리는 샘플 형식 확인용으로만 보고, 실제 법인등록번호·주소·동호수 원문을 넣지 않는다.
+실제 입력은 upstream repo `data/`가 아니라 `$workdir/corp-input.json`, `$workdir/realty-input.json`, `$workdir/customer-list.xlsx`처럼 저장소 밖에 둔다. upstream `data/` 디렉터리는 샘플 형식 확인용으로만 보고, 실제 법인등록번호·주소·동호수·고객 Excel 원문을 넣지 않는다.
 
 ```bash
 cat > "$workdir/corp-input.json" <<'JSON'
@@ -58,7 +58,22 @@ cat > "$workdir/corp-input.json" <<'JSON'
   "1101117654321": "샘플 주식회사"
 }
 JSON
+
+python3 - "$workdir" <<'PY'
+import json
+import pathlib
+import sys
+
+workdir = pathlib.Path(sys.argv[1])
+corp_input = json.loads((workdir / "corp-input.json").read_text())
+companies = list(corp_input.values())
+(workdir / "companies-input.json").write_text(
+    json.dumps(companies, ensure_ascii=False, indent=2) + "\n"
+)
+PY
 ```
+
+`iros_download.py`는 결제 후 열람·저장 단계에서 `companies_list`를 열어 저장 파일명을 맞춘다. 법인등록번호 기반 `iros_cart_by_corpnum.py`를 쓰더라도 결제 전에 `$workdir/companies-input.json`을 준비해야 결제 후 다운로드가 로컬 `FileNotFoundError` 없이 이어진다.
 
 `config.json`의 입력·로그·save_dir 관련 값을 `$workdir`로 돌리면 upstream 스크립트를 실행해도 저장소 하위 `data/`, `logs/`, `output/`에 실제 업무 정보가 남지 않는다.
 
@@ -74,6 +89,7 @@ config.update({
     "corpnum_list": str(workdir / "corp-input.json"),
     "companies_list": str(workdir / "companies-input.json"),
     "realty_list": str(workdir / "realty-input.json"),
+    "excel_path": str(workdir / "customer-list.xlsx"),
     "save_dir": str(workdir / "downloads"),
     "realty_save_dir": str(workdir / "downloads" / "realty"),
     "pdf_dir": str(workdir / "downloads"),
@@ -106,7 +122,7 @@ python iros_cart_by_corpnum.py
 python iros_download.py
 ```
 
-위 명령은 로컬 `config.json`을 읽으므로, 먼저 `corpnum_list`와 `save_dir`가 `$workdir/corp-input.json`, `$workdir/downloads`를 가리키는지 확인한다.
+위 명령은 로컬 `config.json`을 읽으므로, 먼저 `corpnum_list`, `companies_list`, `save_dir`가 각각 `$workdir/corp-input.json`, `$workdir/companies-input.json`, `$workdir/downloads`를 가리키는지 확인한다.
 
 ## 부동산등기부등본 흐름
 
@@ -129,7 +145,7 @@ python iros_cart_realty.py
 python iros_wizard.py
 ```
 
-마법사는 법인/부동산 장바구니, 결제 후 열람·저장, 사업자번호 기반 법인정보 조회, 다운로드된 법인 PDF 종합 리포트 생성을 메뉴로 제공한다.
+마법사는 법인/부동산 장바구니, 결제 후 열람·저장, 사업자번호 기반 법인정보 조회, 다운로드된 법인 PDF 종합 리포트 생성을 메뉴로 제공한다. 사업자번호/고객 workbook 경로는 `excel_path`가 `$workdir/customer-list.xlsx`를 가리키게 한 뒤 사용하고, upstream repo `data/고객리스트.xlsx`에는 실제 고객 Excel을 두지 않는다.
 
 ## 트러블슈팅
 
