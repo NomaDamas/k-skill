@@ -57,6 +57,7 @@ npx --yes skills add <owner/repo> \
   --skill kakaotalk-mac \
   --skill korean-law-search \
   --skill korean-privacy-terms \
+  --skill korean-jangbu-for \
   --skill corporate-registration-consulting \
   --skill iros-registry-automation \
   --skill real-estate-search \
@@ -131,6 +132,9 @@ korean-law list
 `real-estate-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/tae0y/real-estate-mcp/tree/main`. 자세한 사용법은 [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)를 본다.
 
 `korean-scholarship-search` 는 스킬 이름 `장학금 검색 및 조회` 로 동작한다. 별도 API key 없이 최신 웹 검색과 공식 공고 확인으로 장학금을 찾고, 한국장학재단·전국 대학교 본부·단과대·학과·재단·기업·공공기관 공고를 모아 금액/지원자격/지원구간/공식 링크를 정리한다. 설치된 helper `python3 scripts/scholarship_filter.py` 로 사용자 조건 필터링, KST(`Asia/Seoul`) 현재 날짜 기준 마감 상태 분류, readable report, 지원 가능 여부 확인을 할 수 있고, `python3 scripts/university_search_plan.py` 로 학교별 또는 전국 대학 검색 쿼리 팩을 만들 수 있다. 자세한 사용법은 [장학금 검색 및 조회 가이드](features/korean-scholarship-search.md)를 본다.
+
+
+`korean-jangbu-for` 는 `kimlawtech/korean-jangbu-for` (Apache-2.0, 원저작자 @kimlawtech / SpeciAI) 업스트림을 중심으로 사용하는 thin wrapper 다. 별도 hosted proxy 없이 `bash korean-jangbu-for/scripts/install.sh` 로 pinned upstream 을 `~/.claude/skills/korean-jangbu-for/upstream/` 와 `~/.agents/skills/korean-jangbu-for/upstream/` 양쪽에 설치하고, 업스트림 `jangbu-*` 하위 스킬을 양쪽 홈 디렉터리의 top-level skill 로 함께 등록한다. CODEF 자동 수집은 사용자가 직접 발급한 키를 쓰는 BYOK 방식이며, 장부·재무제표·세무사 전달 CSV 는 참고용 초안이므로 신고 전 세무사 검토 및 외감 대상 공인회계사 감사가 필요하다. 자세한 사용법은 [한국 사업자 장부 자동화 가이드](features/korean-jangbu-for.md)를 본다.
 
 `korean-stock-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `KRX_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/jjlabsio/korea-stock-mcp`. 자세한 사용법은 [한국 주식 정보 조회 가이드](features/korean-stock-search.md)를 본다.
 

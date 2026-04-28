@@ -1,0 +1,30 @@
+korean-jangbu-for
+Copyright 2026 kimlawtech (SpeciAI) and contributors
+
+This k-skill wrapper centers the upstream korean-jangbu-for Claude Code
+skill package for Korean business ledger automation.
+
+Upstream repository:
+  https://github.com/kimlawtech/korean-jangbu-for
+
+Original author / maintainer:
+  @kimlawtech (https://github.com/kimlawtech), SpeciAI
+
+Licensed under the Apache License, Version 2.0. See LICENSE.upstream for
+the upstream license text bundled with this wrapper.
+
+----------------------------------------------------------------------
+
+ACCOUNTING / TAX DISCLAIMER
+
+Generated ledgers, financial statements, management reports, and tax-accountant
+handoff CSV files are reference drafts only. They do not replace official
+audits, tax filings, licensed tax-accountant review, or certified public
+accountant review.
+
+----------------------------------------------------------------------
+
+회계·세무 면책 고지
+
+생성된 장부, 재무제표, 경영 리포트, 세무사 전달 CSV 는 참고용 초안입니다.
+공식 회계감사·세무신고·세무사 검토·공인회계사 감사를 대체하지 않습니다.

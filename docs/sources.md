@@ -34,6 +34,7 @@
 - rhwp HWPX-save-disabled issue #196 (data-safety gate until #197 ships): https://github.com/edwardkim/rhwp/issues/196
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
+- korean-jangbu-for upstream: https://github.com/kimlawtech/korean-jangbu-for (Apache-2.0; original author @kimlawtech, SpeciAI)
 - corporate-registration-consulting skill: local://corporate-registration-consulting
 - 대법원 인터넷등기소: https://www.iros.go.kr
 - 온라인법인설립시스템: https://www.startbiz.go.kr

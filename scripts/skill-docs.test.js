@@ -2893,6 +2893,323 @@ test("korean-privacy-terms feature doc documents the thin-wrapper install flow a
   assert.match(featureDoc, /Next\.js/);
 });
 
+test("repository docs advertise the korean-jangbu-for thin-wrapper skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-jangbu-for.md");
+  const skillPath = path.join(repoRoot, "korean-jangbu-for", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-jangbu-for.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-jangbu-for/SKILL.md to exist");
+  assert.match(readme, /\| 한국 사업자 장부 자동화 \|/);
+  assert.match(readme, /\[한국 사업자 장부 자동화 가이드\]\(docs\/features\/korean-jangbu-for\.md\)/);
+  assert.match(install, /--skill korean-jangbu-for/);
+  assert.match(sources, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+  assert.match(sources, /Apache-2\.0/);
+  assert.match(sources, /kimlawtech/);
+  assert.match(sources, /SpeciAI/);
+});
+
+test("korean-jangbu-for skill cites upstream author and enforces accounting/tax disclaimers", () => {
+  const skillPath = path.join(repoRoot, "korean-jangbu-for", "SKILL.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected korean-jangbu-for/SKILL.md to exist");
+
+  const skill = read(path.join("korean-jangbu-for", "SKILL.md"));
+
+  assert.match(skill, /^name: korean-jangbu-for$/m);
+  assert.match(skill, /^license: Apache-2\.0$/m);
+  assert.match(skill, /^description: .*장부.*사업자.*$/m);
+  assert.match(skill, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+  assert.match(skill, /@kimlawtech/);
+  assert.match(skill, /SpeciAI/);
+  assert.match(skill, /Apache-2\.0/);
+  assert.match(skill, /참고용 초안/);
+  assert.match(skill, /공식 회계감사/);
+  assert.match(skill, /세무신고/);
+  assert.match(skill, /세무사 검토/);
+  assert.match(skill, /공인회계사/);
+  assert.match(skill, /CODEF/);
+  assert.match(skill, /BYOK/);
+  assert.match(skill, /~\/\.claude\/skills\/korean-jangbu-for/);
+  assert.match(skill, /~\/\.agents\/skills\/korean-jangbu-for/);
+  assert.match(skill, /scripts\/install\.sh/);
+  assert.match(skill, /scripts\/upstream\.pin/);
+  assert.match(skill, /DISCLAIMER\.md/);
+  assert.match(skill, /LICENSE\.upstream/);
+  assert.doesNotMatch(skill, /AskUserQuestion/);
+});
+
+test("korean-jangbu-for preserves upstream attribution, disclaimer, and Apache license", () => {
+  const noticePath = path.join(repoRoot, "korean-jangbu-for", "NOTICE");
+  const disclaimerPath = path.join(repoRoot, "korean-jangbu-for", "DISCLAIMER.md");
+  const licensePath = path.join(repoRoot, "korean-jangbu-for", "LICENSE.upstream");
+
+  assert.ok(fs.existsSync(noticePath), "expected korean-jangbu-for/NOTICE to exist");
+  assert.ok(fs.existsSync(disclaimerPath), "expected korean-jangbu-for/DISCLAIMER.md to exist");
+  assert.ok(fs.existsSync(licensePath), "expected korean-jangbu-for/LICENSE.upstream to exist");
+
+  const notice = read(path.join("korean-jangbu-for", "NOTICE"));
+  const disclaimer = read(path.join("korean-jangbu-for", "DISCLAIMER.md"));
+  const license = read(path.join("korean-jangbu-for", "LICENSE.upstream"));
+
+  assert.match(notice, /korean-jangbu-for/);
+  assert.match(notice, /Copyright 2026 kimlawtech/);
+  assert.match(notice, /SpeciAI/);
+  assert.match(notice, /@kimlawtech/);
+  assert.match(notice, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+
+  assert.match(disclaimer, /참고용 초안/);
+  assert.match(disclaimer, /공식 회계감사/);
+  assert.match(disclaimer, /세무신고/);
+  assert.match(disclaimer, /세무사 검토 필수/);
+  assert.match(disclaimer, /공인회계사 감사 필수/);
+  assert.match(disclaimer, /법적 효력/);
+
+  assert.match(license, /Apache License/);
+  assert.match(license, /Version 2\.0, January 2004/);
+  assert.match(license, /END OF TERMS AND CONDITIONS/);
+  assert.match(license, /Copyright 2026 kimlawtech \(SpeciAI\)/);
+});
+
+test("korean-jangbu-for ships an install.sh wrapper and a pinned upstream SHA", () => {
+  const pinPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "upstream.pin");
+  const installPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "install.sh");
+
+  assert.ok(fs.existsSync(pinPath), "expected korean-jangbu-for/scripts/upstream.pin to exist");
+  assert.ok(fs.existsSync(installPath), "expected korean-jangbu-for/scripts/install.sh to exist");
+
+  const pin = read(path.join("korean-jangbu-for", "scripts", "upstream.pin")).trim();
+
+  assert.match(pin, /^[0-9a-f]{40}$/, "upstream.pin must contain a single 40-char git SHA");
+  assert.notStrictEqual(pin, "0".repeat(40), "upstream.pin must not be a placeholder all-zero SHA");
+
+  const install = read(path.join("korean-jangbu-for", "scripts", "install.sh"));
+
+  assert.match(install, /^#!\/(?:usr\/bin\/env bash|bin\/bash)/m);
+  assert.match(install, /set -euo pipefail/);
+  assert.match(install, /~\/\.claude\/skills\/korean-jangbu-for/);
+  assert.match(install, /~\/\.agents\/skills\/korean-jangbu-for/);
+  assert.match(install, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for\.git/);
+  assert.match(install, /git clone --filter=blob:none/);
+  assert.match(install, /upstream\.pin/);
+  assert.match(install, /verify\.sh/);
+  assert.match(install, /Re-run this wrapper installer after upstream runtime install/);
+
+  const stat = fs.statSync(installPath);
+  assert.ok((stat.mode & 0o111) !== 0, "install.sh must be executable");
+});
+
+test("korean-jangbu-for installer registers upstream subskills for Claude and agents", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "korean-jangbu-for-install-"));
+  const homeDir = path.join(tmpDir, "home");
+  const upstreamDir = path.join(tmpDir, "upstream");
+  const installPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "install.sh");
+  const upstreamSubskills = [
+    "jangbu-connect",
+    "jangbu-dash",
+    "jangbu-import",
+    "jangbu-jongso",
+    "jangbu-tag",
+    "jangbu-tax",
+  ];
+
+  fs.mkdirSync(path.join(upstreamDir, "skills"), { recursive: true });
+  fs.mkdirSync(homeDir, { recursive: true });
+
+  for (const skillName of ["korean-jangbu-for", ...upstreamSubskills]) {
+    const skillDir = path.join(upstreamDir, "skills", skillName);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, "SKILL.md"),
+      `---\nname: ${skillName}\n---\n\n# ${skillName}\n`,
+    );
+  }
+
+  fs.mkdirSync(path.join(upstreamDir, "scripts"), { recursive: true });
+  fs.writeFileSync(path.join(upstreamDir, "scripts", "verify.sh"), "#!/usr/bin/env bash\nexit 0\n");
+
+  childProcess.execFileSync("git", ["init"], { cwd: upstreamDir, stdio: "ignore" });
+  childProcess.execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["config", "user.name", "Test"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["add", "."], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["commit", "-m", "seed upstream skills"], { cwd: upstreamDir, stdio: "ignore" });
+  const upstreamSha = childProcess.execFileSync("git", ["rev-parse", "HEAD"], { cwd: upstreamDir, encoding: "utf8" }).trim();
+
+  fs.mkdirSync(path.join(homeDir, ".claude", "skills"), { recursive: true });
+  fs.symlinkSync(
+    path.join(upstreamDir, "skills", "korean-jangbu-for"),
+    path.join(homeDir, ".claude", "skills", "korean-jangbu-for"),
+  );
+
+  childProcess.execFileSync("bash", [installPath], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      HOME: homeDir,
+      KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+      KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+    },
+    stdio: "pipe",
+  });
+
+  for (const root of [".claude", ".agents"]) {
+    const skillRoot = path.join(homeDir, root, "skills");
+
+    assert.ok(
+      fs.existsSync(path.join(skillRoot, "korean-jangbu-for", "upstream", "skills", "jangbu-connect", "SKILL.md")),
+      `${root} should keep the pinned upstream checkout nested under the wrapper`,
+    );
+    assert.match(
+      fs.readFileSync(path.join(skillRoot, "korean-jangbu-for", "SKILL.md"), "utf8"),
+      /@kimlawtech/,
+      `${root} should keep the korean-jangbu-for wrapper policy at the top level`,
+    );
+    assert.ok(
+      !fs.lstatSync(path.join(skillRoot, "korean-jangbu-for")).isSymbolicLink(),
+      `${root} should replace conflicting upstream korean-jangbu-for symlinks with a wrapper directory`,
+    );
+
+    for (const requiredPath of [
+      "scripts/install.sh",
+      "scripts/upstream.pin",
+      "LICENSE.upstream",
+      "DISCLAIMER.md",
+      "NOTICE",
+    ]) {
+      assert.ok(
+        fs.existsSync(path.join(skillRoot, "korean-jangbu-for", requiredPath)),
+        `${root} should install wrapper support payload ${requiredPath}`,
+      );
+    }
+
+    for (const skillName of upstreamSubskills) {
+      const installedSubskillPath = path.join(skillRoot, skillName, "SKILL.md");
+      assert.ok(
+        fs.existsSync(installedSubskillPath),
+        `${root} should register upstream subskill ${skillName} as a top-level discoverable skill`,
+      );
+
+      const installedSubskill = fs.readFileSync(installedSubskillPath, "utf8");
+      assert.match(installedSubskill, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+      assert.match(installedSubskill, /@kimlawtech/);
+      assert.match(installedSubskill, /SpeciAI/);
+      assert.match(installedSubskill, /Apache-2\.0/);
+      assert.match(installedSubskill, /참고용 초안/);
+      assert.match(installedSubskill, /공식 회계감사/);
+      assert.match(installedSubskill, /세무신고/);
+    }
+  }
+
+  for (const installedRoot of [".claude", ".agents"]) {
+    childProcess.execFileSync("bash", [path.join(homeDir, installedRoot, "skills", "korean-jangbu-for", "scripts", "install.sh")], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        HOME: homeDir,
+        KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+        KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+      },
+      stdio: "pipe",
+    });
+  }
+});
+
+test("korean-jangbu-for installer preflights promoted subskill collisions before home writes", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "korean-jangbu-for-collision-"));
+  const homeDir = path.join(tmpDir, "home");
+  const upstreamDir = path.join(tmpDir, "upstream");
+  const installPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "install.sh");
+  const upstreamSubskills = [
+    "jangbu-connect",
+    "jangbu-dash",
+    "jangbu-import",
+    "jangbu-jongso",
+    "jangbu-tag",
+    "jangbu-tax",
+  ];
+
+  for (const skillName of upstreamSubskills) {
+    fs.mkdirSync(path.join(upstreamDir, "skills", skillName), { recursive: true });
+    fs.writeFileSync(
+      path.join(upstreamDir, "skills", skillName, "SKILL.md"),
+      `---\nname: ${skillName}\n---\n\n# ${skillName}\n`,
+    );
+  }
+
+  fs.mkdirSync(path.join(upstreamDir, "scripts"), { recursive: true });
+  fs.writeFileSync(path.join(upstreamDir, "scripts", "verify.sh"), "#!/usr/bin/env bash\nexit 0\n");
+
+  childProcess.execFileSync("git", ["init"], { cwd: upstreamDir, stdio: "ignore" });
+  childProcess.execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["config", "user.name", "Test"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["add", "."], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["commit", "-m", "seed upstream skills"], { cwd: upstreamDir, stdio: "ignore" });
+  const upstreamSha = childProcess.execFileSync("git", ["rev-parse", "HEAD"], { cwd: upstreamDir, encoding: "utf8" }).trim();
+
+  const unrelatedSkillDir = path.join(homeDir, ".agents", "skills", "jangbu-tax");
+  fs.mkdirSync(unrelatedSkillDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(unrelatedSkillDir, "SKILL.md"),
+    "---\nname: jangbu-tax\n---\n\n# user-authored jangbu-tax\n",
+  );
+
+  assert.throws(
+    () =>
+      childProcess.execFileSync("bash", [installPath], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+          KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+        },
+        stdio: "pipe",
+      }),
+    /refusing to overwrite unrelated skill/,
+  );
+
+  assert.match(
+    fs.readFileSync(path.join(unrelatedSkillDir, "SKILL.md"), "utf8"),
+    /user-authored jangbu-tax/,
+    "unrelated existing subskill should be preserved after installer refusal",
+  );
+
+  for (const root of [".claude", ".agents"]) {
+    const skillRoot = path.join(homeDir, root, "skills");
+    assert.ok(
+      !fs.existsSync(path.join(skillRoot, "korean-jangbu-for")),
+      `${root} should not create the wrapper directory after a promoted-subskill preflight failure`,
+    );
+
+    for (const skillName of upstreamSubskills.filter((name) => name !== "jangbu-tax")) {
+      assert.ok(
+        !fs.existsSync(path.join(skillRoot, skillName)),
+        `${root} should not create promoted subskill ${skillName} after a promoted-subskill preflight failure`,
+      );
+    }
+  }
+});
+
+test("korean-jangbu-for feature doc documents source-first use and mandatory attribution", () => {
+  const featureDoc = read(path.join("docs", "features", "korean-jangbu-for.md"));
+
+  assert.match(featureDoc, /kimlawtech\/korean-jangbu-for/);
+  assert.match(featureDoc, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+  assert.match(featureDoc, /@kimlawtech/);
+  assert.match(featureDoc, /SpeciAI/);
+  assert.match(featureDoc, /Apache-2\.0/);
+  assert.match(featureDoc, /~\/\.claude\/skills\/korean-jangbu-for/);
+  assert.match(featureDoc, /~\/\.agents\/skills\/korean-jangbu-for/);
+  assert.match(featureDoc, /scripts\/install\.sh/);
+  assert.match(featureDoc, /scripts\/upstream\.pin/);
+  assert.match(featureDoc, /CODEF/);
+  assert.match(featureDoc, /BYOK/);
+  assert.match(featureDoc, /세무사 검토/);
+  assert.match(featureDoc, /공인회계사/);
+});
+
 test("corporate-registration-consulting skill covers court registry workflow, tax pitfalls, and rhwp automation", () => {
   const skillPath = path.join(repoRoot, "corporate-registration-consulting", "SKILL.md");
   const featureDocPath = path.join(repoRoot, "docs", "features", "corporate-registration-consulting.md");
