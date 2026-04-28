@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-UPSTREAM_REPO="https://github.com/kimlawtech/korean-jangbu-for.git"
+UPSTREAM_REPO="${KOREAN_JANGBU_FOR_UPSTREAM_REPO:-https://github.com/kimlawtech/korean-jangbu-for.git}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PIN_FILE="${SCRIPT_DIR}/upstream.pin"
 SKILL_NAME="korean-jangbu-for"
@@ -25,7 +25,7 @@ if [[ ! -f "${PIN_FILE}" ]]; then
   exit 1
 fi
 
-UPSTREAM_SHA="$(tr -d '[:space:]' <"${PIN_FILE}")"
+UPSTREAM_SHA="${KOREAN_JANGBU_FOR_UPSTREAM_SHA:-$(tr -d '[:space:]' <"${PIN_FILE}")}"
 
 if [[ ! "${UPSTREAM_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
   echo "[korean-jangbu-for] upstream.pin must contain a 40-char git SHA (got: ${UPSTREAM_SHA})" >&2
@@ -34,6 +34,46 @@ fi
 
 CACHE_DIR="${HOME}/.cache/k-skill/${SKILL_NAME}"
 CLONE_DIR="${CACHE_DIR}/upstream"
+UPSTREAM_SUBSKILLS=(
+  "jangbu-connect"
+  "jangbu-dash"
+  "jangbu-import"
+  "jangbu-jongso"
+  "jangbu-tag"
+  "jangbu-tax"
+)
+
+sync_dir() {
+  local source_dir="$1"
+  local target_dir="$2"
+
+  if [[ -e "${target_dir}" || -L "${target_dir}" ]]; then
+    rm -rf "${target_dir}"
+  fi
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete "${source_dir}/" "${target_dir}/"
+  else
+    cp -a "${source_dir}/" "${target_dir}/"
+  fi
+}
+
+append_response_policy() {
+  local skill_file="$1"
+
+  cat >>"${skill_file}" <<'POLICY'
+
+## k-skill wrapper attribution and disclaimer
+
+This top-level skill is registered by the k-skill `korean-jangbu-for` thin wrapper so agent-compatible runtimes can discover the upstream `jangbu-*` workflows. Preserve the upstream workflow above, but every response that uses this skill must include:
+
+- 원본: https://github.com/kimlawtech/korean-jangbu-for
+- 원저작자: **@kimlawtech (SpeciAI)**
+- 라이선스: Apache-2.0 (`korean-jangbu-for/LICENSE.upstream`)
+- 생성된 장부·재무제표·경영 리포트·세무사 전달 CSV 는 **참고용 초안**이며, **공식 회계감사** 또는 **세무신고** 를 대체하지 않는다.
+- 법인세 신고 전에는 **세무사 검토** 가 필요하고, 외감 대상 법인은 **공인회계사 감사** 가 필요하다.
+POLICY
+}
 
 mkdir -p "${CACHE_DIR}"
 
@@ -66,17 +106,14 @@ HOME_DIRS=(
 
 for HOME_SKILL_DIR in "${HOME_DIRS[@]}"; do
   HOME_UPSTREAM="${HOME_SKILL_DIR}/upstream"
+  HOME_SKILLS_ROOT="$(dirname "${HOME_SKILL_DIR}")"
+  if [[ -L "${HOME_SKILL_DIR}" ]]; then
+    rm -f "${HOME_SKILL_DIR}"
+  fi
   mkdir -p "${HOME_SKILL_DIR}"
+  cp "${SCRIPT_DIR}/../SKILL.md" "${HOME_SKILL_DIR}/SKILL.md"
 
-  if [[ -e "${HOME_UPSTREAM}" || -L "${HOME_UPSTREAM}" ]]; then
-    rm -rf "${HOME_UPSTREAM}"
-  fi
-
-  if command -v rsync >/dev/null 2>&1; then
-    rsync -a --delete "${CLONE_DIR}/" "${HOME_UPSTREAM}/"
-  else
-    cp -a "${CLONE_DIR}/" "${HOME_UPSTREAM}/"
-  fi
+  sync_dir "${CLONE_DIR}" "${HOME_UPSTREAM}"
 
   INSTALLED_SHA="$(git -C "${HOME_UPSTREAM}" rev-parse HEAD)"
 
@@ -86,6 +123,21 @@ for HOME_SKILL_DIR in "${HOME_DIRS[@]}"; do
   fi
 
   echo "[korean-jangbu-for] installed upstream@${UPSTREAM_SHA} -> ${HOME_UPSTREAM}"
+
+  for UPSTREAM_SKILL in "${UPSTREAM_SUBSKILLS[@]}"; do
+    UPSTREAM_SKILL_DIR="${CLONE_DIR}/skills/${UPSTREAM_SKILL}"
+    HOME_UPSTREAM_SKILL_DIR="${HOME_SKILLS_ROOT}/${UPSTREAM_SKILL}"
+
+    if [[ ! -f "${UPSTREAM_SKILL_DIR}/SKILL.md" ]]; then
+      echo "[korean-jangbu-for] missing upstream skill: ${UPSTREAM_SKILL_DIR}/SKILL.md" >&2
+      exit 1
+    fi
+
+    sync_dir "${UPSTREAM_SKILL_DIR}" "${HOME_UPSTREAM_SKILL_DIR}"
+    append_response_policy "${HOME_UPSTREAM_SKILL_DIR}/SKILL.md"
+
+    echo "[korean-jangbu-for] registered upstream skill /${UPSTREAM_SKILL} -> ${HOME_UPSTREAM_SKILL_DIR}"
+  done
 done
 
 echo ""
@@ -94,6 +146,7 @@ echo "  pinned upstream SHA: ${UPSTREAM_SHA}"
 echo "  upstream repo:       ${UPSTREAM_REPO}"
 echo "  runtime install:     bash ~/.claude/skills/korean-jangbu-for/upstream/scripts/install.sh"
 echo "  verify command:      bash ~/.claude/skills/korean-jangbu-for/upstream/scripts/verify.sh"
+echo "  subskills:           /korean-jangbu-for /jangbu-connect /jangbu-import /jangbu-tag /jangbu-tax /jangbu-dash /jangbu-jongso"
 echo "  원저작자: @kimlawtech (SpeciAI) — 응답마다 원본 링크와 함께 언급해야 한다."
 echo "  생성물은 참고용 초안이며 공식 회계감사·세무신고를 대체하지 않는다."
 echo "  법인세 신고 전 세무사 검토, 외감 대상은 공인회계사 감사가 필요하다."

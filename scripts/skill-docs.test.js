@@ -3000,6 +3000,95 @@ test("korean-jangbu-for ships an install.sh wrapper and a pinned upstream SHA", 
   assert.ok((stat.mode & 0o111) !== 0, "install.sh must be executable");
 });
 
+test("korean-jangbu-for installer registers upstream subskills for Claude and agents", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "korean-jangbu-for-install-"));
+  const homeDir = path.join(tmpDir, "home");
+  const upstreamDir = path.join(tmpDir, "upstream");
+  const installPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "install.sh");
+  const upstreamSubskills = [
+    "jangbu-connect",
+    "jangbu-dash",
+    "jangbu-import",
+    "jangbu-jongso",
+    "jangbu-tag",
+    "jangbu-tax",
+  ];
+
+  fs.mkdirSync(path.join(upstreamDir, "skills"), { recursive: true });
+  fs.mkdirSync(homeDir, { recursive: true });
+
+  for (const skillName of ["korean-jangbu-for", ...upstreamSubskills]) {
+    const skillDir = path.join(upstreamDir, "skills", skillName);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, "SKILL.md"),
+      `---\nname: ${skillName}\n---\n\n# ${skillName}\n`,
+    );
+  }
+
+  fs.mkdirSync(path.join(upstreamDir, "scripts"), { recursive: true });
+  fs.writeFileSync(path.join(upstreamDir, "scripts", "verify.sh"), "#!/usr/bin/env bash\nexit 0\n");
+
+  childProcess.execFileSync("git", ["init"], { cwd: upstreamDir, stdio: "ignore" });
+  childProcess.execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["config", "user.name", "Test"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["add", "."], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["commit", "-m", "seed upstream skills"], { cwd: upstreamDir, stdio: "ignore" });
+  const upstreamSha = childProcess.execFileSync("git", ["rev-parse", "HEAD"], { cwd: upstreamDir, encoding: "utf8" }).trim();
+
+  fs.mkdirSync(path.join(homeDir, ".claude", "skills"), { recursive: true });
+  fs.symlinkSync(
+    path.join(upstreamDir, "skills", "korean-jangbu-for"),
+    path.join(homeDir, ".claude", "skills", "korean-jangbu-for"),
+  );
+
+  childProcess.execFileSync("bash", [installPath], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      HOME: homeDir,
+      KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+      KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+    },
+    stdio: "pipe",
+  });
+
+  for (const root of [".claude", ".agents"]) {
+    const skillRoot = path.join(homeDir, root, "skills");
+
+    assert.ok(
+      fs.existsSync(path.join(skillRoot, "korean-jangbu-for", "upstream", "skills", "jangbu-connect", "SKILL.md")),
+      `${root} should keep the pinned upstream checkout nested under the wrapper`,
+    );
+    assert.match(
+      fs.readFileSync(path.join(skillRoot, "korean-jangbu-for", "SKILL.md"), "utf8"),
+      /@kimlawtech/,
+      `${root} should keep the korean-jangbu-for wrapper policy at the top level`,
+    );
+    assert.ok(
+      !fs.lstatSync(path.join(skillRoot, "korean-jangbu-for")).isSymbolicLink(),
+      `${root} should replace conflicting upstream korean-jangbu-for symlinks with a wrapper directory`,
+    );
+
+    for (const skillName of upstreamSubskills) {
+      const installedSubskillPath = path.join(skillRoot, skillName, "SKILL.md");
+      assert.ok(
+        fs.existsSync(installedSubskillPath),
+        `${root} should register upstream subskill ${skillName} as a top-level discoverable skill`,
+      );
+
+      const installedSubskill = fs.readFileSync(installedSubskillPath, "utf8");
+      assert.match(installedSubskill, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+      assert.match(installedSubskill, /@kimlawtech/);
+      assert.match(installedSubskill, /SpeciAI/);
+      assert.match(installedSubskill, /Apache-2\.0/);
+      assert.match(installedSubskill, /참고용 초안/);
+      assert.match(installedSubskill, /공식 회계감사/);
+      assert.match(installedSubskill, /세무신고/);
+    }
+  }
+});
+
 test("korean-jangbu-for feature doc documents source-first use and mandatory attribution", () => {
   const featureDoc = read(path.join("docs", "features", "korean-jangbu-for.md"));
 

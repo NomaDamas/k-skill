@@ -30,7 +30,7 @@
 
 ## 설치 흐름
 
-`~/.claude/skills/korean-jangbu-for/upstream/` 와 `~/.agents/skills/korean-jangbu-for/upstream/` 양쪽에 pinned SHA 로 업스트림을 설치한다.
+`~/.claude/skills/korean-jangbu-for/upstream/` 와 `~/.agents/skills/korean-jangbu-for/upstream/` 양쪽에 pinned SHA 로 업스트림을 설치한다. 동시에 업스트림 `skills/jangbu-*` 를 `~/.claude/skills/<skill-name>` 및 `~/.agents/skills/<skill-name>` top-level 경로로 등록해 slash skill discovery 가 중첩 `upstream/` 탐색에 의존하지 않게 한다. `/korean-jangbu-for` 는 wrapper top-level skill 로 유지한다.
 
 ```bash
 bash korean-jangbu-for/scripts/install.sh
@@ -44,7 +44,7 @@ git -C ~/.claude/skills/korean-jangbu-for/upstream rev-parse HEAD
 git -C ~/.agents/skills/korean-jangbu-for/upstream rev-parse HEAD
 ```
 
-세 SHA 가 모두 같으면 wrapper 설치가 성공한 것이다. 실제 OCR/MCP 런타임까지 검증해야 할 때는 업스트림 설치 후 verify 를 실행한다.
+세 SHA 가 모두 같고 `~/.agents/skills/jangbu-import/SKILL.md` 같은 top-level 하위 스킬이 존재하면 wrapper 설치가 성공한 것이다. 실제 OCR/MCP 런타임까지 검증해야 할 때는 업스트림 설치 후 verify 를 실행한다.
 
 ```bash
 bash ~/.claude/skills/korean-jangbu-for/upstream/scripts/install.sh

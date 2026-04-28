@@ -46,7 +46,7 @@ metadata:
 
 ## Install (dual-install)
 
-업스트림을 `~/.claude/skills/korean-jangbu-for/upstream/` 와 `~/.agents/skills/korean-jangbu-for/upstream/` 양쪽에 pinned SHA 로 체크아웃한다. 레포 내부에는 업스트림 payload 를 커밋하지 않는다.
+업스트림을 `~/.claude/skills/korean-jangbu-for/upstream/` 와 `~/.agents/skills/korean-jangbu-for/upstream/` 양쪽에 pinned SHA 로 체크아웃한다. 또한 업스트림 `skills/jangbu-*` 를 양쪽 홈 디렉터리의 top-level skill 로 등록해 `/jangbu-connect`, `/jangbu-import`, `/jangbu-tag`, `/jangbu-tax`, `/jangbu-dash`, `/jangbu-jongso` 라우팅이 agent-compatible 런타임에서도 발견되게 한다. `/korean-jangbu-for` 는 이 wrapper 의 top-level skill 로 유지한다. 레포 내부에는 업스트림 payload 를 커밋하지 않는다.
 
 ```bash
 bash korean-jangbu-for/scripts/install.sh
@@ -119,6 +119,7 @@ bash ~/.claude/skills/korean-jangbu-for/upstream/scripts/verify.sh
 
 - 목표 산출물, 입력 자료, 사업자 유형, 기간, 민감정보 처리 수준이 확인되었다.
 - `scripts/install.sh` 이 업스트림을 dual-install 했고 양쪽 `upstream/` 경로가 `scripts/upstream.pin` 과 같은 SHA 를 가리킨다.
+- 업스트림 `skills/jangbu-*` 가 `~/.claude/skills/<skill-name>` 및 `~/.agents/skills/<skill-name>` top-level 경로에 등록되어 slash skill discovery 가 가능하다.
 - 업스트림의 해당 하위 스킬(`/jangbu-import`, `/jangbu-tag`, `/jangbu-tax`, `/jangbu-dash`, `/jangbu-jongso`, `/jangbu-connect`) 흐름을 사용했다.
 - 사용자가 공식 제출/신고 목적이라고 밝힌 경우 세무사 검토 또는 공인회계사 감사 필요성을 명시했다.
 - 최종 답변에 원본 링크, 원저작자 @kimlawtech (SpeciAI), Apache-2.0, 회계·세무 면책 고지가 포함되었다.
