@@ -21,7 +21,7 @@ Ask a compact interview before scanning or recommending deletion:
 1. 어떤 에이전트를 주로 쓰나요? (Claude Code, Codex, OpenCode, OpenClaw/ClawHub, Hermes Agent, 기타)
 2. 절대 지우면 안 되는 스킬은 무엇인가요?
 3. 본인이 절대로 쓰지 않는다고 확신하는 스킬은 무엇인가요?
-4. 최근 30/90/180일 중 어떤 기간의 사용 흔적을 우선 볼까요?
+4. 최근 30/90/180일 중 어떤 기간의 사용 흔적을 우선 볼까요? helper 실행 시 `--days` 또는 `--since`로 반영합니다.
 5. 추천만 원하나요, 아니면 승인 후 실제 삭제까지 원하나요?
 
 ## Trigger count sources by agent
@@ -36,12 +36,13 @@ Ask a compact interview before scanning or recommending deletion:
 
 ## Local helper
 
-From the repository root, run the deterministic helper to combine interview answers and local logs:
+From an installed standalone skill, run the deterministic helper from the `k-skill-cleaner` skill directory. In a full repository checkout, the compatibility wrapper at `scripts/k_skill_cleaner.py` accepts the same options.
 
 ```bash
 python3 scripts/k_skill_cleaner.py \
   --skills-root . \
   --scan-default-logs \
+  --days 90 \
   --never-use blue-ribbon-nearby,lotto-results \
   --keep k-skill-setup,k-skill-cleaner
 ```
@@ -49,7 +50,7 @@ python3 scripts/k_skill_cleaner.py \
 For agent exports or hand-curated counts, pass a JSON object mapping skill name to trigger count:
 
 ```bash
-python3 scripts/k_skill_cleaner.py --skills-root . --usage-json usage-counts.json
+python3 scripts/k_skill_cleaner.py --skills-root . --usage-json usage-counts.json --days 90
 ```
 
 The helper prints JSON with:
@@ -57,6 +58,7 @@ The helper prints JSON with:
 - `skill_count`: number of root-level skills discovered.
 - `candidates`: ranked `remove` or `review` candidates with `trigger_count` and `reasons`.
 - `agent_usage_sources`: the agent-specific paths and caveats above.
+- `time_window`: the effective `--since`/`--days` cutoff and mtime fallback caveat.
 - `safety`: reminder that no files were deleted.
 
 ## Recommendation policy

@@ -3348,8 +3348,10 @@ test("repository docs advertise the k-skill-cleaner skill and agent usage source
   const install = read(path.join("docs", "install.md"));
   const featureDocPath = path.join(repoRoot, "docs", "features", "k-skill-cleaner.md");
   const skillPath = path.join(repoRoot, "k-skill-cleaner", "SKILL.md");
+  const skillLocalHelperPath = path.join(repoRoot, "k-skill-cleaner", "scripts", "k_skill_cleaner.py");
 
   assert.ok(fs.existsSync(skillPath), "expected k-skill-cleaner/SKILL.md to exist");
+  assert.ok(fs.existsSync(skillLocalHelperPath), "expected k-skill-cleaner/scripts/k_skill_cleaner.py to be included in standalone skill installs");
   assert.ok(fs.existsSync(featureDocPath), "expected docs/features/k-skill-cleaner.md to exist");
 
   const skill = read(path.join("k-skill-cleaner", "SKILL.md"));
@@ -3362,6 +3364,9 @@ test("repository docs advertise the k-skill-cleaner skill and agent usage source
   assert.match(skill, /OpenClaw\/ClawHub/);
   assert.match(skill, /Hermes Agent/);
   assert.match(skill, /python3 scripts\/k_skill_cleaner\.py/);
+  assert.match(skill, /--days 90/);
+  assert.match(featureDoc, /k-skill-cleaner\/scripts\/k_skill_cleaner\.py/);
+  assert.match(featureDoc, /--days 90/);
   assert.match(featureDoc, /인터뷰/);
   assert.match(featureDoc, /트리거 횟수/);
   assert.match(readme, /\| K-스킬 클리너 \| `k-skill-cleaner` \|/);

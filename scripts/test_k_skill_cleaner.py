@@ -44,6 +44,44 @@ class KSkillCleanerTest(unittest.TestCase):
             self.assertEqual(counts["korean-law-search"], 2)
             self.assertEqual(counts["unused"], 0)
 
+    def test_collects_usage_with_since_window_and_mtime_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            recent_log = root / "recent.jsonl"
+            recent_log.write_text(
+                "\n".join(
+                    [
+                        json.dumps({"timestamp": "2026-04-20T12:00:00+09:00", "skill": "kbo-results"}),
+                        json.dumps({"timestamp": "2026-01-10T12:00:00+09:00", "skill": "korean-law-search"}),
+                        "loaded skill: fallback-skill",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            old_log = root / "old.log"
+            old_log.write_text("loaded skill: old-fallback", encoding="utf-8")
+
+            # Lines without parseable timestamps use file mtime as the fallback signal.
+            recent_mtime = 1_776_643_200  # 2026-04-24T00:00:00Z
+            old_mtime = 1_766_275_200  # 2025-12-20T00:00:00Z
+            recent_log.touch()
+            old_log.touch()
+            import os
+
+            os.utime(recent_log, (recent_mtime, recent_mtime))
+            os.utime(old_log, (old_mtime, old_mtime))
+
+            counts = collect_skill_usage(
+                [recent_log, old_log],
+                ["kbo-results", "korean-law-search", "fallback-skill", "old-fallback"],
+                since="2026-04-01T00:00:00+09:00",
+            )
+
+            self.assertEqual(counts["kbo-results"], 1)
+            self.assertEqual(counts["korean-law-search"], 0)
+            self.assertEqual(counts["fallback-skill"], 1)
+            self.assertEqual(counts["old-fallback"], 0)
+
     def test_ranks_deletion_candidates_with_interview_and_usage_reasons(self):
         candidates = rank_cleanup_candidates(
             skill_names=["unused", "rare", "protected", "active"],
