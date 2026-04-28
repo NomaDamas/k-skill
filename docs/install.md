@@ -58,6 +58,7 @@ npx --yes skills add <owner/repo> \
   --skill korean-law-search \
   --skill korean-privacy-terms \
   --skill corporate-registration-consulting \
+  --skill iros-registry-automation \
   --skill real-estate-search \
   --skill korean-scholarship-search \
   --skill korean-stock-search \
