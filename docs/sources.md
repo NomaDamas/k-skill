@@ -37,6 +37,7 @@
 - corporate-registration-consulting skill: local://corporate-registration-consulting
 - 대법원 인터넷등기소: https://www.iros.go.kr
 - 온라인법인설립시스템: https://www.startbiz.go.kr
+- 등기부등본 자동화 참고 구현(`challengekim/iros-registry-automation`, MIT): https://github.com/challengekim/iros-registry-automation
 - 위택스 등록면허세 신고/납부: https://www.wetax.go.kr
 - 국가법령정보센터 지방세법/지방세법 시행령/상법/상업등기법/조세특례제한법: https://www.law.go.kr
 - 국세청 창업중소기업 세액감면 안내: https://www.nts.go.kr

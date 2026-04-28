@@ -3019,6 +3019,68 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(sources, /law\.go\.kr/);
 });
 
+
+test("iros-registry-automation skill documents safe IROS registry certificate automation and upstream credit", () => {
+  const skillPath = path.join(repoRoot, "iros-registry-automation", "SKILL.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "iros-registry-automation.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected iros-registry-automation/SKILL.md to exist");
+  assert.ok(fs.existsSync(featureDocPath), "expected iros-registry-automation feature doc to exist");
+
+  const skill = read(path.join("iros-registry-automation", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "iros-registry-automation.md"));
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+
+  assert.match(skill, /^---\nname: iros-registry-automation\n/);
+  assert.match(skill, /등기부등본|등기사항증명서/);
+  assert.match(skill, /법인/);
+  assert.match(skill, /부동산/);
+  assert.match(skill, /인터넷등기소|IROS/);
+  assert.match(skill, /TouchEn nxKey/);
+  assert.match(skill, /Playwright|Chromium/);
+  assert.match(skill, /로그인[\s\S]*수동|사용자.*직접.*로그인/);
+  assert.match(skill, /결제[\s\S]*수동|사용자.*직접.*결제/);
+  assert.match(skill, /카드|공동인증서|간편인증/);
+  assert.match(skill, /페이지당\s*10건|10건/);
+  assert.match(skill, /장바구니/);
+  assert.match(skill, /열람/);
+  assert.match(skill, /저장|다운로드/);
+  assert.match(skill, /법인등록번호/);
+  assert.match(skill, /상호명/);
+  assert.match(skill, /주소/);
+  assert.match(skill, /개인정보|민감정보/);
+  assert.match(skill, /법률 자문|참고용/);
+  assert.match(skill, /challengekim/);
+  assert.match(skill, /https:\/\/github\.com\/challengekim\/iros-registry-automation/);
+  assert.match(skill, /MIT/);
+  assert.match(skill, /원 저작자|원저작자|upstream|참고 구현/);
+
+  for (const doc of [featureDoc, sources]) {
+    assert.match(doc, /challengekim/);
+    assert.match(doc, /https:\/\/github\.com\/challengekim\/iros-registry-automation/);
+    assert.match(doc, /인터넷등기소|IROS|iros\.go\.kr/);
+  }
+
+  assert.match(featureDoc, /로그인[\s\S]*수동|사용자.*직접.*로그인/);
+  assert.match(featureDoc, /결제[\s\S]*수동|사용자.*직접.*결제/);
+  assert.match(featureDoc, /법인[\s\S]*장바구니[\s\S]*열람[\s\S]*저장/);
+  assert.match(featureDoc, /부동산[\s\S]*장바구니[\s\S]*수동/);
+  assert.match(featureDoc, /TouchEn nxKey/);
+  assert.match(featureDoc, /페이지당\s*10건|10건/);
+  assert.match(featureDoc, /i?ros_cart_by_corpnum\.py|법인등록번호 기반/);
+  assert.match(featureDoc, /i?ros_cart_realty\.py|부동산 장바구니/);
+  assert.match(featureDoc, /저장소 밖|레포 밖|커밋하지/);
+  assert.doesNotMatch(featureDoc, /결제.*자동화.*지원/);
+
+  assert.match(readme, /\| 등기부등본 자동화 \| `iros-registry-automation` \|/);
+  assert.match(readme, /docs\/features\/iros-registry-automation\.md/);
+  assert.match(install, /--skill iros-registry-automation/);
+  assert.match(roadmap, /등기부등본 자동화 스킬 출시/);
+});
+
 test("rhwp-edit skill pins the k-skill-rhwp CLI as the editing engine and disclaims kordoc/rhwp-advanced routing", () => {
   const skill = read(path.join("rhwp-edit", "SKILL.md"));
 
