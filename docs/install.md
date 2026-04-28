@@ -88,7 +88,8 @@ npx --yes skills add <owner/repo> \
   --skill korean-spell-check \
   --skill library-book-search \
   --skill k-schoollunch-menu \
-  --skill korean-character-count
+  --skill korean-character-count \
+  --skill k-skill-cleaner
 ```
 
 인증이 필요한 기능만 부분 설치할 때도 `k-skill-setup` 은 같이 넣는다.

@@ -3342,3 +3342,29 @@ test("README skill table skill-name column entries match real on-disk skill dire
     );
   }
 });
+
+test("repository docs advertise the k-skill-cleaner skill and agent usage sources", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "k-skill-cleaner.md");
+  const skillPath = path.join(repoRoot, "k-skill-cleaner", "SKILL.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected k-skill-cleaner/SKILL.md to exist");
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/k-skill-cleaner.md to exist");
+
+  const skill = read(path.join("k-skill-cleaner", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "k-skill-cleaner.md"));
+
+  assert.match(skill, /^name: k-skill-cleaner$/m);
+  assert.match(skill, /Claude Code/);
+  assert.match(skill, /Codex/);
+  assert.match(skill, /OpenCode/);
+  assert.match(skill, /OpenClaw\/ClawHub/);
+  assert.match(skill, /Hermes Agent/);
+  assert.match(skill, /python3 scripts\/k_skill_cleaner\.py/);
+  assert.match(featureDoc, /인터뷰/);
+  assert.match(featureDoc, /트리거 횟수/);
+  assert.match(readme, /\| K-스킬 클리너 \| `k-skill-cleaner` \|/);
+  assert.match(readme, /\[K-스킬 클리너 가이드\]\(docs\/features\/k-skill-cleaner\.md\)/);
+  assert.match(install, /--skill k-skill-cleaner/);
+});
