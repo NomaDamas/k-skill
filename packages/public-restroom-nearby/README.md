@@ -81,9 +81,11 @@ main().catch((error) => {
 ```
 
 
-Kakao 키가 설정된 경우 기본 Kakao 검색 반경은 1,000m이며 `radiusMeters` 로 조정할 수 있습니다. `maxDistanceMeters` 는 병합 후 전체 결과 필터링에 사용됩니다. CSV 좌표의 실제 건물명/주소를 Kakao `coord2address` 로 보정하려면 `correctCsvWithKakao: true` 를 넘기세요.
+Kakao 키가 설정된 경우 기본 Kakao 검색 반경은 1,000m이며 `radiusMeters` 로 조정할 수 있습니다. `maxDistanceMeters` 는 병합 후 전체 결과 필터링에 사용됩니다. CSV 좌표의 실제 건물명/주소를 Kakao `coord2address` 로 보정하려면 `correctCsvWithKakao: true` 를 넘기세요. 기본 보정 범위는 최종 요청 `limit` 개수로 제한되며, 더 넓게 보정해야 할 때만 `csvCorrectionLimit` 을 명시하세요.
 
 병합 중복 제거는 좌표 50m 이내를 같은 시설로 보고 CSV(Layer 1)를 우선 보존합니다. 지도 링크는 장소명을 URL 인코딩해 공백/괄호/한국어 이름이 좌표 파싱을 깨지 않도록 생성합니다.
+
+Kakao 키워드/주유소 보강은 선택 계층입니다. Kakao Local API가 401/429/5xx 등으로 실패해도 공식 CSV 결과는 반환되며, 실패한 계층은 `result.meta.kakaoErrors` 에 `source`, `status`, `message`, `url` 로 기록됩니다.
 
 거리 제한이 필요하면 `maxDistanceMeters` 를 함께 넘겨서 반경 바깥 결과를 잘라낼 수 있습니다.
 

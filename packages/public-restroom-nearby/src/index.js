@@ -257,7 +257,10 @@ async function fetchKakaoLayerItems(origin, options = {}) {
   const kakaoRestApiKey = resolveKakaoRestApiKey(options);
 
   if (!kakaoRestApiKey || options.includeKakaoSources === false) {
-    return [];
+    return {
+      items: [],
+      errors: []
+    };
   }
 
   const radius = normalizeRadius(options.radiusMeters ?? 1000);
@@ -265,29 +268,66 @@ async function fetchKakaoLayerItems(origin, options = {}) {
   const requests = [];
 
   for (const keyword of KAKAO_RESTROOM_KEYWORDS) {
-    requests.push(fetchKakaoJson("/search/keyword.json", {
-      query: keyword,
+    requests.push({
+      source: SOURCE_KAKAO_KEYWORD,
+      sourceLayer: 2,
+      type: keyword,
+      promise: fetchKakaoJson("/search/keyword.json", {
+        query: keyword,
+        x: origin.longitude,
+        y: origin.latitude,
+        radius,
+        sort: "distance",
+        size
+      }, options)
+    });
+  }
+
+  requests.push({
+    source: SOURCE_KAKAO_GAS_STATION,
+    sourceLayer: 3,
+    type: "주유소 화장실",
+    promise: fetchKakaoJson("/search/category.json", {
+      category_group_code: KAKAO_GAS_STATION_CATEGORY,
       x: origin.longitude,
       y: origin.latitude,
       radius,
       sort: "distance",
       size
-    }, options).then((payload) => ({ payload, source: SOURCE_KAKAO_KEYWORD, sourceLayer: 2, type: keyword })));
+    }, options)
+  });
+
+  const settled = await Promise.allSettled(requests.map((layer) => layer.promise));
+  const items = [];
+  const errors = [];
+
+  for (const [index, result] of settled.entries()) {
+    const layer = requests[index];
+
+    if (result.status === "rejected") {
+      errors.push(normalizeKakaoLayerError(result.reason, layer));
+      continue;
+    }
+
+    items.push(...(result.value?.documents || [])
+      .map((document) => normalizeKakaoPoi(document, origin, layer))
+      .filter(Boolean));
   }
 
-  requests.push(fetchKakaoJson("/search/category.json", {
-    category_group_code: KAKAO_GAS_STATION_CATEGORY,
-    x: origin.longitude,
-    y: origin.latitude,
-    radius,
-    sort: "distance",
-    size
-  }, options).then((payload) => ({ payload, source: SOURCE_KAKAO_GAS_STATION, sourceLayer: 3, type: "주유소 화장실" })));
+  return {
+    items,
+    errors
+  };
+}
 
-  const settled = await Promise.all(requests);
-  return settled.flatMap(({ payload, source, sourceLayer, type }) => (payload?.documents || [])
-    .map((document) => normalizeKakaoPoi(document, origin, { source, sourceLayer, type }))
-    .filter(Boolean));
+function normalizeKakaoLayerError(error, layer) {
+  return {
+    source: layer.source,
+    type: layer.type,
+    status: Number.isInteger(Number(error?.status)) ? Number(error.status) : null,
+    message: String(error?.message || "Kakao layer request failed."),
+    url: error?.url ? String(error.url) : null
+  };
 }
 
 async function fetchKakaoCoord2Address(latitude, longitude, options = {}) {
@@ -330,7 +370,7 @@ async function correctCsvItemsWithKakao(items, options = {}) {
     return items;
   }
 
-  const limit = Math.max(0, Math.min(Number(options.csvCorrectionLimit ?? items.length) || 0, items.length));
+  const limit = Math.max(0, Math.min(Number(options.csvCorrectionLimit ?? options.limit) || 0, items.length));
   const corrected = [...items];
 
   for (let index = 0; index < limit; index += 1) {
@@ -405,8 +445,12 @@ async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
   const csvItems = await correctCsvItemsWithKakao(normalizePublicRestroomRows(dataset.csvText, origin, {
     maxDistanceMeters: options.maxDistanceMeters,
     preferredDistrict: options.preferredDistrict
-  }), options);
-  const kakaoItems = await fetchKakaoLayerItems(origin, options);
+  }), {
+    ...options,
+    limit
+  });
+  const kakaoResult = await fetchKakaoLayerItems(origin, options);
+  const kakaoItems = kakaoResult.items;
   const allItems = mergeAndDeduplicateSources([...csvItems, ...kakaoItems], options);
 
   return {
@@ -423,7 +467,8 @@ async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
       datasetUrl: dataset.datasetUrl,
       region: options.region || null,
       sources: summarizeSources(allItems),
-      kakaoEnabled: Boolean(resolveKakaoRestApiKey(options)) && options.includeKakaoSources !== false
+      kakaoEnabled: Boolean(resolveKakaoRestApiKey(options)) && options.includeKakaoSources !== false,
+      kakaoErrors: kakaoResult.errors
     }
   };
 }

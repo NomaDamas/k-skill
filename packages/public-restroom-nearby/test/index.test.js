@@ -1,4 +1,4 @@
-const test = require("node:test");
+const { afterEach, beforeEach, test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -16,6 +16,18 @@ const fixturesDir = path.join(__dirname, "fixtures");
 const anchorSearchHtml = fs.readFileSync(path.join(fixturesDir, "anchor-search.html"), "utf8");
 const anchorPanel = JSON.parse(fs.readFileSync(path.join(fixturesDir, "anchor-panel.json"), "utf8"));
 const csvFixture = fs.readFileSync(path.join(fixturesDir, "public-restrooms-seoul.csv"), "utf8");
+const originalKakaoRestApiKey = process.env.KAKAO_REST_API_KEY;
+const originalKakaoRestApiKeyAlt = process.env.KAKAO_REST_APIKEY;
+
+beforeEach(() => {
+  delete process.env.KAKAO_REST_API_KEY;
+  delete process.env.KAKAO_REST_APIKEY;
+});
+
+afterEach(() => {
+  restoreEnv("KAKAO_REST_API_KEY", originalKakaoRestApiKey);
+  restoreEnv("KAKAO_REST_APIKEY", originalKakaoRestApiKeyAlt);
+});
 
 test("parseCoordinateQuery recognizes latitude/longitude pairs", () => {
   assert.deepEqual(parseCoordinateQuery("37.573713, 126.978338"), {
@@ -393,6 +405,77 @@ test("searchNearbyPublicRestroomsByCoordinates can correct CSV display names and
   assert.equal(result.items[0].source, "csv");
 });
 
+test("searchNearbyPublicRestroomsByCoordinates only corrects the default visible CSV window", async () => {
+  const coord2addressCalls = [];
+  const fetchImpl = async (url) => {
+    const resolved = String(url);
+
+    if (resolved === "https://file.localdata.go.kr/file/download/public_restroom_info/info") {
+      return makeResponse(Buffer.from(csvFixture, "utf8"));
+    }
+
+    if (resolved.startsWith("https://dapi.kakao.com/v2/local/geo/coord2address.json?")) {
+      coord2addressCalls.push(resolved);
+      return makeResponse({ documents: [] }, "application/json");
+    }
+
+    if (resolved.includes("keyword.json") || resolved.includes("category.json")) {
+      return makeResponse({ documents: [] }, "application/json");
+    }
+
+    throw new Error(`unexpected url: ${resolved}`);
+  };
+
+  const result = await searchNearbyPublicRestroomsByCoordinates({
+    latitude: 37.57371315593711,
+    longitude: 126.97833785777944,
+    limit: 1,
+    kakaoRestApiKey: "test-key",
+    correctCsvWithKakao: true,
+    includeKakaoSources: false,
+    fetchImpl
+  });
+
+  assert.equal(result.items.length, 1);
+  assert.equal(coord2addressCalls.length, 1);
+});
+
+test("searchNearbyPublicRestroomsByCoordinates returns CSV results with warnings when optional Kakao layers fail", async () => {
+  const fetchImpl = async (url) => {
+    const resolved = String(url);
+
+    if (resolved === "https://file.localdata.go.kr/file/download/public_restroom_info/info") {
+      return makeResponse(Buffer.from(csvFixture, "utf8"));
+    }
+
+    if (resolved.includes("keyword.json") || resolved.includes("category.json")) {
+      return { ok: false, status: 429 };
+    }
+
+    throw new Error(`unexpected url: ${resolved}`);
+  };
+
+  const result = await searchNearbyPublicRestroomsByCoordinates({
+    latitude: 37.57371315593711,
+    longitude: 126.97833785777944,
+    limit: 1,
+    kakaoRestApiKey: "test-key",
+    fetchImpl
+  });
+
+  assert.equal(result.items.length, 1);
+  assert.equal(result.items[0].source, "csv");
+  assert.equal(result.meta.sources.csv, 3);
+  assert.equal(result.meta.sources.kakaoKeyword, 0);
+  assert.equal(result.meta.sources.kakaoGasStation, 0);
+  assert.equal(result.meta.kakaoErrors.length, 3);
+  assert.deepEqual(
+    result.meta.kakaoErrors.map((error) => error.source),
+    ["kakao_keyword", "kakao_keyword", "kakao_category_gas_station"]
+  );
+  assert.ok(result.meta.kakaoErrors.every((error) => error.status === 429));
+});
+
 test("Kakao map links encode special place names before coordinates", () => {
   const items = normalizePublicRestroomRows(`관리번호,구분명,화장실명,소재지도로명주소,WGS84위도,WGS84경도\n1,개방화장실,양재천 영동2교(남단) 개방화장실,서울특별시 강남구,37.477,127.035\n`, {
     latitude: 37.477,
@@ -474,4 +557,13 @@ function makeResponse(body, contentType = "text/csv;charset=UTF-8") {
       return Buffer.isBuffer(body) ? body : Buffer.from(String(body), "utf8");
     }
   };
+}
+
+function restoreEnv(name, value) {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+
+  process.env[name] = value;
 }
