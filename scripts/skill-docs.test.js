@@ -3023,16 +3023,21 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
 test("iros-registry-automation skill documents safe IROS registry certificate automation and upstream credit", () => {
   const skillPath = path.join(repoRoot, "iros-registry-automation", "SKILL.md");
   const featureDocPath = path.join(repoRoot, "docs", "features", "iros-registry-automation.md");
+  const upstreamPinPath = path.join(repoRoot, "iros-registry-automation", "scripts", "upstream.pin");
 
   assert.ok(fs.existsSync(skillPath), "expected iros-registry-automation/SKILL.md to exist");
   assert.ok(fs.existsSync(featureDocPath), "expected iros-registry-automation feature doc to exist");
+  assert.ok(fs.existsSync(upstreamPinPath), "expected iros-registry-automation/scripts/upstream.pin to exist");
 
   const skill = read(path.join("iros-registry-automation", "SKILL.md"));
   const featureDoc = read(path.join("docs", "features", "iros-registry-automation.md"));
+  const upstreamPin = read(path.join("iros-registry-automation", "scripts", "upstream.pin")).trim();
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
   const sources = read(path.join("docs", "sources.md"));
   const roadmap = read(path.join("docs", "roadmap.md"));
+
+  assert.match(upstreamPin, /^[0-9a-f]{40}$/, "upstream pin should be a reviewed 40-character Git SHA");
 
   assert.match(skill, /^---\nname: iros-registry-automation\n/);
   assert.match(skill, /등기부등본|등기사항증명서/);
@@ -3057,6 +3062,13 @@ test("iros-registry-automation skill documents safe IROS registry certificate au
   assert.match(skill, /https:\/\/github\.com\/challengekim\/iros-registry-automation/);
   assert.match(skill, /MIT/);
   assert.match(skill, /원 저작자|원저작자|upstream|참고 구현/);
+  assert.match(skill, new RegExp(`git checkout ${upstreamPin}`), "skill install flow should check out the pinned upstream SHA");
+  assert.match(skill, /scripts\/upstream\.pin/, "skill should document where the reviewed upstream pin lives");
+  assert.match(skill, /pin update|핀 업데이트|업스트림 핀|review/i, "skill should require review before updating the pin");
+  assert.match(skill, /\$workdir\/corp-input\.json/, "skill should put real corporate inputs under the private workdir");
+  assert.match(skill, /\$workdir\/downloads/, "skill should point save_dir/download output at the private workdir");
+  assert.match(skill, /config\.json[\s\S]*save_dir[\s\S]*\$workdir/, "skill should wire config.json save_dir to the private workdir");
+  assert.match(skill, /upstream repo `data\/`|upstream `data\/`|data\/.*실제/, "skill should warn not to use upstream data/ for real inputs");
 
   for (const doc of [featureDoc, sources]) {
     assert.match(doc, /challengekim/);
@@ -3064,6 +3076,9 @@ test("iros-registry-automation skill documents safe IROS registry certificate au
     assert.match(doc, /인터넷등기소|IROS|iros\.go\.kr/);
   }
 
+  assert.match(featureDoc, new RegExp(`git checkout ${upstreamPin}`), "feature doc install flow should check out the pinned upstream SHA");
+  assert.match(featureDoc, /scripts\/upstream\.pin/, "feature doc should document where the reviewed upstream pin lives");
+  assert.match(featureDoc, /pin update|핀 업데이트|업스트림 핀|review/i, "feature doc should require review before updating the pin");
   assert.match(featureDoc, /로그인[\s\S]*수동|사용자.*직접.*로그인/);
   assert.match(featureDoc, /결제[\s\S]*수동|사용자.*직접.*결제/);
   assert.match(featureDoc, /법인[\s\S]*장바구니[\s\S]*열람[\s\S]*저장/);
@@ -3073,6 +3088,10 @@ test("iros-registry-automation skill documents safe IROS registry certificate au
   assert.match(featureDoc, /i?ros_cart_by_corpnum\.py|법인등록번호 기반/);
   assert.match(featureDoc, /i?ros_cart_realty\.py|부동산 장바구니/);
   assert.match(featureDoc, /저장소 밖|레포 밖|커밋하지/);
+  assert.match(featureDoc, /\$workdir\/corp-input\.json/, "feature doc should put real corporate inputs under the private workdir");
+  assert.match(featureDoc, /\$workdir\/downloads/, "feature doc should point save_dir/download output at the private workdir");
+  assert.match(featureDoc, /config\.json[\s\S]*save_dir[\s\S]*\$workdir/, "feature doc should wire config.json save_dir to the private workdir");
+  assert.match(featureDoc, /upstream repo `data\/`|upstream `data\/`|data\/.*실제/, "feature doc should warn not to use upstream data/ for real inputs");
   assert.doesNotMatch(featureDoc, /결제.*자동화.*지원/);
 
   assert.match(readme, /\| 등기부등본 자동화 \| `iros-registry-automation` \|/);

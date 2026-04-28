@@ -22,15 +22,20 @@
 
 ## 설치
 
+이 스킬은 로그인·인증·결제 인접 브라우저 자동화를 mutable upstream `HEAD`에 맡기지 않는다. 실행 전 이 저장소의 `iros-registry-automation/scripts/upstream.pin`에 적힌 reviewed SHA로 checkout한다.
+
 ```bash
 git clone https://github.com/challengekim/iros-registry-automation.git
 cd iros-registry-automation
+git checkout 7c6924b2ff88d693a12556659188cb91041e5097
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 playwright install chromium
 cp config.json.example config.json
 ```
+
+업스트림 핀 업데이트는 새 upstream diff 검토가 필요한 보안/신뢰 경계 변경이다. `scripts/upstream.pin`과 설치 예시의 `git checkout` SHA를 같은 PR에서 함께 갱신한다.
 
 Chrome/Chromium, Python 3.10+, IROS 로그인 수단, 결제 카드, TouchEn nxKey가 필요하다.
 
@@ -41,6 +46,50 @@ Chrome/Chromium, Python 3.10+, IROS 로그인 수단, 결제 카드, TouchEn nxK
 ```bash
 workdir="$(mktemp -d "${TMPDIR:-/tmp}/iros-registry.XXXXXX")"
 chmod 700 "$workdir"
+mkdir -p "$workdir/downloads" "$workdir/logs" "$workdir/output"
+```
+
+실제 입력은 upstream repo `data/`가 아니라 `$workdir/corp-input.json`, `$workdir/realty-input.json`처럼 저장소 밖에 둔다. upstream `data/` 디렉터리는 샘플 형식 확인용으로만 보고, 실제 법인등록번호·주소·동호수 원문을 넣지 않는다.
+
+```bash
+cat > "$workdir/corp-input.json" <<'JSON'
+{
+  "1101111234567": "예시 주식회사",
+  "1101117654321": "샘플 주식회사"
+}
+JSON
+```
+
+`config.json`의 입력·로그·save_dir 관련 값을 `$workdir`로 돌리면 upstream 스크립트를 실행해도 저장소 하위 `data/`, `logs/`, `output/`에 실제 업무 정보가 남지 않는다.
+
+```bash
+python3 - "$workdir" <<'PY'
+import json
+import pathlib
+import sys
+
+workdir = pathlib.Path(sys.argv[1])
+config = json.loads(pathlib.Path("config.json").read_text())
+config.update({
+    "corpnum_list": str(workdir / "corp-input.json"),
+    "companies_list": str(workdir / "companies-input.json"),
+    "realty_list": str(workdir / "realty-input.json"),
+    "save_dir": str(workdir / "downloads"),
+    "realty_save_dir": str(workdir / "downloads" / "realty"),
+    "pdf_dir": str(workdir / "downloads"),
+    "report_output": str(workdir / "output" / "corp-report.xlsx"),
+    "extract_output": str(workdir / "output" / "corp-extract.json"),
+    "bizno_cache": str(workdir / "logs" / "bizno-cache.json"),
+    "bizno_results": str(workdir / "logs" / "bizno-results.json"),
+    "realty_cart_log": str(workdir / "logs" / "cart-realty-log.json"),
+    "realty_download_log": str(workdir / "logs" / "download-realty-log.json"),
+    "cart_log": str(workdir / "logs" / "cart-log.json"),
+    "cart_corpnum_log": str(workdir / "logs" / "cart-corpnum-log.json"),
+    "download_log": str(workdir / "logs" / "download-log.json"),
+    "download_temp": str(workdir / "tmp-downloads"),
+})
+pathlib.Path("config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n")
+PY
 ```
 
 ## 법인등기부등본 흐름
@@ -56,6 +105,8 @@ chmod 700 "$workdir"
 python iros_cart_by_corpnum.py
 python iros_download.py
 ```
+
+위 명령은 로컬 `config.json`을 읽으므로, 먼저 `corpnum_list`와 `save_dir`가 `$workdir/corp-input.json`, `$workdir/downloads`를 가리키는지 확인한다.
 
 ## 부동산등기부등본 흐름
 
