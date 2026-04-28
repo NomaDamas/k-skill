@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from k_skill_cleaner import (
     AGENT_USAGE_SOURCES,
@@ -84,6 +85,54 @@ class KSkillCleanerTest(unittest.TestCase):
             self.assertEqual(counts["korean-law-search"], 0)
             self.assertEqual(counts["fallback-skill"], 1)
             self.assertEqual(counts["old-fallback"], 0)
+
+    def test_collect_skill_usage_streams_log_files_without_reading_whole_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "codex.jsonl"
+            log_path.write_text(json.dumps({"skill": "kbo-results"}) + "\n", encoding="utf-8")
+
+            with patch.object(Path, "read_text", side_effect=AssertionError("collect_skill_usage must stream logs")):
+                counts = collect_skill_usage([log_path], ["kbo-results", "unused"])
+
+            self.assertEqual(counts["kbo-results"], 1)
+            self.assertEqual(counts["unused"], 0)
+
+    def test_cli_reports_usage_json_provenance_and_window_caveat(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            skill_dir = root / "kbo-results"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text("---\nname: kbo-results\n", encoding="utf-8")
+            usage_json = root / "usage.json"
+            usage_json.write_text(json.dumps({"kbo-results": 3}), encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import sys; "
+                        "from k_skill_cleaner import main; "
+                        "sys.exit(main(sys.argv[1:]))"
+                    ),
+                    "--skills-root",
+                    str(root),
+                    "--usage-json",
+                    str(usage_json),
+                    "--days",
+                    "90",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            report = json.loads(result.stdout)
+
+            self.assertTrue(report["usage_json"]["applied"])
+            self.assertEqual(report["usage_json"]["path"], str(usage_json))
+            self.assertIn("pre-windowed", report["usage_json"]["caveat"])
+            self.assertEqual(report["scanned_logs"]["count"], 0)
+            self.assertIn("usage JSON", report["time_window"]["scope"])
 
     def test_ranks_deletion_candidates_with_interview_and_usage_reasons(self):
         candidates = rank_cleanup_candidates(

@@ -31,4 +31,4 @@ python3 scripts/k_skill_cleaner.py \
   --keep k-skill-setup,k-skill-cleaner
 ```
 
-`--days 90`은 최근 90일 window만 카운트한다. timestamp가 없는 로그 줄은 파일 mtime으로 포함/제외를 결정한다. 출력은 파일 삭제를 하지 않는 JSON 리포트다. `zero_triggers`나 `low_usage`만 있는 항목은 바로 삭제하지 말고 검토 후보로 남긴다. `interview_never_use`가 포함된 항목은 사용자의 의도가 확인된 삭제 후보로 보고한다.
+`--days 90`은 최근 90일 window만 카운트한다. timestamp가 없는 로그 줄은 파일 mtime으로 포함/제외를 결정한다. 단, `--usage-json`으로 넣은 값은 이미 집계된 count로 간주하므로 `--days`/`--since`로 다시 필터링하지 않는다. 같은 기간의 통계를 export하거나 직접 전처리한 JSON을 넣어야 한다. 출력은 `usage_json`과 `scanned_logs` provenance를 포함하고, 파일 삭제를 하지 않는 JSON 리포트다. `zero_triggers`나 `low_usage`만 있는 항목은 바로 삭제하지 말고 검토 후보로 남긴다. `interview_never_use`가 포함된 항목은 사용자의 의도가 확인된 삭제 후보로 보고한다.

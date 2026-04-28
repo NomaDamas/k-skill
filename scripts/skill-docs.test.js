@@ -3281,6 +3281,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["네이버 뉴스 검색", "naver-news-search"],
   ["한국어 글자 수 세기", "korean-character-count"],
   ["한국어 유행어 글쓰기", "korean-slang-writing"],
+  ["K-스킬 클리너", "k-skill-cleaner"],
 ];
 
 test("README skill table header advertises the new 스킬 이름 column (issue #165)", () => {
@@ -3295,6 +3296,11 @@ test("README skill table header advertises the new 스킬 이름 column (issue #
 
 test("README skill table includes inline-code skill names for every documented row (issue #165)", () => {
   const readme = read("README.md");
+
+  assert.ok(
+    README_SKILL_NAME_COLUMN_MAPPING.some(([, skillName]) => skillName === "k-skill-cleaner"),
+    "expected k-skill-cleaner to be covered by the central README skill-name mapping fixture",
+  );
 
   for (const [label, skillName] of README_SKILL_NAME_COLUMN_MAPPING) {
     const escapedLabel = escapeRegex(label);

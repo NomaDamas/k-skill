@@ -53,12 +53,16 @@ For agent exports or hand-curated counts, pass a JSON object mapping skill name 
 python3 scripts/k_skill_cleaner.py --skills-root . --usage-json usage-counts.json --days 90
 ```
 
+`--days` and `--since` filter scanned log records only. `--usage-json` values are already-aggregated counts, so prepare/export that JSON for the same time window before passing it to the helper.
+
 The helper prints JSON with:
 
 - `skill_count`: number of root-level skills discovered.
 - `candidates`: ranked `remove` or `review` candidates with `trigger_count` and `reasons`.
 - `agent_usage_sources`: the agent-specific paths and caveats above.
 - `time_window`: the effective `--since`/`--days` cutoff and mtime fallback caveat.
+- `usage_json`: whether imported counts were merged and the pre-windowing caveat.
+- `scanned_logs`: how many readable log files were scanned and which paths contributed best-effort evidence.
 - `safety`: reminder that no files were deleted.
 
 ## Recommendation policy

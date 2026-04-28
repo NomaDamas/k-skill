@@ -228,17 +228,21 @@ def collect_skill_usage(
         path = Path(raw_path).expanduser()
         if not path.is_file():
             continue
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            parsed: Any | None = None
-            try:
-                parsed = json.loads(line)
-            except json.JSONDecodeError:
-                parsed = None
-            if not _line_is_in_window(path, line, parsed, since_dt):
-                continue
-            for skill in skills:
-                if (parsed is not None and _json_mentions_skill(parsed, skill)) or _line_mentions_skill(line, skill):
-                    counts[skill] += 1
+        try:
+            with path.open(encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    parsed: Any | None = None
+                    try:
+                        parsed = json.loads(line)
+                    except json.JSONDecodeError:
+                        parsed = None
+                    if not _line_is_in_window(path, line, parsed, since_dt):
+                        continue
+                    for skill in skills:
+                        if (parsed is not None and _json_mentions_skill(parsed, skill)) or _line_mentions_skill(line, skill):
+                            counts[skill] += 1
+        except OSError:
+            continue
     return counts
 
 
@@ -365,6 +369,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.scan_default_logs:
         log_paths.extend(expand_default_log_paths())
     since = _resolve_since(args.days, args.since)
+    scanned_log_paths = sorted({str(path.expanduser()) for path in log_paths if path.expanduser().is_file()})
     log_counts = collect_skill_usage(log_paths, skill_names, since=since)
     for skill, count in log_counts.items():
         usage_counts[skill] = usage_counts.get(skill, 0) + count
@@ -382,7 +387,18 @@ def main(argv: list[str] | None = None) -> int:
         "time_window": {
             "since": since.isoformat() if since is not None else None,
             "days": args.days if args.since is None else None,
+            "scope": "Applies to scanned logs only; usage JSON counts are merged as already aggregated/pre-windowed input.",
             "fallback": "Untimestamped log lines are included or skipped by log file mtime.",
+        },
+        "usage_json": {
+            "applied": args.usage_json is not None,
+            "path": args.usage_json,
+            "caveat": "Usage JSON counts are treated as already aggregated/pre-windowed and are not filtered by --days or --since.",
+        },
+        "scanned_logs": {
+            "count": len(scanned_log_paths),
+            "paths": scanned_log_paths,
+            "caveat": "Unreadable log files are skipped; trigger detection is best-effort.",
         },
         "safety": "No files were deleted. Review candidates and remove skills in a separate explicit edit.",
     }
