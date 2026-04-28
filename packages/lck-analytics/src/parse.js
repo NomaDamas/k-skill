@@ -38,8 +38,7 @@ function normalizeDateInput(value) {
   }
 
   const [year, month, day] = [match[1], match[2], match[3]];
-  const candidate = new Date(`${year}-${month}-${day}T00:00:00+09:00`);
-  if (Number.isNaN(candidate.getTime())) {
+  if (!isValidCalendarDate(year, month, day)) {
     throw new Error("date must be a valid Date or YYYY-MM-DD string.");
   }
 
@@ -49,6 +48,40 @@ function normalizeDateInput(value) {
     day,
     isoDate: `${year}-${month}-${day}`,
   };
+}
+
+function isValidCalendarDate(year, month, day) {
+  const numericYear = Number(year);
+  const numericMonth = Number(month);
+  const numericDay = Number(day);
+
+  if (!Number.isInteger(numericYear) || !Number.isInteger(numericMonth) || !Number.isInteger(numericDay)) {
+    return false;
+  }
+
+  if (numericMonth < 1 || numericMonth > 12 || numericDay < 1) {
+    return false;
+  }
+
+  const daysInMonth = [
+    31,
+    isLeapYear(numericYear) ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ][numericMonth - 1];
+  return numericDay <= daysInMonth;
+}
+
+function isLeapYear(year) {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
 
 function eventToKoreaDateTime(startTime) {
