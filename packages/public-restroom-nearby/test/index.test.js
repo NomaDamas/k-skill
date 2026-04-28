@@ -29,6 +29,15 @@ afterEach(() => {
   restoreEnv("KAKAO_REST_APIKEY", originalKakaoRestApiKeyAlt);
 });
 
+test("merge priority comparator body remains consistently indented", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../src/index.js"), "utf8");
+
+  assert.match(
+    source,
+    /\.sort\(\(left, right\) => \{\n {6}if \(left\.sourceLayer !== right\.sourceLayer\) \{\n {8}return left\.sourceLayer - right\.sourceLayer;\n {6}\}\n\n {6}return left\.distanceMeters - right\.distanceMeters;\n {4}\}\);/
+  );
+});
+
 test("parseCoordinateQuery recognizes latitude/longitude pairs", () => {
   assert.deepEqual(parseCoordinateQuery("37.573713, 126.978338"), {
     latitude: 37.573713,

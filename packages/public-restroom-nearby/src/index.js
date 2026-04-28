@@ -410,12 +410,12 @@ function mergeAndDeduplicateSources(sourceItems, options = {}) {
   const sortedForPriority = sourceItems
     .filter((item) => (maxDistanceMeters === null ? true : item.distanceMeters <= maxDistanceMeters))
     .sort((left, right) => {
-    if (left.sourceLayer !== right.sourceLayer) {
-      return left.sourceLayer - right.sourceLayer;
-    }
+      if (left.sourceLayer !== right.sourceLayer) {
+        return left.sourceLayer - right.sourceLayer;
+      }
 
-    return left.distanceMeters - right.distanceMeters;
-  });
+      return left.distanceMeters - right.distanceMeters;
+    });
   const kept = [];
 
   for (const item of sortedForPriority) {
