@@ -20,6 +20,7 @@ const KAKAO_GAS_STATION_CATEGORY = "OL7";
 const SOURCE_CSV = "csv";
 const SOURCE_KAKAO_KEYWORD = "kakao_keyword";
 const SOURCE_KAKAO_GAS_STATION = "kakao_category_gas_station";
+const SOURCE_KAKAO_COORD2ADDRESS = "kakao_coord2address";
 const DEFAULT_BROWSER_HEADERS = {
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "accept-language": "ko,en-US;q=0.9,en;q=0.8",
@@ -367,19 +368,34 @@ function applyKakaoAddressCorrection(item, payload) {
 
 async function correctCsvItemsWithKakao(items, options = {}) {
   if (!resolveKakaoRestApiKey(options) || options.correctCsvWithKakao !== true) {
-    return items;
+    return {
+      items,
+      errors: []
+    };
   }
 
   const limit = Math.max(0, Math.min(Number(options.csvCorrectionLimit ?? options.limit) || 0, items.length));
   const corrected = [...items];
+  const errors = [];
 
   for (let index = 0; index < limit; index += 1) {
     const item = corrected[index];
-    const payload = await fetchKakaoCoord2Address(item.latitude, item.longitude, options);
-    corrected[index] = applyKakaoAddressCorrection(item, payload);
+
+    try {
+      const payload = await fetchKakaoCoord2Address(item.latitude, item.longitude, options);
+      corrected[index] = applyKakaoAddressCorrection(item, payload);
+    } catch (error) {
+      errors.push(normalizeKakaoLayerError(error, {
+        source: SOURCE_KAKAO_COORD2ADDRESS,
+        type: "CSV address correction"
+      }));
+    }
   }
 
-  return corrected;
+  return {
+    items: corrected,
+    errors
+  };
 }
 
 function areSameFacility(left, right, thresholdMeters = 50) {
@@ -442,13 +458,14 @@ async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
 
   const origin = { latitude, longitude };
   const dataset = await fetchDatasetCsv(options);
-  const csvItems = await correctCsvItemsWithKakao(normalizePublicRestroomRows(dataset.csvText, origin, {
+  const csvResult = await correctCsvItemsWithKakao(normalizePublicRestroomRows(dataset.csvText, origin, {
     maxDistanceMeters: options.maxDistanceMeters,
     preferredDistrict: options.preferredDistrict
   }), {
     ...options,
     limit
   });
+  const csvItems = csvResult.items;
   const kakaoResult = await fetchKakaoLayerItems(origin, options);
   const kakaoItems = kakaoResult.items;
   const allItems = mergeAndDeduplicateSources([...csvItems, ...kakaoItems], options);
@@ -468,7 +485,7 @@ async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
       region: options.region || null,
       sources: summarizeSources(allItems),
       kakaoEnabled: Boolean(resolveKakaoRestApiKey(options)) && options.includeKakaoSources !== false,
-      kakaoErrors: kakaoResult.errors
+      kakaoErrors: [...csvResult.errors, ...kakaoResult.errors]
     }
   };
 }

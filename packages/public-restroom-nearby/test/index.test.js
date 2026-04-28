@@ -440,6 +440,45 @@ test("searchNearbyPublicRestroomsByCoordinates only corrects the default visible
   assert.equal(coord2addressCalls.length, 1);
 });
 
+test("searchNearbyPublicRestroomsByCoordinates keeps CSV results when coord2address correction fails", async () => {
+  const fetchImpl = async (url) => {
+    const resolved = String(url);
+
+    if (resolved === "https://file.localdata.go.kr/file/download/public_restroom_info/info") {
+      return makeResponse(Buffer.from(csvFixture, "utf8"));
+    }
+
+    if (resolved.startsWith("https://dapi.kakao.com/v2/local/geo/coord2address.json?")) {
+      return { ok: false, status: 429 };
+    }
+
+    throw new Error(`unexpected url: ${resolved}`);
+  };
+
+  const result = await searchNearbyPublicRestroomsByCoordinates({
+    latitude: 37.57371315593711,
+    longitude: 126.97833785777944,
+    limit: 1,
+    kakaoRestApiKey: "test-key",
+    correctCsvWithKakao: true,
+    includeKakaoSources: false,
+    fetchImpl
+  });
+
+  assert.equal(result.items.length, 1);
+  assert.equal(result.items[0].name, "통인시장 고객만족센터");
+  assert.equal(result.items[0].address, "서울특별시 종로구 자하문로 15길 18");
+  assert.equal(result.items[0].source, "csv");
+  assert.equal(result.meta.kakaoErrors.length, 1);
+  assert.deepEqual(result.meta.kakaoErrors[0], {
+    source: "kakao_coord2address",
+    type: "CSV address correction",
+    status: 429,
+    message: "Request failed with 429 for https://dapi.kakao.com/v2/local/geo/coord2address.json?x=126.96995&y=37.58077&input_coord=WGS84",
+    url: "https://dapi.kakao.com/v2/local/geo/coord2address.json?x=126.96995&y=37.58077&input_coord=WGS84"
+  });
+});
+
 test("searchNearbyPublicRestroomsByCoordinates returns CSV results with warnings when optional Kakao layers fail", async () => {
   const fetchImpl = async (url) => {
     const resolved = String(url);
