@@ -3281,6 +3281,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["네이버 뉴스 검색", "naver-news-search"],
   ["한국어 글자 수 세기", "korean-character-count"],
   ["한국어 유행어 글쓰기", "korean-slang-writing"],
+  ["K-스킬 클리너", "k-skill-cleaner"],
 ];
 
 test("README skill table header advertises the new 스킬 이름 column (issue #165)", () => {
@@ -3295,6 +3296,11 @@ test("README skill table header advertises the new 스킬 이름 column (issue #
 
 test("README skill table includes inline-code skill names for every documented row (issue #165)", () => {
   const readme = read("README.md");
+
+  assert.ok(
+    README_SKILL_NAME_COLUMN_MAPPING.some(([, skillName]) => skillName === "k-skill-cleaner"),
+    "expected k-skill-cleaner to be covered by the central README skill-name mapping fixture",
+  );
 
   for (const [label, skillName] of README_SKILL_NAME_COLUMN_MAPPING) {
     const escapedLabel = escapeRegex(label);
@@ -3341,4 +3347,35 @@ test("README skill table skill-name column entries match real on-disk skill dire
       `expected ${skillName}/SKILL.md frontmatter name to match the directory name (validate-skills.sh invariant)`,
     );
   }
+});
+
+test("repository docs advertise the k-skill-cleaner skill and agent usage sources", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "k-skill-cleaner.md");
+  const skillPath = path.join(repoRoot, "k-skill-cleaner", "SKILL.md");
+  const skillLocalHelperPath = path.join(repoRoot, "k-skill-cleaner", "scripts", "k_skill_cleaner.py");
+
+  assert.ok(fs.existsSync(skillPath), "expected k-skill-cleaner/SKILL.md to exist");
+  assert.ok(fs.existsSync(skillLocalHelperPath), "expected k-skill-cleaner/scripts/k_skill_cleaner.py to be included in standalone skill installs");
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/k-skill-cleaner.md to exist");
+
+  const skill = read(path.join("k-skill-cleaner", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "k-skill-cleaner.md"));
+
+  assert.match(skill, /^name: k-skill-cleaner$/m);
+  assert.match(skill, /Claude Code/);
+  assert.match(skill, /Codex/);
+  assert.match(skill, /OpenCode/);
+  assert.match(skill, /OpenClaw\/ClawHub/);
+  assert.match(skill, /Hermes Agent/);
+  assert.match(skill, /python3 scripts\/k_skill_cleaner\.py/);
+  assert.match(skill, /--days 90/);
+  assert.match(featureDoc, /k-skill-cleaner\/scripts\/k_skill_cleaner\.py/);
+  assert.match(featureDoc, /--days 90/);
+  assert.match(featureDoc, /인터뷰/);
+  assert.match(featureDoc, /트리거 횟수/);
+  assert.match(readme, /\| K-스킬 클리너 \| `k-skill-cleaner` \|/);
+  assert.match(readme, /\[K-스킬 클리너 가이드\]\(docs\/features\/k-skill-cleaner\.md\)/);
+  assert.match(install, /--skill k-skill-cleaner/);
 });
