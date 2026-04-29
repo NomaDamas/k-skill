@@ -32,6 +32,21 @@ function shouldVerifySessionOnEmpty(commandName, options = {}) {
   return commandName === "portfolioPositions" || commandName === "watchlistList";
 }
 
+function isConfirmedInvalidSession(doctor) {
+  return doctor?.data?.session?.valid === false;
+}
+
+function buildSessionExpiredError(commandName, result, doctor, emptyKind) {
+  return new TossSessionExpiredError(
+    `tossctl ${commandName} returned ${emptyKind} while session is invalid. Run \`tossctl auth login\`.`,
+    {
+      commandName,
+      stderr: String(result.stderr || "").trim(),
+      doctor: doctor.data
+    }
+  );
+}
+
 function enrichQuote403Message(commandName, detail) {
   const text = String(detail || "");
   const isQuote = commandName === "quoteGet" || commandName === "quoteBatch";
@@ -56,6 +71,21 @@ async function checkSession(options = {}) {
   return result;
 }
 
+async function getConfirmedInvalidSession(options = {}) {
+  try {
+    const doctor = await checkSession(options);
+    if (isConfirmedInvalidSession(doctor)) {
+      return doctor;
+    }
+  } catch {
+    // Treat doctor execution/parsing failures as inconclusive. Empty portfolio
+    // and watchlist responses should only become TossSessionExpiredError when
+    // auth doctor returns parsed data that explicitly confirms invalid session.
+  }
+
+  return null;
+}
+
 async function runReadOnlyCommand(commandName, options = {}) {
   const command = buildReadOnlyCommand(commandName, options);
 
@@ -67,20 +97,19 @@ async function runReadOnlyCommand(commandName, options = {}) {
       maxBuffer: options.maxBuffer || 1024 * 1024
     });
 
+    if (shouldVerifySessionOnEmpty(commandName, options) && !String(result.stdout || "").trim()) {
+      const doctor = await getConfirmedInvalidSession(options);
+      if (doctor) {
+        throw buildSessionExpiredError(commandName, result, doctor, "empty output");
+      }
+    }
+
     const parsed = parseJsonOutput(result.stdout, commandName);
 
     if (shouldVerifySessionOnEmpty(commandName, options) && Array.isArray(parsed.data) && parsed.data.length === 0) {
-      const doctor = await checkSession(options);
-      const valid = Boolean(doctor?.data?.session?.valid);
-      if (!valid) {
-        throw new TossSessionExpiredError(
-          `tossctl ${commandName} returned empty array while session is invalid. Run \`tossctl auth login\`.`,
-          {
-            commandName,
-            stderr: String(result.stderr || "").trim(),
-            doctor: doctor.data
-          }
-        );
+      const doctor = await getConfirmedInvalidSession(options);
+      if (doctor) {
+        throw buildSessionExpiredError(commandName, result, doctor, "empty array");
       }
     }
 
