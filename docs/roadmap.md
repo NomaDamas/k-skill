@@ -22,6 +22,7 @@
 - 한국 개인정보처리방침·이용약관 스킬 출시 (kimlawtech/korean-privacy-terms Apache-2.0 업스트림 기반 thin wrapper)
 - 한국 부동산 실거래가 조회 스킬 출시
 - LH 청약 공고문 조회 스킬 출시
+- 법원 경매 부동산 매각공고 조회 스킬 출시 (court-auction-notice-search v1: 매각공고+사건번호 직조회 MVP)
 - 의약품 안전 체크 스킬 출시
 - 식품 안전 체크 스킬 출시
 - 장학금 검색 및 조회 스킬 출시

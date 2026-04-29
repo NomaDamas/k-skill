@@ -1,0 +1,20 @@
+{
+  "status": 200,
+  "message": "정상",
+  "timestamp": 1777447077355,
+  "errors": null,
+  "data": {
+    "result": [
+      { "cortOfcCd": "B000210", "cortOfcNm": "서울중앙지방법원", "cortSptNm": "서울중앙지방법원" },
+      { "cortOfcCd": "B000211", "cortOfcNm": "서울동부지방법원", "cortSptNm": "서울동부지방법원" },
+      { "cortOfcCd": "B000215", "cortOfcNm": "서울서부지방법원", "cortSptNm": "서울서부지방법원" },
+      { "cortOfcCd": "B000212", "cortOfcNm": "서울남부지방법원", "cortSptNm": "서울남부지방법원" },
+      { "cortOfcCd": "B000213", "cortOfcNm": "서울북부지방법원", "cortSptNm": "서울북부지방법원" },
+      { "cortOfcCd": "B000214", "cortOfcNm": "의정부지방법원", "cortSptNm": "의정부지방법원" },
+      { "cortOfcCd": "B214807", "cortOfcNm": "고양지원", "cortSptNm": "고양지원" },
+      { "cortOfcCd": "B000240", "cortOfcNm": "인천지방법원", "cortSptNm": "인천지방법원" },
+      { "cortOfcCd": "B000250", "cortOfcNm": "수원지방법원", "cortSptNm": "수원지방법원" }
+    ]
+  },
+  "token": null
+}

@@ -90,6 +90,7 @@ npx --yes skills add <owner/repo> \
   --skill library-book-search \
   --skill k-schoollunch-menu \
   --skill korean-character-count \
+  --skill court-auction-notice-search \
   --skill k-skill-cleaner
 ```
 
@@ -274,7 +275,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli
+npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search
 export NODE_PATH="$(npm root -g)"
 ```
 

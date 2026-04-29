@@ -1,0 +1,41 @@
+{
+  "name": "court-auction-notice-search",
+  "version": "0.1.0",
+  "description": "Korean court auction (대법원경매정보) real estate sale notice and case lookup with direct HTTP + Playwright fallback",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "court-auction-notice-search": "bin/court-auction-notice-search.js"
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "court-auction",
+    "courtauction",
+    "real-estate",
+    "auction-notice"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/normalize.js && node --check src/codetables/index.js && node --check src/transport/http.js && node --check src/transport/playwright.js && node --check src/cli.js && node --check bin/court-auction-notice-search.js && node --check test/normalize.test.js && node --check test/transport.test.js && node --check test/index.test.js && node --check test/cli.test.js",
+    "test": "node --test"
+  },
+  "optionalDependencies": {
+    "playwright-core": ">=1.40.0",
+    "rebrowser-playwright": ">=1.40.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "status": 200,
+  "message": "비정상 접근이 감지되어 차단되었습니다. 1시간 후 다시 시도해주세요.",
+  "timestamp": 1777447035364,
+  "errors": null,
+  "data": {
+    "ipcheck": false
+  },
+  "token": null
+}

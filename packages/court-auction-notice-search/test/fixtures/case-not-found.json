@@ -1,0 +1,21 @@
+{
+  "status": 204,
+  "message": "조회 되는 사건번호 정보가 없습니다.",
+  "timestamp": 1777447297479,
+  "errors": null,
+  "data": {
+    "ipcheck": true,
+    "dlt_dpcnMrgTrnscsCsRlet": null,
+    "dma_csBasInf": null,
+    "dlt_dstrtDemnLstprdDts": null,
+    "dlt_csApalRaplDts": null,
+    "dlt_rletReltCsLst": null,
+    "dlt_dspslGdsDspslObjctLst": null,
+    "dlt_rletCsSugtExclBldLst": null,
+    "dlt_rletCsGdsDtsDxdyInf": null,
+    "dlt_rletCsDspslObjctLst": null,
+    "dlt_rletCsIntrpsLst": null,
+    "dma_dlvrfDtsParam": null
+  },
+  "token": null
+}

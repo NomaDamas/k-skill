@@ -1,0 +1,88 @@
+{
+  "status": 200,
+  "message": "정상",
+  "timestamp": 1777447400000,
+  "errors": null,
+  "data": {
+    "ipcheck": true,
+    "dma_csBasInf": {
+      "cortOfcCd": "B000210",
+      "cortOfcNm": "서울중앙지방법원",
+      "cortSptNm": "서울중앙지방법원",
+      "csNo": "2024타경100001",
+      "csNm": "부동산임의경매",
+      "csRcptYmd": "20240315",
+      "csCmdcYmd": "20240320",
+      "clmAmt": "500000000",
+      "rletApalYn": "N",
+      "auctnSuspStatCd": "",
+      "ultmtDvsCd": "",
+      "csUltmtYmd": "",
+      "csProgStatCd": "01",
+      "jdgeAojAsstnNm": "홍길동",
+      "auctnDpcnMrgDvsCd": "",
+      "csProgSuspRsn": "",
+      "jdbnCd": "ENC_jdbn1",
+      "cortAuctnJdbnNm": "경매1계",
+      "jdbnTelno": "02-530-1234",
+      "execrCsTelno": "02-530-9999",
+      "cortTypCd": "B",
+      "expCsNo": "",
+      "lwstDvsCd": "",
+      "userCsNo": "2024타경100001",
+      "mvprpCsNo": "",
+      "mvprpRletDvsCd": "1"
+    },
+    "dlt_rletCsDspslObjctLst": [
+      {
+        "dspslObjctSeq": "1",
+        "userSt": "서울특별시 강남구 역삼동 123-4 OO아파트 101동 502호",
+        "userLstprdYmd": "20240615",
+        "cortOfcCd": "B000210",
+        "csNo": "2024타경100001"
+      }
+    ],
+    "dlt_rletCsGdsDtsDxdyInf": [
+      {
+        "dspslGdsSeq": "1",
+        "dspslDxdyYmd": "20260427",
+        "lwsDspslPrc": "1200000000",
+        "aeeEvlAmt": "1500000000",
+        "rsltCd": "유찰",
+        "dxdySeq": "1"
+      },
+      {
+        "dspslGdsSeq": "1",
+        "dspslDxdyYmd": "20260601",
+        "lwsDspslPrc": "960000000",
+        "aeeEvlAmt": "1500000000",
+        "rsltCd": "",
+        "dxdySeq": "2"
+      }
+    ],
+    "dlt_dstrtDemnLstprdDts": [
+      {
+        "dstrtDemnLstprdYmd": "20240615",
+        "dstrtDemnLstprdPbancYmd": "20240501"
+      }
+    ],
+    "dlt_rletReltCsLst": [],
+    "dlt_csApalRaplDts": [],
+    "dlt_rletCsIntrpsLst": [],
+    "dlt_rletCsSugtExclBldLst": [],
+    "dlt_dpcnMrgTrnscsCsRlet": [],
+    "dlt_dspslGdsDspslObjctLst": [
+      {
+        "dspslGdsSeq": "1",
+        "dspslObjctSeq": "1"
+      }
+    ],
+    "dma_dlvrfDtsParam": {
+      "cortCd": "B000210",
+      "csYear": "2024",
+      "csDvsCd": "타경",
+      "csSerial": "100001"
+    }
+  },
+  "token": null
+}

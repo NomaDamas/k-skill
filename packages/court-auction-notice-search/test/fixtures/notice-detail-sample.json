@@ -1,0 +1,45 @@
+{
+  "status": 200,
+  "message": "정상",
+  "timestamp": 1777447040000,
+  "errors": null,
+  "data": {
+    "ipcheck": true,
+    "dma_srchGnrlPbanc": {
+      "cortOfcCd": "B000210",
+      "dspslDxdyYmd": "20260427",
+      "bidBgngYmd": "20260427",
+      "bidEndYmd": "20260427",
+      "jdbnCd": "ENC_jdbn1",
+      "cortAuctnJdbnNm": "경매1계",
+      "jdbnTelno": "02-530-1234",
+      "dspslPlcNm": "서울중앙지방법원 경매법정 (4별관 211호)",
+      "fstDspslHm": "1000",
+      "scndDspslHm": "1400",
+      "thrdDspslHm": "",
+      "fothDspslHm": "",
+      "bidDvsCd": "000331"
+    },
+    "dlt_gnrlPbancLst": [
+      {
+        "csNo": "2024타경100001",
+        "dspslSeq": "1",
+        "usgNm": "아파트",
+        "st": "서울특별시 강남구 역삼동 123-4 OO아파트 101동 502호",
+        "aeeEvlAmt": "1500000000",
+        "dspslRmk": "토지·건물 일괄매각",
+        "lwsDspslPrc": "1200000000"
+      },
+      {
+        "csNo": "2024타경100002",
+        "dspslSeq": "1",
+        "usgNm": "근린생활시설",
+        "st": "서울특별시 강남구 삼성동 555-6",
+        "aeeEvlAmt": "850000000",
+        "dspslRmk": "",
+        "lwsDspslPrc": "680000000"
+      }
+    ]
+  },
+  "token": null
+}
