@@ -15,6 +15,14 @@
 - 하이패스 사용내역 조회 진입: https://www.hipass.co.kr/usepculr/InitUsePculrTabSearch.do
 - 하이패스 사용내역 이용안내: https://www.hipass.co.kr/html/guide/siteguide_6.jsp
 - 하이패스 사용내역 이용안내(do): https://www.hipass.co.kr/info/guide/siteguide_6.do
+- 법원경매정보 메인: https://www.courtauction.go.kr
+- 법원경매정보 부동산매각공고 진입: https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01
+- 법원경매정보 경매사건검색 진입: https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml&pgjId=159M00
+- 법원경매정보 매각공고 목록 endpoint: https://www.courtauction.go.kr/pgj/pgj143/selectRletDspslPbanc.on
+- 법원경매정보 매각공고 상세 endpoint: https://www.courtauction.go.kr/pgj/pgj143/selectRletDspslPbancDtl.on
+- 법원경매정보 사건 단건 endpoint: https://www.courtauction.go.kr/pgj/pgj15A/selectAuctnCsSrchRslt.on
+- 법원경매정보 법원사무소 코드 endpoint: https://www.courtauction.go.kr/pgj/pgjComm/selectCortOfcCdLst.on
+- data.go.kr "법원경매정보 OPEN API 미구축" 회신(2015-009): https://www.data.go.kr/odmc/trublMdat/mdatCase/board.do?id=45
 - K League 일정/결과 JSON: https://www.kleague.com/getScheduleList.do
 - K League 팀 순위 JSON: https://www.kleague.com/record/teamRank.do
 - jerjangmin original `lck-analytics` skill pack: https://github.com/jerjangmin/share/tree/main/SKILL/lck-analytics
