@@ -82,6 +82,16 @@ python3 -m pip install korail2 pycryptodome
 python3 scripts/ktx_booking.py search 서울 부산 20260328 090000 --limit 5
 ```
 
+기본 `--train-type` 은 `ktx` 다. ITX-청춘(예: 남춘천↔용산)·ITX-새마을·무궁화호처럼 KTX 외 노선을 잡으려면 `--train-type` 으로 지정한다.
+
+```bash
+python3 scripts/ktx_booking.py search 남춘천 용산 20260503 150000 --train-type itx-cheongchun
+```
+
+선택지: `ktx`, `itx-saemaeul`, `mugunghwa`, `nuriro`, `tonggeun`, `itx-cheongchun`, `airport`, `all`.
+
+예약 단계(`reserve`)에서도 같은 `--train-type` 값을 그대로 넘겨야 stable `train_id` 매칭이 깨지지 않는다.
+
 좌석이 없는 열차도 후보에 포함하려면 `--include-no-seats`, 예약 대기 가능한 열차도 같이 보고 싶으면 `--include-waiting-list` 를 붙인다.
 
 ### 3. Present the shortlist
@@ -101,6 +111,12 @@ python3 scripts/ktx_booking.py search 서울 부산 20260328 090000 --limit 5
 
 ```bash
 python3 scripts/ktx_booking.py reserve 서울 부산 20260328 090000 --train-id <train_id> --seat-option general-first
+```
+
+ITX 등 KTX 외 노선을 search 단계에서 골랐다면 reserve 에도 똑같이 `--train-type` 을 넘긴다.
+
+```bash
+python3 scripts/ktx_booking.py reserve 남춘천 용산 20260503 150000 --train-id <train_id> --train-type itx-cheongchun --seat-option general-first
 ```
 
 응답에는 예약번호, 운임, 구입기한이 포함된다. **결제는 자동화하지 않는다.**
