@@ -147,6 +147,17 @@ class KtxBookingTests(unittest.TestCase):
         self.assertEqual(args.train_id, "ktx:v1:test")
         self.assertEqual(args.train_type, "ktx")
 
+    def test_build_parser_defaults_search_train_type_to_ktx(self):
+        args = ktx_booking.build_parser().parse_args([
+            "search",
+            "서울",
+            "부산",
+            "20260328",
+            "090000",
+        ])
+
+        self.assertEqual(args.train_type, "ktx")
+
     def test_parser_train_type_choices_match_supported_train_types(self):
         parser = ktx_booking.build_parser()
         for train_type in sorted(ktx_booking.TRAIN_TYPE_MAP):
