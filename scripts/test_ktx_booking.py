@@ -1,5 +1,4 @@
 import argparse
-import importlib
 import io
 import subprocess
 import sys
@@ -147,6 +146,63 @@ class KtxBookingTests(unittest.TestCase):
 
         self.assertEqual(args.train_id, "ktx:v1:test")
         self.assertEqual(args.train_type, "ktx")
+
+    def test_parser_train_type_choices_match_supported_train_types(self):
+        parser = ktx_booking.build_parser()
+        for train_type in sorted(ktx_booking.TRAIN_TYPE_MAP):
+            search_args = parser.parse_args([
+                "search",
+                "서울",
+                "부산",
+                "20260328",
+                "090000",
+                "--train-type",
+                train_type,
+            ])
+            reserve_args = parser.parse_args([
+                "reserve",
+                "서울",
+                "부산",
+                "20260328",
+                "090000",
+                "--train-id",
+                "ktx:v1:test",
+                "--train-type",
+                train_type,
+            ])
+            self.assertEqual(search_args.train_type, train_type)
+            self.assertEqual(reserve_args.train_type, train_type)
+
+    def test_command_search_replays_selected_train_type(self):
+        selected = FakeTrain(
+            train_no="2080",
+            dep_time="155300",
+            arr_time="170000",
+            dep_name="남춘천",
+            arr_name="용산",
+            train_type_name="ITX-청춘",
+        )
+        client = FakeClient([selected])
+        args = argparse.Namespace(
+            dep="남춘천",
+            arr="용산",
+            date="20260503",
+            time="150000",
+            adults=1,
+            children=0,
+            toddlers=0,
+            seniors=0,
+            limit=5,
+            train_type="itx-cheongchun",
+            include_no_seats=False,
+            include_waiting_list=False,
+        )
+
+        with patch.object(ktx_booking, "build_client", return_value=client):
+            with redirect_stdout(io.StringIO()):
+                ktx_booking.command_search(args)
+
+        self.assertEqual(client.search_calls[-1]["train_type"], ktx_booking.TRAIN_TYPE_MAP["itx-cheongchun"])
 
     def test_command_reserve_targets_exact_train_id_even_if_order_changes(self):
         sold_out_first = FakeTrain(
