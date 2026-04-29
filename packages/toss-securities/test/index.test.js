@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const {
   buildReadOnlyCommand,
+  checkSession,
   getAccountSummary,
   getPortfolioPositions,
   getQuote,
@@ -264,6 +265,56 @@ exit 1
     getQuote("ALM", { env }),
     (error) =>
       !(error instanceof TossSessionExpiredError) &&
+      /issues\/15/.test(error.message)
+  );
+});
+
+test("checkSession treats auth doctor validation_error failures as inconclusive command errors", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "toss-securities-check-session-fail-"));
+  const binDir = path.join(tempDir, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const script = `#!/bin/sh
+if [ "$3" = "auth" ] && [ "$4" = "doctor" ]; then
+  echo "validation_error: transport failure" 1>&2
+  exit 1
+fi
+printf '{"ok":true}\n'
+`;
+
+  const binPath = path.join(binDir, "tossctl");
+  fs.writeFileSync(binPath, script, { mode: 0o755 });
+
+  const env = { ...process.env, PATH: `${binDir}:${process.env.PATH || ""}` };
+
+  await assert.rejects(
+    checkSession({ env }),
+    (error) =>
+      !(error instanceof TossSessionExpiredError) &&
+      /validation_error: transport failure/.test(error.message)
+  );
+});
+
+test("quote search stocks 403 with validation_error remains a non-session upstream error", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "toss-securities-403-validation-error-"));
+  const binDir = path.join(tempDir, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const script = `#!/bin/sh
+echo "validation_error: status 403 at search/stocks" 1>&2
+exit 1
+`;
+
+  const binPath = path.join(binDir, "tossctl");
+  fs.writeFileSync(binPath, script, { mode: 0o755 });
+
+  const env = { ...process.env, PATH: `${binDir}:${process.env.PATH || ""}` };
+
+  await assert.rejects(
+    getQuote("ALM", { env }),
+    (error) =>
+      !(error instanceof TossSessionExpiredError) &&
+      /validation_error: status 403 at search\/stocks/.test(error.message) &&
       /issues\/15/.test(error.message)
   );
 });
