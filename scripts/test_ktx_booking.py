@@ -130,7 +130,10 @@ class KtxBookingTests(unittest.TestCase):
         normalized = ktx_booking.normalize_train(train, index=2)
 
         self.assertIn("train_id", normalized)
-        resolved = ktx_booking.find_train_by_id([train], normalized["train_id"])
+        train_id = normalized["train_id"]
+        if not isinstance(train_id, str):
+            self.fail("train_id should be emitted as a string")
+        resolved = ktx_booking.find_train_by_id([train], train_id)
         self.assertIs(resolved, train)
 
     def test_build_parser_requires_train_id_for_reserve(self):
@@ -213,7 +216,10 @@ class KtxBookingTests(unittest.TestCase):
             with redirect_stdout(io.StringIO()):
                 ktx_booking.command_search(args)
 
-        self.assertEqual(client.search_calls[-1]["train_type"], ktx_booking.TRAIN_TYPE_MAP["itx-cheongchun"])
+        self.assertEqual(
+            client.search_calls[-1]["train_type"],
+            ktx_booking.TRAIN_TYPE_MAP["itx-cheongchun"],
+        )
 
     def test_command_reserve_targets_exact_train_id_even_if_order_changes(self):
         sold_out_first = FakeTrain(
@@ -246,7 +252,6 @@ class KtxBookingTests(unittest.TestCase):
                     ktx_booking.command_reserve(self.make_args(train_id))
 
         self.assertIn("train_id", str(exc.exception))
-
 
     def test_command_reserve_replays_selected_train_type(self):
         selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
