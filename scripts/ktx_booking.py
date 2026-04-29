@@ -83,8 +83,19 @@ except ModuleNotFoundError as exc:
         SPECIAL_ONLY = "SPECIAL_ONLY"
 
     class TrainType:
-        ALL = "ALL"
-        KTX = "KTX"
+        # Fallback constants used only when korail2 is missing so module
+        # import succeeds and ensure_runtime_dependencies() can surface
+        # the install message. Values mirror upstream korail2.TrainType.
+        KTX = "100"
+        KTX_SANCHEON = "100"
+        ITX_SAEMAEUL = "101"
+        SAEMAEUL = "101"
+        MUGUNGHWA = "102"
+        NURIRO = "102"
+        TONGGUEN = "103"
+        ITX_CHEONGCHUN = "104"
+        AIRPORT = "105"
+        ALL = "109"
 
     class Korail:
         def __init__(self, *args, **kwargs):

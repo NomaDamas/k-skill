@@ -1,7 +1,12 @@
 import argparse
+import importlib
 import io
+import subprocess
+import sys
+import textwrap
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
 
 import ktx_booking
@@ -215,6 +220,78 @@ class KtxBookingTests(unittest.TestCase):
         self.assertTrue(client.search_calls)
         self.assertTrue(client.search_calls[-1]["include_waiting_list"])
         self.assertIs(client.reserved_train, waiting_only)
+
+
+class FallbackImportTests(unittest.TestCase):
+    def test_module_imports_when_korail2_is_missing(self):
+        script_dir = Path(__file__).resolve().parent
+        helper = textwrap.dedent(
+            """
+            import importlib
+            import sys
+
+            sys.modules["korail2"] = None
+            sys.modules.pop("ktx_booking", None)
+            module = importlib.import_module("ktx_booking")
+
+            assert module._KORAIL_IMPORT_ERROR is not None, "expected fallback path"
+            assert module.TRAIN_TYPE_MAP["ktx"] == "100"
+            assert module.TRAIN_TYPE_MAP["itx-cheongchun"] == "104"
+            assert module.TRAIN_TYPE_MAP["itx-saemaeul"] == "101"
+            assert module.TRAIN_TYPE_MAP["mugunghwa"] == "102"
+            assert module.TRAIN_TYPE_MAP["nuriro"] == "102"
+            assert module.TRAIN_TYPE_MAP["tonggeun"] == "103"
+            assert module.TRAIN_TYPE_MAP["airport"] == "105"
+            assert module.TRAIN_TYPE_MAP["all"] == "109"
+            print("ok")
+            """
+        ).strip()
+        env = {
+            "PYTHONPATH": str(script_dir),
+            "PYTHONNOUSERSITE": "1",
+            "PATH": "",
+        }
+        result = subprocess.run(
+            [sys.executable, "-S", "-c", helper],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("ok", result.stdout)
+
+    def test_help_works_when_korail2_is_missing(self):
+        script_dir = Path(__file__).resolve().parent
+        helper = textwrap.dedent(
+            """
+            import importlib
+            import sys
+
+            sys.modules["korail2"] = None
+            sys.modules.pop("ktx_booking", None)
+            module = importlib.import_module("ktx_booking")
+            parser = module.build_parser()
+            help_text = parser.format_help()
+            assert "search" in help_text
+            assert "reserve" in help_text
+            print("ok")
+            """
+        ).strip()
+        env = {
+            "PYTHONPATH": str(script_dir),
+            "PYTHONNOUSERSITE": "1",
+            "PATH": "",
+        }
+        result = subprocess.run(
+            [sys.executable, "-S", "-c", helper],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("ok", result.stdout)
 
 
 if __name__ == "__main__":
