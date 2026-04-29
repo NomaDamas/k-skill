@@ -26,6 +26,10 @@ from typing import Any
 LOGIN_URL = "https://www.foresttrip.go.kr/com/login.do"
 RSRVT_PAGE = "https://www.foresttrip.go.kr/rep/or/sssn/monthRsrvtSmplStatus.do"
 POST_URL = "https://www.foresttrip.go.kr/rep/or/selectRsrvtAvailInfoListForMonthRsrvtSmpl.do"
+DEFAULT_CONCURRENCY = 4
+MAX_CONCURRENCY = 5
+DEFAULT_WEEK_RANGE = 1
+CATEGORY_CODES = {"01", "02"}
 
 
 @dataclass
@@ -35,6 +39,64 @@ class Session:
     user_agent: str
     forests: dict[str, str]
     expires_at: float
+
+
+def parse_csv(value: str) -> list[str]:
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def parse_categories(value: str) -> tuple[str, ...]:
+    categories = parse_csv(value)
+    if not categories:
+        raise argparse.ArgumentTypeError("must include at least one category code")
+    invalid = [category for category in categories if category not in CATEGORY_CODES]
+    if invalid:
+        raise argparse.ArgumentTypeError(
+            "unknown category code(s): "
+            + ", ".join(invalid)
+            + " (allowed: 01=lodging, 02=camping)"
+        )
+    return tuple(dict.fromkeys(categories))
+
+
+def parse_dates(value: str) -> tuple[str, ...]:
+    dates = parse_csv(value)
+    if not dates:
+        raise argparse.ArgumentTypeError("must include at least one YYYYMMDD date")
+
+    today = datetime.now().date()
+    normalized: list[str] = []
+    for raw_date in dates:
+        try:
+            parsed = datetime.strptime(raw_date, "%Y%m%d").date()
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(f"invalid YYYYMMDD date: {raw_date}") from exc
+        if parsed.strftime("%Y%m%d") != raw_date:
+            raise argparse.ArgumentTypeError(f"invalid YYYYMMDD date: {raw_date}")
+        if parsed < today:
+            raise argparse.ArgumentTypeError(f"date is in the past: {raw_date}")
+        normalized.append(raw_date)
+    return tuple(sorted(dict.fromkeys(normalized)))
+
+
+def parse_concurrency(value: str) -> int:
+    try:
+        concurrency = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be an integer") from exc
+    if not 1 <= concurrency <= MAX_CONCURRENCY:
+        raise argparse.ArgumentTypeError(f"must be between 1 and {MAX_CONCURRENCY}")
+    return concurrency
+
+
+def parse_week_range(value: str) -> int:
+    try:
+        week_range = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be an integer") from exc
+    if week_range < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return week_range
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,12 +116,23 @@ def parse_args() -> argparse.Namespace:
         help="Substring to match against official forest names.",
     )
 
-    parser.add_argument("--json", action="store_true", help="Print JSON output.")
-    parser.add_argument("--text", action="store_true", help="Print human-readable output.")
-    parser.add_argument("--dates", help="Comma-separated YYYYMMDD dates.")
-    parser.add_argument("--categories", default="01,02", help="Comma-separated category codes.")
-    parser.add_argument("--concurrency", type=int, default=20, help="Parallel POST workers.")
-    parser.add_argument("--week-range", type=int, default=1, help="Weeks ahead to scan.")
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument("--json", action="store_true", help="Print JSON output.")
+    output.add_argument("--text", action="store_true", help="Print human-readable output.")
+    parser.add_argument("--dates", type=parse_dates, help="Comma-separated YYYYMMDD dates.")
+    parser.add_argument(
+        "--categories",
+        type=parse_categories,
+        default=("01", "02"),
+        help="Comma-separated category codes: 01=lodging, 02=camping.",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=parse_concurrency,
+        default=DEFAULT_CONCURRENCY,
+        help=f"Parallel POST workers, 1-{MAX_CONCURRENCY}.",
+    )
+    parser.add_argument("--week-range", type=parse_week_range, help="Weeks ahead to scan when --dates is omitted.")
     parser.add_argument("--refresh-session", action="store_true", help="Ignore session cache.")
     parser.add_argument("--check-deps", action="store_true", help="Check Python and Playwright runtime dependencies.")
     parser.add_argument(
@@ -67,7 +140,12 @@ def parse_args() -> argparse.Namespace:
         default="~/.cache/k-skill/foresttrip-vacancy/session.json",
         help="Session cache path.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.all and (args.forest_id or args.forest_name):
+        parser.error("--all cannot be combined with --forest-id or --forest-name")
+    if args.dates and args.week_range is not None:
+        parser.error("--week-range cannot be combined with --dates; the lookup range is derived from --dates")
+    return args
 
 
 def require_env(name: str) -> str:
@@ -325,12 +403,18 @@ def collect_results(
     session: Session,
     targets: dict[str, str],
     categories: tuple[str, ...],
-    dates: set[str] | None,
-    week_range: int,
+    dates: tuple[str, ...] | None,
+    week_range: int | None,
     concurrency: int,
 ) -> dict[str, Any]:
-    today = datetime.now().strftime("%Y%m%d")
-    last_day = (datetime.now() + timedelta(weeks=week_range)).strftime("%Y%m%d")
+    now = datetime.now()
+    today = now.strftime("%Y%m%d")
+    last_day = (
+        max(dates)
+        if dates
+        else (now + timedelta(weeks=week_range or DEFAULT_WEEK_RANGE)).strftime("%Y%m%d")
+    )
+    date_filter = set(dates) if dates else None
     failures: list[dict[str, str]] = []
     rows: list[dict[str, Any]] = []
 
@@ -360,7 +444,7 @@ def collect_results(
                 if not is_available(row):
                     continue
                 normalized = normalize_row(row, session.forests)
-                if dates is not None and normalized["use_dt"] not in dates:
+                if date_filter is not None and normalized["use_dt"] not in date_filter:
                     continue
                 rows.append(normalized)
 
@@ -417,13 +501,11 @@ def main() -> int:
         return 0
     session = get_session(args)
     targets = resolve_targets(args, session.forests)
-    categories = tuple(part.strip() for part in args.categories.split(",") if part.strip())
-    dates = {part.strip() for part in args.dates.split(",") if part.strip()} if args.dates else None
     payload = collect_results(
         session=session,
         targets=targets,
-        categories=categories,
-        dates=dates,
+        categories=args.categories,
+        dates=args.dates,
         week_range=args.week_range,
         concurrency=args.concurrency,
     )

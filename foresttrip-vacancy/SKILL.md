@@ -58,6 +58,7 @@ Optional:
 4. **아무것도 없으면** 유저에게 물어서 2 또는 3에 저장한다.
 
 기본 경로에 저장하는 것은 fallback일 뿐, 강제가 아니다.
+Helper 자체는 `KSKILL_FORESTTRIP_ID`, `KSKILL_FORESTTRIP_PASSWORD` 환경변수만 읽는다. vault나 `secrets.env` 를 사용하는 경우에도 실행 전에 해당 값을 환경변수로 주입한다.
 
 ## Inputs
 
@@ -73,6 +74,10 @@ Optional:
   - `--categories 01`: 숙박
   - `--categories 02`: 야영/캠핑
   - `--categories 01,02`: 숙박 + 야영/캠핑
+- 고급 실행 옵션:
+  - `--week-range N`: `--dates` 를 생략했을 때만 오늘부터 N주 범위를 조회
+  - `--concurrency N`: 병렬 조회 worker 수, 1-5 범위
+  - `--session-cache PATH`: 로그인 세션 캐시 경로 override
 
 ## Workflow
 
@@ -147,6 +152,20 @@ python3 scripts/run_foresttrip_vacancy.py --forest-name 유명산 --text --dates
 - Playwright browser 미설치: `python3 -m playwright install chromium`
 - fetch failure 일부 발생: 결과와 실패 개수를 함께 보고하고, 필요하면 `--refresh-session` 으로 1회 재조회
 - 숲나들e 표면 변경: helper의 login/session bootstrap 또는 parser 점검 필요
+
+## Maintainer review notes
+
+메인테이너가 이 스킬을 검토하기 위해 숲나들e 계정을 새로 만들 필요는 없다.
+
+계정 없이 가능한 검증:
+
+- `./scripts/validate-skills.sh`
+- `python3 -m py_compile foresttrip-vacancy/scripts/run_foresttrip_vacancy.py`
+- `python3 foresttrip-vacancy/scripts/run_foresttrip_vacancy.py --help`
+- `python3 foresttrip-vacancy/scripts/run_foresttrip_vacancy.py --check-deps`
+- `npm run ci`
+
+실제 live smoke는 기여자 또는 이미 숲나들e 계정을 가진 사용자가 선택적으로 수행한다. PR에는 `forests_scanned`, `fetch_failures`, `filter_hits` 같은 비민감 요약만 남기고 계정 정보, 세션 쿠키, 개인 조회 세부 내역은 공유하지 않는다.
 
 ## Safety notes
 
