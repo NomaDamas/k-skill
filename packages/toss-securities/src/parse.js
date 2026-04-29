@@ -34,6 +34,9 @@ const READ_ONLY_COMMANDS = Object.freeze({
     buildExtraArgs(options = {}) {
       return normalizeSymbols(options.symbols);
     }
+  },
+  authDoctor: {
+    segments: ["auth", "doctor"]
   }
 });
 

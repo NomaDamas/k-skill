@@ -7,7 +7,9 @@ const path = require("node:path");
 const {
   buildReadOnlyCommand,
   getAccountSummary,
-  getQuote
+  getPortfolioPositions,
+  getQuote,
+  TossSessionExpiredError
 } = require("../src/index");
 const {
   assertReadOnlyCommandName,
@@ -70,16 +72,16 @@ test("public helpers execute a mock tossctl binary and parse its JSON output", a
   fs.mkdirSync(binDir, { recursive: true });
 
   const script = `#!/bin/sh
-printf '%s\n' "$@" > "${logFile}"
+printf '%s\\n' "$@" > "${logFile}"
 if [ "$7" = "account" ] && [ "$8" = "summary" ]; then
-  printf '{"accountNo":"123-45","totalAssetAmount":1500000}\n'
+  printf '{"accountNo":"123-45","totalAssetAmount":1500000}\\n'
   exit 0
 fi
 if [ "$3" = "quote" ] && [ "$4" = "get" ]; then
-  printf '{"symbol":"%s","price":123.45}\n' "$5"
+  printf '{"symbol":"%s","price":123.45}\\n' "$5"
   exit 0
 fi
-printf '{"args":"%s"}\n' "$*"
+printf '{"args":"%s"}\\n' "$*"
 `;
 
   const binPath = path.join(binDir, "tossctl");
@@ -100,4 +102,78 @@ printf '{"args":"%s"}\n' "$*"
   assert.equal(account.data.totalAssetAmount, 1500000);
   assert.equal(quote.data.symbol, "005930");
   assert.match(fs.readFileSync(logFile, "utf8"), /quote|get/);
+});
+
+test("account summary invalid session throws TossSessionExpiredError", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "toss-securities-expire-"));
+  const binDir = path.join(tempDir, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const script = `#!/bin/sh
+if [ "$3" = "account" ] && [ "$4" = "summary" ]; then
+  echo "Error: stored session is no longer valid; run \\\`tossctl auth login\\\`" 1>&2
+  exit 1
+fi
+printf '{"ok":true}\\n'
+`;
+
+  const binPath = path.join(binDir, "tossctl");
+  fs.writeFileSync(binPath, script, { mode: 0o755 });
+
+  const env = { ...process.env, PATH: `${binDir}:${process.env.PATH || ""}` };
+
+  await assert.rejects(
+    getAccountSummary({ env }),
+    (error) => error instanceof TossSessionExpiredError && /stored session is no longer valid/.test(error.message)
+  );
+});
+
+test("portfolio empty array with invalid auth doctor is promoted to TossSessionExpiredError", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "toss-securities-empty-"));
+  const binDir = path.join(tempDir, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const script = `#!/bin/sh
+if [ "$3" = "portfolio" ] && [ "$4" = "positions" ]; then
+  printf '[]\\n'
+  exit 0
+fi
+if [ "$3" = "auth" ] && [ "$4" = "doctor" ]; then
+  printf '{"session":{"valid":false,"validation_error":"401"}}\\n'
+  exit 0
+fi
+printf '{"ok":true}\\n'
+`;
+
+  const binPath = path.join(binDir, "tossctl");
+  fs.writeFileSync(binPath, script, { mode: 0o755 });
+
+  const env = { ...process.env, PATH: `${binDir}:${process.env.PATH || ""}` };
+
+  await assert.rejects(getPortfolioPositions({ env }), TossSessionExpiredError);
+  const passthrough = await getPortfolioPositions({ env, verifySessionOnEmpty: false });
+  assert.deepEqual(passthrough.data, []);
+});
+
+test("quote 403 includes upstream hint", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "toss-securities-403-"));
+  const binDir = path.join(tempDir, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const script = `#!/bin/sh
+echo "status 403 at search/stocks" 1>&2
+exit 1
+`;
+
+  const binPath = path.join(binDir, "tossctl");
+  fs.writeFileSync(binPath, script, { mode: 0o755 });
+
+  const env = { ...process.env, PATH: `${binDir}:${process.env.PATH || ""}` };
+
+  await assert.rejects(
+    getQuote("ALM", { env }),
+    (error) =>
+      !(error instanceof TossSessionExpiredError) &&
+      /issues\/15/.test(error.message)
+  );
 });
