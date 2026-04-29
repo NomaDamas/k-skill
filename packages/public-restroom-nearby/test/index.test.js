@@ -257,6 +257,46 @@ test("searchNearbyPublicRestroomsByLocationQuery still surfaces non-HTTP Kakao p
   );
 });
 
+test("searchNearbyPublicRestroomsByCoordinates can merge Kakao Local supplemental sources", async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    const resolved = String(url);
+    calls.push(resolved);
+
+    if (resolved.startsWith("https://file.localdata.go.kr/file/download/public_restroom_info/info")) {
+      return makeResponse(Buffer.from(csvFixture, "utf8"));
+    }
+
+    if (resolved.includes("/search/keyword.json") && resolved.includes("query=%EA%B3%B5%EC%A4%91%ED%99%94%EC%9E%A5%EC%8B%A4")) {
+      return makeResponse({ documents: [{ id: "k1", place_name: "테스트공중화장실", x: "126.97834", y: "37.57371", distance: "99999" }] }, "application/json");
+    }
+
+    if (resolved.includes("/search/keyword.json") && resolved.includes("query=%EA%B0%9C%EB%B0%A9%ED%99%94%EC%9E%A5%EC%8B%A4")) {
+      return makeResponse({ documents: [] }, "application/json");
+    }
+
+    if (resolved.includes("/search/category.json") && resolved.includes("category_group_code=OL7")) {
+      return makeResponse({ documents: [{ id: "k2", place_name: "테스트주유소", x: "126.979", y: "37.574" }] }, "application/json");
+    }
+
+    throw new Error(`unexpected url: ${resolved}`);
+  };
+
+  const result = await searchNearbyPublicRestroomsByCoordinates({
+    latitude: 37.57371315593711,
+    longitude: 126.97833785777944,
+    limit: 6,
+    fetchImpl,
+    includeKakaoSupplemental: true,
+    kakaoRestApiKey: "dummy-key"
+  });
+
+  assert.ok(result.meta.sources.kakaoSupplemental >= 1);
+  assert.ok(result.items.some((item) => item.name === "테스트주유소"));
+  assert.ok(result.items.some((item) => item.name === "테스트공중화장실"));
+  assert.ok(calls.some((u) => u.includes("dapi.kakao.com/v2/local/search/keyword.json")));
+});
+
 function makeResponse(body, contentType = "text/csv;charset=UTF-8") {
   return {
     ok: true,

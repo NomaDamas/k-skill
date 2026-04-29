@@ -12,6 +12,7 @@ const {
 
 const SEARCH_VIEW_URL = "https://m.map.kakao.com/actions/searchView";
 const PLACE_PANEL_URL_BASE = "https://place-api.map.kakao.com/places/panel3";
+const KAKAO_LOCAL_BASE = "https://dapi.kakao.com/v2/local";
 const DEFAULT_BROWSER_HEADERS = {
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "accept-language": "ko,en-US;q=0.9,en;q=0.8",
@@ -75,6 +76,149 @@ function isRecoverablePlacePanelError(error) {
   const status = Number(error?.status);
 
   return Number.isInteger(status) && status >= 400 && status < 600;
+}
+
+function normalizeKakaoApiKey(options = {}) {
+  return String(options.kakaoRestApiKey || process.env.KAKAO_REST_API_KEY || "").trim();
+}
+
+async function requestKakaoLocal(pathname, params, options = {}) {
+  const apiKey = normalizeKakaoApiKey(options);
+  if (!apiKey) {
+    throw new Error("KAKAO_REST_API_KEY is required for Kakao Local supplemental restroom search.");
+  }
+
+  const url = new URL(`${KAKAO_LOCAL_BASE}${pathname}`);
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+
+  return request(
+    url.toString(),
+    {
+      ...options,
+      headerSet: {
+        accept: "application/json",
+        Authorization: `KakaoAK ${apiKey}`
+      }
+    },
+    "json"
+  );
+}
+
+function toNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function haversineDistanceMeters(latitudeA, longitudeA, latitudeB, longitudeB) {
+  const earthRadiusMeters = 6371008.8;
+  const toRadians = (value) => (value * Math.PI) / 180;
+  const deltaLatitude = toRadians(latitudeB - latitudeA);
+  const deltaLongitude = toRadians(longitudeB - longitudeA);
+  const originLatitude = toRadians(latitudeA);
+  const targetLatitude = toRadians(latitudeB);
+
+  const value =
+    Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(originLatitude) * Math.cos(targetLatitude) * Math.sin(deltaLongitude / 2) ** 2;
+
+  return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+}
+
+function buildMapUrl(name, latitude, longitude) {
+  return `https://map.kakao.com/link/map/${encodeURIComponent(name)},${latitude},${longitude}`;
+}
+
+function normalizeKakaoCandidate(document, sourceType, origin) {
+  const latitude = toNumber(document.y);
+  const longitude = toNumber(document.x);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  const name = String(document.place_name || document.address_name || "").trim();
+  const roadAddress = String(document.road_address_name || "").trim() || null;
+  const lotAddress = String(document.address_name || "").trim() || null;
+  const address = roadAddress || lotAddress || null;
+
+  return {
+    id: `kakao:${sourceType}:${document.id || name}:${latitude}:${longitude}`,
+    name: name || "이름없음",
+    type: sourceType === "category-ol7" ? "주유소(OL7)" : "공중화장실",
+    address,
+    roadAddress,
+    lotAddress,
+    latitude,
+    longitude,
+    distanceMeters: haversineDistanceMeters(origin.latitude, origin.longitude, latitude, longitude),
+    phone: String(document.phone || "").trim() || null,
+    managementAgency: null,
+    openTimeCategory: null,
+    openTimeDetail: null,
+    hasEmergencyBell: false,
+    hasBabyChangingTable: false,
+    hasAccessibleFacility: false,
+    mapUrl: buildMapUrl(name || "지도", latitude, longitude),
+    source: `kakao-${sourceType}`
+  };
+}
+
+function mergeCandidates(csvItems, kakaoItems) {
+  const merged = [...csvItems.map((item) => ({ ...item, source: "localdata-csv" }))];
+
+  for (const candidate of kakaoItems) {
+    const duplicate = merged.find((existing) => {
+      const distance = haversineDistanceMeters(
+        existing.latitude,
+        existing.longitude,
+        candidate.latitude,
+        candidate.longitude
+      );
+      return distance <= 50;
+    });
+
+    if (!duplicate) {
+      merged.push(candidate);
+    }
+  }
+
+  return merged.sort((a, b) => a.distanceMeters - b.distanceMeters);
+}
+
+async function fetchKakaoSupplemental(origin, options = {}) {
+  if (!options.includeKakaoSupplemental) {
+    return [];
+  }
+
+  const radius = Number(options.maxDistanceMeters) > 0
+    ? Math.min(Math.floor(Number(options.maxDistanceMeters)), 20000)
+    : 1000;
+
+  const commonParams = {
+    x: origin.longitude,
+    y: origin.latitude,
+    radius,
+    sort: "distance",
+    size: 15
+  };
+
+  const [publicResp, openResp, ol7Resp] = await Promise.all([
+    requestKakaoLocal("/search/keyword.json", { ...commonParams, query: "공중화장실" }, options),
+    requestKakaoLocal("/search/keyword.json", { ...commonParams, query: "개방화장실" }, options),
+    requestKakaoLocal("/search/category.json", { ...commonParams, category_group_code: "OL7" }, options)
+  ]);
+
+  const docs = [
+    ...(publicResp.documents || []).map((doc) => normalizeKakaoCandidate(doc, "keyword-public", origin)),
+    ...(openResp.documents || []).map((doc) => normalizeKakaoCandidate(doc, "keyword-open", origin)),
+    ...(ol7Resp.documents || []).map((doc) => normalizeKakaoCandidate(doc, "category-ol7", origin))
+  ].filter(Boolean);
+
+  return docs;
 }
 
 async function resolveAnchor(locationQuery, options = {}) {
@@ -152,10 +296,13 @@ async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
   }
 
   const dataset = await fetchDatasetCsv(options);
-  const allItems = normalizePublicRestroomRows(dataset.csvText, { latitude, longitude }, {
+  const csvItems = normalizePublicRestroomRows(dataset.csvText, { latitude, longitude }, {
     maxDistanceMeters: options.maxDistanceMeters,
     preferredDistrict: options.preferredDistrict
   });
+
+  const kakaoItems = await fetchKakaoSupplemental({ latitude, longitude }, options);
+  const mergedItems = mergeCandidates(csvItems, kakaoItems);
 
   return {
     anchor: {
@@ -164,12 +311,16 @@ async function searchNearbyPublicRestroomsByCoordinates(options = {}) {
       latitude,
       longitude
     },
-    items: allItems.slice(0, limit),
+    items: mergedItems.slice(0, limit),
     meta: {
-      total: allItems.length,
+      total: mergedItems.length,
       limit,
       datasetUrl: dataset.datasetUrl,
-      region: options.region || null
+      region: options.region || null,
+      sources: {
+        csv: csvItems.length,
+        kakaoSupplemental: kakaoItems.length
+      }
     }
   };
 }

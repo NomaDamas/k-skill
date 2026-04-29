@@ -7,12 +7,53 @@ const {
 } = require("./parse");
 
 const execFile = util.promisify(childProcess.execFile);
+const SESSION_EXPIRED_PATTERN = /stored session is no longer valid|validation_error/iu;
+
+class TossSessionExpiredError extends Error {
+  constructor(message, details = {}) {
+    super(message, { cause: details.cause });
+    this.name = "TossSessionExpiredError";
+    this.details = details;
+  }
+}
 
 function buildReadOnlyCommand(commandName, options = {}) {
   return {
     bin: options.bin || "tossctl",
     args: buildReadOnlyArgs(commandName, options)
   };
+}
+
+function shouldVerifySessionOnEmpty(commandName, options = {}) {
+  if (options.verifySessionOnEmpty === false) {
+    return false;
+  }
+
+  return commandName === "portfolioPositions" || commandName === "watchlistList";
+}
+
+function enrichQuote403Message(commandName, detail) {
+  const text = String(detail || "");
+  const isQuote = commandName === "quoteGet" || commandName === "quoteBatch";
+
+  if (!isQuote) {
+    return text;
+  }
+
+  if (/search\/stocks/iu.test(text) && /403/.test(text)) {
+    return `${text} | Upstream hint: if this recurs, report to https://github.com/JungHoonGhae/tossinvest-cli/issues/15 with timestamp and symbol.`;
+  }
+
+  return text;
+}
+
+async function checkSession(options = {}) {
+  const result = await runReadOnlyCommand("authDoctor", {
+    ...options,
+    verifySessionOnEmpty: false
+  });
+
+  return result;
 }
 
 async function runReadOnlyCommand(commandName, options = {}) {
@@ -26,14 +67,43 @@ async function runReadOnlyCommand(commandName, options = {}) {
       maxBuffer: options.maxBuffer || 1024 * 1024
     });
 
+    const parsed = parseJsonOutput(result.stdout, commandName);
+
+    if (shouldVerifySessionOnEmpty(commandName, options) && Array.isArray(parsed.data) && parsed.data.length === 0) {
+      const doctor = await checkSession(options);
+      const valid = Boolean(doctor?.data?.session?.valid);
+      if (!valid) {
+        throw new TossSessionExpiredError(
+          `tossctl ${commandName} returned empty array while session is invalid. Run \`tossctl auth login\`.`,
+          {
+            commandName,
+            stderr: String(result.stderr || "").trim(),
+            doctor: doctor.data
+          }
+        );
+      }
+    }
+
     return {
       ...command,
-      ...parseJsonOutput(result.stdout, commandName),
+      ...parsed,
       stderr: result.stderr
     };
   } catch (error) {
+    if (error instanceof TossSessionExpiredError) {
+      throw error;
+    }
+
     const stderr = String(error.stderr || "").trim();
-    const detail = stderr || error.message;
+    const detail = enrichQuote403Message(commandName, stderr || error.message);
+
+    if (SESSION_EXPIRED_PATTERN.test(detail)) {
+      throw new TossSessionExpiredError(`tossctl ${commandName} failed: ${detail}`, {
+        commandName,
+        stderr,
+        cause: error
+      });
+    }
 
     throw new Error(`tossctl ${commandName} failed: ${detail}`, {
       cause: error
@@ -85,6 +155,7 @@ function getQuoteBatch(symbols, options = {}) {
 
 module.exports = {
   buildReadOnlyCommand,
+  checkSession,
   getAccountSummary,
   getPortfolioAllocation,
   getPortfolioPositions,
@@ -94,5 +165,6 @@ module.exports = {
   listCompletedOrders,
   listOrders,
   listWatchlist,
-  runReadOnlyCommand
+  runReadOnlyCommand,
+  TossSessionExpiredError
 };
