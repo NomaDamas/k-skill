@@ -40,6 +40,7 @@ npm install toss-securities
 세션 만료 관련:
 - `account summary` 등은 만료 시 에러를 던집니다.
 - 일부 커맨드(`portfolio positions`, `watchlist list`)는 upstream에서 빈 배열(`[]`)을 반환할 수 있어, 이 패키지는 기본적으로 `auth doctor`를 추가 확인해 만료를 `TossSessionExpiredError`로 승격합니다.
+- 이 승격은 `auth doctor`가 파싱 가능한 JSON을 반환하고 `session.valid === false`로 명시 확인될 때만 발생합니다. `auth doctor` 실패, 파싱 불가 출력, 또는 `session.valid !== false`는 세션 만료 판정으로 취급하지 않습니다.
 - 필요하면 `verifySessionOnEmpty: false`로 기존 빈 배열 동작을 유지할 수 있습니다.
 
 대응되는 대표 CLI 는 `tossctl account summary --output json`, `tossctl quote get TSLA --output json`, `tossctl watchlist list --output json` 입니다.
