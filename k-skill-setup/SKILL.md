@@ -67,6 +67,8 @@ KSKILL_SRT_ID=replace-me
 KSKILL_SRT_PASSWORD=replace-me
 KSKILL_KTX_ID=replace-me
 KSKILL_KTX_PASSWORD=replace-me
+KSKILL_FORESTTRIP_ID=replace-me
+KSKILL_FORESTTRIP_PASSWORD=replace-me
 LAW_OC=replace-me
 KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
@@ -110,6 +112,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 - SRT: `KSKILL_SRT_ID`, `KSKILL_SRT_PASSWORD`
 - KTX: `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD`
+- 자연휴양림 빈 객실 조회: `KSKILL_FORESTTRIP_ID`, `KSKILL_FORESTTRIP_PASSWORD`
 - 로컬 한국 법령 검색: `LAW_OC` + `korean-law-mcp`
 - 한국 법령 검색 remote endpoint: 사용자 `LAW_OC` 없이 `url`만 등록, 장애 시 `법망` fallback
 - 한국 부동산 실거래가 조회: 사용자 시크릿 불필요 (기본 hosted proxy 사용)

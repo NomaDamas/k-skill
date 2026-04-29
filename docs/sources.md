@@ -6,6 +6,10 @@
 - `SRTrain` / `ryanking13/SRT`: https://github.com/ryanking13/SRT
 - `korail2` / `carpedm20/korail2`: https://github.com/carpedm20/korail2
 - `korail2` anti-bot bypass PR #54: https://github.com/carpedm20/korail2/pull/54
+- 숲나들e 공식 사이트: https://foresttrip.go.kr/index.jsp
+- 숲나들e 로그인: https://www.foresttrip.go.kr/com/login.do
+- 숲나들e 월별예약조회 화면: https://www.foresttrip.go.kr/rep/or/sssn/monthRsrvtSmplStatus.do
+- 숲나들e 월별 예약 가능 정보 JSON endpoint: https://www.foresttrip.go.kr/rep/or/selectRsrvtAvailInfoListForMonthRsrvtSmpl.do
 - `kbo-game`: https://github.com/vkehfdl1/kbo-game
 - KBL 일정/결과 API: https://api.kbl.or.kr/match/list
 - KBL 팀 순위 API: https://api.kbl.or.kr/league/rank/team

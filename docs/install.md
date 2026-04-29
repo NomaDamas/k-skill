@@ -47,6 +47,7 @@ npx --yes skills add <owner/repo> \
   --skill hwp \
   --skill rhwp-edit \
   --skill rhwp-advanced \
+  --skill foresttrip-vacancy \
   --skill kbo-results \
   --skill kbl-results \
   --skill kleague-results \
@@ -101,6 +102,7 @@ npx --yes skills add <owner/repo> \
   --skill k-skill-setup \
   --skill srt-booking \
   --skill ktx-booking \
+  --skill foresttrip-vacancy \
   --skill korean-law-search \
   --skill real-estate-search \
   --skill mfds-drug-safety \
