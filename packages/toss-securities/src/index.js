@@ -7,7 +7,7 @@ const {
 } = require("./parse");
 
 const execFile = util.promisify(childProcess.execFile);
-const SESSION_EXPIRED_PATTERN = /stored session is no longer valid|validation_error/iu;
+const SESSION_EXPIRED_PATTERN = /stored session is no longer valid/iu;
 
 class TossSessionExpiredError extends Error {
   constructor(message, details = {}) {
