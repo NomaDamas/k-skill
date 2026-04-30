@@ -1,6 +1,6 @@
 {
   "name": "court-auction-notice-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Korean court auction (대법원경매정보) real estate sale notice and case lookup with direct HTTP + Playwright fallback",
   "license": "MIT",
   "main": "src/index.js",
