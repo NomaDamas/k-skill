@@ -101,7 +101,7 @@ python3 scripts/ktx_booking.py search 남춘천 용산 20260503 150000 --train-t
 - `index`
 - `train_id`
 - 출발/도착 시각
-- KTX 여부
+- 열차 종류 (`train_type`)
 - 일반실/특실 가능 여부
 - 예약 대기 가능 여부
 
