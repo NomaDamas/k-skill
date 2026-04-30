@@ -6,6 +6,10 @@
 - `SRTrain` / `ryanking13/SRT`: https://github.com/ryanking13/SRT
 - `korail2` / `carpedm20/korail2`: https://github.com/carpedm20/korail2
 - `korail2` anti-bot bypass PR #54: https://github.com/carpedm20/korail2/pull/54
+- 숲나들e 공식 사이트: https://foresttrip.go.kr/index.jsp
+- 숲나들e 로그인: https://www.foresttrip.go.kr/com/login.do
+- 숲나들e 월별예약조회 화면: https://www.foresttrip.go.kr/rep/or/sssn/monthRsrvtSmplStatus.do
+- 숲나들e 월별 예약 가능 정보 JSON endpoint: https://www.foresttrip.go.kr/rep/or/selectRsrvtAvailInfoListForMonthRsrvtSmpl.do
 - `kbo-game`: https://github.com/vkehfdl1/kbo-game
 - KBL 일정/결과 API: https://api.kbl.or.kr/match/list
 - KBL 팀 순위 API: https://api.kbl.or.kr/league/rank/team
@@ -15,6 +19,14 @@
 - 하이패스 사용내역 조회 진입: https://www.hipass.co.kr/usepculr/InitUsePculrTabSearch.do
 - 하이패스 사용내역 이용안내: https://www.hipass.co.kr/html/guide/siteguide_6.jsp
 - 하이패스 사용내역 이용안내(do): https://www.hipass.co.kr/info/guide/siteguide_6.do
+- 법원경매정보 메인: https://www.courtauction.go.kr
+- 법원경매정보 부동산매각공고 진입: https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01
+- 법원경매정보 경매사건검색 진입: https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml&pgjId=159M00
+- 법원경매정보 매각공고 목록 endpoint: https://www.courtauction.go.kr/pgj/pgj143/selectRletDspslPbanc.on
+- 법원경매정보 매각공고 상세 endpoint: https://www.courtauction.go.kr/pgj/pgj143/selectRletDspslPbancDtl.on
+- 법원경매정보 사건 단건 endpoint: https://www.courtauction.go.kr/pgj/pgj15A/selectAuctnCsSrchRslt.on
+- 법원경매정보 법원사무소 코드 endpoint: https://www.courtauction.go.kr/pgj/pgjComm/selectCortOfcCdLst.on
+- data.go.kr "법원경매정보 OPEN API 미구축" 회신(2015-009): https://www.data.go.kr/odmc/trublMdat/mdatCase/board.do?id=45
 - K League 일정/결과 JSON: https://www.kleague.com/getScheduleList.do
 - K League 팀 순위 JSON: https://www.kleague.com/record/teamRank.do
 - jerjangmin original `lck-analytics` skill pack: https://github.com/jerjangmin/share/tree/main/SKILL/lck-analytics
@@ -34,6 +46,14 @@
 - rhwp HWPX-save-disabled issue #196 (data-safety gate until #197 ships): https://github.com/edwardkim/rhwp/issues/196
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
+- korean-jangbu-for upstream: https://github.com/kimlawtech/korean-jangbu-for (Apache-2.0; original author @kimlawtech, SpeciAI)
+- corporate-registration-consulting skill: local://corporate-registration-consulting
+- 대법원 인터넷등기소: https://www.iros.go.kr
+- 온라인법인설립시스템: https://www.startbiz.go.kr
+- 등기부등본 자동화 참고 구현(`challengekim/iros-registry-automation`, MIT): https://github.com/challengekim/iros-registry-automation — 실행 가이드는 `iros-registry-automation/scripts/upstream.pin`의 reviewed SHA로 checkout한 버전을 기준으로 한다.
+- 위택스 등록면허세 신고/납부: https://www.wetax.go.kr
+- 국가법령정보센터 지방세법/지방세법 시행령/상법/상업등기법/조세특례제한법: https://www.law.go.kr
+- 국세청 창업중소기업 세액감면 안내: https://www.nts.go.kr
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
 - 한국장학재단 학자금 지원구간 산정절차: https://www.kosaf.go.kr/ko/tuition.do?pg=tuition04_09_01&type=tuition
 - 한국장학재단 학자금 지원구간 경곗값 확인: https://www.kosaf.go.kr/ko/tuition.do?naviParam=JH%2C01%2C01%2C03&pg=tuition04_09_07

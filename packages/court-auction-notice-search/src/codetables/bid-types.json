@@ -1,0 +1,16 @@
+{
+  "bidTypes": [
+    {
+      "code": "000331",
+      "name": "기일입찰",
+      "alias": "date",
+      "description": "Date-based bidding (single auction date with sealed-bid open in the courtroom)"
+    },
+    {
+      "code": "000332",
+      "name": "기간입찰",
+      "alias": "period",
+      "description": "Period-based bidding (sealed bids accepted across a window, opened on a designated date)"
+    }
+  ]
+}

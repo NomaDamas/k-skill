@@ -2893,6 +2893,550 @@ test("korean-privacy-terms feature doc documents the thin-wrapper install flow a
   assert.match(featureDoc, /Next\.js/);
 });
 
+test("repository docs advertise the korean-jangbu-for thin-wrapper skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-jangbu-for.md");
+  const skillPath = path.join(repoRoot, "korean-jangbu-for", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-jangbu-for.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-jangbu-for/SKILL.md to exist");
+  assert.match(readme, /\| 한국 사업자 장부 자동화 \|/);
+  assert.match(readme, /\[한국 사업자 장부 자동화 가이드\]\(docs\/features\/korean-jangbu-for\.md\)/);
+  assert.match(install, /--skill korean-jangbu-for/);
+  assert.match(sources, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+  assert.match(sources, /Apache-2\.0/);
+  assert.match(sources, /kimlawtech/);
+  assert.match(sources, /SpeciAI/);
+});
+
+test("korean-jangbu-for skill cites upstream author and enforces accounting/tax disclaimers", () => {
+  const skillPath = path.join(repoRoot, "korean-jangbu-for", "SKILL.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected korean-jangbu-for/SKILL.md to exist");
+
+  const skill = read(path.join("korean-jangbu-for", "SKILL.md"));
+
+  assert.match(skill, /^name: korean-jangbu-for$/m);
+  assert.match(skill, /^license: Apache-2\.0$/m);
+  assert.match(skill, /^description: .*장부.*사업자.*$/m);
+  assert.match(skill, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+  assert.match(skill, /@kimlawtech/);
+  assert.match(skill, /SpeciAI/);
+  assert.match(skill, /Apache-2\.0/);
+  assert.match(skill, /참고용 초안/);
+  assert.match(skill, /공식 회계감사/);
+  assert.match(skill, /세무신고/);
+  assert.match(skill, /세무사 검토/);
+  assert.match(skill, /공인회계사/);
+  assert.match(skill, /CODEF/);
+  assert.match(skill, /BYOK/);
+  assert.match(skill, /~\/\.claude\/skills\/korean-jangbu-for/);
+  assert.match(skill, /~\/\.agents\/skills\/korean-jangbu-for/);
+  assert.match(skill, /scripts\/install\.sh/);
+  assert.match(skill, /scripts\/upstream\.pin/);
+  assert.match(skill, /DISCLAIMER\.md/);
+  assert.match(skill, /LICENSE\.upstream/);
+  assert.doesNotMatch(skill, /AskUserQuestion/);
+});
+
+test("korean-jangbu-for preserves upstream attribution, disclaimer, and Apache license", () => {
+  const noticePath = path.join(repoRoot, "korean-jangbu-for", "NOTICE");
+  const disclaimerPath = path.join(repoRoot, "korean-jangbu-for", "DISCLAIMER.md");
+  const licensePath = path.join(repoRoot, "korean-jangbu-for", "LICENSE.upstream");
+
+  assert.ok(fs.existsSync(noticePath), "expected korean-jangbu-for/NOTICE to exist");
+  assert.ok(fs.existsSync(disclaimerPath), "expected korean-jangbu-for/DISCLAIMER.md to exist");
+  assert.ok(fs.existsSync(licensePath), "expected korean-jangbu-for/LICENSE.upstream to exist");
+
+  const notice = read(path.join("korean-jangbu-for", "NOTICE"));
+  const disclaimer = read(path.join("korean-jangbu-for", "DISCLAIMER.md"));
+  const license = read(path.join("korean-jangbu-for", "LICENSE.upstream"));
+
+  assert.match(notice, /korean-jangbu-for/);
+  assert.match(notice, /Copyright 2026 kimlawtech/);
+  assert.match(notice, /SpeciAI/);
+  assert.match(notice, /@kimlawtech/);
+  assert.match(notice, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+
+  assert.match(disclaimer, /참고용 초안/);
+  assert.match(disclaimer, /공식 회계감사/);
+  assert.match(disclaimer, /세무신고/);
+  assert.match(disclaimer, /세무사 검토 필수/);
+  assert.match(disclaimer, /공인회계사 감사 필수/);
+  assert.match(disclaimer, /법적 효력/);
+
+  assert.match(license, /Apache License/);
+  assert.match(license, /Version 2\.0, January 2004/);
+  assert.match(license, /END OF TERMS AND CONDITIONS/);
+  assert.match(license, /Copyright 2026 kimlawtech \(SpeciAI\)/);
+});
+
+test("korean-jangbu-for ships an install.sh wrapper and a pinned upstream SHA", () => {
+  const pinPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "upstream.pin");
+  const installPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "install.sh");
+
+  assert.ok(fs.existsSync(pinPath), "expected korean-jangbu-for/scripts/upstream.pin to exist");
+  assert.ok(fs.existsSync(installPath), "expected korean-jangbu-for/scripts/install.sh to exist");
+
+  const pin = read(path.join("korean-jangbu-for", "scripts", "upstream.pin")).trim();
+
+  assert.match(pin, /^[0-9a-f]{40}$/, "upstream.pin must contain a single 40-char git SHA");
+  assert.notStrictEqual(pin, "0".repeat(40), "upstream.pin must not be a placeholder all-zero SHA");
+
+  const install = read(path.join("korean-jangbu-for", "scripts", "install.sh"));
+
+  assert.match(install, /^#!\/(?:usr\/bin\/env bash|bin\/bash)/m);
+  assert.match(install, /set -euo pipefail/);
+  assert.match(install, /~\/\.claude\/skills\/korean-jangbu-for/);
+  assert.match(install, /~\/\.agents\/skills\/korean-jangbu-for/);
+  assert.match(install, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for\.git/);
+  assert.match(install, /git clone --filter=blob:none/);
+  assert.match(install, /upstream\.pin/);
+  assert.match(install, /verify\.sh/);
+  assert.match(install, /Re-run this wrapper installer after upstream runtime install/);
+
+  const stat = fs.statSync(installPath);
+  assert.ok((stat.mode & 0o111) !== 0, "install.sh must be executable");
+});
+
+test("korean-jangbu-for installer registers upstream subskills for Claude and agents", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "korean-jangbu-for-install-"));
+  const homeDir = path.join(tmpDir, "home");
+  const upstreamDir = path.join(tmpDir, "upstream");
+  const installPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "install.sh");
+  const upstreamSubskills = [
+    "jangbu-connect",
+    "jangbu-dash",
+    "jangbu-import",
+    "jangbu-jongso",
+    "jangbu-tag",
+    "jangbu-tax",
+  ];
+
+  fs.mkdirSync(path.join(upstreamDir, "skills"), { recursive: true });
+  fs.mkdirSync(homeDir, { recursive: true });
+
+  for (const skillName of ["korean-jangbu-for", ...upstreamSubskills]) {
+    const skillDir = path.join(upstreamDir, "skills", skillName);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, "SKILL.md"),
+      `---\nname: ${skillName}\n---\n\n# ${skillName}\n`,
+    );
+  }
+
+  fs.mkdirSync(path.join(upstreamDir, "scripts"), { recursive: true });
+  fs.writeFileSync(path.join(upstreamDir, "scripts", "verify.sh"), "#!/usr/bin/env bash\nexit 0\n");
+
+  childProcess.execFileSync("git", ["init"], { cwd: upstreamDir, stdio: "ignore" });
+  childProcess.execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["config", "user.name", "Test"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["add", "."], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["commit", "-m", "seed upstream skills"], { cwd: upstreamDir, stdio: "ignore" });
+  const upstreamSha = childProcess.execFileSync("git", ["rev-parse", "HEAD"], { cwd: upstreamDir, encoding: "utf8" }).trim();
+
+  fs.mkdirSync(path.join(homeDir, ".claude", "skills"), { recursive: true });
+  fs.symlinkSync(
+    path.join(upstreamDir, "skills", "korean-jangbu-for"),
+    path.join(homeDir, ".claude", "skills", "korean-jangbu-for"),
+  );
+
+  childProcess.execFileSync("bash", [installPath], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      HOME: homeDir,
+      KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+      KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+    },
+    stdio: "pipe",
+  });
+
+  for (const root of [".claude", ".agents"]) {
+    const skillRoot = path.join(homeDir, root, "skills");
+
+    assert.ok(
+      fs.existsSync(path.join(skillRoot, "korean-jangbu-for", "upstream", "skills", "jangbu-connect", "SKILL.md")),
+      `${root} should keep the pinned upstream checkout nested under the wrapper`,
+    );
+    assert.match(
+      fs.readFileSync(path.join(skillRoot, "korean-jangbu-for", "SKILL.md"), "utf8"),
+      /@kimlawtech/,
+      `${root} should keep the korean-jangbu-for wrapper policy at the top level`,
+    );
+    assert.ok(
+      !fs.lstatSync(path.join(skillRoot, "korean-jangbu-for")).isSymbolicLink(),
+      `${root} should replace conflicting upstream korean-jangbu-for symlinks with a wrapper directory`,
+    );
+
+    for (const requiredPath of [
+      "scripts/install.sh",
+      "scripts/upstream.pin",
+      "LICENSE.upstream",
+      "DISCLAIMER.md",
+      "NOTICE",
+    ]) {
+      assert.ok(
+        fs.existsSync(path.join(skillRoot, "korean-jangbu-for", requiredPath)),
+        `${root} should install wrapper support payload ${requiredPath}`,
+      );
+    }
+
+    for (const skillName of upstreamSubskills) {
+      const installedSubskillPath = path.join(skillRoot, skillName, "SKILL.md");
+      assert.ok(
+        fs.existsSync(installedSubskillPath),
+        `${root} should register upstream subskill ${skillName} as a top-level discoverable skill`,
+      );
+
+      const installedSubskill = fs.readFileSync(installedSubskillPath, "utf8");
+      assert.match(installedSubskill, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+      assert.match(installedSubskill, /@kimlawtech/);
+      assert.match(installedSubskill, /SpeciAI/);
+      assert.match(installedSubskill, /Apache-2\.0/);
+      assert.match(installedSubskill, /참고용 초안/);
+      assert.match(installedSubskill, /공식 회계감사/);
+      assert.match(installedSubskill, /세무신고/);
+    }
+  }
+
+  for (const installedRoot of [".claude", ".agents"]) {
+    childProcess.execFileSync("bash", [path.join(homeDir, installedRoot, "skills", "korean-jangbu-for", "scripts", "install.sh")], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        HOME: homeDir,
+        KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+        KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+      },
+      stdio: "pipe",
+    });
+  }
+});
+
+test("korean-jangbu-for installer preflights promoted subskill collisions before home writes", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "korean-jangbu-for-collision-"));
+  const homeDir = path.join(tmpDir, "home");
+  const upstreamDir = path.join(tmpDir, "upstream");
+  const installPath = path.join(repoRoot, "korean-jangbu-for", "scripts", "install.sh");
+  const upstreamSubskills = [
+    "jangbu-connect",
+    "jangbu-dash",
+    "jangbu-import",
+    "jangbu-jongso",
+    "jangbu-tag",
+    "jangbu-tax",
+  ];
+
+  for (const skillName of upstreamSubskills) {
+    fs.mkdirSync(path.join(upstreamDir, "skills", skillName), { recursive: true });
+    fs.writeFileSync(
+      path.join(upstreamDir, "skills", skillName, "SKILL.md"),
+      `---\nname: ${skillName}\n---\n\n# ${skillName}\n`,
+    );
+  }
+
+  fs.mkdirSync(path.join(upstreamDir, "scripts"), { recursive: true });
+  fs.writeFileSync(path.join(upstreamDir, "scripts", "verify.sh"), "#!/usr/bin/env bash\nexit 0\n");
+
+  childProcess.execFileSync("git", ["init"], { cwd: upstreamDir, stdio: "ignore" });
+  childProcess.execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["config", "user.name", "Test"], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["add", "."], { cwd: upstreamDir });
+  childProcess.execFileSync("git", ["commit", "-m", "seed upstream skills"], { cwd: upstreamDir, stdio: "ignore" });
+  const upstreamSha = childProcess.execFileSync("git", ["rev-parse", "HEAD"], { cwd: upstreamDir, encoding: "utf8" }).trim();
+
+  const unrelatedSkillDir = path.join(homeDir, ".agents", "skills", "jangbu-tax");
+  fs.mkdirSync(unrelatedSkillDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(unrelatedSkillDir, "SKILL.md"),
+    "---\nname: jangbu-tax\n---\n\n# user-authored jangbu-tax\n",
+  );
+
+  assert.throws(
+    () =>
+      childProcess.execFileSync("bash", [installPath], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          KOREAN_JANGBU_FOR_UPSTREAM_REPO: upstreamDir,
+          KOREAN_JANGBU_FOR_UPSTREAM_SHA: upstreamSha,
+        },
+        stdio: "pipe",
+      }),
+    /refusing to overwrite unrelated skill/,
+  );
+
+  assert.match(
+    fs.readFileSync(path.join(unrelatedSkillDir, "SKILL.md"), "utf8"),
+    /user-authored jangbu-tax/,
+    "unrelated existing subskill should be preserved after installer refusal",
+  );
+
+  for (const root of [".claude", ".agents"]) {
+    const skillRoot = path.join(homeDir, root, "skills");
+    assert.ok(
+      !fs.existsSync(path.join(skillRoot, "korean-jangbu-for")),
+      `${root} should not create the wrapper directory after a promoted-subskill preflight failure`,
+    );
+
+    for (const skillName of upstreamSubskills.filter((name) => name !== "jangbu-tax")) {
+      assert.ok(
+        !fs.existsSync(path.join(skillRoot, skillName)),
+        `${root} should not create promoted subskill ${skillName} after a promoted-subskill preflight failure`,
+      );
+    }
+  }
+});
+
+test("korean-jangbu-for feature doc documents source-first use and mandatory attribution", () => {
+  const featureDoc = read(path.join("docs", "features", "korean-jangbu-for.md"));
+
+  assert.match(featureDoc, /kimlawtech\/korean-jangbu-for/);
+  assert.match(featureDoc, /https:\/\/github\.com\/kimlawtech\/korean-jangbu-for/);
+  assert.match(featureDoc, /@kimlawtech/);
+  assert.match(featureDoc, /SpeciAI/);
+  assert.match(featureDoc, /Apache-2\.0/);
+  assert.match(featureDoc, /~\/\.claude\/skills\/korean-jangbu-for/);
+  assert.match(featureDoc, /~\/\.agents\/skills\/korean-jangbu-for/);
+  assert.match(featureDoc, /scripts\/install\.sh/);
+  assert.match(featureDoc, /scripts\/upstream\.pin/);
+  assert.match(featureDoc, /CODEF/);
+  assert.match(featureDoc, /BYOK/);
+  assert.match(featureDoc, /세무사 검토/);
+  assert.match(featureDoc, /공인회계사/);
+});
+
+test("corporate-registration-consulting skill covers court registry workflow, tax pitfalls, and rhwp automation", () => {
+  const skillPath = path.join(repoRoot, "corporate-registration-consulting", "SKILL.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "corporate-registration-consulting.md");
+
+  assert.ok(fs.existsSync(skillPath), "expected corporate-registration-consulting/SKILL.md to exist");
+  assert.ok(fs.existsSync(featureDocPath), "expected corporate-registration-consulting feature doc to exist");
+  const articlesTemplatePath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "standard-articles-of-incorporation.md",
+  );
+  const documentPackTemplatePath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "incorporation-document-pack.md",
+  );
+
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, articlesTemplatePath)),
+    "expected a standard articles template artifact",
+  );
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, documentPackTemplatePath)),
+    "expected an incorporation document pack template artifact",
+  );
+
+  const articlesTemplate = read(articlesTemplatePath);
+  const documentPackTemplate = read(documentPackTemplatePath);
+  const skill = read(path.join("corporate-registration-consulting", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "corporate-registration-consulting.md"));
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+
+  assert.match(skill, /^---\nname: corporate-registration-consulting\n/);
+  assert.match(skill, /참고용/);
+  assert.match(skill, /법률 자문/);
+  assert.match(skill, /변호사|법무사|세무사/);
+  assert.match(skill, /상호/);
+  assert.match(skill, /정관/);
+  assert.match(skill, /잔고증명|주금납입/);
+  assert.match(skill, /취임승낙서/);
+  assert.match(skill, /조사보고서/);
+  assert.match(skill, /등록면허세/);
+  assert.match(skill, /과밀억제권역/);
+  assert.match(skill, /지방세법 제28조/);
+  assert.match(skill, /소프트웨어/);
+  assert.match(skill, /주민등록번호/);
+  assert.match(skill, /마스킹/);
+  assert.match(skill, /에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*수행하지 않는다/);
+  assert.match(skill, /사용자 사칭[\s\S]*수행하지 않는다/);
+  assert.match(skill, /최종 법률 판단[\s\S]*수행하지 않는다/);
+  assert.match(skill, /최종 세무 판단[\s\S]*수행하지 않는다/);
+  assert.match(skill, /모집설립/);
+  assert.match(skill, /현물출자/);
+  assert.match(skill, /변태설립사항/);
+  assert.match(skill, /자본금 10억/);
+  assert.match(skill, /주식회사 외/);
+  assert.match(skill, /지점/);
+  assert.match(skill, /외국인/);
+  assert.match(skill, /인허가 업종/);
+  assert.match(skill, /rhwp-edit/);
+  assert.match(skill, /k-skill-rhwp/);
+  assert.match(skill, /replace-all.*본문/);
+  assert.match(skill, /set-cell-text/);
+  assert.match(skill, /표.*셀/);
+  assert.match(skill, /mktemp -d/);
+  assert.match(skill, /chmod 700/);
+  assert.match(skill, /레포.*밖|레포.*외부|저장소.*밖|저장소.*외부/);
+  assert.doesNotMatch(skill, /\.\/out\/court-form-filled\.hwp/);
+  assert.match(skill, /법인명/);
+  assert.match(skill, /이사/);
+  assert.match(skill, /주소/);
+  assert.match(skill, /쉬운 말/);
+  assert.match(skill, /사용자 결정/);
+  assert.match(articlesTemplate, /\{\{COMPANY_NAME\}\}/);
+  assert.match(articlesTemplate, /발기인/);
+  assert.match(articlesTemplate, /1주의 금액/);
+  assert.match(articlesTemplate, /3명 이상.*이사회/);
+  assert.match(articlesTemplate, /2명.*이사회가 없는/);
+  assert.match(articlesTemplate, /이사회 결의라는 표현은 쓰지 않는다/);
+  assert.match(articlesTemplate, /1명.*그 이사가 회사를 대표/);
+  assert.match(articlesTemplate, /관할 등기소|전문가/);
+  assert.match(documentPackTemplate, /취임승낙서/);
+  assert.match(documentPackTemplate, /인감신고서/);
+  assert.match(documentPackTemplate, /등록면허세/);
+  assert.match(documentPackTemplate, /개인정보|민감정보/);
+  assert.match(documentPackTemplate, /레포.*커밋/);
+  assert.match(documentPackTemplate, /\{\{INSPECTION_CONCLUSION_AFTER_USER_OR_EXPERT_REVIEW\}\}/);
+  assert.doesNotMatch(documentPackTemplate, /중대한 흠이 없음을 보고합니다/);
+
+  assert.match(featureDoc, /법인등기 신청 컨설팅/);
+  assert.match(featureDoc, /표준 정관/);
+  assert.match(featureDoc, /등록면허세/);
+  assert.match(featureDoc, /과밀억제권역/);
+  assert.match(featureDoc, /조세특례제한법 제6조/);
+  assert.match(featureDoc, /지방세법 제28조/);
+  assert.match(featureDoc, /에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*지원하지 않는다|에이전트는[\s\S]*로그인[\s\S]*전자서명[\s\S]*세금 납부[\s\S]*등기 제출[\s\S]*수행하지 않는다/);
+  assert.match(featureDoc, /사용자 사칭[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
+  assert.match(featureDoc, /최종 법률 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
+  assert.match(featureDoc, /최종 세무 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
+  assert.match(featureDoc, /개인정보|민감정보/);
+  assert.match(featureDoc, /모집설립/);
+  assert.match(featureDoc, /현물출자/);
+  assert.match(featureDoc, /변태설립사항/);
+  assert.match(featureDoc, /자본금 10억/);
+  assert.match(featureDoc, /주식회사 외/);
+  assert.match(featureDoc, /지점/);
+  assert.match(featureDoc, /외국인/);
+  assert.match(featureDoc, /인허가 업종/);
+  assert.match(featureDoc, /replace-all.*본문/);
+  assert.match(featureDoc, /set-cell-text/);
+  assert.match(featureDoc, /표.*셀/);
+  assert.match(featureDoc, /사용자\/전문가가.*신고.*납부|사용자.*신고.*납부/);
+  assert.match(featureDoc, /사용자\/전문가가.*제출|사용자.*제출/);
+  assert.match(featureDoc, /인터넷등기소|온라인법인설립시스템/);
+  assert.match(featureDoc, /참고용/);
+
+  assert.match(readme, /\| 법인등기 신청 컨설팅 \|/);
+  assert.match(readme, /docs\/features\/corporate-registration-consulting\.md/);
+  assert.match(install, /--skill corporate-registration-consulting/);
+  assert.match(sources, /corporate-registration-consulting/);
+  assert.match(sources, /startbiz\.go\.kr/);
+  assert.match(sources, /law\.go\.kr/);
+});
+
+
+test("iros-registry-automation skill documents safe IROS registry certificate automation and upstream credit", () => {
+  const skillPath = path.join(repoRoot, "iros-registry-automation", "SKILL.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "iros-registry-automation.md");
+  const upstreamPinPath = path.join(repoRoot, "iros-registry-automation", "scripts", "upstream.pin");
+
+  assert.ok(fs.existsSync(skillPath), "expected iros-registry-automation/SKILL.md to exist");
+  assert.ok(fs.existsSync(featureDocPath), "expected iros-registry-automation feature doc to exist");
+  assert.ok(fs.existsSync(upstreamPinPath), "expected iros-registry-automation/scripts/upstream.pin to exist");
+
+  const skill = read(path.join("iros-registry-automation", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "iros-registry-automation.md"));
+  const upstreamPin = read(path.join("iros-registry-automation", "scripts", "upstream.pin")).trim();
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+
+  assert.match(upstreamPin, /^[0-9a-f]{40}$/, "upstream pin should be a reviewed 40-character Git SHA");
+
+  assert.match(skill, /^---\nname: iros-registry-automation\n/);
+  assert.match(skill, /등기부등본|등기사항증명서/);
+  assert.match(skill, /법인/);
+  assert.match(skill, /부동산/);
+  assert.match(skill, /인터넷등기소|IROS/);
+  assert.match(skill, /TouchEn nxKey/);
+  assert.match(skill, /Playwright|Chromium/);
+  assert.match(skill, /로그인[\s\S]*수동|사용자.*직접.*로그인/);
+  assert.match(skill, /결제[\s\S]*수동|사용자.*직접.*결제/);
+  assert.match(skill, /카드|공동인증서|간편인증/);
+  assert.match(skill, /페이지당\s*10건|10건/);
+  assert.match(skill, /장바구니/);
+  assert.match(skill, /열람/);
+  assert.match(skill, /저장|다운로드/);
+  assert.match(skill, /법인등록번호/);
+  assert.match(skill, /상호명/);
+  assert.match(skill, /주소/);
+  assert.match(skill, /개인정보|민감정보/);
+  assert.match(skill, /법률 자문|참고용/);
+  assert.match(skill, /challengekim/);
+  assert.match(skill, /https:\/\/github\.com\/challengekim\/iros-registry-automation/);
+  assert.match(skill, /MIT/);
+  assert.match(skill, /원 저작자|원저작자|upstream|참고 구현/);
+  assert.match(skill, new RegExp(`git checkout ${upstreamPin}`), "skill install flow should check out the pinned upstream SHA");
+  assert.match(skill, /scripts\/upstream\.pin/, "skill should document where the reviewed upstream pin lives");
+  assert.match(skill, /pin update|핀 업데이트|업스트림 핀|review/i, "skill should require review before updating the pin");
+  assert.match(skill, /\$workdir\/corp-input\.json/, "skill should put real corporate inputs under the private workdir");
+  assert.match(
+    skill,
+    /\$workdir\/companies-input\.json[\s\S]*(iros_download\.py|결제 후|열람|저장)/,
+    "skill should prepare the company-name list required by iros_download.py before the download flow after payment",
+  );
+  assert.match(
+    skill,
+    /"excel_path":\s*str\(workdir \/ "customer-list\.xlsx"\)/,
+    "skill should redirect upstream customer Excel input to the private workdir",
+  );
+  assert.match(skill, /\$workdir\/downloads/, "skill should point save_dir/download output at the private workdir");
+  assert.match(skill, /config\.json[\s\S]*save_dir[\s\S]*\$workdir/, "skill should wire config.json save_dir to the private workdir");
+  assert.match(skill, /upstream repo `data\/`|upstream `data\/`|data\/.*실제/, "skill should warn not to use upstream data/ for real inputs");
+
+  for (const doc of [featureDoc, sources]) {
+    assert.match(doc, /challengekim/);
+    assert.match(doc, /https:\/\/github\.com\/challengekim\/iros-registry-automation/);
+    assert.match(doc, /인터넷등기소|IROS|iros\.go\.kr/);
+  }
+
+  assert.match(featureDoc, new RegExp(`git checkout ${upstreamPin}`), "feature doc install flow should check out the pinned upstream SHA");
+  assert.match(featureDoc, /scripts\/upstream\.pin/, "feature doc should document where the reviewed upstream pin lives");
+  assert.match(featureDoc, /pin update|핀 업데이트|업스트림 핀|review/i, "feature doc should require review before updating the pin");
+  assert.match(featureDoc, /로그인[\s\S]*수동|사용자.*직접.*로그인/);
+  assert.match(featureDoc, /결제[\s\S]*수동|사용자.*직접.*결제/);
+  assert.match(featureDoc, /법인[\s\S]*장바구니[\s\S]*열람[\s\S]*저장/);
+  assert.match(featureDoc, /부동산[\s\S]*장바구니[\s\S]*수동/);
+  assert.match(featureDoc, /TouchEn nxKey/);
+  assert.match(featureDoc, /페이지당\s*10건|10건/);
+  assert.match(featureDoc, /i?ros_cart_by_corpnum\.py|법인등록번호 기반/);
+  assert.match(featureDoc, /i?ros_cart_realty\.py|부동산 장바구니/);
+  assert.match(featureDoc, /저장소 밖|레포 밖|커밋하지/);
+  assert.match(featureDoc, /\$workdir\/corp-input\.json/, "feature doc should put real corporate inputs under the private workdir");
+  assert.match(
+    featureDoc,
+    /\$workdir\/companies-input\.json[\s\S]*(iros_download\.py|결제 후|열람|저장)/,
+    "feature doc should prepare the company-name list required by iros_download.py before the download flow after payment",
+  );
+  assert.match(
+    featureDoc,
+    /"excel_path":\s*str\(workdir \/ "customer-list\.xlsx"\)/,
+    "feature doc should redirect upstream customer Excel input to the private workdir",
+  );
+  assert.match(featureDoc, /\$workdir\/downloads/, "feature doc should point save_dir/download output at the private workdir");
+  assert.match(featureDoc, /config\.json[\s\S]*save_dir[\s\S]*\$workdir/, "feature doc should wire config.json save_dir to the private workdir");
+  assert.match(featureDoc, /upstream repo `data\/`|upstream `data\/`|data\/.*실제/, "feature doc should warn not to use upstream data/ for real inputs");
+  assert.doesNotMatch(featureDoc, /결제.*자동화.*지원/);
+
+  assert.match(readme, /\| 등기부등본 자동화 \| `iros-registry-automation` \|/);
+  assert.match(readme, /docs\/features\/iros-registry-automation\.md/);
+  assert.match(install, /--skill iros-registry-automation/);
+  assert.match(roadmap, /등기부등본 자동화 스킬 출시/);
+});
+
 test("rhwp-edit skill pins the k-skill-rhwp CLI as the editing engine and disclaims kordoc/rhwp-advanced routing", () => {
   const skill = read(path.join("rhwp-edit", "SKILL.md"));
 
@@ -2997,4 +3541,158 @@ test("k-skill-rhwp package ships CLI bin, WASM-init shim, and minor semver chang
     "expected bin/k-skill-rhwp.js"
   );
 
+});
+
+const README_SKILL_NAME_COLUMN_MAPPING = [
+  ["SRT 예매", "srt-booking"],
+  ["KTX 예매", "ktx-booking"],
+  ["카카오톡 Mac CLI", "kakaotalk-mac"],
+  ["서울 지하철 도착정보 조회", "seoul-subway-arrival"],
+  ["지하철 분실물 조회", "subway-lost-property"],
+  ["긱뉴스 조회", "geeknews-search"],
+  ["한국 날씨 조회", "korea-weather"],
+  ["사용자 위치 미세먼지 조회", "fine-dust-location"],
+  ["한강 수위 정보 조회", "han-river-water-level"],
+  ["한국 법령 검색", "korean-law-search"],
+  ["법인등기 신청 컨설팅", "corporate-registration-consulting"],
+  ["한국 개인정보처리방침·이용약관 자동 생성", "korean-privacy-terms"],
+  ["한국 부동산 실거래가 조회", "real-estate-search"],
+  ["LH 청약 공고문 조회", "lh-notice-search"],
+  ["장학금 검색 및 조회", "korean-scholarship-search"],
+  ["생활쓰레기 배출정보 조회", "household-waste-info"],
+  ["학교 급식 식단 조회", "k-schoollunch-menu"],
+  ["도서관 도서 조회", "library-book-search"],
+  ["의약품 안전 체크", "mfds-drug-safety"],
+  ["식품 안전 체크", "mfds-food-safety"],
+  ["한국 주식 정보 조회", "korean-stock-search"],
+  ["금감원 DART 전자공시 조회", "k-dart"],
+  ["조선왕조실록 검색", "joseon-sillok-search"],
+  ["한국 특허 정보 검색", "korean-patent-search"],
+  ["근처 가장 싼 주유소 찾기", "cheap-gas-nearby"],
+  ["근처 공중화장실 찾기", "public-restroom-nearby"],
+  ["근처 공영주차장 찾기", "parking-lot-search"],
+  ["KBO 경기 결과 조회", "kbo-results"],
+  ["KBL 경기 결과 조회", "kbl-results"],
+  ["K리그 경기 결과 조회", "kleague-results"],
+  ["LCK 경기 분석", "lck-analytics"],
+  ["토스증권 조회", "toss-securities"],
+  ["하이패스 영수증 발급", "hipass-receipt"],
+  ["캐치테이블 예약 스나이핑", "catchtable-sniper"],
+  ["로또 당첨 확인", "lotto-results"],
+  ["HWP 문서 조회/변환", "hwp"],
+  ["HWP 문서 편집", "rhwp-edit"],
+  ["HWP 레이아웃·IR 디버깅", "rhwp-advanced"],
+  ["근처 술집 조회", "kakao-bar-nearby"],
+  ["우편번호 검색", "zipcode-search"],
+  ["다이소 상품 조회", "daiso-product-search"],
+  ["마켓컬리 상품 조회", "market-kurly-search"],
+  ["올리브영 검색", "olive-young-search"],
+  ["올라포케 역삼 포케", "hola-poke-yeoksam"],
+  ["택배 배송조회", "delivery-tracking"],
+  ["쿠팡 상품 검색", "coupang-product-search"],
+  ["번개장터 검색", "bunjang-search"],
+  ["중고차 가격 조회", "used-car-price-search"],
+  ["한국어 맞춤법 검사", "korean-spell-check"],
+  ["네이버 블로그 리서치", "naver-blog-research"],
+  ["네이버 쇼핑 가격비교", "naver-shopping-search"],
+  ["네이버 뉴스 검색", "naver-news-search"],
+  ["한국어 글자 수 세기", "korean-character-count"],
+  ["한국어 유행어 글쓰기", "korean-slang-writing"],
+  ["K-스킬 클리너", "k-skill-cleaner"],
+];
+
+test("README skill table header advertises the new 스킬 이름 column (issue #165)", () => {
+  const readme = read("README.md");
+
+  assert.match(
+    readme,
+    /\| 할 수 있는 일 \| 스킬 이름 \| 설명 \| 사용자 로그인 \| 문서 \|\n\| --- \| --- \| --- \| --- \| --- \|/,
+    "expected the 어떤 걸 할 수 있나 table header to include 스킬 이름 between 할 수 있는 일 and 설명 with a 5-column separator",
+  );
+});
+
+test("README skill table includes inline-code skill names for every documented row (issue #165)", () => {
+  const readme = read("README.md");
+
+  assert.ok(
+    README_SKILL_NAME_COLUMN_MAPPING.some(([, skillName]) => skillName === "k-skill-cleaner"),
+    "expected k-skill-cleaner to be covered by the central README skill-name mapping fixture",
+  );
+
+  for (const [label, skillName] of README_SKILL_NAME_COLUMN_MAPPING) {
+    const escapedLabel = escapeRegex(label);
+    const escapedName = escapeRegex(skillName);
+
+    assert.match(
+      readme,
+      new RegExp(`\\| ${escapedLabel} \\| \`${escapedName}\` \\|`),
+      `expected README row "${label}" to surface skill name \`${skillName}\` as the second column`,
+    );
+  }
+});
+
+test("README skill table strikes through the deprecated blue-ribbon-nearby skill name (issue #165)", () => {
+  const readme = read("README.md");
+
+  assert.match(
+    readme,
+    /\| ~~근처 블루리본 맛집~~ ⚠️ 지원 중단 \| ~~`blue-ribbon-nearby`~~ \|/,
+    "expected the deprecated blue-ribbon-nearby row to keep the strikethrough on its skill-name cell as well",
+  );
+});
+
+test("README skill table skill-name column entries match real on-disk skill directories (issue #165)", () => {
+  const allEntries = [
+    ...README_SKILL_NAME_COLUMN_MAPPING.map(([, skillName]) => skillName),
+    "blue-ribbon-nearby",
+  ];
+
+  for (const skillName of allEntries) {
+    const skillFile = path.join(repoRoot, skillName, "SKILL.md");
+
+    assert.ok(
+      fs.existsSync(skillFile),
+      `expected ${skillName}/SKILL.md to exist on disk so the README table never advertises a non-existent skill identifier`,
+    );
+
+    const frontmatterMatch = read(path.join(skillName, "SKILL.md")).match(/^name:\s*(\S+)\s*$/m);
+
+    assert.ok(frontmatterMatch, `expected ${skillName}/SKILL.md to declare a name in frontmatter`);
+    assert.equal(
+      frontmatterMatch[1].replace(/^"|"$/g, ""),
+      skillName,
+      `expected ${skillName}/SKILL.md frontmatter name to match the directory name (validate-skills.sh invariant)`,
+    );
+  }
+});
+
+test("repository docs advertise the k-skill-cleaner skill and agent usage sources", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "k-skill-cleaner.md");
+  const skillPath = path.join(repoRoot, "k-skill-cleaner", "SKILL.md");
+  const skillLocalHelperPath = path.join(repoRoot, "k-skill-cleaner", "scripts", "k_skill_cleaner.py");
+
+  assert.ok(fs.existsSync(skillPath), "expected k-skill-cleaner/SKILL.md to exist");
+  assert.ok(fs.existsSync(skillLocalHelperPath), "expected k-skill-cleaner/scripts/k_skill_cleaner.py to be included in standalone skill installs");
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/k-skill-cleaner.md to exist");
+
+  const skill = read(path.join("k-skill-cleaner", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "k-skill-cleaner.md"));
+
+  assert.match(skill, /^name: k-skill-cleaner$/m);
+  assert.match(skill, /Claude Code/);
+  assert.match(skill, /Codex/);
+  assert.match(skill, /OpenCode/);
+  assert.match(skill, /OpenClaw\/ClawHub/);
+  assert.match(skill, /Hermes Agent/);
+  assert.match(skill, /python3 scripts\/k_skill_cleaner\.py/);
+  assert.match(skill, /--days 90/);
+  assert.match(featureDoc, /k-skill-cleaner\/scripts\/k_skill_cleaner\.py/);
+  assert.match(featureDoc, /--days 90/);
+  assert.match(featureDoc, /인터뷰/);
+  assert.match(featureDoc, /트리거 횟수/);
+  assert.match(readme, /\| K-스킬 클리너 \| `k-skill-cleaner` \|/);
+  assert.match(readme, /\[K-스킬 클리너 가이드\]\(docs\/features\/k-skill-cleaner\.md\)/);
+  assert.match(install, /--skill k-skill-cleaner/);
 });

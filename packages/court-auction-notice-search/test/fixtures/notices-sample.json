@@ -1,0 +1,60 @@
+{
+  "status": 200,
+  "message": "정상",
+  "timestamp": 1777447035364,
+  "errors": null,
+  "data": {
+    "ipcheck": true,
+    "dlt_rletDspslPbancLst": [
+      {
+        "realBidPerd": "",
+        "dspslDxdyYmd": "20260427",
+        "cortSptNm": "서울중앙지방법원",
+        "cortAuctnJdbnNm": "경매1계",
+        "cortOfcCd": "B000210",
+        "cortOfcNm": "서울중앙지방법원",
+        "jdbnCd": "ENC_jdbn1",
+        "jdbnTelno": "02-530-1234",
+        "bidDvsCd": "000331",
+        "bidBgngYmd": "20260427",
+        "bidEndYmd": "20260427",
+        "dspslPlcNm": "서울중앙지방법원 경매법정 (4별관 211호)",
+        "fstDspslHm": "1000",
+        "scndDspslHm": "1400",
+        "thrdDspslHm": "",
+        "fothDspslHm": "",
+        "corCnt": "0",
+        "canCnt": "0",
+        "dspslRealId": "REAL_ID_2026042701",
+        "printJdbnNm": "경매1계",
+        "intgCd": "000331",
+        "intgCdNm": "기일입찰"
+      },
+      {
+        "realBidPerd": "20260420 ~ 20260424",
+        "dspslDxdyYmd": "20260427",
+        "cortSptNm": "서울중앙지방법원",
+        "cortAuctnJdbnNm": "경매2계",
+        "cortOfcCd": "B000210",
+        "cortOfcNm": "서울중앙지방법원",
+        "jdbnCd": "ENC_jdbn2",
+        "jdbnTelno": "02-530-5678",
+        "bidDvsCd": "000332",
+        "bidBgngYmd": "20260420",
+        "bidEndYmd": "20260424",
+        "dspslPlcNm": "서울중앙지방법원 경매법정",
+        "fstDspslHm": "1000",
+        "scndDspslHm": "",
+        "thrdDspslHm": "",
+        "fothDspslHm": "",
+        "corCnt": "0",
+        "canCnt": "0",
+        "dspslRealId": "REAL_ID_2026042702",
+        "printJdbnNm": "경매2계",
+        "intgCd": "000332",
+        "intgCdNm": "기간입찰"
+      }
+    ]
+  },
+  "token": null
+}

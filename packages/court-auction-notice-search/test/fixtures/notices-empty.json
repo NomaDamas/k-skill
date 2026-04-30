@@ -1,0 +1,11 @@
+{
+  "status": 200,
+  "message": "배당요구종기공고",
+  "timestamp": 1777447035364,
+  "errors": null,
+  "data": {
+    "ipcheck": true,
+    "dlt_rletDspslPbancLst": []
+  },
+  "token": null
+}

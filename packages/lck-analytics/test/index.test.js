@@ -13,6 +13,7 @@ const {
   parseOracleCsv,
 } = require("../src/index");
 const {
+  normalizeDateInput,
   normalizeScheduleResponse,
   normalizeStandingsResponse,
 } = require("../src/parse");
@@ -43,6 +44,22 @@ test("normalizeScheduleResponse filters requested LCK date and Korean team alias
   assert.equal(result.matches[0].team1.currentName, "Hanwha Life Esports");
   assert.equal(result.matches[0].team2.currentName, "T1");
   assert.deepEqual(result.matches[0].score, { team1: 1, team2: 0 });
+});
+
+test("date normalization rejects impossible calendar dates", () => {
+  assert.equal(normalizeDateInput("2024-02-29").isoDate, "2024-02-29");
+  assert.throws(
+    () => normalizeDateInput("2026-02-31"),
+    /date must be a valid Date or YYYY-MM-DD string\./,
+  );
+  assert.throws(
+    () => normalizeDateInput("2026-02-29"),
+    /date must be a valid Date or YYYY-MM-DD string\./,
+  );
+  assert.throws(
+    () => normalizeScheduleResponse(schedulePayload, { date: "2026-02-31" }),
+    /date must be a valid Date or YYYY-MM-DD string\./,
+  );
 });
 
 test("normalizeStandingsResponse keeps the LCK standings shape and alias resolution", () => {
