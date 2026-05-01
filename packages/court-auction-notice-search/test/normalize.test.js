@@ -31,6 +31,10 @@ test("parseAmount strips commas/won/spaces and rejects non-numeric", () => {
   assert.equal(parseAmount("1,500,000,000"), 1500000000);
   assert.equal(parseAmount("1,500,000,000원"), 1500000000);
   assert.equal(parseAmount(" 850000000 "), 850000000);
+  assert.equal(
+    parseAmount('<img src="/images/number_01.gif" alt="첫번째"> 9,600,000<br>입찰시간(10:00)<br>'),
+    9600000
+  );
   assert.equal(parseAmount(""), null);
   assert.equal(parseAmount("-"), null);
   assert.equal(parseAmount("not-a-number"), null);
