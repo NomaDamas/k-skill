@@ -28,6 +28,13 @@ These rules are repo-specific and apply to everything under this directory.
 - Respect existing home-directory indirection such as symlinks when syncing `~/.agents/skills`.
 - Do **not** create repo-local `.claude` or `.agents` directories for skill installation unless the user explicitly asks for a repository-local test fixture.
 
+## Crawling/search skill authoring
+
+- For any k-skill that crawls or searches a website, the expected output is a site-dependent recipe packaged into that skill.
+- Before fixing that recipe, use an insane-search-style, site-agnostic discovery pass: identify public entry points, observe browser-visible data flows when needed, prefer stable public/data endpoints over brittle screen scraping, and classify login/CAPTCHA/empty/blocked responses as explicit failure modes.
+- Record the discovered site-dependent access path, fallback order, inputs/outputs, and failure modes in `SKILL.md` and any helper package code. See `docs/adding-a-skill.md` for the canonical checklist.
+- Do not add crawling dependencies by default; first prefer existing runtime capabilities, public endpoints, or narrow allowlisted proxy routes.
+
 ## Free API proxy policy
 
 - The built-in `k-skill-proxy` is for **free APIs only**.
