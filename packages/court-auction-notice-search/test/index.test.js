@@ -67,7 +67,7 @@ test("describeBidTypeCode returns the Korean name", () => {
   assert.equal(describeBidTypeCode(""), "");
 });
 
-test("searchSaleNotices builds the expected request body and normalizes the response", async () => {
+test("searchSaleNotices posts the month key used by the site search button and normalizes the response", async () => {
   const client = makeFakeClient((endpoint) => {
     assert.equal(endpoint, "notices");
     return loadFixture("notices-sample.json");
@@ -83,7 +83,7 @@ test("searchSaleNotices builds the expected request body and normalizes the resp
   assert.equal(client.calls.length, 1);
   assert.deepEqual(client.calls[0].body, {
     dma_srchDspslPbanc: {
-      srchYmd: "20260427",
+      srchYmd: "202604",
       cortOfcCd: "B000210",
       bidDvsCd: "000331",
       srchBtnYn: "Y"
@@ -92,20 +92,33 @@ test("searchSaleNotices builds the expected request body and normalizes the resp
 
   assert.equal(result.count, 2);
   assert.equal(result.requestedDate, "2026-04-27");
+  assert.equal(result.requestedMonth, "2026-04");
   assert.equal(result.requestedCourtCode, "B000210");
   assert.deepEqual(result.requestedBidType, { code: "000331", name: "기일입찰" });
   assert.equal(result.items[0].caseNumber, undefined);
   assert.equal(result.items[0].noticeId, "REAL_ID_2026042701");
 });
 
-test("searchSaleNotices accepts compact YYYYMMDD dates and rejects garbage", async () => {
-  const client = makeFakeClient(() => loadFixture("notices-empty.json"));
-  await searchSaleNotices({ date: "20260427", client });
-  assert.equal(client.calls[0].body.dma_srchDspslPbanc.srchYmd, "20260427");
+test("searchSaleNotices accepts compact dates/months and filters exact day requests", async () => {
+  const client = makeFakeClient(() => loadFixture("notices-sample.json"));
+
+  const exactDay = await searchSaleNotices({ date: "20260427", client });
+  assert.equal(client.calls[0].body.dma_srchDspslPbanc.srchYmd, "202604");
+  assert.equal(exactDay.count, 2);
+
+  const emptyDay = await searchSaleNotices({ date: "2026-04-28", client });
+  assert.equal(client.calls[1].body.dma_srchDspslPbanc.srchYmd, "202604");
+  assert.equal(emptyDay.count, 0);
+
+  const month = await searchSaleNotices({ date: "2026-04", client });
+  assert.equal(client.calls[2].body.dma_srchDspslPbanc.srchYmd, "202604");
+  assert.equal(month.requestedDate, "2026-04");
+  assert.equal(month.requestedMonth, "2026-04");
+  assert.equal(month.count, 2);
 
   await assert.rejects(
     () => searchSaleNotices({ date: "not-a-date", client }),
-    /must be YYYY-MM-DD or YYYYMMDD/
+    /must be YYYY-MM, YYYYMM, YYYY-MM-DD or YYYYMMDD/
   );
 });
 

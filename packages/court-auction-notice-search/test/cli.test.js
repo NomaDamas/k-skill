@@ -73,7 +73,7 @@ test("CLI rejects --date with an obviously invalid format", () => {
     { encoding: "utf8" }
   );
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /must be YYYY-MM-DD or YYYYMMDD/);
+  assert.match(result.stderr, /must be YYYY-MM, YYYYMM, YYYY-MM-DD or YYYYMMDD/);
 });
 
 test("CLI prints usage and exits non-zero on unknown command", () => {

@@ -36,7 +36,7 @@
 court-auction-notice-search -h
 court-auction-notice-search codes courts --pretty | head -40
 court-auction-notice-search codes bid-types --pretty
-court-auction-notice-search notices --date 2026-04-27 --court-code B000210 --bid-type date --pretty
+court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-type date --pretty
 court-auction-notice-search case --court-code B000210 --case-number "2024타경100001" --pretty
 ```
 
@@ -50,7 +50,7 @@ const {
 } = require("court-auction-notice-search");
 
 const notices = await searchSaleNotices({
-  date: "2026-04-27",
+  date: "2026-04", // 월 전체 조회. 일자 입력은 같은 월 조회 후 해당일만 필터링
   courtCode: "B000210",
   bidType: "date"
 });
@@ -73,7 +73,7 @@ const caseInfo = await getCaseByCaseNumber({
 
 | 목적 | 메소드 + 경로 | request body |
 | --- | --- | --- |
-| 매각공고 목록 | `POST /pgj/pgj143/selectRletDspslPbanc.on` | `{"dma_srchDspslPbanc":{"srchYmd","cortOfcCd","bidDvsCd","srchBtnYn":"Y"}}` |
+| 매각공고 목록 | `POST /pgj/pgj143/selectRletDspslPbanc.on` | `{"dma_srchDspslPbanc":{"srchYmd","cortOfcCd","bidDvsCd","srchBtnYn":"Y"}}` (`srchYmd`는 사이트 검색 버튼과 동일하게 `YYYYMM`) |
 | 매각공고 상세 | `POST /pgj/pgj143/selectRletDspslPbancDtl.on` | `{"dma_srchGnrlPbanc":{"cortOfcCd","dspslDxdyYmd","jdbnCd",...}}` |
 | 사건 단건 | `POST /pgj/pgj15A/selectAuctnCsSrchRslt.on` | `{"dma_srchCsDtlInf":{"cortOfcCd","csNo"}}` |
 | 법원사무소 코드 | `POST /pgj/pgjComm/selectCortOfcCdLst.on` | `{}` |

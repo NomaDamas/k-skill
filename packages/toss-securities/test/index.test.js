@@ -157,6 +157,33 @@ printf '{"ok":true}\\n'
   assert.deepEqual(passthrough.data, []);
 });
 
+test("portfolio empty array is preserved when auth doctor does not confirm invalid session", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "toss-securities-empty-valid-"));
+  const binDir = path.join(tempDir, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const script = `#!/bin/sh
+if [ "$3" = "portfolio" ] && [ "$4" = "positions" ]; then
+  printf '[]\\n'
+  exit 0
+fi
+if [ "$3" = "auth" ] && [ "$4" = "doctor" ]; then
+  printf '{"session":{"valid":true}}\\n'
+  exit 0
+fi
+printf '{"ok":true}\\n'
+`;
+
+  const binPath = path.join(binDir, "tossctl");
+  fs.writeFileSync(binPath, script, { mode: 0o755 });
+
+  const env = { ...process.env, PATH: `${binDir}:${process.env.PATH || ""}` };
+
+  const result = await getPortfolioPositions({ env });
+
+  assert.deepEqual(result.data, []);
+});
+
 test("portfolio blank stdout with invalid auth doctor is promoted to TossSessionExpiredError", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "toss-securities-blank-"));
   const binDir = path.join(tempDir, "bin");
@@ -244,6 +271,33 @@ printf '{"ok":true}\\n'
   await assert.rejects(listWatchlist({ env }), TossSessionExpiredError);
   const passthrough = await listWatchlist({ env, verifySessionOnEmpty: false });
   assert.deepEqual(passthrough.data, []);
+});
+
+test("watchlist empty array is preserved when auth doctor does not confirm invalid session", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "toss-securities-watchlist-empty-valid-"));
+  const binDir = path.join(tempDir, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const script = `#!/bin/sh
+if [ "$3" = "watchlist" ] && [ "$4" = "list" ]; then
+  printf '[]\\n'
+  exit 0
+fi
+if [ "$3" = "auth" ] && [ "$4" = "doctor" ]; then
+  printf '{"session":{"valid":true}}\\n'
+  exit 0
+fi
+printf '{"ok":true}\\n'
+`;
+
+  const binPath = path.join(binDir, "tossctl");
+  fs.writeFileSync(binPath, script, { mode: 0o755 });
+
+  const env = { ...process.env, PATH: `${binDir}:${process.env.PATH || ""}` };
+
+  const result = await listWatchlist({ env });
+
+  assert.deepEqual(result.data, []);
 });
 
 test("quote 403 includes upstream hint", async () => {

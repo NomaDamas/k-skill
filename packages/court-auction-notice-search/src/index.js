@@ -36,6 +36,31 @@ function toYmd(input, label) {
   return compact;
 }
 
+function toNoticeSearchDate(input, label) {
+  if (input === null || input === undefined || input === "") {
+    throw new Error(`${label} is required (YYYY-MM, YYYYMM, YYYY-MM-DD, or YYYYMMDD)`);
+  }
+
+  const value = String(input).trim();
+  const compact = value.replace(/[^0-9]/g, "");
+  if (/^\d{6}$/.test(compact)) {
+    return { queryYmd: compact, exactYmd: null };
+  }
+  if (/^\d{8}$/.test(compact)) {
+    return { queryYmd: compact.slice(0, 6), exactYmd: compact };
+  }
+
+  throw new Error(`${label} must be YYYY-MM, YYYYMM, YYYY-MM-DD or YYYYMMDD, got "${input}"`);
+}
+
+function formatCompactMonth(value) {
+  return `${value.slice(0, 4)}-${value.slice(4, 6)}`;
+}
+
+function formatCompactDate(value) {
+  return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+}
+
 function normalizeCaseNumber(input) {
   if (input === null || input === undefined) {
     throw new Error("caseNumber is required (e.g. 2024타경100001)");
@@ -88,7 +113,7 @@ function ensureClient(client, options) {
 }
 
 async function searchSaleNotices(params = {}) {
-  const date = toYmd(params.date, "date");
+  const searchDate = toNoticeSearchDate(params.date, "date");
   const courtCodeRaw =
     params.courtCode === undefined || params.courtCode === null ? "" : String(params.courtCode).trim();
   const courtCode = courtCodeRaw === "" ? "" : ensureCourtCode(courtCodeRaw);
@@ -97,7 +122,9 @@ async function searchSaleNotices(params = {}) {
   const client = ensureClient(params.client, params);
   const body = {
     dma_srchDspslPbanc: {
-      srchYmd: date,
+      // The PGJ143M01 "검색" button posts a month key (YYYYMM), not a day key.
+      // Day-level API compatibility is preserved by filtering the returned month rows below.
+      srchYmd: searchDate.queryYmd,
       cortOfcCd: courtCode,
       bidDvsCd: bidTypeCode,
       srchBtnYn: "Y"
@@ -105,14 +132,27 @@ async function searchSaleNotices(params = {}) {
   };
 
   const raw = await client.postJson("notices", body);
-  return normalizeNoticeListResponse(raw, {
-    requestedDate: `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`,
+  const normalized = normalizeNoticeListResponse(raw, {
+    requestedDate: searchDate.exactYmd
+      ? formatCompactDate(searchDate.exactYmd)
+      : formatCompactMonth(searchDate.queryYmd),
+    requestedMonth: formatCompactMonth(searchDate.queryYmd),
     requestedCourtCode: courtCode || null,
     requestedBidType: bidTypeCode
       ? { code: bidTypeCode, name: describeBidTypeCode(bidTypeCode) }
       : null,
     includeRaw: params.includeRaw !== false
   });
+
+  if (searchDate.exactYmd) {
+    normalized.items = normalized.items.filter((item) => {
+      const rawYmd = item.raw && item.raw.dspslDxdyYmd ? String(item.raw.dspslDxdyYmd) : "";
+      return rawYmd === searchDate.exactYmd;
+    });
+    normalized.count = normalized.items.length;
+  }
+
+  return normalized;
 }
 
 function pickNoticeKeys(notice) {
