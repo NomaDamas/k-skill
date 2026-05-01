@@ -8,13 +8,29 @@ function nullIfBlank(value) {
   return trimmed === "" ? null : trimmed;
 }
 
+function stripHtml(value) {
+  if (value === null || value === undefined) return null;
+  const text = String(value)
+    .replace(/<img\b[^>]*>/gi, " ")
+    .replace(/<br\s*\/?\s*>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text === "" ? null : text;
+}
+
 function parseAmount(value) {
   if (value === null || value === undefined) return null;
-  const trimmed = String(value).trim();
-  if (trimmed === "") return null;
-  const cleaned = trimmed.replace(/[, ]/g, "").replace(/원$/, "");
-  if (cleaned === "" || cleaned === "-") return null;
-  const num = Number(cleaned);
+  const stripped = stripHtml(value);
+  if (!stripped) return null;
+  if (stripped === "-") return null;
+  const amountMatch = stripped.match(/\d{1,3}(?:,\d{3})+|\d+/);
+  if (!amountMatch) return null;
+  const num = Number(amountMatch[0].replace(/[, ]/g, ""));
   return Number.isFinite(num) ? num : null;
 }
 
@@ -49,6 +65,7 @@ function normalizeNoticeListResponse(rawPayload, options = {}) {
 
   return {
     requestedDate: options.requestedDate || null,
+    requestedMonth: options.requestedMonth || null,
     requestedCourtCode: options.requestedCourtCode || null,
     requestedBidType: options.requestedBidType || null,
     count: items.length,
@@ -98,9 +115,23 @@ function collectSaleTimes(row) {
 
 function normalizeNoticeDetailResponse(rawPayload, options = {}) {
   const data = rawPayload && typeof rawPayload === "object" ? rawPayload.data : null;
-  const meta = data && typeof data.dma_srchGnrlPbanc === "object" ? data.dma_srchGnrlPbanc : {};
+  const resultData = data && typeof data.result === "object" ? data.result : null;
+  const nestedInput = resultData && typeof resultData.inputData === "object" ? resultData.inputData : null;
+  const meta =
+    nestedInput ||
+    (data && typeof data.dma_srchGnrlPbanc === "object" ? data.dma_srchGnrlPbanc : {});
+  const nestedPbanc =
+    resultData &&
+    resultData.dspslPbanc &&
+    typeof resultData.dspslPbanc.pbancInfo === "object"
+      ? resultData.dspslPbanc.pbancInfo
+      : null;
   const list =
-    data && Array.isArray(data.dlt_gnrlPbancLst) ? data.dlt_gnrlPbancLst : [];
+    nestedPbanc && Array.isArray(nestedPbanc.lst)
+      ? nestedPbanc.lst
+      : data && Array.isArray(data.dlt_gnrlPbancLst)
+        ? data.dlt_gnrlPbancLst
+        : [];
 
   const includeRaw = options.includeRaw !== false;
 
@@ -110,7 +141,7 @@ function normalizeNoticeDetailResponse(rawPayload, options = {}) {
     bidStartDate: formatYmd(meta.bidBgngYmd),
     bidEndDate: formatYmd(meta.bidEndYmd),
     judgeDeptCode: nullIfBlank(meta.jdbnCd),
-    judgeDeptName: nullIfBlank(meta.cortAuctnJdbnNm),
+    judgeDeptName: nullIfBlank(meta.cortAuctnJdbnNm) || nullIfBlank(nestedPbanc && nestedPbanc.chargDept),
     judgeDeptPhone: nullIfBlank(meta.jdbnTelno),
     salePlace: nullIfBlank(meta.dspslPlcNm),
     saleTimes: collectSaleTimes(meta),
@@ -126,7 +157,9 @@ function normalizeNoticeDetailResponse(rawPayload, options = {}) {
     items
   };
   if (includeRaw) {
-    result.raw = { dma_srchGnrlPbanc: { ...meta } };
+    result.raw = nestedPbanc
+      ? { inputData: { ...meta }, pbancInfo: { ...nestedPbanc } }
+      : { dma_srchGnrlPbanc: { ...meta } };
   }
   return result;
 }
@@ -134,13 +167,13 @@ function normalizeNoticeDetailResponse(rawPayload, options = {}) {
 function normalizeNoticeDetailRow(rawRow, includeRaw) {
   const row = ensureRow(rawRow);
   const out = {
-    caseNumber: nullIfBlank(row.csNo),
+    caseNumber: stripHtml(row.csNo),
     itemSeq: nullIfBlank(row.dspslSeq),
-    usage: nullIfBlank(row.usgNm),
-    address: nullIfBlank(row.st),
+    usage: stripHtml(row.usgNm),
+    address: stripHtml(row.st),
     appraisedPrice: parseAmount(row.aeeEvlAmt),
     minimumSalePrice: parseAmount(row.lwsDspslPrc),
-    remarks: nullIfBlank(row.dspslRmk)
+    remarks: stripHtml(row.dspslRmk)
   };
   if (includeRaw) {
     out.raw = { ...row };
@@ -319,6 +352,7 @@ module.exports = {
   normalizeCourtCodesResponse,
   normalizeCaseDetailResponse,
   parseAmount,
+  stripHtml,
   formatYmd,
   formatHm
 };

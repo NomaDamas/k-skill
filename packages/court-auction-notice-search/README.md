@@ -47,7 +47,7 @@ console.log(courts.items.find((c) => c.name === "서울중앙지방법원"));
 // { code: "B000210", name: "서울중앙지방법원", branchName: "서울중앙지방법원" }
 
 const notices = await searchSaleNotices({
-  date: "2026-04-27",
+  date: "2026-04", // 월 전체 조회. "2026-04-27"처럼 일자를 주면 같은 월을 조회한 뒤 해당 일자만 필터링
   courtCode: "B000210",
   bidType: "date" // "기일입찰" / "000331" 도 모두 받음
 });
@@ -76,14 +76,14 @@ if (caseInfo.found) {
 court-auction-notice-search -h
 court-auction-notice-search codes courts --pretty
 court-auction-notice-search codes bid-types --pretty
-court-auction-notice-search notices --date 2026-04-27 --court-code B000210 --bid-type date --pretty
+court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-type date --pretty
 court-auction-notice-search case --court-code B000210 --case-number "2024타경100001" --pretty
 ```
 
 ## Public API
 
 - `searchSaleNotices({ date, courtCode?, bidType?, includeRaw?, client? })`
-  - `date`: `"YYYY-MM-DD"` 또는 `"YYYYMMDD"` (필수)
+  - `date`: `"YYYY-MM"`/`"YYYYMM"` 또는 `"YYYY-MM-DD"`/`"YYYYMMDD"` (필수). 실제 사이트 검색 버튼은 월(`YYYYMM`) 단위로 조회하므로, 일자를 주면 같은 월을 조회한 뒤 해당 매각기일만 필터링한다
   - `courtCode`: `"B000210"` 형식 또는 `""`(전체)
   - `bidType`: `"date"` / `"period"` / `"기일입찰"` / `"기간입찰"` / `"000331"` / `"000332"` / `""`
   - returns `{ requestedDate, requestedCourtCode, requestedBidType, count, items[] }`
@@ -133,7 +133,7 @@ discovery 시 직접 캡처한 사이트 내부 endpoint:
 
 | 목적 | 메소드 + 경로 | request body 핵심 키 |
 | --- | --- | --- |
-| 매각공고 목록 | `POST /pgj/pgj143/selectRletDspslPbanc.on` | `dma_srchDspslPbanc.{srchYmd, cortOfcCd, bidDvsCd, srchBtnYn:"Y"}` |
+| 매각공고 목록 | `POST /pgj/pgj143/selectRletDspslPbanc.on` | `dma_srchDspslPbanc.{srchYmd, cortOfcCd, bidDvsCd, srchBtnYn:"Y"}` — `srchYmd`는 사이트 검색 버튼과 동일하게 `YYYYMM` 월 단위 |
 | 매각공고 상세 | `POST /pgj/pgj143/selectRletDspslPbancDtl.on` | `dma_srchGnrlPbanc.{cortOfcCd, dspslDxdyYmd, jdbnCd, ...}` |
 | 사건 단건 | `POST /pgj/pgj15A/selectAuctnCsSrchRslt.on` | `dma_srchCsDtlInf.{cortOfcCd, csNo}` |
 | 법원사무소 | `POST /pgj/pgjComm/selectCortOfcCdLst.on` | `{}` |

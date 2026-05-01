@@ -39,7 +39,7 @@ metadata:
 
 ## Inputs
 
-- `date` — 매각기일 (YYYY-MM-DD 또는 YYYYMMDD). 필수.
+- `date` — 매각기일 월(YYYY-MM 또는 YYYYMM) 또는 특정일(YYYY-MM-DD 또는 YYYYMMDD). 필수. 실제 사이트 검색 버튼은 월(YYYYMM) 단위로 조회하므로 특정일 입력은 월 조회 후 해당 일자만 필터링한다.
 - `courtCode` — 법원사무소코드 (예: `B000210` = 서울중앙지방법원). 비우면 전체. `getCourtCodes()` 또는 `codes courts` 로 받아온다.
 - `bidType` — `date` (= 기일입찰, code 000331) 또는 `period` (= 기간입찰, code 000332). 빈값이면 둘 다.
 - `caseNumber` — 사건번호. `2024타경100001` 형식 권장. `2024-100001` 도 받아서 `2024타경100001` 로 정규화한다.
@@ -147,7 +147,7 @@ court-auction-notice-search codes courts --pretty | head -40
 court-auction-notice-search codes bid-types --pretty
 
 # 3. 매각공고 목록
-court-auction-notice-search notices --date 2026-04-27 --court-code B000210 --bid-type date --pretty
+court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-type date --pretty
 
 # 4. 매각공고 상세 — list 응답의 row 의 raw 필드를 그대로 detail 호출에 사용한다.
 #    (CLI 단발 호출에서는 list -> detail 으로 결과를 파이프할 수 있도록 jq 등을 함께 사용)
