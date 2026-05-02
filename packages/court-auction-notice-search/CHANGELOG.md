@@ -1,5 +1,11 @@
 # court-auction-notice-search
 
+## 0.2.1
+
+### Patch Changes
+
+- d7aca1b: Fix sale notice search to post the court site month key (`YYYYMM`) and filter exact-day requests locally; normalize the current nested notice-detail response shape and HTML-formatted prices.
+
 ## 0.2.0
 
 ### Minor Changes
