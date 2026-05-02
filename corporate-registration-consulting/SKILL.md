@@ -27,15 +27,16 @@ metadata:
 1. **사용자 결정 사항만 묻고 나머지는 에이전트가 처리한다.** 법인명, 본점 주소, 목적, 자본금, 1주의 금액, 발기인/주주, 이사/감사, 공고방법, 결산기, 주금납입 은행, 제출 방식처럼 사용자가 결정해야 하는 값만 확인한다.
 2. **쉬운 말로 설명한다.** “발기인=처음 회사를 세우는 사람”, “정관=회사 기본 규칙”, “등록면허세=등기 전에 내는 지방세”처럼 어려운 말을 풀어쓴다.
 3. **최신 확인이 필요한 법령·세율은 공식 출처를 다시 확인한다.** 법령은 국가법령정보센터(law.go.kr), 신청 절차는 인터넷등기소(iros.go.kr) 또는 온라인법인설립시스템(startbiz.go.kr), 지방세는 위택스(wetax.go.kr)·관할 지자체를 우선한다.
-4. **표준 정관은 ‘보수적 기본안’으로 낸다.** 등기소에서 거부되지 않는 표현을 목표로 하되, 실제 수리 보장을 하지 않는다. 특수한 우선주, 스톡옵션, 종류주식, 전환사채, 외국인투자, 인허가 업종은 전문가 검토로 보낸다.
-5. **공식 양식은 최신 원본을 다시 확인한다.** 실제 제출용 HWP/HWPX/PDF는 인터넷등기소의 **등기신청양식**·**첨부서면예시**와 국가법령정보센터 `상업등기신청서의 양식에 관한 예규` 양식 제65-1호(발기설립), 양식 제65-2호(모집설립)를 우선한다. 레포의 Markdown 템플릿은 공식 양식 원본을 대체하지 않는 초안·체크리스트다.
-6. **HWP 편집은 기존 rhwp 계열 스킬을 재사용한다.** 문서 생성/편집은 [`rhwp-edit`](../rhwp-edit/SKILL.md)의 `k-skill-rhwp`, HWP/HWPX 조회·필드 추출은 [`hwp`](../hwp/SKILL.md), 레이아웃 디버깅은 [`rhwp-advanced`](../rhwp-advanced/SKILL.md)를 사용한다.
-7. **사람만 할 수 있는 최종 행위를 대신하지 않는다.** 에이전트는 초안·체크리스트·자리표시자 치환까지만 돕고, 인터넷등기소/위택스 로그인, 전자서명, 세금 납부, 등기 제출, 사용자 사칭, 최종 법률 판단, 최종 세무 판단은 수행하지 않는다.
-8. **개인정보는 최소화한다.** 초안 단계에서는 가능한 한 `{{OFFICER_NAME}}`, `{{OFFICER_ADDRESS}}` 같은 자리표시자를 쓰고, 실제 생성 직전에 필요한 필드만 받는다. 주민등록번호 원문, 신분증 이미지, 인감증명서 스캔본은 꼭 필요한 경우가 아니면 요구하지 않으며, 요약·로그·테스트·PR에는 이름/주소/생년월일 등 개인정보를 마스킹한다. 채워진 산출물은 로컬에만 두고 레포에 커밋하지 말라고 안내한다.
+4. **정관은 ‘보수적 기본안’으로 낸다.** 등기소에서 거부되지 않는 표현을 목표로 하되, 실제 수리 보장을 하지 않는다. 특수한 우선주, 스톡옵션, 종류주식, 전환사채, 외국인투자, 인허가 업종은 전문가 검토로 보낸다.
+5. **실제 HWP 공식 양식을 함께 제공하고 그 파일에 작성한다.** 실제 제출용 HWP/HWPX/PDF 기준은 인터넷등기소의 **등기신청양식**·**첨부서면예시**와 국가법령정보센터 `상업등기신청서의 양식에 관한 예규` 양식 제65-1호(발기설립), 양식 제65-2호(모집설립)를 우선한다. 이 스킬에는 2026-05-02 기준 공식 HWP 스냅샷 `templates/official/form-65-1-stock-company-incorporation-promoter.hwp`와 `templates/official/form-65-2-stock-company-incorporation-subscription.hwp`를 포함한다. 발기설립은 `scripts/fill_official_hwp.py`와 `templates/official/form-65-1-fill-map.json`으로 실제 공식 HWP 사본에 주요 값을 작성한다. 정관·주식발행사항동의서·주식인수증·발기인회의사록·발기인총회 기간단축 동의서·주주명부·조사보고서·취임승낙서·이사회의사록·인감신고서·위임장 등은 `templates/attachment-hwp/`의 실제 공개 배포 HWP 양식 묶음으로 함께 제공한다. 공개 배포 HWP 안에 들어 있던 실제/샘플 법인명·성명·주소·주민등록번호형 문자열·은행명·구체 날짜는 `{{COMPANY_NAME}}`, `{{FOUNDER_ADDRESS}}`, `{{DATE}}` 같은 자리표시자로 치환해 둔다. 레포의 Markdown 템플릿과 공개 배포 HWP 묶음은 최신 공식 양식·관할 등기소 요구를 대체하지 않는 작성 보조자료다.
+6. **사용자가 서류 작성을 요청하면 기본 산출물은 실제 HWP 파일이다.** 단순 절차 설명만 요청한 경우가 아니면 Markdown만 반환하지 말고, 레포 밖 비공개 작업 디렉터리에 공식 신청서와 첨부서류 HWP 사본을 만들고, `rhwp-edit`/`k-skill-rhwp`로 그 사본의 자리표시자와 표 셀에 사용자 값을 입력한다. Markdown은 검토용 요약·체크리스트·정관 대조본으로만 보조 제공한다.
+7. **HWP 편집은 기존 rhwp 계열 스킬을 적극적으로 재사용한다.** 문서 생성/편집은 [`rhwp-edit`](../rhwp-edit/SKILL.md)의 `k-skill-rhwp`, HWP/HWPX 조회·필드 추출은 [`hwp`](../hwp/SKILL.md), 레이아웃 디버깅은 [`rhwp-advanced`](../rhwp-advanced/SKILL.md)를 사용한다. 본문 자리표시자는 `replace-all`, 공식 신청서와 표 기반 첨부서류는 `set-cell-text`, 구조 확인은 `info`/`list-paragraphs`, 생성 후 확인은 `info`와 가능하면 `render` 또는 `kordoc` 변환으로 검증한다.
+8. **사람만 할 수 있는 최종 행위를 대신하지 않는다.** 에이전트는 초안·체크리스트·자리표시자 치환까지만 돕고, 인터넷등기소/위택스 로그인, 전자서명, 세금 납부, 등기 제출, 사용자 사칭, 최종 법률 판단, 최종 세무 판단은 수행하지 않는다.
+9. **개인정보는 최소화한다.** 초안 단계에서는 가능한 한 `{{OFFICER_NAME}}`, `{{OFFICER_ADDRESS}}` 같은 자리표시자를 쓰고, 실제 생성 직전에 필요한 필드만 받는다. 주민등록번호 원문, 신분증 이미지, 인감증명서 스캔본은 꼭 필요한 경우가 아니면 요구하지 않으며, 요약·로그·테스트·PR에는 이름/주소/생년월일 등 개인정보를 마스킹한다. 채워진 산출물은 로컬에만 두고 레포에 커밋하지 말라고 안내한다.
 
 ## 전문가/공식 확인 필요 또는 v1 범위 밖
 
-아래 사실이 하나라도 있으면 표준 초안 흐름을 계속 진행하지 말고, “이 사안은 v1 기본 설립등기 범위를 벗어나므로 관할 등기소·법무사·변호사·세무사 확인 후 문구를 확정해야 합니다”라고 먼저 안내한다.
+아래 사실이 하나라도 있으면 기본 발기설립 흐름을 계속 진행하지 말고, “이 사안은 v1 기본 설립등기 범위를 벗어나므로 관할 등기소·법무사·변호사·세무사 확인 후 문구를 확정해야 합니다”라고 먼저 안내한다.
 
 - 발기설립이 아닌 **모집설립**.
 - 현금 납입만이 아닌 **현물출자**, 재산인수, 사후설립 등 **변태설립사항**.
@@ -44,7 +45,7 @@ metadata:
 - 설립과 동시에 본점 외 **지점**을 여러 곳 두거나 관할이 복수인 경우.
 - **외국인** 임원·주주, 외국법인 주주, 외국인투자신고·아포스티유·번역공증이 필요한 경우.
 - 금융, 의료, 교육, 여행, 통신판매 외 별도 허가·등록·신고가 선행되는 **인허가 업종**.
-- 종류주식, 스톡옵션, 전환사채, 투자계약, 주주간계약처럼 표준 정관 밖의 권리 설계가 있는 경우.
+- 종류주식, 스톡옵션, 전환사채, 투자계약, 주주간계약처럼 정관 밖의 권리 설계가 있는 경우.
 
 ## 먼저 묻는 최소 정보
 
@@ -67,8 +68,8 @@ metadata:
 
 1. **상호·본점·목적 결정**: 인터넷등기소 상호검색으로 같은 관할 내 충돌 가능성을 확인한다.
 2. **과밀억제권역/대도시 세금 체크**: 본점 주소가 수도권 과밀억제권역 등 중과 대상인지 먼저 본다. 대도시 법인 설립은 등록면허세가 중과될 수 있다.
-3. **공식 양식 출처 확인**: `templates/official-form-sources.md`를 열어 인터넷등기소 **등기신청양식**·**첨부서면예시**, 국가법령정보센터 등기예규 **양식 제65-1호(발기설립)** 및 **양식 제65-2호(모집설립)** 경로를 사용자에게 안내한다. 실제 제출용 원본은 사용 시점에 공식 사이트에서 다시 내려받는다.
-4. **정관 작성**: `templates/standard-articles-of-incorporation.md`를 기반으로 법인명, 목적, 주식, 기관, 결산기, 공고방법을 채운다.
+3. **공식 HWP 양식 준비**: `templates/official-form-sources.md`를 열어 인터넷등기소 **등기신청양식**·**첨부서면예시**, 국가법령정보센터 등기예규 **양식 제65-1호(발기설립)** 및 **양식 제65-2호(모집설립)** 경로를 사용자에게 안내한다. 기본 발기설립은 번들 HWP `templates/official/form-65-1-stock-company-incorporation-promoter.hwp`를 레포 밖 작업 디렉터리에 복사해 채우고, 제출 전 최신 공식본과 대조한다.
+4. **정관 및 첨부서면 HWP 작성**: `templates/attachment-hwp/articles-of-incorporation.hwp`, `founder-meeting-minutes.hwp`, `share-subscription.hwp`, `share-issuance-consent.hwp`, `inspection-report.hwp`, `officer-acceptance-director-ceo.hwp / officer-acceptance-auditor.hwp` 등 공개 배포 HWP 양식을 레포 밖 작업 디렉터리에 복사해 자리표시자를 채운다. Markdown 정관 초안은 `templates/standard-articles-of-incorporation.md`를 함께 참고한다.
 5. **발기인 결정서·주식인수·주금납입**: 발기인이 주식을 인수하고 자본금을 입금한 뒤 잔고증명서 또는 주금납입보관증명에 준하는 증빙을 준비한다.
 6. **임원 취임승낙서·인감·주민등록/주소 증빙 준비**: 이사·대표이사·감사가 취임을 승낙했다는 서류와 인감 관련 서류를 준비한다. 주민등록번호·신분증·인감증명 같은 민감정보는 원문을 대화나 로그에 남기지 말고 제출 직전 로컬 문서에만 반영한다.
 7. **조사보고서/이사회·발기인 의사록 작성**: 현물출자 등 특수 사정이 없더라도 설립 경과를 확인하는 문서를 준비한다. 1인 회사면 결정을 단순화한다.
@@ -85,7 +86,7 @@ metadata:
 - **소프트웨어 업종**: 소프트웨어 개발·공급, 정보통신업은 창업중소기업 세액감면(조세특례제한법 제6조) 또는 대도시 중과 제외 업종 검토 대상이 될 수 있다. 단, 감면·제외는 업종코드, 실제 사업내용, 창업 요건, 이전/합병/개인사업 전환 여부에 따라 달라지므로 세무사/지자체 확인 전에는 확정 표현을 쓰지 않는다.
 - **응답 방식**: 세금은 “예상 체크리스트”로 안내하고, 최종 금액은 위택스/관할 시군구 계산 결과를 기준으로 한다.
 
-## 문서 자동화 흐름
+## HWP 우선 문서 자동화 흐름
 
 1. 사용자 입력을 JSON으로 정규화한다. 공유용 예시는 개인정보를 마스킹하고, 실제 문서 생성 전까지는 주소·생년월일·인감 관련 값 대신 자리표시자를 유지한다.
 
@@ -102,21 +103,48 @@ metadata:
 }
 ```
 
-2. `templates/official-form-sources.md`로 공식 양식 출처를 먼저 제시한다. 특히 실제 제출용 신청서는 인터넷등기소 **등기신청양식**에서 최신 HWP/HWPX/PDF를 내려받고, 첨부서면 예시는 인터넷등기소 **첨부서면예시**와 등기예규 양식 제65-1호/양식 제65-2호를 대조하라고 안내한다.
-3. `templates/standard-articles-of-incorporation.md`와 `templates/incorporation-document-pack.md`의 `{{PLACEHOLDER}}`를 채워 Markdown 초안을 만든다.
-4. HWPX가 필요하면 `hwp` 스킬의 kordoc `markdownToHwpx` 경로를 사용한다.
-5. 기존 HWP 양식을 편집해야 하면 `rhwp-edit` 스킬의 `k-skill-rhwp replace-all` 또는 `set-cell-text`로 자리표시자를 채운다. `replace-all`은 본문 문단 자리표시자 치환에만 우선 사용하고, 표/셀 안의 입력란은 `k-skill-rhwp info`로 구조를 확인한 뒤 `set-cell-text` 같은 셀 인식 명령으로 채운다. 법원·등기소 공식 HWP 양식은 표가 많으므로 제출 전에는 반드시 사람이 열어 레이아웃과 누락 셀을 검토한다.
-6. 채워진 HWP에는 이름·주소·생년월일 같은 개인정보가 들어갈 수 있으므로 레포 밖의 비공개 임시 디렉터리나 사용자가 지정한 안전한 로컬 폴더에만 저장한다. 예시는 `mktemp -d`와 `chmod 700`으로 저장소 외부 작업 디렉터리를 만든 뒤 사용한다.
+2. `templates/official-form-sources.md`로 공식 양식 출처를 먼저 제시한다. 실제 제출용 신청서는 인터넷등기소 **등기신청양식** 및 국가법령정보센터 등기예규 양식 제65-1호/양식 제65-2호와 대조한다.
+3. `mktemp -d`와 `chmod 700`으로 레포 밖 비공개 작업 디렉터리를 만들고, 공식 신청서와 필요한 첨부서류 HWP를 모두 그 디렉터리로 복사한다. 번들 원본 HWP는 직접 수정하지 않는다.
+4. 발기설립이면 `templates/official/form-65-1-stock-company-incorporation-promoter.hwp`를 원본으로 삼아 `scripts/fill_official_hwp.py`가 실제 HWP 사본을 작성한다. 모집설립이면 `templates/official/form-65-2-stock-company-incorporation-subscription.hwp`는 제공하되 v1 자동작성 범위 밖으로 보고 전문가 확인을 먼저 안내한다.
+5. `templates/attachment-hwp/`의 정관·주식발행사항동의서·주식인수증·발기인회의사록·조사보고서·취임승낙서·이사회의사록·주주명부·인감신고서·위임장 등 실제 공개 배포 HWP 양식을 함께 복사하고, `rhwp-edit`의 `k-skill-rhwp replace-all` 또는 `set-cell-text`로 자리표시자와 입력 셀을 채운다.
+6. `replace-all`은 본문 문단 자리표시자 치환에만 우선 사용한다. 표/셀 안의 입력란은 `k-skill-rhwp info` 또는 `list-paragraphs`로 구조를 확인한 뒤 `set-cell-text` 같은 셀 인식 명령으로 채운다. 법원·등기소 공식 HWP 양식은 표가 많으므로 제출 전에는 반드시 사람이 열어 레이아웃과 누락 셀을 검토한다.
+7. `templates/standard-articles-of-incorporation.md`와 `templates/incorporation-document-pack.md`의 `{{PLACEHOLDER}}`를 채운 Markdown은 HWP 작성의 보조 검토본으로만 만든다. 사용자가 “서류 작성/양식 작성/제출 준비”를 요청하면 최종 산출물 목록에는 실제 `.hwp` 파일 경로가 포함되어야 한다.
+8. HWPX가 필요하면 `hwp` 스킬의 kordoc `markdownToHwpx` 경로를 사용하되, 기존 HWP 양식이 있는 경우에는 HWP 원본 편집을 우선한다.
+9. 채워진 HWP에는 이름·주소·생년월일 같은 개인정보가 들어갈 수 있으므로 레포 밖의 비공개 임시 디렉터리나 사용자가 지정한 안전한 로컬 폴더에만 저장한다. 예시는 `mktemp -d`와 `chmod 700`으로 저장소 외부 작업 디렉터리를 만든 뒤 사용한다.
 
 ```bash
 workdir="$(mktemp -d "${TMPDIR:-/tmp}/corp-reg.XXXXXX")"
 chmod 700 "$workdir"
-npx k-skill-rhwp replace-all ./templates/court-form.hwp "$workdir/court-form-filled.hwp" \
-  --query '{{COMPANY_NAME}}' --replacement '예시소프트 주식회사'
-k-skill-rhwp info "$workdir/court-form-filled.hwp"
+cat > "$workdir/form-data.json" <<'JSON'
+{
+  "company_name": "예시소프트 주식회사",
+  "head_office_address": "서울특별시 ...",
+  "capital_krw": 1000000
+}
+JSON
+python3 corporate-registration-consulting/scripts/fill_official_hwp.py \
+  --input-json "$workdir/form-data.json" \
+  --output "$workdir/form-65-1-filled.hwp"
+npx k-skill-rhwp info "$workdir/form-65-1-filled.hwp"
 ```
 
-7. 생성 직후 `k-skill-rhwp info "$workdir/court-form-filled.hwp"`로 round-trip 여부를 확인하고, 사용자가 제출 전 읽을 수 있도록 쉬운 말 요약본을 함께 만든다. 채워진 산출물 경로는 PR·테스트 로그·공유 요약에 노출하지 않는다.
+10. 첨부서류 HWP는 작업 디렉터리 사본에 대해 자리표시자 치환을 실행한다. 예: `articles-of-incorporation.hwp` 본문 placeholder는 `replace-all`, 표 기반 `shareholder-register.hwp`의 셀은 `set-cell-text`로 채운다.
+
+```bash
+cp corporate-registration-consulting/templates/attachment-hwp/articles-of-incorporation.hwp \
+  "$workdir/articles-of-incorporation-filled.hwp"
+npx k-skill-rhwp replace-all \
+  "$workdir/articles-of-incorporation-filled.hwp" \
+  "$workdir/articles-of-incorporation-filled.tmp.hwp" \
+  --query "{{COMPANY_NAME}}" \
+  --replacement "예시소프트 주식회사" \
+  --case-sensitive
+mv "$workdir/articles-of-incorporation-filled.tmp.hwp" \
+  "$workdir/articles-of-incorporation-filled.hwp"
+npx k-skill-rhwp info "$workdir/articles-of-incorporation-filled.hwp"
+```
+
+11. 생성 직후 각 HWP에 대해 `k-skill-rhwp info "$workdir/<file>.hwp"`로 round-trip 여부를 확인하고, 가능하면 `k-skill-rhwp render` 또는 `kordoc` 변환으로 입력값 반영 여부를 확인한다. 사용자가 제출 전 읽을 수 있도록 쉬운 말 요약본을 함께 만들되, 채워진 산출물 경로와 원문 개인정보는 PR·테스트 로그·공유 요약에 노출하지 않는다.
 
 ## 응답 끝에 항상 붙일 문구
 
@@ -124,7 +152,7 @@ k-skill-rhwp info "$workdir/court-form-filled.hwp"
 
 ## 출처 확인 우선순위
 
-- `templates/official-form-sources.md`: 공식 양식 출처 맵과 HWP/HWPX 처리 주의
+- `templates/official-form-sources.md`: 공식 양식 출처 맵, 번들 HWP 목록, 실제 공개 배포 첨부서류 HWP 묶음, 실제 HWP 자동작성 흐름
 - 대법원 인터넷등기소: https://www.iros.go.kr (등기신청양식, 첨부서면예시)
 - 온라인법인설립시스템: https://www.startbiz.go.kr
 - 위택스: https://www.wetax.go.kr

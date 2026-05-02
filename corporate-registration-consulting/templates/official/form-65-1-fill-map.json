@@ -1,0 +1,32 @@
+{
+  "form": "form-65-1-stock-company-incorporation-promoter.hwp",
+  "title": "[양식 제65-1호] 주식회사 설립 등기(발기설립)",
+  "engine": "k-skill-rhwp set-cell-text",
+  "warning": "이 매핑은 국가법령정보센터 HWP 별지 양식의 표 셀 인덱스에 맞춘 보조 자동작성 맵입니다. 자동 작성 후 한컴오피스/호환 뷰어에서 셀 위치, 줄바꿈, 날인란, 첨부서면 통수를 반드시 사람이 확인하세요.",
+  "fields": {
+    "registration_purpose": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 18, "default": "주식회사설립" },
+    "registration_reason": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 19 },
+    "company_name": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 21 },
+    "head_office_address": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 23 },
+    "public_notice_method": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 25 },
+    "par_value_krw": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 27 },
+    "authorized_shares": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 29 },
+    "issued_shares_summary": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 31 },
+    "capital_krw": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 33 },
+    "purposes_text": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 35 },
+    "directors_auditors_text": { "section": 0, "parentParagraph": 3, "control": 0, "cell": 2 },
+    "ceo_name_address": { "section": 0, "parentParagraph": 3, "control": 0, "cell": 4 },
+    "share_class_details": { "section": 0, "parentParagraph": 3, "control": 0, "cell": 6, "default": "해당없음" },
+    "branches": { "section": 0, "parentParagraph": 3, "control": 0, "cell": 8, "default": "해당없음" },
+    "duration_or_dissolution": { "section": 0, "parentParagraph": 3, "control": 0, "cell": 10, "default": "해당없음" },
+    "other_registration_items": { "section": 0, "parentParagraph": 3, "control": 0, "cell": 12 },
+    "registration_tax_krw": { "section": 0, "parentParagraph": 6, "control": 0, "cell": 1 },
+    "local_education_tax_krw": { "section": 0, "parentParagraph": 6, "control": 0, "cell": 3 },
+    "special_rural_tax_krw": { "section": 0, "parentParagraph": 6, "control": 0, "cell": 5, "default": "0" },
+    "tax_total_krw": { "section": 0, "parentParagraph": 6, "control": 0, "cell": 7 },
+    "application_fee_krw": { "section": 0, "parentParagraph": 6, "control": 0, "cell": 9 },
+    "fee_payment_number": { "section": 0, "parentParagraph": 6, "control": 0, "cell": 11 },
+    "tax_base_krw": { "section": 0, "parentParagraph": 6, "control": 0, "cell": 13 },
+    "application_date": { "section": 0, "parentParagraph": 6, "control": 0, "cell": 17 }
+  }
+}

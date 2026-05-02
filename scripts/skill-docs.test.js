@@ -3231,6 +3231,51 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
     "templates",
     "official-form-sources.md",
   );
+  const officialPromoterHwpPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official",
+    "form-65-1-stock-company-incorporation-promoter.hwp",
+  );
+  const officialSubscriptionHwpPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official",
+    "form-65-2-stock-company-incorporation-subscription.hwp",
+  );
+  const officialFillMapPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official",
+    "form-65-1-fill-map.json",
+  );
+  const officialSourceManifestPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official",
+    "source-manifest.json",
+  );
+  const officialFillScriptPath = path.join(
+    "corporate-registration-consulting",
+    "scripts",
+    "fill_official_hwp.py",
+  );
+  const attachmentHwpDir = path.join("corporate-registration-consulting", "templates", "attachment-hwp");
+  const attachmentHwpArtifacts = [
+    "articles-of-incorporation.hwp",
+    "standard-articles-startup-moj.hwp",
+    "share-issuance-consent.hwp",
+    "share-subscription.hwp",
+    "founder-meeting-minutes.hwp",
+    "founder-meeting-period-shortening-consent.hwp",
+    "shareholder-register.hwp",
+    "inspection-report.hwp",
+    "officer-acceptance-director-ceo.hwp",
+    "officer-acceptance-auditor.hwp",
+    "board-minutes.hwp",
+    "corporate-seal-report.hwp",
+    "power-of-attorney.hwp",
+  ].map((fileName) => path.join(attachmentHwpDir, fileName));
 
   assert.ok(
     fs.existsSync(path.join(repoRoot, articlesTemplatePath)),
@@ -3244,10 +3289,20 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
     fs.existsSync(path.join(repoRoot, officialFormSourcesPath)),
     "expected an official form sources artifact",
   );
+  for (const artifactPath of [officialPromoterHwpPath, officialSubscriptionHwpPath, officialFillMapPath, officialSourceManifestPath, officialFillScriptPath, ...attachmentHwpArtifacts, path.join(attachmentHwpDir, "source-manifest.json")]) {
+    assert.ok(fs.existsSync(path.join(repoRoot, artifactPath)), `expected ${artifactPath} to exist`);
+  }
 
   const articlesTemplate = read(articlesTemplatePath);
   const documentPackTemplate = read(documentPackTemplatePath);
   const officialFormSources = read(officialFormSourcesPath);
+  const officialFillMap = JSON.parse(read(officialFillMapPath));
+  const officialSourceManifest = JSON.parse(read(officialSourceManifestPath));
+  const attachmentSourceManifest = JSON.parse(read(path.join(attachmentHwpDir, "source-manifest.json")));
+  for (const hwpPath of [officialPromoterHwpPath, officialSubscriptionHwpPath, ...attachmentHwpArtifacts]) {
+    const hwpMagic = fs.readFileSync(path.join(repoRoot, hwpPath)).subarray(0, 8).toString("hex");
+    assert.equal(hwpMagic, "d0cf11e0a1b11ae1", `${hwpPath} should be an OLE HWP file`);
+  }
   const skill = read(path.join("corporate-registration-consulting", "SKILL.md"));
   const featureDoc = read(path.join("docs", "features", "corporate-registration-consulting.md"));
   const readme = read("README.md");
@@ -3287,11 +3342,27 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(skill, /양식 제65-1호/);
   assert.match(skill, /양식 제65-2호/);
   assert.match(skill, /official-form-sources\.md/);
-  assert.match(skill, /공식 양식 원본을 대체하지 않는 초안/);
+  assert.match(skill, /form-65-1-stock-company-incorporation-promoter\.hwp/);
+  assert.match(skill, /form-65-2-stock-company-incorporation-subscription\.hwp/);
+  assert.match(skill, /fill_official_hwp\.py/);
+  assert.match(skill, /form-65-1-fill-map\.json/);
+  assert.match(skill, /기본 산출물은 실제 HWP 파일/);
+  assert.match(skill, /Markdown만 반환하지 말고/);
+  assert.match(skill, /최종 산출물 목록에는 실제 `?\.hwp`? 파일 경로/);
+  assert.match(skill, /templates\/attachment-hwp\//);
+  assert.match(skill, /자리표시자/);
+  assert.match(skill, /articles-of-incorporation\.hwp/);
+  assert.match(skill, /founder-meeting-minutes\.hwp/);
+  assert.match(skill, /share-subscription\.hwp/);
+  assert.match(skill, /inspection-report\.hwp/);
+  assert.match(skill, /officer-acceptance-director-ceo\.hwp/);
+  assert.match(skill, /최신 공식 양식.*관할 등기소 요구를 대체하지 않는 작성 보조자료/);
   assert.match(skill, /rhwp-edit/);
   assert.match(skill, /k-skill-rhwp/);
   assert.match(skill, /replace-all.*본문/);
   assert.match(skill, /set-cell-text/);
+  assert.match(skill, /info.*list-paragraphs/);
+  assert.match(skill, /render|kordoc/);
   assert.match(skill, /표.*셀/);
   assert.match(skill, /mktemp -d/);
   assert.match(skill, /chmod 700/);
@@ -3324,10 +3395,25 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(officialFormSources, /양식 제65-1호/);
   assert.match(officialFormSources, /양식 제65-2호/);
   assert.match(officialFormSources, /HWP\/HWPX\/PDF/);
-  assert.match(officialFormSources, /레포에 복사본을 고정 커밋하지 말고/);
+  assert.match(officialFormSources, /templates\/official/);
+  assert.match(officialFormSources, /form-65-1-stock-company-incorporation-promoter\.hwp/);
+  assert.match(officialFormSources, /form-65-2-stock-company-incorporation-subscription\.hwp/);
+  assert.match(officialFormSources, /fill_official_hwp\.py/);
+  assert.match(officialFormSources, /templates\/attachment-hwp\//);
+  assert.match(officialFormSources, /실제 공개 배포 첨부서류 HWP 양식 묶음/);
+  assert.match(officialFormSources, /자리표시자/);
+  assert.match(officialFormSources, /articles-of-incorporation\.hwp/);
+  assert.match(officialFormSources, /corporate-seal-report\.hwp/);
+  assert.match(officialFormSources, /최신본을 다시 확인|최신 예규/);
+  assert.equal(officialFillMap.fields.company_name.cell, 21);
+  assert.equal(officialFillMap.fields.head_office_address.cell, 23);
+  assert.equal(officialFillMap.fields.capital_krw.cell, 33);
+  assert.equal(officialSourceManifest.source.adm_rul_seq, "2200000106061");
+  assert.match(officialSourceManifest.files[0].sha256, /^[a-f0-9]{64}$/);
+  assert.match(attachmentSourceManifest.note, /sanitized to placeholders|자리표시자/);
 
   assert.match(featureDoc, /법인등기 신청 컨설팅/);
-  assert.match(featureDoc, /표준 정관/);
+  assert.match(featureDoc, /정관/);
   assert.match(featureDoc, /등록면허세/);
   assert.match(featureDoc, /과밀억제권역/);
   assert.match(featureDoc, /조세특례제한법 제6조/);
@@ -3337,6 +3423,10 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(featureDoc, /최종 법률 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
   assert.match(featureDoc, /최종 세무 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
   assert.match(featureDoc, /개인정보|민감정보/);
+  assert.match(featureDoc, /자리표시자/);
+  assert.match(featureDoc, /최종 산출물은 실제 `?\.hwp`? 사본/);
+  assert.match(featureDoc, /HWP 원본 편집을 우선/);
+  assert.match(featureDoc, /set-cell-text/);
   assert.match(featureDoc, /모집설립/);
   assert.match(featureDoc, /현물출자/);
   assert.match(featureDoc, /변태설립사항/);
@@ -3356,6 +3446,10 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(featureDoc, /양식 제65-1호/);
   assert.match(featureDoc, /양식 제65-2호/);
   assert.match(featureDoc, /official-form-sources\.md/);
+  assert.match(featureDoc, /templates\/official\/\*\.hwp|templates\/official\//);
+  assert.match(featureDoc, /fill_official_hwp\.py/);
+  assert.match(featureDoc, /templates\/attachment-hwp\//);
+  assert.match(featureDoc, /정관.*첨부서면.*HWP|첨부서류 HWP|공개 배포.*HWP/);
   assert.match(featureDoc, /참고용/);
 
   assert.match(readme, /\| 법인등기 신청 컨설팅 \|/);
