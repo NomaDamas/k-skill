@@ -1,0 +1,27 @@
+{
+  "downloaded_at": "2026-05-02",
+  "source": {
+    "name": "국가법령정보센터 상업등기신청서의 양식에 관한 예규",
+    "page_url": "https://www.law.go.kr/행정규칙/상업등기신청서의양식에관한예규",
+    "adm_rul_seq": "2200000106061",
+    "note": "별지 양식 HWP 다운로드 링크(flDownload.do)에서 내려받은 공식 별지 서식입니다. 제출 전에는 최신 예규/인터넷등기소 양식과 다시 대조하세요."
+  },
+  "files": [
+    {
+      "path": "form-65-1-stock-company-incorporation-promoter.hwp",
+      "title": "[양식 제65-1호] 주식회사 설립 등기(발기설립)",
+      "flSeq": "146330897",
+      "bylClsCd": "200206",
+      "sha256": "793dc933df06bd7dee117c6613e369d6918be22114d8682d6e8c5f54850ddc98",
+      "bytes": 17408
+    },
+    {
+      "path": "form-65-2-stock-company-incorporation-subscription.hwp",
+      "title": "[양식 제65-2호] 주식회사 설립 등기(모집설립)",
+      "flSeq": "146330901",
+      "bylClsCd": "200206",
+      "sha256": "aefa665b1d57f856041a648bb8b9cbcfd291049112d683e9504310295d2a7848",
+      "bytes": 17408
+    }
+  ]
+}

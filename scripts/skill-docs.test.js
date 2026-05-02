@@ -3216,28 +3216,83 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
 
   assert.ok(fs.existsSync(skillPath), "expected corporate-registration-consulting/SKILL.md to exist");
   assert.ok(fs.existsSync(featureDocPath), "expected corporate-registration-consulting feature doc to exist");
-  const articlesTemplatePath = path.join(
-    "corporate-registration-consulting",
-    "templates",
-    "standard-articles-of-incorporation.md",
-  );
   const documentPackTemplatePath = path.join(
     "corporate-registration-consulting",
     "templates",
     "incorporation-document-pack.md",
   );
-
-  assert.ok(
-    fs.existsSync(path.join(repoRoot, articlesTemplatePath)),
-    "expected a standard articles template artifact",
+  const officialFormSourcesPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official-form-sources.md",
   );
+  const officialPromoterHwpPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official",
+    "form-65-1-stock-company-incorporation-promoter.hwp",
+  );
+  const officialSubscriptionHwpPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official",
+    "form-65-2-stock-company-incorporation-subscription.hwp",
+  );
+  const officialFillMapPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official",
+    "form-65-1-fill-map.json",
+  );
+  const officialSourceManifestPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official",
+    "source-manifest.json",
+  );
+  const officialFillScriptPath = path.join(
+    "corporate-registration-consulting",
+    "scripts",
+    "fill_official_hwp.py",
+  );
+  const attachmentHwpDir = path.join("corporate-registration-consulting", "templates", "attachment-hwp");
+  const attachmentHwpArtifacts = [
+    "articles-of-incorporation.hwp",
+    "standard-articles-startup-moj.hwp",
+    "share-issuance-consent.hwp",
+    "share-subscription.hwp",
+    "founder-meeting-minutes.hwp",
+    "founder-meeting-period-shortening-consent.hwp",
+    "shareholder-register.hwp",
+    "inspection-report.hwp",
+    "officer-acceptance-director-ceo.hwp",
+    "officer-acceptance-auditor.hwp",
+    "board-minutes.hwp",
+    "corporate-seal-report.hwp",
+    "power-of-attorney.hwp",
+  ].map((fileName) => path.join(attachmentHwpDir, fileName));
+
   assert.ok(
     fs.existsSync(path.join(repoRoot, documentPackTemplatePath)),
     "expected an incorporation document pack template artifact",
   );
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, officialFormSourcesPath)),
+    "expected an official form sources artifact",
+  );
+  for (const artifactPath of [officialPromoterHwpPath, officialSubscriptionHwpPath, officialFillMapPath, officialSourceManifestPath, officialFillScriptPath, ...attachmentHwpArtifacts, path.join(attachmentHwpDir, "source-manifest.json")]) {
+    assert.ok(fs.existsSync(path.join(repoRoot, artifactPath)), `expected ${artifactPath} to exist`);
+  }
 
-  const articlesTemplate = read(articlesTemplatePath);
   const documentPackTemplate = read(documentPackTemplatePath);
+  const officialFormSources = read(officialFormSourcesPath);
+  const officialFillMap = JSON.parse(read(officialFillMapPath));
+  const officialSourceManifest = JSON.parse(read(officialSourceManifestPath));
+  const attachmentSourceManifest = JSON.parse(read(path.join(attachmentHwpDir, "source-manifest.json")));
+  for (const hwpPath of [officialPromoterHwpPath, officialSubscriptionHwpPath, ...attachmentHwpArtifacts]) {
+    const hwpMagic = fs.readFileSync(path.join(repoRoot, hwpPath)).subarray(0, 8).toString("hex");
+    assert.equal(hwpMagic, "d0cf11e0a1b11ae1", `${hwpPath} should be an OLE HWP file`);
+  }
   const skill = read(path.join("corporate-registration-consulting", "SKILL.md"));
   const featureDoc = read(path.join("docs", "features", "corporate-registration-consulting.md"));
   const readme = read("README.md");
@@ -3264,45 +3319,114 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(skill, /최종 법률 판단[\s\S]*수행하지 않는다/);
   assert.match(skill, /최종 세무 판단[\s\S]*수행하지 않는다/);
   assert.match(skill, /모집설립/);
-  assert.match(skill, /현물출자/);
-  assert.match(skill, /변태설립사항/);
-  assert.match(skill, /자본금 10억/);
-  assert.match(skill, /주식회사 외/);
-  assert.match(skill, /지점/);
-  assert.match(skill, /외국인/);
-  assert.match(skill, /인허가 업종/);
+  assert.match(skill, /모집설립은 일반적이지[\s\S]*기본 플로우에서는 제외/);
+  assert.match(skill, /저장된 발기설립 양식과 첨부서류 양식/);
+  assert.match(skill, /등기신청양식/);
+  assert.match(skill, /첨부서면예시/);
+  assert.match(skill, /상업등기신청서의 양식에 관한 예규/);
+  assert.match(skill, /official-form-sources\.md/);
+  assert.match(skill, /form-65-1-stock-company-incorporation-promoter\.hwp/);
+  assert.match(skill, /fill_official_hwp\.py/);
+  assert.match(skill, /form-65-1-fill-map\.json/);
+  assert.match(skill, /기본 산출물은 실제 HWP 파일/);
+  assert.match(skill, /Markdown만 반환하지 말고/);
+  assert.match(skill, /dummy[\s\S]*지양|dummy[\s\S]*남기지 않는다/);
+  assert.match(skill, /반드시 작성할 문서와 저장된 양식 경로/);
+  assert.match(skill, /저장해 둔 HWP 양식을 우선 활용|저장된 HWP 양식을 우선 활용/);
+  assert.match(skill, /에이전트가 매번 공식 양식을 새로 찾게 하지 말고/);
+  assert.match(skill, /정관은 최대한 저장된 표준정관을 그대로 따른다/);
+  assert.match(skill, /정관[\s\S]*제2조[\s\S]*업태·종목/);
+  assert.match(skill, /정관[\s\S]*맨 마지막[\s\S]*작성일자[\s\S]*서명|정관[\s\S]*맨 마지막[\s\S]*날짜[\s\S]*기명날인/);
+  assert.match(skill, /간인/);
+  assert.match(skill, /법인인감/);
+  assert.match(skill, /templates\/attachment-hwp\//);
+  assert.match(skill, /자리표시자/);
+  assert.match(skill, /articles-of-incorporation\.hwp/);
+  assert.match(skill, /founder-meeting-minutes\.hwp/);
+  assert.match(skill, /share-subscription\.hwp/);
+  assert.match(skill, /inspection-report\.hwp/);
+  assert.match(skill, /officer-acceptance-director-ceo\.hwp/);
   assert.match(skill, /rhwp-edit/);
   assert.match(skill, /k-skill-rhwp/);
-  assert.match(skill, /replace-all.*본문/);
+  assert.match(skill, /본문[\s\S]*replace-all|replace-all[\s\S]*본문/);
+  assert.match(skill, /replace-all[\s\S]*shortcut/);
+  assert.match(skill, /한 장 한 장[\s\S]*순차/);
   assert.match(skill, /set-cell-text/);
+  assert.match(skill, /info.*list-paragraphs/);
+  assert.match(skill, /render|kordoc/);
   assert.match(skill, /표.*셀/);
-  assert.match(skill, /mktemp -d/);
-  assert.match(skill, /chmod 700/);
   assert.match(skill, /레포.*밖|레포.*외부|저장소.*밖|저장소.*외부/);
   assert.doesNotMatch(skill, /\.\/out\/court-form-filled\.hwp/);
+  assert.match(skill, /등기신청수수료 영수필확인서/);
+  assert.match(skill, /등기이사[\s\S]*인감증명서 또는 본인서명사실확인서/);
+  assert.match(skill, /등기이사[\s\S]*주민등록초본\/등본/);
+  assert.match(skill, /상법 제291조/);
+  assert.match(skill, /명의개서대리인/);
+  assert.match(skill, /현물출자[\s\S]*재산인수/);
+  assert.match(skill, /인허가/);
+  assert.match(skill, /정관 공증|의사록 인증/);
   assert.match(skill, /법인명/);
   assert.match(skill, /이사/);
   assert.match(skill, /주소/);
   assert.match(skill, /쉬운 말/);
   assert.match(skill, /사용자 결정/);
-  assert.match(articlesTemplate, /\{\{COMPANY_NAME\}\}/);
-  assert.match(articlesTemplate, /발기인/);
-  assert.match(articlesTemplate, /1주의 금액/);
-  assert.match(articlesTemplate, /3명 이상.*이사회/);
-  assert.match(articlesTemplate, /2명.*이사회가 없는/);
-  assert.match(articlesTemplate, /이사회 결의라는 표현은 쓰지 않는다/);
-  assert.match(articlesTemplate, /1명.*그 이사가 회사를 대표/);
-  assert.match(articlesTemplate, /관할 등기소|전문가/);
   assert.match(documentPackTemplate, /취임승낙서/);
   assert.match(documentPackTemplate, /인감신고서/);
   assert.match(documentPackTemplate, /등록면허세/);
+  assert.match(documentPackTemplate, /등기신청수수료 영수필확인서/);
+  assert.match(documentPackTemplate, /등기이사[\s\S]*인감증명서 또는 본인서명사실확인서/);
+  assert.match(documentPackTemplate, /등기이사[\s\S]*주민등록초본\/등본/);
+  assert.match(documentPackTemplate, /명의개서대리인/);
+  assert.match(documentPackTemplate, /현물출자[\s\S]*재산인수/);
+  assert.match(documentPackTemplate, /인허가/);
+  assert.match(documentPackTemplate, /정관 공증|의사록 인증/);
   assert.match(documentPackTemplate, /개인정보|민감정보/);
+  assert.match(documentPackTemplate, /양식별 수정 위치/);
+  assert.match(documentPackTemplate, /간인/);
+  assert.match(documentPackTemplate, /법인인감/);
   assert.match(documentPackTemplate, /레포.*커밋/);
   assert.match(documentPackTemplate, /\{\{INSPECTION_CONCLUSION_AFTER_USER_OR_EXPERT_REVIEW\}\}/);
   assert.doesNotMatch(documentPackTemplate, /중대한 흠이 없음을 보고합니다/);
+  assert.match(officialFormSources, /인터넷등기소/);
+  assert.match(officialFormSources, /등기신청양식/);
+  assert.match(officialFormSources, /첨부서면예시/);
+  assert.match(officialFormSources, /상업등기신청서의 양식에 관한 예규/);
+  assert.match(officialFormSources, /양식 제65-1호/);
+  assert.match(officialFormSources, /양식 제65-2호/);
+  assert.match(officialFormSources, /이미 저장된 HWP 양식 경로/);
+  assert.match(officialFormSources, /새 양식을 찾는 것부터 시작하지 말고/);
+  assert.match(officialFormSources, /모집설립[\s\S]*기본 플로우에서는 사용하지 않음/);
+  assert.match(officialFormSources, /HWP\/HWPX\/PDF/);
+  assert.match(officialFormSources, /templates\/official/);
+  assert.match(officialFormSources, /form-65-1-stock-company-incorporation-promoter\.hwp/);
+  assert.match(officialFormSources, /form-65-2-stock-company-incorporation-subscription\.hwp/);
+  assert.match(officialFormSources, /fill_official_hwp\.py/);
+  assert.match(officialFormSources, /templates\/attachment-hwp\//);
+  assert.match(officialFormSources, /실제 공개 배포 첨부서류 HWP 양식 묶음/);
+  assert.match(officialFormSources, /자리표시자/);
+  assert.match(officialFormSources, /articles-of-incorporation\.hwp/);
+  assert.match(officialFormSources, /corporate-seal-report\.hwp/);
+  assert.match(officialFormSources, /최신본을 다시 확인|최신 예규/);
+  assert.match(officialFormSources, /replace-all[\s\S]*shortcut/);
+  assert.match(officialFormSources, /간인/);
+  assert.match(officialFormSources, /법인인감/);
+  assert.match(officialFormSources, /등기신청수수료 영수필확인서/);
+  assert.match(officialFormSources, /등기이사[\s\S]*인감증명서 또는 본인서명사실확인서/);
+  assert.match(officialFormSources, /등기이사[\s\S]*주민등록초본\/등본/);
+  assert.match(officialFormSources, /상업등기규칙 제129조/);
+  assert.match(officialFormSources, /명의개서대리인/);
+  assert.match(officialFormSources, /현물출자[\s\S]*재산인수/);
+  assert.match(officialFormSources, /인허가/);
+  assert.match(officialFormSources, /정관 공증|의사록 인증/);
+  assert.equal(officialFillMap.fields.company_name.cell, 21);
+  assert.equal(officialFillMap.fields.head_office_address.cell, 23);
+  assert.equal(officialFillMap.fields.capital_krw.cell, 33);
+  assert.equal(officialSourceManifest.source.adm_rul_seq, "2200000106061");
+  assert.match(officialSourceManifest.files[0].sha256, /^[a-f0-9]{64}$/);
+  assert.match(attachmentSourceManifest.note, /sanitized to placeholders|자리표시자/);
 
   assert.match(featureDoc, /법인등기 신청 컨설팅/);
-  assert.match(featureDoc, /표준 정관/);
+  assert.match(featureDoc, /정관/);
   assert.match(featureDoc, /등록면허세/);
   assert.match(featureDoc, /과밀억제권역/);
   assert.match(featureDoc, /조세특례제한법 제6조/);
@@ -3312,20 +3436,38 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(featureDoc, /최종 법률 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
   assert.match(featureDoc, /최종 세무 판단[\s\S]*(지원하지 않는다|수행하지 않는다|사용자가 직접 또는 전문가)/);
   assert.match(featureDoc, /개인정보|민감정보/);
+  assert.match(featureDoc, /자리표시자/);
+  assert.match(featureDoc, /최종 산출물은 실제 `?\.hwp`? 사본/);
+  assert.match(featureDoc, /저장된 HWP 양식 사본/);
+  assert.match(featureDoc, /표 셀|set-cell-text/);
   assert.match(featureDoc, /모집설립/);
-  assert.match(featureDoc, /현물출자/);
-  assert.match(featureDoc, /변태설립사항/);
-  assert.match(featureDoc, /자본금 10억/);
-  assert.match(featureDoc, /주식회사 외/);
-  assert.match(featureDoc, /지점/);
-  assert.match(featureDoc, /외국인/);
-  assert.match(featureDoc, /인허가 업종/);
-  assert.match(featureDoc, /replace-all.*본문/);
-  assert.match(featureDoc, /set-cell-text/);
+  assert.match(featureDoc, /모집설립은 일반적이지[\s\S]*기본 플로우/);
+  assert.match(featureDoc, /저장된 양식 경로/);
+  assert.match(featureDoc, /필수 문서와 양식/);
+  assert.match(featureDoc, /replace-all/);
+  assert.match(featureDoc, /replace-all[\s\S]*shortcut/);
+  assert.match(featureDoc, /한 장 한 장[\s\S]*순차/);
+  assert.match(featureDoc, /표 셀|set-cell-text/);
+  assert.match(featureDoc, /간인/);
+  assert.match(featureDoc, /법인인감/);
+  assert.match(featureDoc, /등기신청수수료 영수필확인서/);
+  assert.match(featureDoc, /등기이사[\s\S]*인감증명서\/본인서명사실확인서|등기이사[\s\S]*인감증명서 또는 본인서명사실확인서/);
+  assert.match(featureDoc, /등기이사[\s\S]*주민등록초본\/등본/);
+  assert.match(featureDoc, /상법 제291조/);
+  assert.match(featureDoc, /명의개서대리인/);
+  assert.match(featureDoc, /현물출자[\s\S]*재산인수/);
+  assert.match(featureDoc, /인허가/);
+  assert.match(featureDoc, /정관 공증|의사록 인증/);
+  assert.match(featureDoc, /업태·종목/);
   assert.match(featureDoc, /표.*셀/);
-  assert.match(featureDoc, /사용자\/전문가가.*신고.*납부|사용자.*신고.*납부/);
-  assert.match(featureDoc, /사용자\/전문가가.*제출|사용자.*제출/);
+  assert.match(featureDoc, /세금 납부/);
+  assert.match(featureDoc, /실제 제출은 사용자가 직접/);
   assert.match(featureDoc, /인터넷등기소|온라인법인설립시스템/);
+  assert.match(featureDoc, /form-65-1-stock-company-incorporation-promoter\.hwp/);
+  assert.doesNotMatch(featureDoc, /양식 제65-2호/);
+  assert.match(featureDoc, /templates\/official\/\*\.hwp|templates\/official\//);
+  assert.match(featureDoc, /templates\/attachment-hwp\//);
+  assert.match(featureDoc, /templates\/attachment-hwp\/\*\.hwp|첨부/);
   assert.match(featureDoc, /참고용/);
 
   assert.match(readme, /\| 법인등기 신청 컨설팅 \|/);
