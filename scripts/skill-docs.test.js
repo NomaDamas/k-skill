@@ -3226,6 +3226,11 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
     "templates",
     "incorporation-document-pack.md",
   );
+  const officialFormSourcesPath = path.join(
+    "corporate-registration-consulting",
+    "templates",
+    "official-form-sources.md",
+  );
 
   assert.ok(
     fs.existsSync(path.join(repoRoot, articlesTemplatePath)),
@@ -3235,9 +3240,14 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
     fs.existsSync(path.join(repoRoot, documentPackTemplatePath)),
     "expected an incorporation document pack template artifact",
   );
+  assert.ok(
+    fs.existsSync(path.join(repoRoot, officialFormSourcesPath)),
+    "expected an official form sources artifact",
+  );
 
   const articlesTemplate = read(articlesTemplatePath);
   const documentPackTemplate = read(documentPackTemplatePath);
+  const officialFormSources = read(officialFormSourcesPath);
   const skill = read(path.join("corporate-registration-consulting", "SKILL.md"));
   const featureDoc = read(path.join("docs", "features", "corporate-registration-consulting.md"));
   const readme = read("README.md");
@@ -3271,6 +3281,13 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(skill, /지점/);
   assert.match(skill, /외국인/);
   assert.match(skill, /인허가 업종/);
+  assert.match(skill, /등기신청양식/);
+  assert.match(skill, /첨부서면예시/);
+  assert.match(skill, /상업등기신청서의 양식에 관한 예규/);
+  assert.match(skill, /양식 제65-1호/);
+  assert.match(skill, /양식 제65-2호/);
+  assert.match(skill, /official-form-sources\.md/);
+  assert.match(skill, /공식 양식 원본을 대체하지 않는 초안/);
   assert.match(skill, /rhwp-edit/);
   assert.match(skill, /k-skill-rhwp/);
   assert.match(skill, /replace-all.*본문/);
@@ -3300,6 +3317,14 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(documentPackTemplate, /레포.*커밋/);
   assert.match(documentPackTemplate, /\{\{INSPECTION_CONCLUSION_AFTER_USER_OR_EXPERT_REVIEW\}\}/);
   assert.doesNotMatch(documentPackTemplate, /중대한 흠이 없음을 보고합니다/);
+  assert.match(officialFormSources, /인터넷등기소/);
+  assert.match(officialFormSources, /등기신청양식/);
+  assert.match(officialFormSources, /첨부서면예시/);
+  assert.match(officialFormSources, /상업등기신청서의 양식에 관한 예규/);
+  assert.match(officialFormSources, /양식 제65-1호/);
+  assert.match(officialFormSources, /양식 제65-2호/);
+  assert.match(officialFormSources, /HWP\/HWPX\/PDF/);
+  assert.match(officialFormSources, /레포에 복사본을 고정 커밋하지 말고/);
 
   assert.match(featureDoc, /법인등기 신청 컨설팅/);
   assert.match(featureDoc, /표준 정관/);
@@ -3326,6 +3351,11 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(featureDoc, /사용자\/전문가가.*신고.*납부|사용자.*신고.*납부/);
   assert.match(featureDoc, /사용자\/전문가가.*제출|사용자.*제출/);
   assert.match(featureDoc, /인터넷등기소|온라인법인설립시스템/);
+  assert.match(featureDoc, /등기신청양식/);
+  assert.match(featureDoc, /첨부서면예시/);
+  assert.match(featureDoc, /양식 제65-1호/);
+  assert.match(featureDoc, /양식 제65-2호/);
+  assert.match(featureDoc, /official-form-sources\.md/);
   assert.match(featureDoc, /참고용/);
 
   assert.match(readme, /\| 법인등기 신청 컨설팅 \|/);
