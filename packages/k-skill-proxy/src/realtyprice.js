@@ -17,59 +17,59 @@ const REFERER =
 // Maps every recognized name variant to its 2-digit code.
 const SIDO_MAP = {
   // 서울
-  "서울특별시": 11,
-  "서울": 11,
+  "서울특별시": "11",
+  "서울": "11",
   // 부산
-  "부산광역시": 21,
-  "부산": 21,
+  "부산광역시": "21",
+  "부산": "21",
   // 대구
-  "대구광역시": 22,
-  "대구": 22,
+  "대구광역시": "22",
+  "대구": "22",
   // 인천
-  "인천광역시": 23,
-  "인천": 23,
+  "인천광역시": "23",
+  "인천": "23",
   // 광주
-  "광주광역시": 24,
-  "광주": 24,
+  "광주광역시": "24",
+  "광주": "24",
   // 대전
-  "대전광역시": 25,
-  "대전": 25,
+  "대전광역시": "25",
+  "대전": "25",
   // 울산
-  "울산광역시": 26,
-  "울산": 26,
+  "울산광역시": "26",
+  "울산": "26",
   // 세종
-  "세종특별자치시": 29,
-  "세종": 29,
+  "세종특별자치시": "29",
+  "세종": "29",
   // 경기
-  "경기도": 41,
-  "경기": 41,
+  "경기도": "41",
+  "경기": "41",
   // 강원
-  "강원특별자치도": 42,
-  "강원도": 42,
-  "강원": 42,
+  "강원특별자치도": "42",
+  "강원도": "42",
+  "강원": "42",
   // 충북
-  "충청북도": 43,
-  "충북": 43,
+  "충청북도": "43",
+  "충북": "43",
   // 충남
-  "충청남도": 44,
-  "충남": 44,
+  "충청남도": "44",
+  "충남": "44",
   // 전북
-  "전북특별자치도": 45,
-  "전라북도": 45,
-  "전북": 45,
+  "전북특별자치도": "45",
+  "전라북도": "45",
+  "전북": "45",
   // 전남
-  "전라남도": 46,
-  "전남": 46,
+  "전라남도": "46",
+  "전남": "46",
   // 경북
-  "경상북도": 47,
-  "경북": 47,
+  "경상북도": "47",
+  "경북": "47",
   // 경남
-  "경상남도": 48,
-  "경남": 48,
+  "경상남도": "48",
+  "경남": "48",
   // 제주
-  "제주특별자치도": 50,
-  "제주도": 50,
-  "제주": 50,
+  "제주특별자치도": "50",
+  "제주도": "50",
+  "제주": "50",
 };
 
 // ---------------------------------------------------------------------------
@@ -94,10 +94,10 @@ function makeError(code, message, statusCode) {
 // ---------------------------------------------------------------------------
 
 /**
- * Maps a Korean 시도 name (full or abbreviated) to its 2-digit numeric code.
+ * Maps a Korean 시도 name (full or abbreviated) to its 2-digit string code.
  * Returns null if the name is not recognized.
  * @param {string} text
- * @returns {number|null}
+ * @returns {string|null}
  */
 function parseSido(text) {
   if (!text) return null;
@@ -126,7 +126,7 @@ function parseSido(text) {
  *       when bun1 is non-numeric or longer than 4 digits.
  *
  * @param {string} rawAddress
- * @returns {{ sido: string, sidoCode: number, sigungu: string,
+ * @returns {{ sido: string, sidoCode: string, sigungu: string,
  *             eupmyeondong: string, san: boolean, bun1: string, bun2: string }}
  */
 function parseAddress(rawAddress) {
