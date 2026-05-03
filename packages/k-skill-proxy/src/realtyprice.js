@@ -516,6 +516,40 @@ async function lookupGongsijiga(addressRaw, fetchFn = fetch) {
 }
 
 // ---------------------------------------------------------------------------
+// createCache
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates a simple in-memory TTL cache backed by a Map.
+ * No LRU, no max-size, no periodic cleanup.
+ *
+ * @returns {{ get(key: string): any|null, set(key: string, value: any, ttlMs: number): void, size(): number }}
+ */
+function createCache() {
+  const store = new Map();
+
+  return {
+    get(key) {
+      const entry = store.get(key);
+      if (!entry) return null;
+      if (Date.now() > entry.expiresAt) {
+        store.delete(key);
+        return null;
+      }
+      return entry.value;
+    },
+
+    set(key, value, ttlMs) {
+      store.set(key, { value, expiresAt: Date.now() + ttlMs });
+    },
+
+    size() {
+      return store.size;
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -533,4 +567,5 @@ module.exports = {
   fetchEupmyeondongList,
   fetchGsiSearchList,
   lookupGongsijiga,
+  createCache,
 };

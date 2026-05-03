@@ -15,6 +15,7 @@ const {
   fetchEupmyeondongList,
   fetchGsiSearchList,
   lookupGongsijiga,
+  createCache,
 } = require("../src/realtyprice");
 
 // ---------------------------------------------------------------------------
@@ -897,6 +898,42 @@ test("lookupGongsijiga: eupmyeondong prefix match (strip suffix) resolves single
   );
   assert.equal(result.address, "서울특별시 강남구 역삼동 736");
 });
+
+// ---------------------------------------------------------------------------
+// createCache
+// ---------------------------------------------------------------------------
+
+test("createCache: get returns null for missing key", () => {
+  const cache = createCache();
+  assert.equal(cache.get("nonexistent"), null);
+});
+
+test("createCache: set then get returns value within TTL", () => {
+  const cache = createCache();
+  cache.set("key1", { data: 42 }, 10000);
+  assert.deepEqual(cache.get("key1"), { data: 42 });
+});
+
+test("createCache: get returns null after TTL expires", async () => {
+  const cache = createCache();
+  cache.set("key2", "hello", 1);
+  // wait long enough for the 1ms TTL to pass
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(cache.get("key2"), null);
+});
+
+test("createCache: size() returns correct count", () => {
+  const cache = createCache();
+  assert.equal(cache.size(), 0);
+  cache.set("a", 1, 10000);
+  assert.equal(cache.size(), 1);
+  cache.set("b", 2, 10000);
+  assert.equal(cache.size(), 2);
+});
+
+// ---------------------------------------------------------------------------
+// fetchWithTimeout
+// ---------------------------------------------------------------------------
 
 test("fetchWithTimeout: simulated slow fetch → UPSTREAM_TIMEOUT with statusCode 504", async () => {
   const slowFetch = (url, opts) =>
