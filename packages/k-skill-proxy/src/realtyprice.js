@@ -227,6 +227,78 @@ function parseAddress(rawAddress) {
 }
 
 // ---------------------------------------------------------------------------
+// normalizeSearchResult
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalizes a single raw item from realtyprice.kr's gsiList response.
+ *
+ * @param {{ base_year: string, gakuka_w: string, notice_ymd: string, [key: string]: any }} raw
+ * @returns {{ year: number, price_per_sqm: number|null, notice_date: string|null }}
+ */
+function normalizeSearchResult(raw) {
+  const year = parseInt(raw.base_year, 10);
+
+  const priceStr = raw.gakuka_w;
+  const price_per_sqm =
+    priceStr && priceStr.trim() !== ""
+      ? parseInt(priceStr.replace(/,/g, ""), 10)
+      : null;
+
+  const ymd = raw.notice_ymd || "";
+  const notice_date =
+    ymd.length === 8
+      ? `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`
+      : null;
+
+  return { year, price_per_sqm, notice_date };
+}
+
+// ---------------------------------------------------------------------------
+// buildResponse
+// ---------------------------------------------------------------------------
+
+const SOURCE_URL =
+  "https://www.realtyprice.kr/notice/gsindividual/search.htm";
+
+/**
+ * Assembles the final normalized response from parsed address fields and a
+ * history array of normalized search results.
+ *
+ * @param {{ address: string, jibun: string, san: boolean, history: Array<{year: number, price_per_sqm: number|null, notice_date: string|null}> }} param
+ * @returns {object}
+ */
+function buildResponse({ address, jibun, san, history }) {
+  const sorted = [...history].sort((a, b) => b.year - a.year);
+
+  const latestRaw = sorted[0];
+  const latest = {
+    ...latestRaw,
+    base_date: `${latestRaw.year}-01-01`,
+  };
+
+  let yoy_change_pct = null;
+  if (sorted.length >= 2) {
+    const latestPrice = sorted[0].price_per_sqm;
+    const prevPrice = sorted[1].price_per_sqm;
+    if (latestPrice !== null && prevPrice !== null && prevPrice !== 0) {
+      yoy_change_pct =
+        Math.round(((latestPrice - prevPrice) / prevPrice) * 100 * 100) / 100;
+    }
+  }
+
+  return {
+    address,
+    jibun,
+    san,
+    latest,
+    history: sorted,
+    yoy_change_pct,
+    source_url: SOURCE_URL,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -237,4 +309,6 @@ module.exports = {
   makeError,
   parseSido,
   parseAddress,
+  normalizeSearchResult,
+  buildResponse,
 };

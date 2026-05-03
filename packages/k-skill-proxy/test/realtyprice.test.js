@@ -8,6 +8,8 @@ const {
   makeError,
   parseSido,
   parseAddress,
+  normalizeSearchResult,
+  buildResponse,
 } = require("../src/realtyprice");
 
 // ---------------------------------------------------------------------------
@@ -372,4 +374,172 @@ test("parseAddress: non-numeric bun1 with dash throws INVALID_BUNJI", () => {
       return true;
     }
   );
+});
+
+// ---------------------------------------------------------------------------
+// normalizeSearchResult
+// ---------------------------------------------------------------------------
+
+test("normalizeSearchResult: parses price with commas", () => {
+  const raw = {
+    base_year: "2026",
+    gakuka_w: "72,340,000",
+    notice_ymd: "20260430",
+    x_coord: "127.12345",
+    y_coord: "37.98765",
+  };
+  const result = normalizeSearchResult(raw);
+  assert.equal(result.price_per_sqm, 72340000);
+});
+
+test("normalizeSearchResult: formats notice_ymd as YYYY-MM-DD", () => {
+  const raw = {
+    base_year: "2026",
+    gakuka_w: "72,340,000",
+    notice_ymd: "20260430",
+    x_coord: "127.12345",
+    y_coord: "37.98765",
+  };
+  const result = normalizeSearchResult(raw);
+  assert.equal(result.notice_date, "2026-04-30");
+});
+
+test("normalizeSearchResult: extracts year as integer", () => {
+  const raw = {
+    base_year: "2026",
+    gakuka_w: "72,340,000",
+    notice_ymd: "20260430",
+    x_coord: "127.12345",
+    y_coord: "37.98765",
+  };
+  const result = normalizeSearchResult(raw);
+  assert.equal(result.year, 2026);
+  assert.equal(typeof result.year, "number");
+});
+
+test("normalizeSearchResult: does NOT include x_coord or y_coord in output", () => {
+  const raw = {
+    base_year: "2026",
+    gakuka_w: "72,340,000",
+    notice_ymd: "20260430",
+    x_coord: "127.12345",
+    y_coord: "37.98765",
+  };
+  const result = normalizeSearchResult(raw);
+  assert.ok(!("x_coord" in result));
+  assert.ok(!("y_coord" in result));
+});
+
+test("normalizeSearchResult: missing gakuka_w → price_per_sqm is null", () => {
+  const raw = {
+    base_year: "2026",
+    gakuka_w: "",
+    notice_ymd: "20260430",
+  };
+  const result = normalizeSearchResult(raw);
+  assert.equal(result.price_per_sqm, null);
+});
+
+test("normalizeSearchResult: notice_ymd shorter than 8 chars → notice_date is null", () => {
+  const raw = {
+    base_year: "2026",
+    gakuka_w: "72,340,000",
+    notice_ymd: "2026",
+  };
+  const result = normalizeSearchResult(raw);
+  assert.equal(result.notice_date, null);
+});
+
+// ---------------------------------------------------------------------------
+// buildResponse
+// ---------------------------------------------------------------------------
+
+test("buildResponse: computes yoy_change_pct correctly for 2+ years", () => {
+  const history = [
+    { year: 2025, price_per_sqm: 68600000, notice_date: "2025-04-30" },
+    { year: 2026, price_per_sqm: 72340000, notice_date: "2026-04-30" },
+  ];
+  const result = buildResponse({
+    address: "서울 강남구 역삼동 736",
+    jibun: "736번지",
+    san: false,
+    history,
+  });
+  assert.equal(result.yoy_change_pct, 5.45);
+});
+
+test("buildResponse: yoy_change_pct is null when only 1 year", () => {
+  const history = [
+    { year: 2026, price_per_sqm: 72340000, notice_date: "2026-04-30" },
+  ];
+  const result = buildResponse({
+    address: "서울 강남구 역삼동 736",
+    jibun: "736번지",
+    san: false,
+    history,
+  });
+  assert.equal(result.yoy_change_pct, null);
+});
+
+test("buildResponse: history is sorted descending by year", () => {
+  const history = [
+    { year: 2024, price_per_sqm: 65000000, notice_date: "2024-04-30" },
+    { year: 2026, price_per_sqm: 72340000, notice_date: "2026-04-30" },
+    { year: 2025, price_per_sqm: 68600000, notice_date: "2025-04-30" },
+  ];
+  const result = buildResponse({
+    address: "서울 강남구 역삼동 736",
+    jibun: "736번지",
+    san: false,
+    history,
+  });
+  assert.equal(result.history[0].year, 2026);
+  assert.equal(result.history[1].year, 2025);
+  assert.equal(result.history[2].year, 2024);
+});
+
+test("buildResponse: latest has base_date set to {year}-01-01", () => {
+  const history = [
+    { year: 2026, price_per_sqm: 72340000, notice_date: "2026-04-30" },
+  ];
+  const result = buildResponse({
+    address: "서울 강남구 역삼동 736",
+    jibun: "736번지",
+    san: false,
+    history,
+  });
+  assert.equal(result.latest.base_date, "2026-01-01");
+  assert.equal(result.latest.year, 2026);
+  assert.equal(result.latest.price_per_sqm, 72340000);
+});
+
+test("buildResponse: source_url is correct constant", () => {
+  const history = [
+    { year: 2026, price_per_sqm: 72340000, notice_date: "2026-04-30" },
+  ];
+  const result = buildResponse({
+    address: "서울 강남구 역삼동 736",
+    jibun: "736번지",
+    san: false,
+    history,
+  });
+  assert.equal(
+    result.source_url,
+    "https://www.realtyprice.kr/notice/gsindividual/search.htm"
+  );
+});
+
+test("buildResponse: output shape includes address, jibun, san", () => {
+  const history = [
+    { year: 2026, price_per_sqm: 72340000, notice_date: "2026-04-30" },
+  ];
+  const result = buildResponse({
+    address: "서울 강남구 역삼동 736",
+    jibun: "736번지",
+    san: false,
+    history,
+  });
+  assert.equal(result.address, "서울 강남구 역삼동 736");
+  assert.equal(result.jibun, "736번지");
+  assert.equal(result.san, false);
 });
