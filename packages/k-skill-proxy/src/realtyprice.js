@@ -415,6 +415,107 @@ async function fetchGsiSearchList({ regCode, eubCode, san, bun1, bun2 }, fetchFn
 }
 
 // ---------------------------------------------------------------------------
+// lookupGongsijiga
+// ---------------------------------------------------------------------------
+
+/**
+ * Main orchestrator: resolves a raw Korean land address to its 공시지가 history.
+ *
+ * Flow:
+ *   1. parseAddress → sidoCode, sigungu, eupmyeondong, san, bun1, bun2
+ *   2. fetchSigunguList → find exact match on sigungu name
+ *   3. fetchEupmyeondongList → match last token of eupmyeondong (exact then prefix)
+ *   4. fetchGsiSearchList → normalize results → buildResponse
+ *
+ * @param {string} addressRaw
+ * @param {Function} [fetchFn=fetch]
+ * @returns {Promise<object>}
+ */
+async function lookupGongsijiga(addressRaw, fetchFn = fetch) {
+  // Step 1: parse
+  const { sidoCode, sigungu, eupmyeondong, san, bun1, bun2 } =
+    parseAddress(addressRaw);
+
+  // Step 2: sigungu list + exact match
+  const sggList = await fetchSigunguList(sidoCode, fetchFn);
+  const sggMatch = sggList.find((item) => item.name === sigungu);
+  if (!sggMatch) {
+    const candidates = sggList
+      .filter(
+        (item) => item.name.includes(sigungu) || sigungu.includes(item.name)
+      )
+      .slice(0, 3)
+      .map((item) => item.name);
+    const err = makeError(
+      "REGION_NOT_FOUND",
+      `시군구를 찾을 수 없습니다: "${sigungu}"`,
+      404
+    );
+    err.candidates = candidates;
+    throw err;
+  }
+
+  // Step 3: eupmyeondong list + match
+  const eubList = await fetchEupmyeondongList(sidoCode, sggMatch.code, fetchFn);
+
+  // The eupmyeondong from parseAddress may be multi-token (e.g. "청계면 청천리").
+  // Use the LAST token as the primary matching target.
+  const eubTokens = eupmyeondong.split(/\s+/);
+  const eubTarget = eubTokens[eubTokens.length - 1];
+
+  // Try exact match first
+  let eubMatch = eubList.find((item) => item.name === eubTarget);
+
+  // Then prefix match: strip trailing 동/리/면/읍 suffix from target and compare
+  if (!eubMatch) {
+    const eubStem = eubTarget.replace(/[동리면읍]$/, "");
+    const prefixMatches = eubList.filter(
+      (item) =>
+        item.name === eubTarget ||
+        item.name.startsWith(eubStem)
+    );
+    if (prefixMatches.length === 1) {
+      eubMatch = prefixMatches[0];
+    } else {
+      // no match or ambiguous
+      const candidates = eubList
+        .filter(
+          (item) =>
+            item.name.includes(eubTarget) || eubTarget.includes(item.name)
+        )
+        .slice(0, 3)
+        .map((item) => item.name);
+      const err = makeError(
+        "REGION_NOT_FOUND",
+        `읍면동을 찾을 수 없습니다: "${eupmyeondong}"`,
+        404
+      );
+      err.candidates = candidates;
+      throw err;
+    }
+  }
+
+  // Step 4: fetch gsiList
+  const gsiListRaw = await fetchGsiSearchList(
+    { regCode: sggMatch.code, eubCode: eubMatch.code, san, bun1, bun2 },
+    fetchFn
+  );
+
+  if (!gsiListRaw || gsiListRaw.length === 0) {
+    throw makeError(
+      "LAND_NOT_FOUND",
+      "해당 지번의 공시지가가 등재되지 않았습니다. 본번/부번 오타이거나 도로/하천 등 미과세 토지일 수 있습니다.",
+      404
+    );
+  }
+
+  // Step 5: normalize + build response
+  const history = gsiListRaw.map(normalizeSearchResult);
+  const jibun = bun2 ? `${bun1}-${bun2}번지` : `${bun1}번지`;
+  return buildResponse({ address: addressRaw.trim(), jibun, san, history });
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -431,4 +532,5 @@ module.exports = {
   fetchSigunguList,
   fetchEupmyeondongList,
   fetchGsiSearchList,
+  lookupGongsijiga,
 };

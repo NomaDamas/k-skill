@@ -14,6 +14,7 @@ const {
   fetchSigunguList,
   fetchEupmyeondongList,
   fetchGsiSearchList,
+  lookupGongsijiga,
 } = require("../src/realtyprice");
 
 // ---------------------------------------------------------------------------
@@ -735,6 +736,167 @@ test("fetchGsiSearchList: HTTP error → throws UPSTREAM_ERROR with statusCode 5
 // ---------------------------------------------------------------------------
 // fetchWithTimeout
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// lookupGongsijiga
+// ---------------------------------------------------------------------------
+
+// Shared mock data
+const MOCK_SGG_LIST = [
+  { bjd_cd: "11680", bjd_nm: "강남구" },
+  { bjd_cd: "11650", bjd_nm: "서초구" },
+  { bjd_cd: "11440", bjd_nm: "마포구" },
+];
+
+const MOCK_EUB_LIST = [
+  { bjd_cd: "11680101", bjd_nm: "역삼동" },
+  { bjd_cd: "11680105", bjd_nm: "삼성동" },
+];
+
+const MOCK_GSI_LIST = [
+  { base_year: "2025", gakuka_w: "68,600,000", notice_ymd: "20250430" },
+  { base_year: "2026", gakuka_w: "72,340,000", notice_ymd: "20260430" },
+];
+
+function makeMockFetch({ sggList = MOCK_SGG_LIST, eubList = MOCK_EUB_LIST, gsiList = MOCK_GSI_LIST } = {}) {
+  return async (url) => {
+    if (url.includes("gubun=sgg")) {
+      return { ok: true, json: async () => ({ bjdList: sggList }) };
+    }
+    if (url.includes("gubun=eub")) {
+      return { ok: true, json: async () => ({ bjdList: eubList }) };
+    }
+    // gsiSearchList
+    return { ok: true, json: async () => ({ gsiList }) };
+  };
+}
+
+test("lookupGongsijiga: success — returns full response shape", async () => {
+  const result = await lookupGongsijiga(
+    "서울특별시 강남구 역삼동 736",
+    makeMockFetch()
+  );
+  assert.equal(result.address, "서울특별시 강남구 역삼동 736");
+  assert.equal(result.jibun, "736번지");
+  assert.equal(result.san, false);
+  assert.ok(Array.isArray(result.history));
+  assert.equal(result.history.length, 2);
+  // sorted descending
+  assert.equal(result.history[0].year, 2026);
+  assert.equal(result.history[1].year, 2025);
+  assert.ok("latest" in result);
+  assert.equal(result.latest.year, 2026);
+  assert.ok("yoy_change_pct" in result);
+  assert.equal(
+    result.source_url,
+    "https://www.realtyprice.kr/notice/gsindividual/search.htm"
+  );
+});
+
+test("lookupGongsijiga: success with bun2 — jibun is bun1-bun2번지", async () => {
+  const result = await lookupGongsijiga(
+    "서울특별시 강남구 역삼동 100-5",
+    makeMockFetch()
+  );
+  assert.equal(result.jibun, "100-5번지");
+});
+
+test("lookupGongsijiga: REGION_NOT_FOUND when sigungu not in list", async () => {
+  await assert.rejects(
+    () => lookupGongsijiga("서울특별시 종로구 역삼동 736", makeMockFetch()),
+    (err) => {
+      assert.equal(err.code, "REGION_NOT_FOUND");
+      assert.equal(err.statusCode, 404);
+      assert.ok(Array.isArray(err.candidates));
+      return true;
+    }
+  );
+});
+
+test("lookupGongsijiga: REGION_NOT_FOUND candidates are up to 3 suggestions", async () => {
+  // "강남" is a prefix of "강남구" → should appear as candidate
+  const sggList = [
+    { bjd_cd: "A", bjd_nm: "강남A구" },
+    { bjd_cd: "B", bjd_nm: "강남B구" },
+    { bjd_cd: "C", bjd_nm: "강남C구" },
+    { bjd_cd: "D", bjd_nm: "강남D구" },
+    { bjd_cd: "E", bjd_nm: "전혀무관구" },
+  ];
+  await assert.rejects(
+    () =>
+      lookupGongsijiga(
+        "서울특별시 강남구 역삼동 736",
+        makeMockFetch({ sggList })
+      ),
+    (err) => {
+      assert.equal(err.code, "REGION_NOT_FOUND");
+      assert.ok(err.candidates.length <= 3);
+      return true;
+    }
+  );
+});
+
+test("lookupGongsijiga: REGION_NOT_FOUND when eupmyeondong not in list", async () => {
+  await assert.rejects(
+    () =>
+      lookupGongsijiga(
+        "서울특별시 강남구 없는동 736",
+        makeMockFetch()
+      ),
+    (err) => {
+      assert.equal(err.code, "REGION_NOT_FOUND");
+      assert.equal(err.statusCode, 404);
+      assert.ok(Array.isArray(err.candidates));
+      return true;
+    }
+  );
+});
+
+test("lookupGongsijiga: LAND_NOT_FOUND when gsiList is empty", async () => {
+  await assert.rejects(
+    () =>
+      lookupGongsijiga(
+        "서울특별시 강남구 역삼동 736",
+        makeMockFetch({ gsiList: [] })
+      ),
+    (err) => {
+      assert.equal(err.code, "LAND_NOT_FOUND");
+      assert.equal(err.statusCode, 404);
+      assert.ok(
+        err.message.includes("공시지가가 등재되지 않았습니다")
+      );
+      return true;
+    }
+  );
+});
+
+test("lookupGongsijiga: eupmyeondong multi-token uses last token for match", async () => {
+  // "청계면 청천리" → last token "청천리" must match eub list entry "청천리"
+  const eubList = [
+    { bjd_cd: "46130310", bjd_nm: "청천리" },
+  ];
+  const sggList = [
+    { bjd_cd: "46130", bjd_nm: "무안군" },
+  ];
+  const result = await lookupGongsijiga(
+    "전라남도 무안군 청계면 청천리 100-5",
+    makeMockFetch({ sggList, eubList })
+  );
+  assert.equal(result.jibun, "100-5번지");
+});
+
+test("lookupGongsijiga: eupmyeondong prefix match (strip suffix) resolves single match", async () => {
+  // "역삼동" stem "역삼" → matches "역삼동" in list
+  const eubList = [
+    { bjd_cd: "11680101", bjd_nm: "역삼동" },
+    { bjd_cd: "11680105", bjd_nm: "삼성동" },
+  ];
+  const result = await lookupGongsijiga(
+    "서울특별시 강남구 역삼동 736",
+    makeMockFetch({ eubList })
+  );
+  assert.equal(result.address, "서울특별시 강남구 역삼동 736");
+});
 
 test("fetchWithTimeout: simulated slow fetch → UPSTREAM_TIMEOUT with statusCode 504", async () => {
   const slowFetch = (url, opts) =>
