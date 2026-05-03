@@ -350,9 +350,10 @@ async function fetchSigunguList(sidoCode, fetchFn = fetch) {
     );
   }
   const data = await res.json();
-  return (data.bjdList || []).map((item) => ({
-    code: item.bjd_cd,
-    name: item.bjd_nm,
+  const list = (data.model && data.model.list) || [];
+  return list.map((item) => ({
+    code: item.code,
+    name: item.name,
   }));
 }
 
@@ -378,9 +379,10 @@ async function fetchEupmyeondongList(sidoCode, sggCode, fetchFn = fetch) {
     );
   }
   const data = await res.json();
-  return (data.bjdList || []).map((item) => ({
-    code: item.bjd_cd,
-    name: item.bjd_nm,
+  const list = (data.model && data.model.list) || [];
+  return list.map((item) => ({
+    code: item.code,
+    name: item.name,
   }));
 }
 
@@ -396,7 +398,7 @@ async function fetchEupmyeondongList(sidoCode, sggCode, fetchFn = fetch) {
  */
 async function fetchGsiSearchList({ regCode, eubCode, san, bun1, bun2 }, fetchFn = fetch) {
   const bun1Padded = bun1.padStart(4, "0");
-  const bun2Padded = bun2 ? bun2.padStart(4, "0") : "";
+  const bun2Padded = bun2 ? bun2.padStart(4, "0") : "0000";
   const sanParam = san ? "2" : "1";
   const url =
     `${REALTYPRICE_BASE_URL}/search/gsiSearchListApi.search` +
@@ -411,7 +413,7 @@ async function fetchGsiSearchList({ regCode, eubCode, san, bun1, bun2 }, fetchFn
     );
   }
   const data = await res.json();
-  return data.gsiList || [];
+  return (data.model && data.model.list) || [];
 }
 
 // ---------------------------------------------------------------------------
@@ -459,20 +461,27 @@ async function lookupGongsijiga(addressRaw, fetchFn = fetch) {
   const eubList = await fetchEupmyeondongList(sidoCode, sggMatch.code, fetchFn);
 
   // The eupmyeondong from parseAddress may be multi-token (e.g. "청계면 청천리").
-  // Use the LAST token as the primary matching target.
+  // The API may return names like "청계면 청천리" (combined) or just "역삼동" (single).
+  // Try full string match first, then last-token match.
   const eubTokens = eupmyeondong.split(/\s+/);
   const eubTarget = eubTokens[eubTokens.length - 1];
 
-  // Try exact match first
-  let eubMatch = eubList.find((item) => item.name === eubTarget);
+  // Try exact match on full eupmyeondong string first (handles "청계면 청천리" format)
+  let eubMatch = eubList.find((item) => item.name === eupmyeondong);
+  // Then try exact match on last token only (handles "역삼동" format)
+  if (!eubMatch) {
+    eubMatch = eubList.find((item) => item.name === eubTarget);
+  }
 
-  // Then prefix match: strip trailing 동/리/면/읍 suffix from target and compare
+  // Then prefix/contains match: strip trailing 동/리/면/읍 suffix from target and compare
   if (!eubMatch) {
     const eubStem = eubTarget.replace(/[동리면읍]$/, "");
     const prefixMatches = eubList.filter(
       (item) =>
         item.name === eubTarget ||
-        item.name.startsWith(eubStem)
+        item.name.startsWith(eubStem) ||
+        item.name.endsWith(eubTarget) ||
+        item.name === eupmyeondong
     );
     if (prefixMatches.length === 1) {
       eubMatch = prefixMatches[0];

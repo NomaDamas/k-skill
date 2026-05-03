@@ -561,9 +561,9 @@ test("fetchSigunguList: URL includes gubun=sgg and sido=11", async () => {
     return {
       ok: true,
       json: async () => ({
-        bjdList: [
-          { bjd_cd: "11680", bjd_nm: "강남구" },
-        ],
+        model: { list: [
+          { code: "11680", name: "강남구" },
+        ] },
       }),
     };
   };
@@ -578,21 +578,21 @@ test("fetchSigunguList: Referer header is present", async () => {
     capturedOpts = opts;
     return {
       ok: true,
-      json: async () => ({ bjdList: [] }),
+      json: async () => ({ model: { list: [] } }),
     };
   };
   await fetchSigunguList("11", mockFetch);
   assert.equal(capturedOpts.headers.Referer, REFERER);
 });
 
-test("fetchSigunguList: parses bjdList and returns mapped array", async () => {
+test("fetchSigunguList: parses model.list and returns mapped array", async () => {
   const mockFetch = async () => ({
     ok: true,
     json: async () => ({
-      bjdList: [
-        { bjd_cd: "11680", bjd_nm: "강남구" },
-        { bjd_cd: "11650", bjd_nm: "서초구" },
-      ],
+      model: { list: [
+        { code: "11680", name: "강남구" },
+        { code: "11650", name: "서초구" },
+      ] },
     }),
   });
   const result = await fetchSigunguList("11", mockFetch);
@@ -626,7 +626,7 @@ test("fetchEupmyeondongList: URL includes gubun=eub, sido=11, sgg=11680", async 
     capturedUrl = url;
     return {
       ok: true,
-      json: async () => ({ bjdList: [] }),
+      json: async () => ({ model: { list: [] } }),
     };
   };
   await fetchEupmyeondongList("11", "11680", mockFetch);
@@ -635,18 +635,18 @@ test("fetchEupmyeondongList: URL includes gubun=eub, sido=11, sgg=11680", async 
   assert.ok(capturedUrl.includes("sgg=11680"), `URL should include sgg=11680, got: ${capturedUrl}`);
 });
 
-test("fetchEupmyeondongList: parses bjdList and returns mapped array", async () => {
+test("fetchEupmyeondongList: parses model.list and returns mapped array", async () => {
   const mockFetch = async () => ({
     ok: true,
     json: async () => ({
-      bjdList: [
-        { bjd_cd: "11680101", bjd_nm: "역삼동" },
-      ],
+      model: { list: [
+        { code: "10100", name: "역삼동" },
+      ] },
     }),
   });
   const result = await fetchEupmyeondongList("11", "11680", mockFetch);
   assert.equal(result.length, 1);
-  assert.deepEqual(result[0], { code: "11680101", name: "역삼동" });
+  assert.deepEqual(result[0], { code: "10100", name: "역삼동" });
 });
 
 // ---------------------------------------------------------------------------
@@ -659,7 +659,7 @@ test("fetchGsiSearchList: URL includes reg, eub, san=1, bun1=0736", async () => 
     capturedUrl = url;
     return {
       ok: true,
-      json: async () => ({ gsiList: [] }),
+      json: async () => ({ model: { list: [] } }),
     };
   };
   await fetchGsiSearchList(
@@ -678,7 +678,7 @@ test("fetchGsiSearchList: san=true → san=2 in URL", async () => {
     capturedUrl = url;
     return {
       ok: true,
-      json: async () => ({ gsiList: [] }),
+      json: async () => ({ model: { list: [] } }),
     };
   };
   await fetchGsiSearchList(
@@ -694,7 +694,7 @@ test("fetchGsiSearchList: bun2=5 → bun2=0005 in URL", async () => {
     capturedUrl = url;
     return {
       ok: true,
-      json: async () => ({ gsiList: [] }),
+      json: async () => ({ model: { list: [] } }),
     };
   };
   await fetchGsiSearchList(
@@ -704,13 +704,13 @@ test("fetchGsiSearchList: bun2=5 → bun2=0005 in URL", async () => {
   assert.ok(capturedUrl.includes("bun2=0005"), `URL should include bun2=0005, got: ${capturedUrl}`);
 });
 
-test("fetchGsiSearchList: returns raw gsiList array", async () => {
+test("fetchGsiSearchList: returns raw list array", async () => {
   const rawItems = [
     { base_year: "2026", gakuka_w: "72,340,000", notice_ymd: "20260430" },
   ];
   const mockFetch = async () => ({
     ok: true,
-    json: async () => ({ gsiList: rawItems }),
+    json: async () => ({ model: { list: rawItems } }),
   });
   const result = await fetchGsiSearchList(
     { regCode: "11680", eubCode: "11680101", san: false, bun1: "736", bun2: "" },
@@ -744,14 +744,14 @@ test("fetchGsiSearchList: HTTP error → throws UPSTREAM_ERROR with statusCode 5
 
 // Shared mock data
 const MOCK_SGG_LIST = [
-  { bjd_cd: "11680", bjd_nm: "강남구" },
-  { bjd_cd: "11650", bjd_nm: "서초구" },
-  { bjd_cd: "11440", bjd_nm: "마포구" },
+  { code: "11680", name: "강남구" },
+  { code: "11650", name: "서초구" },
+  { code: "11440", name: "마포구" },
 ];
 
 const MOCK_EUB_LIST = [
-  { bjd_cd: "11680101", bjd_nm: "역삼동" },
-  { bjd_cd: "11680105", bjd_nm: "삼성동" },
+  { code: "10100", name: "역삼동" },
+  { code: "10500", name: "삼성동" },
 ];
 
 const MOCK_GSI_LIST = [
@@ -762,13 +762,13 @@ const MOCK_GSI_LIST = [
 function makeMockFetch({ sggList = MOCK_SGG_LIST, eubList = MOCK_EUB_LIST, gsiList = MOCK_GSI_LIST } = {}) {
   return async (url) => {
     if (url.includes("gubun=sgg")) {
-      return { ok: true, json: async () => ({ bjdList: sggList }) };
+      return { ok: true, json: async () => ({ model: { list: sggList } }) };
     }
     if (url.includes("gubun=eub")) {
-      return { ok: true, json: async () => ({ bjdList: eubList }) };
+      return { ok: true, json: async () => ({ model: { list: eubList } }) };
     }
     // gsiSearchList
-    return { ok: true, json: async () => ({ gsiList }) };
+    return { ok: true, json: async () => ({ model: { list: gsiList } }) };
   };
 }
 
@@ -817,11 +817,11 @@ test("lookupGongsijiga: REGION_NOT_FOUND when sigungu not in list", async () => 
 test("lookupGongsijiga: REGION_NOT_FOUND candidates are up to 3 suggestions", async () => {
   // "강남" is a prefix of "강남구" → should appear as candidate
   const sggList = [
-    { bjd_cd: "A", bjd_nm: "강남A구" },
-    { bjd_cd: "B", bjd_nm: "강남B구" },
-    { bjd_cd: "C", bjd_nm: "강남C구" },
-    { bjd_cd: "D", bjd_nm: "강남D구" },
-    { bjd_cd: "E", bjd_nm: "전혀무관구" },
+    { code: "A", name: "강남A구" },
+    { code: "B", name: "강남B구" },
+    { code: "C", name: "강남C구" },
+    { code: "D", name: "강남D구" },
+    { code: "E", name: "전혀무관구" },
   ];
   await assert.rejects(
     () =>
@@ -874,10 +874,10 @@ test("lookupGongsijiga: LAND_NOT_FOUND when gsiList is empty", async () => {
 test("lookupGongsijiga: eupmyeondong multi-token uses last token for match", async () => {
   // "청계면 청천리" → last token "청천리" must match eub list entry "청천리"
   const eubList = [
-    { bjd_cd: "46130310", bjd_nm: "청천리" },
+    { code: "46130310", name: "청천리" },
   ];
   const sggList = [
-    { bjd_cd: "46130", bjd_nm: "무안군" },
+    { code: "46130", name: "무안군" },
   ];
   const result = await lookupGongsijiga(
     "전라남도 무안군 청계면 청천리 100-5",
@@ -889,8 +889,8 @@ test("lookupGongsijiga: eupmyeondong multi-token uses last token for match", asy
 test("lookupGongsijiga: eupmyeondong prefix match (strip suffix) resolves single match", async () => {
   // "역삼동" stem "역삼" → matches "역삼동" in list
   const eubList = [
-    { bjd_cd: "11680101", bjd_nm: "역삼동" },
-    { bjd_cd: "11680105", bjd_nm: "삼성동" },
+    { code: "10100", name: "역삼동" },
+    { code: "10500", name: "삼성동" },
   ];
   const result = await lookupGongsijiga(
     "서울특별시 강남구 역삼동 736",
