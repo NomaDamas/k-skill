@@ -10,6 +10,10 @@ const {
   parseAddress,
   normalizeSearchResult,
   buildResponse,
+  fetchWithTimeout,
+  fetchSigunguList,
+  fetchEupmyeondongList,
+  fetchGsiSearchList,
 } = require("../src/realtyprice");
 
 // ---------------------------------------------------------------------------
@@ -542,4 +546,213 @@ test("buildResponse: output shape includes address, jibun, san", () => {
   assert.equal(result.address, "서울 강남구 역삼동 736");
   assert.equal(result.jibun, "736번지");
   assert.equal(result.san, false);
+});
+
+// ---------------------------------------------------------------------------
+// fetchSigunguList
+// ---------------------------------------------------------------------------
+
+test("fetchSigunguList: URL includes gubun=sgg and sido=11", async () => {
+  let capturedUrl;
+  const mockFetch = async (url, opts) => {
+    capturedUrl = url;
+    return {
+      ok: true,
+      json: async () => ({
+        bjdList: [
+          { bjd_cd: "11680", bjd_nm: "강남구" },
+        ],
+      }),
+    };
+  };
+  await fetchSigunguList("11", mockFetch);
+  assert.ok(capturedUrl.includes("gubun=sgg"), `URL should include gubun=sgg, got: ${capturedUrl}`);
+  assert.ok(capturedUrl.includes("sido=11"), `URL should include sido=11, got: ${capturedUrl}`);
+});
+
+test("fetchSigunguList: Referer header is present", async () => {
+  let capturedOpts;
+  const mockFetch = async (url, opts) => {
+    capturedOpts = opts;
+    return {
+      ok: true,
+      json: async () => ({ bjdList: [] }),
+    };
+  };
+  await fetchSigunguList("11", mockFetch);
+  assert.equal(capturedOpts.headers.Referer, REFERER);
+});
+
+test("fetchSigunguList: parses bjdList and returns mapped array", async () => {
+  const mockFetch = async () => ({
+    ok: true,
+    json: async () => ({
+      bjdList: [
+        { bjd_cd: "11680", bjd_nm: "강남구" },
+        { bjd_cd: "11650", bjd_nm: "서초구" },
+      ],
+    }),
+  });
+  const result = await fetchSigunguList("11", mockFetch);
+  assert.equal(result.length, 2);
+  assert.deepEqual(result[0], { code: "11680", name: "강남구" });
+  assert.deepEqual(result[1], { code: "11650", name: "서초구" });
+});
+
+test("fetchSigunguList: HTTP 500 → throws UPSTREAM_ERROR with statusCode 502", async () => {
+  const mockFetch = async () => ({
+    ok: false,
+    status: 500,
+  });
+  await assert.rejects(
+    () => fetchSigunguList("11", mockFetch),
+    (err) => {
+      assert.equal(err.code, "UPSTREAM_ERROR");
+      assert.equal(err.statusCode, 502);
+      return true;
+    }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// fetchEupmyeondongList
+// ---------------------------------------------------------------------------
+
+test("fetchEupmyeondongList: URL includes gubun=eub, sido=11, sgg=11680", async () => {
+  let capturedUrl;
+  const mockFetch = async (url, opts) => {
+    capturedUrl = url;
+    return {
+      ok: true,
+      json: async () => ({ bjdList: [] }),
+    };
+  };
+  await fetchEupmyeondongList("11", "11680", mockFetch);
+  assert.ok(capturedUrl.includes("gubun=eub"), `URL should include gubun=eub, got: ${capturedUrl}`);
+  assert.ok(capturedUrl.includes("sido=11"), `URL should include sido=11, got: ${capturedUrl}`);
+  assert.ok(capturedUrl.includes("sgg=11680"), `URL should include sgg=11680, got: ${capturedUrl}`);
+});
+
+test("fetchEupmyeondongList: parses bjdList and returns mapped array", async () => {
+  const mockFetch = async () => ({
+    ok: true,
+    json: async () => ({
+      bjdList: [
+        { bjd_cd: "11680101", bjd_nm: "역삼동" },
+      ],
+    }),
+  });
+  const result = await fetchEupmyeondongList("11", "11680", mockFetch);
+  assert.equal(result.length, 1);
+  assert.deepEqual(result[0], { code: "11680101", name: "역삼동" });
+});
+
+// ---------------------------------------------------------------------------
+// fetchGsiSearchList
+// ---------------------------------------------------------------------------
+
+test("fetchGsiSearchList: URL includes reg, eub, san=1, bun1=0736", async () => {
+  let capturedUrl;
+  const mockFetch = async (url, opts) => {
+    capturedUrl = url;
+    return {
+      ok: true,
+      json: async () => ({ gsiList: [] }),
+    };
+  };
+  await fetchGsiSearchList(
+    { regCode: "11680", eubCode: "11680101", san: false, bun1: "736", bun2: "" },
+    mockFetch
+  );
+  assert.ok(capturedUrl.includes("reg=11680"), `URL should include reg=11680, got: ${capturedUrl}`);
+  assert.ok(capturedUrl.includes("eub=11680101"), `URL should include eub=11680101, got: ${capturedUrl}`);
+  assert.ok(capturedUrl.includes("san=1"), `URL should include san=1, got: ${capturedUrl}`);
+  assert.ok(capturedUrl.includes("bun1=0736"), `URL should include bun1=0736, got: ${capturedUrl}`);
+});
+
+test("fetchGsiSearchList: san=true → san=2 in URL", async () => {
+  let capturedUrl;
+  const mockFetch = async (url, opts) => {
+    capturedUrl = url;
+    return {
+      ok: true,
+      json: async () => ({ gsiList: [] }),
+    };
+  };
+  await fetchGsiSearchList(
+    { regCode: "11680", eubCode: "11680101", san: true, bun1: "1", bun2: "" },
+    mockFetch
+  );
+  assert.ok(capturedUrl.includes("san=2"), `URL should include san=2, got: ${capturedUrl}`);
+});
+
+test("fetchGsiSearchList: bun2=5 → bun2=0005 in URL", async () => {
+  let capturedUrl;
+  const mockFetch = async (url, opts) => {
+    capturedUrl = url;
+    return {
+      ok: true,
+      json: async () => ({ gsiList: [] }),
+    };
+  };
+  await fetchGsiSearchList(
+    { regCode: "11680", eubCode: "11680101", san: false, bun1: "736", bun2: "5" },
+    mockFetch
+  );
+  assert.ok(capturedUrl.includes("bun2=0005"), `URL should include bun2=0005, got: ${capturedUrl}`);
+});
+
+test("fetchGsiSearchList: returns raw gsiList array", async () => {
+  const rawItems = [
+    { base_year: "2026", gakuka_w: "72,340,000", notice_ymd: "20260430" },
+  ];
+  const mockFetch = async () => ({
+    ok: true,
+    json: async () => ({ gsiList: rawItems }),
+  });
+  const result = await fetchGsiSearchList(
+    { regCode: "11680", eubCode: "11680101", san: false, bun1: "736", bun2: "" },
+    mockFetch
+  );
+  assert.deepEqual(result, rawItems);
+});
+
+test("fetchGsiSearchList: HTTP error → throws UPSTREAM_ERROR with statusCode 502", async () => {
+  const mockFetch = async () => ({ ok: false, status: 503 });
+  await assert.rejects(
+    () => fetchGsiSearchList(
+      { regCode: "11680", eubCode: "11680101", san: false, bun1: "736", bun2: "" },
+      mockFetch
+    ),
+    (err) => {
+      assert.equal(err.code, "UPSTREAM_ERROR");
+      assert.equal(err.statusCode, 502);
+      return true;
+    }
+  );
+});
+
+// ---------------------------------------------------------------------------
+// fetchWithTimeout
+// ---------------------------------------------------------------------------
+
+test("fetchWithTimeout: simulated slow fetch → UPSTREAM_TIMEOUT with statusCode 504", async () => {
+  const slowFetch = (url, opts) =>
+    new Promise((resolve, reject) => {
+      opts.signal.addEventListener("abort", () => {
+        const err = new Error("The operation was aborted");
+        err.name = "AbortError";
+        reject(err);
+      });
+      // never resolves on its own
+    });
+
+  await assert.rejects(
+    () => fetchWithTimeout("https://example.com", {}, 10, slowFetch),
+    (err) => {
+      assert.equal(err.code, "UPSTREAM_TIMEOUT");
+      assert.equal(err.statusCode, 504);
+      return true;
+    }
+  );
 });

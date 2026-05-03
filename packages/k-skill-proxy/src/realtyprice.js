@@ -299,6 +299,122 @@ function buildResponse({ address, jibun, san, history }) {
 }
 
 // ---------------------------------------------------------------------------
+// fetchWithTimeout
+// ---------------------------------------------------------------------------
+
+/**
+ * Wraps a fetch call with an AbortController timeout.
+ * @param {string} url
+ * @param {object} opts  fetch options (headers, etc.)
+ * @param {number} [timeoutMs=30000]
+ * @param {Function} [fetchFn=fetch]
+ * @returns {Promise<Response>}
+ */
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 30000, fetchFn = fetch) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetchFn(url, { ...opts, signal: controller.signal });
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw makeError(
+        "UPSTREAM_TIMEOUT",
+        "realtyprice.kr 응답 시간 초과 (30초)",
+        504
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// fetchSigunguList
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches the 시군구 list for a given 시도 code.
+ * @param {string} sidoCode  2-digit sido code (e.g. "11")
+ * @param {Function} [fetchFn=fetch]
+ * @returns {Promise<Array<{ code: string, name: string }>>}
+ */
+async function fetchSigunguList(sidoCode, fetchFn = fetch) {
+  const url = `${REALTYPRICE_BASE_URL}/bjd/searchBjdApi.bjd?gbn=1&gubun=sgg&sido=${sidoCode}`;
+  const res = await fetchWithTimeout(url, { headers: { Referer: REFERER } }, 30000, fetchFn);
+  if (!res.ok) {
+    throw makeError(
+      "UPSTREAM_ERROR",
+      `realtyprice.kr 시군구 조회 실패: HTTP ${res.status}`,
+      502
+    );
+  }
+  const data = await res.json();
+  return (data.bjdList || []).map((item) => ({
+    code: item.bjd_cd,
+    name: item.bjd_nm,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// fetchEupmyeondongList
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches the 읍면동 list for a given 시도 + 시군구 code.
+ * @param {string} sidoCode  2-digit sido code (e.g. "11")
+ * @param {string} sggCode   sigungu code (e.g. "11680")
+ * @param {Function} [fetchFn=fetch]
+ * @returns {Promise<Array<{ code: string, name: string }>>}
+ */
+async function fetchEupmyeondongList(sidoCode, sggCode, fetchFn = fetch) {
+  const url = `${REALTYPRICE_BASE_URL}/bjd/searchBjdApi.bjd?gbn=1&gubun=eub&sido=${sidoCode}&sgg=${sggCode}`;
+  const res = await fetchWithTimeout(url, { headers: { Referer: REFERER } }, 30000, fetchFn);
+  if (!res.ok) {
+    throw makeError(
+      "UPSTREAM_ERROR",
+      `realtyprice.kr 읍면동 조회 실패: HTTP ${res.status}`,
+      502
+    );
+  }
+  const data = await res.json();
+  return (data.bjdList || []).map((item) => ({
+    code: item.bjd_cd,
+    name: item.bjd_nm,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// fetchGsiSearchList
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches the gsiList (공시지가 search results) for a given address.
+ * @param {{ regCode: string, eubCode: string, san: boolean, bun1: string, bun2: string }} params
+ * @param {Function} [fetchFn=fetch]
+ * @returns {Promise<Array>}  raw gsiList items
+ */
+async function fetchGsiSearchList({ regCode, eubCode, san, bun1, bun2 }, fetchFn = fetch) {
+  const bun1Padded = bun1.padStart(4, "0");
+  const bun2Padded = bun2 ? bun2.padStart(4, "0") : "";
+  const sanParam = san ? "2" : "1";
+  const url =
+    `${REALTYPRICE_BASE_URL}/search/gsiSearchListApi.search` +
+    `?gbn=1&reg=${regCode}&eub=${eubCode}&san=${sanParam}` +
+    `&bun1=${bun1Padded}&bun2=${bun2Padded}&tabGbn=Text&page_no=1&year=`;
+  const res = await fetchWithTimeout(url, { headers: { Referer: REFERER } }, 30000, fetchFn);
+  if (!res.ok) {
+    throw makeError(
+      "UPSTREAM_ERROR",
+      `realtyprice.kr 공시지가 조회 실패: HTTP ${res.status}`,
+      502
+    );
+  }
+  const data = await res.json();
+  return data.gsiList || [];
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -311,4 +427,8 @@ module.exports = {
   parseAddress,
   normalizeSearchResult,
   buildResponse,
+  fetchWithTimeout,
+  fetchSigunguList,
+  fetchEupmyeondongList,
+  fetchGsiSearchList,
 };
