@@ -132,16 +132,7 @@ function parseSido(text) {
 function parseAddress(rawAddress) {
   const tokens = (rawAddress || "").trim().split(/\s+/).filter(Boolean);
 
-  // Minimum: sido + sigungu + eupmyeondong + bunji = 4 tokens
-  if (tokens.length < 4) {
-    throw makeError(
-      "ADDRESS_PARSE_FAILED",
-      `주소를 파싱할 수 없습니다: "${rawAddress}"`,
-      400
-    );
-  }
-
-  // First token must be a valid 시도
+  // First token must be a valid 시도 (needed to know if this is Sejong)
   const sido = tokens[0];
   const sidoCode = parseSido(sido);
   if (sidoCode === null) {
@@ -152,11 +143,22 @@ function parseAddress(rawAddress) {
     );
   }
 
-  // Second token is 시군구
-  const sigungu = tokens[1];
+  // 세종특별자치시 has no 시군구, so minimum is sido + eupmyeondong + bunji = 3 tokens
+  const isSejong = sidoCode === "29";
+  const minTokens = isSejong ? 3 : 4;
+  if (tokens.length < minTokens) {
+    throw makeError(
+      "ADDRESS_PARSE_FAILED",
+      `주소를 파싱할 수 없습니다: "${rawAddress}"`,
+      400
+    );
+  }
 
-  // Remaining tokens (after sido + sigungu): [...eupmyeondong tokens, (산?), bunji]
-  const rest = tokens.slice(2);
+  // Second token is 시군구 (empty for 세종)
+  const sigungu = isSejong ? "" : tokens[1];
+
+  // Remaining tokens (after sido (+ sigungu)): [...eupmyeondong tokens, (산?), bunji]
+  const rest = isSejong ? tokens.slice(1) : tokens.slice(2);
 
   // The last token is always the bunji (번지) token (possibly with 산 prefix).
   // If the second-to-last token is the standalone "산", it belongs to the
@@ -434,31 +436,34 @@ async function fetchGsiSearchList({ regCode, eubCode, san, bun1, bun2 }, fetchFn
  * @returns {Promise<object>}
  */
 async function lookupGongsijiga(addressRaw, fetchFn = fetch) {
-  // Step 1: parse
   const { sidoCode, sigungu, eupmyeondong, san, bun1, bun2 } =
     parseAddress(addressRaw);
 
-  // Step 2: sigungu list + exact match
-  const sggList = await fetchSigunguList(sidoCode, fetchFn);
-  const sggMatch = sggList.find((item) => item.name === sigungu);
-  if (!sggMatch) {
-    const candidates = sggList
-      .filter(
-        (item) => item.name.includes(sigungu) || sigungu.includes(item.name)
-      )
-      .slice(0, 3)
-      .map((item) => item.name);
-    const err = makeError(
-      "REGION_NOT_FOUND",
-      `시군구를 찾을 수 없습니다: "${sigungu}"`,
-      404
-    );
-    err.candidates = candidates;
-    throw err;
+  let sggCode;
+  if (sidoCode === "29") {
+    sggCode = "36110";
+  } else {
+    const sggList = await fetchSigunguList(sidoCode, fetchFn);
+    const sggMatch = sggList.find((item) => item.name === sigungu);
+    if (!sggMatch) {
+      const candidates = sggList
+        .filter(
+          (item) => item.name.includes(sigungu) || sigungu.includes(item.name)
+        )
+        .slice(0, 3)
+        .map((item) => item.name);
+      const err = makeError(
+        "REGION_NOT_FOUND",
+        `시군구를 찾을 수 없습니다: "${sigungu}"`,
+        404
+      );
+      err.candidates = candidates;
+      throw err;
+    }
+    sggCode = sggMatch.code;
   }
 
-  // Step 3: eupmyeondong list + match
-  const eubList = await fetchEupmyeondongList(sidoCode, sggMatch.code, fetchFn);
+  const eubList = await fetchEupmyeondongList(sidoCode, sggCode, fetchFn);
 
   // The eupmyeondong from parseAddress may be multi-token (e.g. "청계면 청천리").
   // The API may return names like "청계면 청천리" (combined) or just "역삼동" (single).
@@ -506,7 +511,7 @@ async function lookupGongsijiga(addressRaw, fetchFn = fetch) {
 
   // Step 4: fetch gsiList
   const gsiListRaw = await fetchGsiSearchList(
-    { regCode: sggMatch.code, eubCode: eubMatch.code, san, bun1, bun2 },
+    { regCode: sggCode, eubCode: eubMatch.code, san, bun1, bun2 },
     fetchFn
   );
 

@@ -309,6 +309,19 @@ test("parseAddress: 세종 address without sigungu 세종 조치원읍 신흥리
   const result = parseAddress("세종 조치원읍 신흥리 100");
   assert.equal(result.sidoCode, "29");
   assert.equal(result.sido, "세종");
+  assert.equal(result.sigungu, "");
+  assert.equal(result.eupmyeondong, "조치원읍 신흥리");
+  assert.equal(result.san, false);
+  assert.equal(result.bun1, "100");
+  assert.equal(result.bun2, "");
+});
+
+test("parseAddress: 세종 full name 세종특별자치시 고욘동 100", () => {
+  const result = parseAddress("세종특별자치시 고욘동 100");
+  assert.equal(result.sidoCode, "29");
+  assert.equal(result.sido, "세종특별자치시");
+  assert.equal(result.sigungu, "");
+  assert.equal(result.eupmyeondong, "고욘동");
   assert.equal(result.bun1, "100");
 });
 
@@ -800,6 +813,20 @@ test("lookupGongsijiga: success with bun2 — jibun is bun1-bun2번지", async (
     makeMockFetch()
   );
   assert.equal(result.jibun, "100-5번지");
+});
+
+test("lookupGongsijiga: success for Sejong (no sigungu, fixed sggCode)", async () => {
+  const sejongEubList = [
+    { code: "25029", name: "조치원읍 신흥리" },
+  ];
+  const result = await lookupGongsijiga(
+    "세종 조치원읍 신흥리 100",
+    makeMockFetch({ eubList: sejongEubList })
+  );
+  assert.equal(result.address, "세종 조치원읍 신흥리 100");
+  assert.equal(result.jibun, "100번지");
+  assert.equal(result.san, false);
+  assert.ok(Array.isArray(result.history));
 });
 
 test("lookupGongsijiga: REGION_NOT_FOUND when sigungu not in list", async () => {
