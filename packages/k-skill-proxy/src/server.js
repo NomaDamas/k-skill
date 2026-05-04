@@ -1287,7 +1287,8 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         krxConfigured: Boolean(config.krxApiKey),
         naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
-        naverNewsApiConfigured: naverSearchKeysPresent
+        naverNewsApiConfigured: naverSearchKeysPresent,
+        realtypriceConfigured: true
       },
       auth: {
         tokenRequired: false
@@ -3403,8 +3404,8 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   const realtypriceCacheTtlMs = 60 * 60 * 1000; // 1 hour
   const realtypriceCacheInstance = createRealtypriceCacheFn();
 
-  app.get("/realtyprice", async (request, reply) => {
-    const address = (request.query.address || "").trim();
+  app.get("/v1/realtyprice", async (request, reply) => {
+    const address = (request.query.address || "").trim().replace(/\s+/g, " ");
     if (!address) {
       reply.code(400);
       return {

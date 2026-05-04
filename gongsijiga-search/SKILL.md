@@ -67,7 +67,7 @@ BASE="${BASE%/}"
 ### 2. 프록시 호출
 
 ```bash
-curl -s "${BASE}/realtyprice?address=$(python3 -c "import urllib.parse; print(urllib.parse.quote('서울 강남구 역삼동 736'))")"
+curl -s "${BASE}/v1/realtyprice?address=$(python3 -c "import urllib.parse; print(urllib.parse.quote('서울 강남구 역삼동 736'))")"
 ```
 
 ### 3. 응답 해석 및 출력
