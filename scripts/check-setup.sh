@@ -9,7 +9,11 @@ if [[ ! -f "$secrets_file" ]]; then
   echo "missing secrets file: $secrets_file"
   missing=1
 else
-  perms=$(stat -f '%Lp' "$secrets_file" 2>/dev/null || stat -c '%a' "$secrets_file" 2>/dev/null)
+  if stat --version >/dev/null 2>&1; then
+    perms=$(stat -c '%a' "$secrets_file")
+  else
+    perms=$(stat -f '%Lp' "$secrets_file")
+  fi
   if [[ "$perms" != "600" ]]; then
     echo "insecure permissions on $secrets_file: $perms (expected 600)"
     missing=1
