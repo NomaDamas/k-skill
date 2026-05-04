@@ -20,6 +20,7 @@ These rules are repo-specific and apply to everything under this directory.
 ## Testing anti-patterns
 
 - **Never write tests that assert `.changeset/*.md` files exist.** Changesets are consumed (deleted) by `changeset version` during the release flow. Any test guarding changeset file presence will break CI on the version-bump commit and block the release pipeline.
+- **Never write tests that pin a workspace package's `version` field** (in `package.json` or `package-lock.json`). `changeset version` bumps these on every release, so any hardcoded version assertion will fail the next release commit and block the npm publish pipeline. Stable invariants like `name`, `license`, `engines.node`, or workspace link metadata are fine to assert; the `version` is not.
 
 ## Development skill install rules
 
@@ -38,6 +39,7 @@ These rules are repo-specific and apply to everything under this directory.
 ## Free API proxy policy
 
 - The built-in `k-skill-proxy` is for **free APIs only**.
+- **k-skill-proxy inclusion rule**: A skill should be served through `k-skill-proxy` **only when the upstream requires an API key** (e.g., data.go.kr, KRX, Naver Search Open API, NEIS, Data4Library). Fully public endpoints that work without any authentication (e.g., realtyprice.kr) should be called directly from the user's machine, not routed through the proxy.
 - Default posture: public read-only endpoint, **no proxy auth by default**.
 - Keep free-API proxy surfaces narrow, allowlisted, cache-backed, and rate-limited.
 - If abuse or operational issues appear later, add stricter controls then instead of preemptively requiring auth.

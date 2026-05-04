@@ -27,7 +27,6 @@
 - `GET /v1/data4library/book-exists` — 도서관별 도서 소장여부(`DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/lh-notice/search` — LH 청약 공고 목록(`DATA_GO_KR_API_KEY`)
 - `GET /v1/lh-notice/detail` — LH 청약 공고 상세(`DATA_GO_KR_API_KEY`)
-- `GET /v1/realtyprice` — 개별공시지가 조회 (realtyprice.kr 공개 API, API 키 불필요)
 
 ## `/health` 업스트림 플래그 의미
 
@@ -202,13 +201,6 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/detail' \
   --data-urlencode 'panId=2015122300019828' \
   --data-urlencode 'ccrCnntSysDsCd=03' \
   --data-urlencode 'splInfTpCd=051'
-```
-
-개별공시지가 조회 예시 (API 키 불필요):
-
-```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/realtyprice' \
-  --data-urlencode 'address=서울 강남구 역삼동 736'
 ```
 
 프록시는 내부적으로 `waterlevel/info.json` 으로 관측소를 해석하고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 수위/유량을 조회합니다. 한국 주식 route는 KRX Open API에 `AUTH_KEY` 헤더를 서버 쪽에서만 주입합니다.

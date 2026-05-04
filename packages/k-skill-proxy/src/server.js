@@ -25,7 +25,6 @@ const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require(
 const { fetchNearbyParkingLots } = require("./parking-lots");
 const { searchRegionCode } = require("./region-lookup");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
-const { lookupGongsijiga, createCache: createRealtypriceCacheFn } = require("./realtyprice");
 const AIR_KOREA_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
 const DATA_GO_KR_UPSTREAM_BASE_URL = "https://apis.data.go.kr";
 const DATA4LIBRARY_UPSTREAM_BASE_URL = "https://data4library.kr/api";
@@ -1287,8 +1286,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         krxConfigured: Boolean(config.krxApiKey),
         naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
-        naverNewsApiConfigured: naverSearchKeysPresent,
-        realtypriceConfigured: true
+        naverNewsApiConfigured: naverSearchKeysPresent
       },
       auth: {
         tokenRequired: false
@@ -3398,39 +3396,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     cache.set(cacheKey, payload, config.cacheTtlMs);
     return payload;
-  });
-
-  // --- 개별공시지가 (realtyprice.kr) ---
-  const realtypriceCacheTtlMs = 60 * 60 * 1000; // 1 hour
-  const realtypriceCacheInstance = createRealtypriceCacheFn();
-
-  app.get("/v1/realtyprice", async (request, reply) => {
-    const address = (request.query.address || "").trim().replace(/\s+/g, " ");
-    if (!address) {
-      reply.code(400);
-      return {
-        error: { code: "ADDRESS_PARSE_FAILED", message: "address 쿼리 파라미터가 필요합니다." },
-      };
-    }
-
-    const cacheKey = `realtyprice:${address}`;
-    const cached = realtypriceCacheInstance.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    try {
-      const result = await lookupGongsijiga(address);
-      realtypriceCacheInstance.set(cacheKey, result, realtypriceCacheTtlMs);
-      return result;
-    } catch (err) {
-      const statusCode = err.statusCode || 502;
-      reply.code(statusCode);
-      return {
-        error: { code: err.code || "UPSTREAM_ERROR", message: err.message },
-        ...(err.candidates ? { candidates: err.candidates } : {}),
-      };
-    }
   });
 
   app.setErrorHandler((error, request, reply) => {

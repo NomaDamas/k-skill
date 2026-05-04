@@ -45,9 +45,21 @@ metadata:
 
 ## Default path
 
+`gongsijiga-search` npm 패키지를 직접 호출한다. realtyprice.kr는 API 키가 필요 없는 공개 엔드포인트이므로 `k-skill-proxy`를 경유하지 않는다.
+
+설치:
+
 ```bash
-BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
-BASE="${BASE%/}"
+npm install gongsijiga-search
+```
+
+호출:
+
+```bash
+node -e "
+const { lookupGongsijiga } = require('gongsijiga-search');
+lookupGongsijiga('서울 강남구 역삼동 736').then(console.log).catch(console.error);
+"
 ```
 
 ## Workflow
@@ -57,18 +69,22 @@ BASE="${BASE%/}"
 사용자에게 **시도 + 시군구 + 읍면동 + 지번**이 포함된 주소를 요청한다.
 
 - 최소 필수: 시도, 시군구, 읍면동, 본번
-  - **세종특별자치시**는 시군구가 없으므로 "세종 [읍멘동] [지번]" 형식
+  - **세종특별자치시**는 시군구가 없으므로 "세종 [읍면동] [지번]" 형식
 - 산 지번이면 "산" 키워드 포함
 - 부번이 있으면 "100-5" 형식
 
-예시: "서울 강남구 역삼동 736", "전남 무안군 청계면 청천리 산 1-2", "세종 고욘동 100"
+예시: "서울 강남구 역삼동 736", "전남 무안군 청계면 청천리 산 1-2", "세종 고용동 100"
 
 시도가 누락된 주소(예: "역삼동 736")는 조회 불가 — 시도를 물어본다.
 
-### 2. 프록시 호출
+### 2. 직접 호출
 
-```bash
-curl -s "${BASE}/v1/realtyprice?address=$(python3 -c "import urllib.parse; print(urllib.parse.quote('서울 강남구 역삼동 736'))")"
+`gongsijiga-search` 모듈을 사용해 realtyprice.kr를 직접 호출한다 (API 키 불필요, 프록시 경유 안 함):
+
+```javascript
+const { lookupGongsijiga } = require('gongsijiga-search');
+
+const result = await lookupGongsijiga('서울 강남구 역삼동 736');
 ```
 
 ### 3. 응답 해석 및 출력

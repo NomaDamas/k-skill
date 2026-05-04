@@ -1695,7 +1695,6 @@ test("package-lock captures the toss-securities workspace metadata for npm ci", 
     resolved: "packages/toss-securities",
     link: true,
   });
-  assert.equal(packageLock.packages["packages/toss-securities"].version, "0.2.0");
   assert.equal(packageLock.packages["packages/toss-securities"].license, "MIT");
   assert.equal(packageLock.packages["packages/toss-securities"].engines.node, ">=18");
 });
