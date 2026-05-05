@@ -152,6 +152,36 @@ test("README advertises OpenClaw among the supported coding agents", () => {
   );
 });
 
+test("repository publishes Korean contribution guidance for external contributors", () => {
+  const contributingPath = path.join(repoRoot, "CONTRIBUTING.md");
+
+  assert.ok(fs.existsSync(contributingPath), "expected CONTRIBUTING.md to exist");
+
+  const contributing = read("CONTRIBUTING.md");
+
+  assert.match(contributing, /^# 기여 가이드$/m);
+  assert.match(contributing, /PR 코멘트, 이슈, 리뷰 등 모든 소통은 한국어로 진행/);
+  assert.match(contributing, /PR의 대상 브랜치는 반드시 `dev`/);
+  assert.match(contributing, /`main` 브랜치로 PR을 만들 수 있는 사람은 `@vkehfdl1`뿐/);
+  assert.match(contributing, /스킬을 추가하거나 변경할 때는 관련 기능 문서와 `README\.md`의 표/);
+  assert.match(contributing, /npm 패키지를 수정할 때는 Changesets/);
+  assert.match(contributing, /Changeset 파일의 존재 여부를 테스트로 검증하지 않는다/);
+  assert.match(contributing, /무료 API/);
+  assert.match(contributing, /`k-skill-proxy` 경로를 우선 검토/);
+  assert.match(contributing, /유료 API/);
+  assert.match(contributing, /`k-skill-proxy`를 타지 않도록 설계/);
+  assert.match(contributing, /릴리스나 패키징 관련 변경은 `npm run ci`/);
+  assert.match(contributing, /`~\/\.claude\/skills\/<skill-name>`/);
+  assert.match(contributing, /`~\/\.agents\/skills\/<skill-name>`/);
+  assert.match(contributing, /프로덕션 프록시는 `~\/\.local\/share\/k-skill-proxy`/);
+});
+
+test("README links to the contribution guide", () => {
+  const readme = read("README.md");
+
+  assert.match(readme, /\[기여 가이드\]\(CONTRIBUTING\.md\)/);
+});
+
 test("hwp skill documents kordoc-based parsing and supported operations", () => {
   const skillPath = path.join(repoRoot, "hwp", "SKILL.md");
 
