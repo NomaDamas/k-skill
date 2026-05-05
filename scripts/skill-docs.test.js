@@ -168,7 +168,8 @@ test("repository publishes Korean contribution guidance for external contributor
   assert.match(contributing, /Changeset 파일의 존재 여부를 테스트로 검증하지 않는다/);
   assert.match(contributing, /`package\.json`과 `package-lock\.json`의 `version` 필드를 테스트에서 고정하지 않는다/);
   assert.match(contributing, /`name`, `license`, `engines\.node`, workspace link metadata/);
-  assert.match(contributing, /upstream이 API key를 요구하는 무료 API인 경우에만 `k-skill-proxy` 경유를 검토/);
+  assert.match(contributing, /현재 구현이 registry token 기반인 경우에도 신규 또는 재설계 흐름은 trusted publishing\/OIDC를 우선/);
+  assert.match(contributing, /신규 proxy route는 upstream이 API key를 요구하는 무료 API인 경우에만 `k-skill-proxy` 경유를 검토/);
   assert.match(contributing, /인증 없이 동작하는 공개 read-only endpoint는 기본적으로 사용자 머신에서 직접 호출/);
   assert.doesNotMatch(contributing, /무료 API이고 1일 리미트가 충분한 경우/);
   assert.match(contributing, /유료 API/);
