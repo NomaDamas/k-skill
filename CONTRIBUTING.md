@@ -35,6 +35,7 @@
 - 패키지 릴리스 목적의 버전 변경은 `package.json`만 직접 수정하지 말고 Changesets 흐름을 사용합니다.
 - npm publish는 GitHub Actions가 생성하는 **Version Packages** PR이 `main`에 머지된 뒤 자동으로 수행되는 것을 전제로 합니다.
 - Changeset 파일의 존재 여부를 테스트로 검증하지 않는다. Changesets는 `changeset version` 단계에서 소비되어 삭제될 수 있으므로, 그런 테스트는 버전 bump 커밋의 CI를 막습니다.
+- `package.json`과 `package-lock.json`의 `version` 필드를 테스트에서 고정하지 않는다. Changesets 릴리스 흐름에서 매번 바뀔 수 있으므로, 테스트는 `name`, `license`, `engines.node`, workspace link metadata처럼 안정적인 invariant를 검증합니다.
 - 장기 registry token보다 npm trusted publishing/OIDC를 우선합니다.
 
 ## Python 패키지와 PyPI
@@ -48,7 +49,8 @@
 ## API와 k-skill-proxy 정책
 
 - `k-skill-proxy`는 무료 API 전용입니다.
-- 무료 API이고 1일 리미트가 충분한 경우에는 사용자가 직접 API key를 발급하지 않아도 되도록 `k-skill-proxy` 경로를 우선 검토합니다.
+- upstream이 API key를 요구하는 무료 API인 경우에만 `k-skill-proxy` 경유를 검토합니다.
+- 인증 없이 동작하는 공개 read-only endpoint는 기본적으로 사용자 머신에서 직접 호출하고, 불필요하게 프록시 운영 표면을 넓히지 않습니다.
 - 유료 API, 사용자별 과금 API, 개인 계정 권한이 필요한 API는 `k-skill-proxy`를 타지 않도록 설계합니다.
 - 기본 자세는 공개 read-only endpoint, proxy auth 없음입니다.
 - 프록시 표면은 좁게 유지하고 allowlist, cache, rate limit를 적용합니다.
