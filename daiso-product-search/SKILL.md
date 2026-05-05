@@ -107,7 +107,7 @@ console.log(productResult.items)
 
 ### 3. Check the store pickup stock
 
-공식 매장 픽업 재고 API로 해당 매장의 재고를 확인한다. 2026-05-05 기준 이 엔드포인트가 `Unauthorized` 로 차단될 수 있으므로, `stock.retrievalStatus === "blocked"` 또는 `stock.status === "unavailable"` 이면 정확한 매장 수량을 단정하지 않는다.
+공식 매장 픽업 재고 API로 해당 매장의 재고를 확인한다. 2026-05-05 기준 이 엔드포인트가 `Unauthorized` 로 차단될 수 있으므로, `stock.retrievalStatus === "blocked"` 또는 `stock.status === "unavailable"` 이면 정확한 매장 수량을 단정하지 않는다. `stock.status` 는 조회 결과 범주이고, 실제 재고 여부는 `stock.inStock` 또는 `stock.inventoryStatus` 로 판단한다.
 
 ```js
 const { getStorePickupStock } = require("daiso-product-search")
@@ -118,7 +118,8 @@ const stock = await getStorePickupStock({
 })
 
 console.log(stock)
-// 차단 예시: { status: "unavailable", retrievalStatus: "blocked", reason: "unauthorized", quantity: null, inStock: null }
+// 품절 예시: { status: "available", retrievalStatus: "resolved", inventoryStatus: "out_of_stock", quantity: 0, inStock: false }
+// 차단 예시: { status: "unavailable", retrievalStatus: "blocked", inventoryStatus: "unknown", reason: "unauthorized", quantity: null, inStock: null }
 ```
 
 ### 4. Use the end-to-end helper when both names are already known

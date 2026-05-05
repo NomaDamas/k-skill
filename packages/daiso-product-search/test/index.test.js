@@ -204,6 +204,31 @@ test("normalizeStorePickupStockResponse maps stock rows into a public availabili
   assert.equal(stock.saleStatusCode, "1")
   assert.equal(stock.status, "available")
   assert.equal(stock.retrievalStatus, "resolved")
+  assert.equal(stock.inventoryStatus, "in_stock")
+})
+
+test("normalizeStorePickupStockResponse separates retrieval status from zero-stock inventory status", () => {
+  const stock = normalizeStorePickupStockResponse(
+    {
+      ...storePickupStockPayload,
+      data: [
+        {
+          ...storePickupStockPayload.data[0],
+          stck: "0"
+        }
+      ]
+    },
+    {
+      pdNo: "1049275",
+      strCd: "10224"
+    }
+  )
+
+  assert.equal(stock.quantity, 0)
+  assert.equal(stock.inStock, false)
+  assert.equal(stock.status, "available")
+  assert.equal(stock.retrievalStatus, "resolved")
+  assert.equal(stock.inventoryStatus, "out_of_stock")
 })
 
 test("normalizeStorePickupStockResponse marks Daiso Unauthorized payloads as unavailable", () => {
@@ -222,6 +247,7 @@ test("normalizeStorePickupStockResponse marks Daiso Unauthorized payloads as una
     inStock: null,
     status: "unavailable",
     retrievalStatus: "blocked",
+    inventoryStatus: "unknown",
     reason: "unauthorized",
     message: "Daiso Mall blocked store pickup stock lookup with Unauthorized.",
     raw: { success: false, message: "Unauthorized" }
@@ -267,6 +293,7 @@ test("public client helpers can consume injected fetch fixtures", async () => {
 
     const pickupStock = await getStorePickupStock({ pdNo: "1049275", strCd: "10224" })
     assert.equal(pickupStock.quantity, 3)
+    assert.equal(pickupStock.inventoryStatus, "in_stock")
 
     const onlineStock = await getOnlineStock({ pdNo: "1049275" })
     assert.equal(onlineStock.quantity, 13047)
@@ -279,6 +306,7 @@ test("public client helpers can consume injected fetch fixtures", async () => {
     assert.equal(availability.selectedStore.strCd, "10224")
     assert.equal(availability.selectedProduct.pdNo, "1049275")
     assert.equal(availability.pickupStock.quantity, 3)
+    assert.equal(availability.pickupStock.inventoryStatus, "in_stock")
     assert.equal(availability.onlineStock.quantity, 13047)
   } finally {
     global.fetch = originalFetch
@@ -298,6 +326,7 @@ test("getStorePickupStock converts Daiso pickup-stock 401 responses to unavailab
 
     assert.equal(pickupStock.status, "unavailable")
     assert.equal(pickupStock.retrievalStatus, "blocked")
+    assert.equal(pickupStock.inventoryStatus, "unknown")
     assert.equal(pickupStock.reason, "unauthorized")
     assert.equal(pickupStock.quantity, null)
     assert.equal(pickupStock.inStock, null)
@@ -341,6 +370,7 @@ test("lookupStoreProductAvailability keeps online-stock fallback when Daiso pick
 
     assert.equal(availability.pickupStock.status, "unavailable")
     assert.equal(availability.pickupStock.retrievalStatus, "blocked")
+    assert.equal(availability.pickupStock.inventoryStatus, "unknown")
     assert.equal(availability.pickupStock.reason, "unauthorized")
     assert.equal(availability.onlineStock.quantity, 13047)
     assert.equal(availability.onlineStock.referenceOnly, true)
