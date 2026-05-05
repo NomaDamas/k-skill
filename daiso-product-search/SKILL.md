@@ -143,7 +143,7 @@ console.log(result.pickupStock)
 - 매장명
 - 상품명
 - 매장 재고 수량, 재고 없음, 또는 `Unauthorized` 로 인한 확인 불가
-- 필요하면 온라인 재고 참고값
+- 필요하면 `referenceOnly: true` 로 표시된 온라인 재고 참고값
 - **공식 표면이 매장 내 진열 위치를 주지 않으면 `공식 표면에서는 매장 재고까지만 확인된다`고 분명히 말한다.**
 
 ## Done when

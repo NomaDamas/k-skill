@@ -268,6 +268,7 @@ test("public client helpers can consume injected fetch fixtures", async () => {
 
     const onlineStock = await getOnlineStock({ pdNo: "1049275" })
     assert.equal(onlineStock.quantity, 13047)
+    assert.equal(onlineStock.referenceOnly, true)
 
     const availability = await lookupStoreProductAvailability({
       storeQuery: "강남역2호점",
@@ -338,6 +339,7 @@ test("lookupStoreProductAvailability keeps online-stock fallback when Daiso pick
     assert.equal(availability.pickupStock.status, "unavailable")
     assert.equal(availability.pickupStock.reason, "unauthorized")
     assert.equal(availability.onlineStock.quantity, 13047)
+    assert.equal(availability.onlineStock.referenceOnly, true)
   } finally {
     global.fetch = originalFetch
   }

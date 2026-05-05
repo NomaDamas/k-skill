@@ -377,6 +377,7 @@ function normalizeOnlineStockResponse(payload, request) {
       firstPresentProductIdentifier(item.onldPdNo, request.onldPdNo, request.pdNo) || String(request.pdNo),
     quantity,
     inStock: quantity > 0,
+    referenceOnly: true,
     raw: item
   }
 }
