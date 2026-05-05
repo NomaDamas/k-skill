@@ -107,7 +107,7 @@ console.log(productResult.items)
 
 ### 3. Check the store pickup stock
 
-공식 매장 픽업 재고 API로 해당 매장의 재고를 확인한다. 2026-05-05 기준 이 엔드포인트가 `Unauthorized` 로 차단될 수 있으므로, `stock.status === "unavailable"` 이면 정확한 매장 수량을 단정하지 않는다.
+공식 매장 픽업 재고 API로 해당 매장의 재고를 확인한다. 2026-05-05 기준 이 엔드포인트가 `Unauthorized` 로 차단될 수 있으므로, `stock.retrievalStatus === "blocked"` 또는 `stock.status === "unavailable"` 이면 정확한 매장 수량을 단정하지 않는다.
 
 ```js
 const { getStorePickupStock } = require("daiso-product-search")
@@ -118,7 +118,7 @@ const stock = await getStorePickupStock({
 })
 
 console.log(stock)
-// 차단 예시: { status: "unavailable", reason: "unauthorized", quantity: null, inStock: null }
+// 차단 예시: { status: "unavailable", retrievalStatus: "blocked", reason: "unauthorized", quantity: null, inStock: null }
 ```
 
 ### 4. Use the end-to-end helper when both names are already known
@@ -142,7 +142,7 @@ console.log(result.pickupStock)
 
 - 매장명
 - 상품명
-- 매장 재고 수량, 재고 없음, 또는 `Unauthorized` 로 인한 확인 불가
+- 매장 재고 수량, 재고 없음, 또는 `retrievalStatus: "blocked"` / `Unauthorized` 로 인한 확인 불가
 - 필요하면 `referenceOnly: true` 로 표시된 온라인 재고 참고값
 - **공식 표면이 매장 내 진열 위치를 주지 않으면 `공식 표면에서는 매장 재고까지만 확인된다`고 분명히 말한다.**
 

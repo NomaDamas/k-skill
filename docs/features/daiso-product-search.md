@@ -5,7 +5,7 @@
 - 다이소 매장명으로 공식 매장 후보 찾기
 - 상품명/검색어로 공식 상품 후보 찾기
 - 특정 매장의 **매장 픽업 재고** 확인
-- 매장 픽업 재고가 `Unauthorized` 로 차단되면 차단 상태를 명확히 표시하고, 필요하면 `referenceOnly: true` 온라인 재고 참고값 함께 확인
+- 매장 픽업 재고가 `Unauthorized` 로 차단되면 `retrievalStatus: "blocked"` 차단 상태를 명확히 표시하고, 필요하면 `referenceOnly: true` 온라인 재고 참고값 함께 확인
 
 ## 먼저 필요한 것
 
@@ -37,7 +37,7 @@
 3. `selStr` 로 매장 후보를 찾고, 필요하면 `selStrInfo` 로 매장 상세를 확인합니다.
 4. `SearchGoods` 로 상품 후보를 찾습니다.
 5. `selStrPkupStck` 로 해당 매장의 상품 재고를 확인합니다.
-6. `selStrPkupStck` 가 `Unauthorized` 로 차단되면 매장 픽업 재고는 `unavailable/unauthorized` 로 보고하고 세션 우회를 시도하지 않습니다.
+6. `selStrPkupStck` 가 `Unauthorized` 로 차단되면 매장 픽업 재고는 `unavailable/blocked/unauthorized` 로 보고하고 세션 우회를 시도하지 않습니다.
 7. 필요하면 `SearchGoods` 응답의 `onldPdNo` 를 함께 보존해 `selOnlStck` 온라인 재고 교차 확인에 사용합니다.
 8. 공식 표면이 매장 내 위치를 주지 않으면 재고 중심으로 답합니다.
 
@@ -72,7 +72,7 @@ main().catch((error) => {
 - 상품 후보가 여러 개면 브랜드, 용량, 호수까지 같이 보여 주는 편이 덜 헷갈립니다.
 - 재고 수량은 실시간 100% 보장값이 아니므로, 필요하면 `방문 직전 다시 확인` 문구를 같이 줍니다.
 - 공식 표면이 매장 내 위치를 주지 않으면 `공식 표면에서는 매장 재고까지만 확인된다`고 답합니다.
-- 매장 픽업 재고가 `Unauthorized` 로 차단된 경우에는 `다이소몰이 현재 매장 픽업 재고 API를 차단해 정확한 매장 재고 수량은 확인할 수 없다`고 답하고, 온라인 재고는 `referenceOnly: true` 참고값으로만 구분합니다.
+- 매장 픽업 재고가 `Unauthorized` 로 차단된 경우에는 `다이소몰이 현재 매장 픽업 재고 API를 차단해 정확한 매장 재고 수량은 확인할 수 없다`고 답하고, 결과의 `retrievalStatus: "blocked"` 와 온라인 재고의 `referenceOnly: true` 참고값을 구분합니다.
 
 ## 라이브 확인 메모
 
@@ -82,6 +82,6 @@ main().catch((error) => {
 
 - `POST /api/ms/msg/selStr` → 매장 후보 확인
 - `GET /ssn/search/SearchGoods?searchTerm=...` → 상품 후보 및 `onldPdNo` 확인
-- `POST /api/pd/pdh/selStrPkupStck` → 성공하면 `status: "available"` 로 매장 픽업 재고 표시
-- `selStrPkupStck` 가 `401`/`403` 또는 `{ "success": false, "message": "Unauthorized" }` 를 반환하면 `status: "unavailable"`, `reason: "unauthorized"` 로 표시
+- `POST /api/pd/pdh/selStrPkupStck` → 성공하면 `status: "available"`, `retrievalStatus: "resolved"` 로 매장 픽업 재고 표시
+- `selStrPkupStck` 가 `401`/`403` 또는 `{ "success": false, "message": "Unauthorized" }` 를 반환하면 `status: "unavailable"`, `retrievalStatus: "blocked"`, `reason: "unauthorized"` 로 표시
 - `POST /api/pdo/selOnlStck` → 가능한 경우 온라인 재고 참고값 표시

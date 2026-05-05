@@ -339,6 +339,7 @@ function normalizeStorePickupStockResponse(payload, request) {
       quantity: null,
       inStock: null,
       status: "unavailable",
+      retrievalStatus: "blocked",
       reason: "unauthorized",
       message: "Daiso Mall blocked store pickup stock lookup with Unauthorized.",
       raw: payload
@@ -358,6 +359,7 @@ function normalizeStorePickupStockResponse(payload, request) {
     quantity,
     inStock: quantity > 0,
     status: "available",
+    retrievalStatus: "resolved",
     saleStatusCode: item.sleStsCd || null,
     raw: item
   }

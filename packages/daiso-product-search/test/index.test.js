@@ -203,6 +203,7 @@ test("normalizeStorePickupStockResponse maps stock rows into a public availabili
   assert.equal(stock.inStock, true)
   assert.equal(stock.saleStatusCode, "1")
   assert.equal(stock.status, "available")
+  assert.equal(stock.retrievalStatus, "resolved")
 })
 
 test("normalizeStorePickupStockResponse marks Daiso Unauthorized payloads as unavailable", () => {
@@ -220,6 +221,7 @@ test("normalizeStorePickupStockResponse marks Daiso Unauthorized payloads as una
     quantity: null,
     inStock: null,
     status: "unavailable",
+    retrievalStatus: "blocked",
     reason: "unauthorized",
     message: "Daiso Mall blocked store pickup stock lookup with Unauthorized.",
     raw: { success: false, message: "Unauthorized" }
@@ -295,6 +297,7 @@ test("getStorePickupStock converts Daiso pickup-stock 401 responses to unavailab
     const pickupStock = await getStorePickupStock({ pdNo: "1049275", strCd: "10224" })
 
     assert.equal(pickupStock.status, "unavailable")
+    assert.equal(pickupStock.retrievalStatus, "blocked")
     assert.equal(pickupStock.reason, "unauthorized")
     assert.equal(pickupStock.quantity, null)
     assert.equal(pickupStock.inStock, null)
@@ -337,6 +340,7 @@ test("lookupStoreProductAvailability keeps online-stock fallback when Daiso pick
     })
 
     assert.equal(availability.pickupStock.status, "unavailable")
+    assert.equal(availability.pickupStock.retrievalStatus, "blocked")
     assert.equal(availability.pickupStock.reason, "unauthorized")
     assert.equal(availability.onlineStock.quantity, 13047)
     assert.equal(availability.onlineStock.referenceOnly, true)
