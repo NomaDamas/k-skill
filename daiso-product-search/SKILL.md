@@ -17,6 +17,7 @@ metadata:
 - 공식 매장 검색으로 매장 코드를 찾는다.
 - 공식 상품 검색으로 상품 후보를 찾는다.
 - 공식 매장 픽업 재고 표면으로 해당 매장의 재고를 확인한다.
+- 다이소몰이 매장 픽업 재고 표면을 `Unauthorized` 로 차단하면 차단 상태를 그대로 보고하고 세션 우회는 시도하지 않는다.
 - **공식 표면이 매장 내 진열 위치를 주지 않으면 재고 중심으로만 답한다.**
 
 ## When to use
@@ -106,7 +107,7 @@ console.log(productResult.items)
 
 ### 3. Check the store pickup stock
 
-공식 매장 픽업 재고 API로 해당 매장의 재고를 확인한다.
+공식 매장 픽업 재고 API로 해당 매장의 재고를 확인한다. 2026-05-05 기준 이 엔드포인트가 `Unauthorized` 로 차단될 수 있으므로, `stock.status === "unavailable"` 이면 정확한 매장 수량을 단정하지 않는다.
 
 ```js
 const { getStorePickupStock } = require("daiso-product-search")
@@ -117,6 +118,7 @@ const stock = await getStorePickupStock({
 })
 
 console.log(stock)
+// 차단 예시: { status: "unavailable", reason: "unauthorized", quantity: null, inStock: null }
 ```
 
 ### 4. Use the end-to-end helper when both names are already known
@@ -140,7 +142,7 @@ console.log(result.pickupStock)
 
 - 매장명
 - 상품명
-- 매장 재고 수량 또는 재고 없음
+- 매장 재고 수량, 재고 없음, 또는 `Unauthorized` 로 인한 확인 불가
 - 필요하면 온라인 재고 참고값
 - **공식 표면이 매장 내 진열 위치를 주지 않으면 `공식 표면에서는 매장 재고까지만 확인된다`고 분명히 말한다.**
 
@@ -148,7 +150,7 @@ console.log(result.pickupStock)
 
 - 매장명과 상품명이 모두 확인되었다.
 - 공식 표면으로 매장 후보와 상품 후보를 찾았다.
-- 공식 매장 재고 결과를 최소 1회 반환했다.
+- 공식 매장 재고 결과 또는 `Unauthorized` 차단 상태를 최소 1회 반환했다.
 - 위치 정보가 없으면 없다고 분명히 고지했다.
 
 ## Failure modes
@@ -156,6 +158,7 @@ console.log(result.pickupStock)
 - 매장명이 너무 넓으면 같은 상권의 여러 지점이 동시에 잡힐 수 있다.
 - 상품명이 너무 넓으면 다른 용량/호수 후보가 많이 섞일 수 있다.
 - 공식 재고는 시점 차이로 실제 방문 시 수량이 달라질 수 있다.
+- `selStrPkupStck` 가 `Unauthorized` 로 차단되면 매장 픽업 수량은 확인 불가로 답하고, 온라인 재고를 매장 재고처럼 단정하지 않는다.
 - 현재 확인된 공식 표면은 **매장 내 aisle/진열 위치**를 직접 주지 않을 수 있다.
 
 ## Notes

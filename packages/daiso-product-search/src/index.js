@@ -9,6 +9,16 @@ const {
   normalizeStoreSearchResponse
 } = require("./parse")
 
+class DaisoRequestError extends Error {
+  constructor(message, options = {}) {
+    super(message)
+    this.name = "DaisoRequestError"
+    this.status = options.status || null
+    this.payload = options.payload || null
+    this.url = options.url || null
+  }
+}
+
 const DEFAULT_BROWSER_HEADERS = {
   accept: "application/json, text/plain, */*",
   "accept-language": "ko,en-US;q=0.9,en;q=0.8",
@@ -43,12 +53,25 @@ async function requestJson(url, options = {}) {
   }
 
   const response = await fetchImpl(url, init)
+  const payload = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(`Daiso request failed with ${response.status} for ${url}`)
+    throw new DaisoRequestError(`Daiso request failed with ${response.status} for ${url}`, {
+      status: response.status,
+      payload,
+      url
+    })
   }
 
-  return response.json()
+  return payload
+}
+
+function isPickupStockUnauthorizedError(error) {
+  return (
+    error instanceof DaisoRequestError &&
+    (error.status === 401 || error.status === 403) &&
+    (!error.payload || /unauthorized/i.test(String(error.payload.message || "")))
+  )
 }
 
 async function searchStores(query, options = {}) {
@@ -91,18 +114,29 @@ async function searchProducts(query, options = {}) {
 }
 
 async function getStorePickupStock(request, options = {}) {
-  const payload = await requestJson(`${BASE_API_URL}/pd/pdh/selStrPkupStck`, {
-    ...options,
-    method: "POST",
-    body: [
-      {
-        pdNo: String(request.pdNo),
-        strCd: String(request.strCd)
-      }
-    ]
-  })
+  try {
+    const payload = await requestJson(`${BASE_API_URL}/pd/pdh/selStrPkupStck`, {
+      ...options,
+      method: "POST",
+      body: [
+        {
+          pdNo: String(request.pdNo),
+          strCd: String(request.strCd)
+        }
+      ]
+    })
 
-  return normalizeStorePickupStockResponse(payload, request)
+    return normalizeStorePickupStockResponse(payload, request)
+  } catch (error) {
+    if (isPickupStockUnauthorizedError(error)) {
+      return normalizeStorePickupStockResponse(
+        error.payload || { success: false, message: "Unauthorized", status: error.status },
+        request
+      )
+    }
+
+    throw error
+  }
 }
 
 async function getOnlineStock(request, options = {}) {

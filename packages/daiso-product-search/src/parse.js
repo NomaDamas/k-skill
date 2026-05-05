@@ -327,7 +327,24 @@ function normalizeSearchGoodsResponse(payload, query) {
   }
 }
 
+function isUnauthorizedMessage(value) {
+  return /unauthorized/i.test(String(value || ""))
+}
+
 function normalizeStorePickupStockResponse(payload, request) {
+  if (payload && typeof payload === "object" && payload.success === false && isUnauthorizedMessage(payload.message)) {
+    return {
+      pdNo: String(request.pdNo),
+      strCd: String(request.strCd),
+      quantity: null,
+      inStock: null,
+      status: "unavailable",
+      reason: "unauthorized",
+      message: "Daiso Mall blocked store pickup stock lookup with Unauthorized.",
+      raw: payload
+    }
+  }
+
   if (!payload || typeof payload !== "object" || !Array.isArray(payload.data) || payload.data.length === 0) {
     throw new Error("No Daiso pickup stock rows were returned.")
   }
@@ -340,6 +357,7 @@ function normalizeStorePickupStockResponse(payload, request) {
     strCd: String(item.strCd || request.strCd),
     quantity,
     inStock: quantity > 0,
+    status: "available",
     saleStatusCode: item.sleStsCd || null,
     raw: item
   }

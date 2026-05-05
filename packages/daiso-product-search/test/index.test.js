@@ -202,6 +202,28 @@ test("normalizeStorePickupStockResponse maps stock rows into a public availabili
   assert.equal(stock.quantity, 3)
   assert.equal(stock.inStock, true)
   assert.equal(stock.saleStatusCode, "1")
+  assert.equal(stock.status, "available")
+})
+
+test("normalizeStorePickupStockResponse marks Daiso Unauthorized payloads as unavailable", () => {
+  const stock = normalizeStorePickupStockResponse(
+    { success: false, message: "Unauthorized" },
+    {
+      pdNo: "1049275",
+      strCd: "10224"
+    }
+  )
+
+  assert.deepEqual(stock, {
+    pdNo: "1049275",
+    strCd: "10224",
+    quantity: null,
+    inStock: null,
+    status: "unavailable",
+    reason: "unauthorized",
+    message: "Daiso Mall blocked store pickup stock lookup with Unauthorized.",
+    raw: { success: false, message: "Unauthorized" }
+  })
 })
 
 test("public client helpers can consume injected fetch fixtures", async () => {
@@ -254,6 +276,67 @@ test("public client helpers can consume injected fetch fixtures", async () => {
     assert.equal(availability.selectedStore.strCd, "10224")
     assert.equal(availability.selectedProduct.pdNo, "1049275")
     assert.equal(availability.pickupStock.quantity, 3)
+    assert.equal(availability.onlineStock.quantity, 13047)
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
+test("getStorePickupStock converts Daiso pickup-stock 401 responses to unavailable results", async () => {
+  const originalFetch = global.fetch
+
+  global.fetch = async (url) => {
+    assert.match(String(url), /\/api\/pd\/pdh\/selStrPkupStck$/)
+    return makeResponse({ success: false, message: "Unauthorized" }, { status: 401 })
+  }
+
+  try {
+    const pickupStock = await getStorePickupStock({ pdNo: "1049275", strCd: "10224" })
+
+    assert.equal(pickupStock.status, "unavailable")
+    assert.equal(pickupStock.reason, "unauthorized")
+    assert.equal(pickupStock.quantity, null)
+    assert.equal(pickupStock.inStock, null)
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
+test("lookupStoreProductAvailability keeps online-stock fallback when Daiso pickup stock is unauthorized", async () => {
+  const originalFetch = global.fetch
+
+  global.fetch = async (url) => {
+    if (String(url).includes("/api/ms/msg/selStr") && !String(url).includes("selStrInfo")) {
+      return makeResponse(storeSearchPayload)
+    }
+
+    if (String(url).includes("/ssn/search/SearchGoods")) {
+      return makeResponse(searchGoodsPayload)
+    }
+
+    if (String(url).includes("/api/dl/dla-api/selStrInfo")) {
+      return makeResponse(storeDetailPayload)
+    }
+
+    if (String(url).includes("/api/pd/pdh/selStrPkupStck")) {
+      return makeResponse({ success: false, message: "Unauthorized" }, { status: 403 })
+    }
+
+    if (String(url).includes("/api/pdo/selOnlStck")) {
+      return makeResponse(onlineStockPayload)
+    }
+
+    return new Response("not found", { status: 404 })
+  }
+
+  try {
+    const availability = await lookupStoreProductAvailability({
+      storeQuery: "강남역2호점",
+      productQuery: "VT 리들샷 100"
+    })
+
+    assert.equal(availability.pickupStock.status, "unavailable")
+    assert.equal(availability.pickupStock.reason, "unauthorized")
     assert.equal(availability.onlineStock.quantity, 13047)
   } finally {
     global.fetch = originalFetch
@@ -444,9 +527,9 @@ test("lookupStoreProductAvailability reuses a product candidate's online stock i
   }
 })
 
-function makeResponse(body) {
+function makeResponse(body, options = {}) {
   return new Response(JSON.stringify(body), {
-    status: 200,
+    status: options.status || 200,
     headers: {
       "content-type": "application/json"
     }
