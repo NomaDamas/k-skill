@@ -441,6 +441,12 @@ test("seoul subway docs default to the hosted proxy when KSKILL_PROXY_BASE_URL i
   }
 
   assert.match(proxyDoc, /GET \/v1\/seoul-subway\/arrival/);
+  assert.match(proxyDoc, /KSKILL_PROXY_BASE_URL/);
+  assert.match(proxyDoc, /unset\/empty|비워 두면/);
+  assert.match(proxyDoc, /https:\/\/k-skill-proxy\.nomadamas\.org/);
+  assert.match(proxyDoc, /KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com/);
+  assert.match(proxyDoc, /self-host|alternate proxy/i);
+  assert.match(proxyDoc, /override/i);
   assert.match(proxyDoc, /SEOUL_OPEN_API_KEY/);
   assert.match(proxyReadme, /GET \/v1\/seoul-subway\/arrival/);
   assert.match(proxyReadme, /SEOUL_OPEN_API_KEY/);

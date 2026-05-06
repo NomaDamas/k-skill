@@ -41,7 +41,8 @@ client/skill -> k-skill-proxy -> upstream public API
 
 클라이언트(스킬) 쪽:
 
-- `KSKILL_PROXY_BASE_URL=https://your-proxy.example.com`
+- 일반 hosted client는 `KSKILL_PROXY_BASE_URL`을 unset/empty로 비워 두면 hosted `https://k-skill-proxy.nomadamas.org`를 기본값으로 사용합니다.
+- `KSKILL_PROXY_BASE_URL=https://your-proxy.example.com`은 self-host 또는 alternate proxy를 명시적으로 쓰는 경우에만 설정하는 override 예시입니다.
 
 프록시 서버 쪽:
 
