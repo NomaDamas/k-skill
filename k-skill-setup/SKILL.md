@@ -72,7 +72,7 @@ KSKILL_FORESTTRIP_PASSWORD=replace-me
 LAW_OC=replace-me
 KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
-KSKILL_PROXY_BASE_URL=https://your-proxy.example.com
+KSKILL_PROXY_BASE_URL=
 EOF
 chmod 0600 ~/.config/k-skill/secrets.env
 ```

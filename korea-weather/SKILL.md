@@ -44,14 +44,15 @@ metadata:
 
 ### 1. Resolve the proxy base URL
 
-`KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
+`KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없거나 비어 있으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
 ### 2. Query the short-term forecast endpoint
 
 격자 좌표가 이미 있으면 그대로 넣고, 위도/경도만 있으면 proxy 에 그대로 넘긴다.
 
 ```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korea-weather/forecast' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
   --data-urlencode 'lat=37.5665' \
   --data-urlencode 'lon=126.9780'
 ```
@@ -59,7 +60,8 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korea-weather/forecast' 
 격자 좌표 예시:
 
 ```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korea-weather/forecast' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
   --data-urlencode 'nx=60' \
   --data-urlencode 'ny=127' \
   --data-urlencode 'baseDate=20260405' \

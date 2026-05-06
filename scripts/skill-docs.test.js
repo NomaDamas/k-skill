@@ -448,7 +448,8 @@ test("seoul subway docs default to the hosted proxy when KSKILL_PROXY_BASE_URL i
   assert.match(security, /서울 지하철.*한국 날씨.*기본 hosted proxy|기본 hosted proxy.*서울 지하철.*한국 날씨/i);
   assert.match(setupSkill, /서울 지하철: 사용자 시크릿 불필요 \(기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`\)/);
   assert.doesNotMatch(secretsExample, /SEOUL_OPEN_API_KEY/);
-  assert.match(secretsExample, /KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com/);
+  assert.doesNotMatch(secretsExample, /^KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m);
+  assert.match(secretsExample, /^(#\s*)?KSKILL_PROXY_BASE_URL=$|^#\s*KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m);
   assert.doesNotMatch(secretsExample, /KSKILL_PROXY_BASE_URL=https:\/\/k-skill-proxy\.nomadamas\.org/);
 });
 
@@ -496,6 +497,34 @@ test("korea-weather docs route short-term forecast calls through the proxy witho
   assert.match(proxyDoc, /KMA_OPEN_API_KEY/);
   assert.match(proxyReadme, /GET \/v1\/korea-weather\/forecast/);
   assert.match(proxyReadme, /KMA_OPEN_API_KEY/);
+});
+
+test("hosted proxy docs keep self-host overrides inactive and demonstrate resolver fallback", () => {
+  const setup = read(path.join("docs", "setup.md"));
+  const security = read(path.join("docs", "security-and-secrets.md"));
+  const setupSkill = read(path.join("k-skill-setup", "SKILL.md"));
+  const secretsExample = read(path.join("examples", "secrets.env.example"));
+  const subwaySkill = read(path.join("seoul-subway-arrival", "SKILL.md"));
+  const weatherSkill = read(path.join("korea-weather", "SKILL.md"));
+  const subwayFeatureDoc = read(path.join("docs", "features", "seoul-subway-arrival.md"));
+  const weatherFeatureDoc = read(path.join("docs", "features", "korea-weather.md"));
+
+  for (const doc of [setup, security, setupSkill, secretsExample]) {
+    assert.doesNotMatch(doc, /^KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m);
+  }
+
+  for (const doc of [setup, security, setupSkill, secretsExample]) {
+    assert.match(
+      doc,
+      /^(#\s*)?KSKILL_PROXY_BASE_URL=$|^#\s*KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m,
+    );
+  }
+
+  for (const doc of [subwaySkill, weatherSkill, subwayFeatureDoc, weatherFeatureDoc]) {
+    assert.match(doc, /BASE="\$\{KSKILL_PROXY_BASE_URL:-https:\/\/k-skill-proxy\.nomadamas\.org\}"/);
+    assert.match(doc, /curl -fsS --get "\$\{BASE\}/);
+    assert.doesNotMatch(doc, /curl -fsS --get 'https:\/\/k-skill-proxy\.nomadamas\.org/);
+  }
 });
 
 test("kakaotalk-mac skill documents safe macOS kakaocli usage", () => {

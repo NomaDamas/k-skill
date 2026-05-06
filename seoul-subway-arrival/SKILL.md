@@ -48,14 +48,15 @@ metadata:
 
 ### 1. Resolve the proxy base URL
 
-`KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
+`KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없거나 비어 있으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
 ### 2. Query the official station arrival endpoint
 
 proxy는 서울 실시간 지하철 API key를 서버에서 주입하고, 역명 기준 실시간 도착정보만 공개 read-only endpoint로 노출한다.
 
 ```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/seoul-subway/arrival' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/seoul-subway/arrival" \
   --data-urlencode 'stationName=강남'
 ```
 

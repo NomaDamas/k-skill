@@ -32,21 +32,23 @@
 
 ## 기본 흐름
 
-1. `KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용합니다.
+1. `KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없거나 비어 있으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용합니다.
 2. `/v1/seoul-subway/arrival?stationName=...` 로 역명 기준 실시간 도착정보를 조회합니다.
 3. 호선, 진행 방향, 도착 메시지, 조회 시점을 함께 요약합니다.
 
 ## 예시
 
 ```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/seoul-subway/arrival' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/seoul-subway/arrival" \
   --data-urlencode 'stationName=강남'
 ```
 
 범위를 줄이거나 늘리고 싶으면:
 
 ```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/seoul-subway/arrival' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/seoul-subway/arrival" \
   --data-urlencode 'stationName=서울역' \
   --data-urlencode 'startIndex=0' \
   --data-urlencode 'endIndex=4'
