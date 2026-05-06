@@ -28,11 +28,14 @@ test("parseArgs handles --key value, --key=value, and -h", () => {
   assert.equal(result.flags.help, true);
 });
 
-test("USAGE describes the four subcommands", () => {
+test("USAGE describes the supported subcommands", () => {
   assert.match(USAGE, /notices --date/);
   assert.match(USAGE, /notice-detail/);
   assert.match(USAGE, /case --court-code/);
+  assert.match(USAGE, /search \[--sido/);
   assert.match(USAGE, /codes courts/);
+  assert.match(USAGE, /codes usages/);
+  assert.match(USAGE, /codes regions/);
   assert.match(USAGE, /codes bid-types/);
   assert.match(USAGE, /BLOCKED/);
 });
@@ -64,6 +67,20 @@ test("CLI codes bid-types subcommand returns 기일입찰 + 기간입찰 from th
     parsed.items.map((item) => item.code).sort(),
     ["000331", "000332"]
   );
+});
+
+test("CLI codes usages and regions expose Workflow C frozen codetables", () => {
+  const usages = spawnSync(process.execPath, [binPath, "codes", "usages"], {
+    encoding: "utf8"
+  });
+  assert.equal(usages.status, 0, `stderr: ${usages.stderr}`);
+  assert.ok(JSON.parse(usages.stdout).items.some((item) => item.name === "주거용건물"));
+
+  const regions = spawnSync(process.execPath, [binPath, "codes", "regions"], {
+    encoding: "utf8"
+  });
+  assert.equal(regions.status, 0, `stderr: ${regions.stderr}`);
+  assert.ok(JSON.parse(regions.stdout).items.some((item) => item.sigunguName === "강남구"));
 });
 
 test("CLI rejects --date with an obviously invalid format", () => {

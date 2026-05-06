@@ -1,6 +1,6 @@
 ---
 name: court-auction-notice-search
-description: Browse 대법원경매정보(courtauction.go.kr) 부동산 매각공고 by 매각기일·법원·기일/기간 입찰, expand each notice into 사건번호·용도·주소·감정평가액·최저매각가, and look up a case directly by 법원+사건번호. Read-only, slow-by-design (~2s/call) to avoid IP blocks. Use when the user asks "오늘 어디서 부동산 경매가 열려?" "이 사건번호 정보 알려줘" or wants 매각공고 데이터를 에이전트가 다룰 수 있는 JSON으로.
+description: Browse 대법원경매정보(courtauction.go.kr) 부동산 매각공고 by 매각기일·법원·기일/기간 입찰, expand each notice into 사건번호·용도·주소·감정평가액·최저매각가, search property items by free conditions(지역·용도·가격·면적·유찰횟수), and look up a case directly by 법원+사건번호. Read-only, slow-by-design (~2s/call) to avoid IP blocks.
 license: MIT
 metadata:
   category: real-estate
@@ -26,12 +26,12 @@ metadata:
 - "기일입찰 vs 기간입찰만 나눠서 보여줘"
 - "이 매각공고 안의 사건번호/용도/주소/감정평가액 다 보여줘"
 - "사건번호 2024타경100001 진행 상황 알려줘"
+- "서울 강남구 아파트 최저가 5억 이하 유찰 1회 이상 물건 찾아줘"
 - "법원사무소 코드 표 줘"
 
 ## When not to use
 
 - 동산(자동차·중기) 경매 (이번 v1 범위 밖)
-- 자유 조건검색(지역·용도·가격대·면적·유찰횟수) — Workflow C 별도 follow-up 이슈에서 다룬다
 - 특정 매각기일 날짜의 모든 법원 일정을 한 번에 (Workflow D 별도 follow-up 이슈)
 - 매각물건 사진(전경/개황/내부) URL 노출 (별도 follow-up 이슈)
 - 매각물건명세서 / 현황조사서 / 감정평가서 PDF 다운로드 (별도 follow-up 이슈)
@@ -62,6 +62,7 @@ metadata:
   - `POST /pgj/pgj143/selectRletDspslPbanc.on` — 매각공고 목록
   - `POST /pgj/pgj143/selectRletDspslPbancDtl.on` — 매각공고 상세 (사건/물건 펼치기)
   - `POST /pgj/pgj15A/selectAuctnCsSrchRslt.on` — 사건 단건 조회
+  - `POST /pgj/pgjsearch/searchControllerMain.on` — 물건 자유 조건검색 (PGJ151F00 → PGJ151M01)
   - `POST /pgj/pgjComm/selectCortOfcCdLst.on` — 법원사무소코드 전체
 
 ## Workflow A — 매각공고 → 사건/물건 펼치기
@@ -78,6 +79,30 @@ metadata:
 2. `getCaseByCaseNumber({ courtCode, caseNumber })` 호출.
 3. `found:false / status:204` 면 사건이 존재하지 않거나 비공개. 사건번호 형식·법원이 맞는지 사용자에게 다시 확인한다.
 4. `found:true` 면 `caseInfo`(사건명·접수일·청구액·재판부·진행상태), `items[]`(매각목적물 — 주소/배당요구종기), `schedule[]`(매각기일별 최저가/감정가/결과), `claimDeadline`, `relatedCases`, `stakeholders` 가 채워진다.
+
+## Workflow C — 부동산 물건 자유 조건검색
+
+1. 사용자의 조건을 `searchProperties()` 입력으로 매핑한다.
+   - `region: { sido, sigungu, dong }` — 코드 또는 대표 정적 코드테이블의 한국어명. 지역을 주면 지번주소 검색(`cortStDvs:"2"`)으로 조회한다.
+   - `usage: { large, medium, small }` — 용도 대/중/소분류 코드 또는 대표 정적 코드테이블의 한국어명.
+   - `priceRange` — 최저매각가격 원 단위 `{ min, max }`
+   - `appraisedPriceRange` — 감정평가액 원 단위 `{ min, max }`
+   - `saleDate` — `{ from, to }`
+   - `flbdCount` — 유찰횟수 `{ min, max }`
+   - `area` — 면적(㎡) `{ min, max }`
+2. `searchProperties({ ... })` 호출 → `POST /pgj/pgjsearch/searchControllerMain.on`.
+3. 응답의 `items[]` 는 핵심 raw 컬럼을 영문 키로 정규화한다:
+   - `saNo` → `caseNumber`
+   - `mokmulSer`/`maemulSer` → `itemNumber`
+   - `printCsNo` → `displayCaseNumber`
+   - `realSt`/`printSt` → `address`
+   - `gamevalAmt` → `appraisedPrice`
+   - `minmaePrice` → `minimumSalePrice`
+   - `yuchalCnt` → `flbdCount`
+   - `mulStatcd` → `statusCode`
+   - `xCordi/yCordi` → `coordinates`
+   - `buldList/areaList/jimokList` → `buildingList/areaList/landCategoryList`
+4. `getUsageCodes()` / `getRegionCodes()` 는 Workflow C용 정적 대표 코드표다. 전체 upstream 코드테이블이 변해도 알 수 없는 코드는 fail-open으로 그대로 전달한다.
 
 ## Throttling and call-budget rules
 
@@ -145,6 +170,8 @@ court-auction-notice-search codes courts --pretty | head -40
 
 # 2. 입찰구분 (정적 코드)
 court-auction-notice-search codes bid-types --pretty
+court-auction-notice-search codes usages --pretty
+court-auction-notice-search codes regions --pretty
 
 # 3. 매각공고 목록
 court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-type date --pretty
@@ -154,6 +181,10 @@ court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-ty
 
 # 5. 사건번호 직접 조회
 court-auction-notice-search case --court-code B000210 --case-number "2024타경100001" --pretty
+
+# 6. 자유 조건검색
+court-auction-notice-search search --sido 서울특별시 --sigungu 강남구 --usage-large 주거용건물 \
+  --price-min 100000000 --price-max 500000000 --sale-from 2026-05-01 --sale-to 2026-05-20 --pretty
 ```
 
 ## Block / Error handling

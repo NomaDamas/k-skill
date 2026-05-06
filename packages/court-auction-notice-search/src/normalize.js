@@ -34,6 +34,16 @@ function parseAmount(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function parseNumber(value) {
+  if (value === null || value === undefined) return null;
+  const stripped = stripHtml(value);
+  if (!stripped) return null;
+  const normalized = stripped.replace(/[, ]/g, "");
+  if (!/^-?\d+(?:\.\d+)?$/.test(normalized)) return null;
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : null;
+}
+
 function formatYmd(value) {
   if (value === null || value === undefined) return null;
   const trimmed = String(value).trim();
@@ -344,6 +354,70 @@ function normalizeCaseDetailResponse(rawPayload, options = {}) {
   return result;
 }
 
+function normalizePropertySearchResponse(rawPayload, options = {}) {
+  const data = rawPayload && typeof rawPayload === "object" ? rawPayload.data : null;
+  const pageInfo = data && typeof data.dma_pageInfo === "object" ? data.dma_pageInfo : {};
+  const list = data && Array.isArray(data.dlt_srchResult) ? data.dlt_srchResult : [];
+  const includeRaw = options.includeRaw !== false;
+  const items = list.map((row) => normalizePropertySearchRow(row, includeRaw));
+
+  return {
+    requestedFilters: options.requestedFilters || null,
+    page: {
+      pageNo: parseAmount(pageInfo.pageNo) || 1,
+      pageSize: parseAmount(pageInfo.pageSize) || items.length,
+      totalCount: parseAmount(pageInfo.totalCnt) || items.length,
+      totalYn: nullIfBlank(pageInfo.totalYn),
+      groupTotalCount: parseAmount(pageInfo.groupTotalCount)
+    },
+    count: items.length,
+    items
+  };
+}
+
+function normalizePropertySearchRow(rawRow, includeRaw) {
+  const row = ensureRow(rawRow);
+  const x = parseNumber(row.xCordi);
+  const y = parseNumber(row.yCordi);
+  const out = {
+    caseNumber: nullIfBlank(row.saNo),
+    displayCaseNumber: nullIfBlank(row.printCsNo),
+    itemNumber: nullIfBlank(row.mokmulSer) || nullIfBlank(row.maemulSer),
+    address: stripHtml(row.realSt) || stripHtml(row.printSt),
+    appraisedPrice: parseAmount(row.gamevalAmt),
+    minimumSalePrice: parseAmount(row.minmaePrice),
+    flbdCount: parseAmount(row.yuchalCnt) || 0,
+    statusCode: nullIfBlank(row.mulStatcd),
+    progressStatusCode: nullIfBlank(row.jinstatCd),
+    courtCode: nullIfBlank(row.boCd),
+    judgeDeptCode: nullIfBlank(row.jpDeptCd),
+    judgeDeptName: nullIfBlank(row.jpDeptNm),
+    documentId: nullIfBlank(row.docid),
+    saleDate: formatYmd(row.maeGiil),
+    salePlace: nullIfBlank(row.maePlace),
+    bidTypeCode: nullIfBlank(row.ipchalGbncd),
+    usage: nullIfBlank(row.dspslUsgNm),
+    usageCodes: {
+      large: nullIfBlank(row.lclsUtilCd),
+      medium: nullIfBlank(row.mclsUtilCd),
+      small: nullIfBlank(row.sclsUtilCd)
+    },
+    coordinates: x === null && y === null ? null : { x, y },
+    buildingList: stripHtml(row.buldList),
+    areaList: stripHtml(row.areaList),
+    landCategoryList: stripHtml(row.jimokList),
+    areaRange: {
+      min: parseNumber(row.minArea),
+      max: parseNumber(row.maxArea)
+    },
+    remarks: stripHtml(row.mulBigo)
+  };
+  if (includeRaw) {
+    out.raw = { ...row };
+  }
+  return out;
+}
+
 module.exports = {
   normalizeNoticeListResponse,
   normalizeNoticeRow,
@@ -351,7 +425,10 @@ module.exports = {
   normalizeNoticeDetailRow,
   normalizeCourtCodesResponse,
   normalizeCaseDetailResponse,
+  normalizePropertySearchResponse,
+  normalizePropertySearchRow,
   parseAmount,
+  parseNumber,
   stripHtml,
   formatYmd,
   formatHm

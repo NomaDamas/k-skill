@@ -1,0 +1,45 @@
+{
+  "status": 200,
+  "data": {
+    "dma_pageInfo": {
+      "pageNo": "2",
+      "pageSize": "20",
+      "totalCnt": "37",
+      "totalYn": "Y",
+      "groupTotalCount": "37"
+    },
+    "dlt_srchResult": [
+      {
+        "printCsNo": "2024타경100001",
+        "maemulSer": "1",
+        "printSt": "서울특별시 강남구 역삼동 123-4",
+        "mulBigo": "토지 및 건물 일괄매각",
+        "gamevalAmt": "1,500,000,000",
+        "jpDeptNm": "경매1계",
+        "boCd": "B000210",
+        "docid": "DOC-1",
+        "saNo": "2024타경100001",
+        "mokmulSer": "1",
+        "jpDeptCd": "ENC_jpdept",
+        "jinstatCd": "000210",
+        "mulStatcd": "매각기일",
+        "realSt": "서울특별시 강남구 역삼동 123-4",
+        "minmaePrice": "1,200,000,000",
+        "yuchalCnt": "1",
+        "maeGiil": "20260520",
+        "maePlace": "서울중앙지방법원 경매법정",
+        "ipchalGbncd": "000331",
+        "buldList": "건물 84.91㎡",
+        "areaList": "대지권 42.1㎡",
+        "jimokList": "대",
+        "lclsUtilCd": "0000801",
+        "mclsUtilCd": "0000802",
+        "sclsUtilCd": "0000803",
+        "xCordi": "127.0276",
+        "yCordi": "37.4979",
+        "minArea": "42.1",
+        "maxArea": "84.91"
+      }
+    ]
+  }
+}

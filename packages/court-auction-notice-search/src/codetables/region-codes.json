@@ -1,0 +1,29 @@
+{
+  "source": "courtauction.go.kr PGJ151F01 행정동 controls; frozen representative subset for Workflow C tests and fail-open lookup",
+  "items": [
+    {
+      "sidoCode": "11",
+      "sidoName": "서울특별시",
+      "sigunguCode": "11680",
+      "sigunguName": "강남구",
+      "dongCode": "11680101",
+      "dongName": "역삼동"
+    },
+    {
+      "sidoCode": "11",
+      "sidoName": "서울특별시",
+      "sigunguCode": "11710",
+      "sigunguName": "송파구",
+      "dongCode": "11710101",
+      "dongName": "잠실동"
+    },
+    {
+      "sidoCode": "26",
+      "sidoName": "부산광역시",
+      "sigunguCode": "26440",
+      "sigunguName": "강서구",
+      "dongCode": "26440101",
+      "dongName": "대저1동"
+    }
+  ]
+}

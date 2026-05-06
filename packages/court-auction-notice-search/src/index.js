@@ -15,13 +15,18 @@ const {
   resolveBidTypeCode,
   describeBidTypeCode,
   listBidTypes,
-  BID_TYPES
+  BID_TYPES,
+  resolveUsageCode,
+  resolveRegionCodes,
+  listUsageCodes,
+  listRegionCodes
 } = require("./codetables");
 const {
   normalizeNoticeListResponse,
   normalizeNoticeDetailResponse,
   normalizeCourtCodesResponse,
-  normalizeCaseDetailResponse
+  normalizeCaseDetailResponse,
+  normalizePropertySearchResponse
 } = require("./normalize");
 
 function toYmd(input, label) {
@@ -34,6 +39,31 @@ function toYmd(input, label) {
     throw new Error(`${label} must be YYYY-MM-DD or YYYYMMDD, got "${input}"`);
   }
   return compact;
+}
+
+function optionalYmd(input, label) {
+  if (input === null || input === undefined || input === "") return "";
+  return toYmd(input, label);
+}
+
+function toPositiveInt(input, fallback, label) {
+  if (input === null || input === undefined || input === "") return fallback;
+  const value = Number(input);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${label} must be a positive integer, got "${input}"`);
+  }
+  return value;
+}
+
+function rangeValue(range, key) {
+  if (!range || typeof range !== "object") return "";
+  const value = range[key];
+  if (value === null || value === undefined || value === "") return "";
+  const text = String(value).trim().replace(/,/g, "");
+  if (!/^\d+(?:\.\d+)?$/.test(text)) {
+    throw new Error(`${key} range value must be numeric, got "${value}"`);
+  }
+  return text;
 }
 
 function toNoticeSearchDate(input, label) {
@@ -250,6 +280,85 @@ async function getCaseByCaseNumber(params = {}) {
   });
 }
 
+function buildPropertySearchBody(params = {}) {
+  const pageNo = toPositiveInt(params.page, 1, "page");
+  const pageSize = toPositiveInt(params.pageSize, 10, "pageSize");
+  const courtCodeRaw =
+    params.courtCode === undefined || params.courtCode === null ? "" : String(params.courtCode).trim();
+  const courtCode = courtCodeRaw === "" ? "" : ensureCourtCode(courtCodeRaw);
+  const region = resolveRegionCodes(params.region || {});
+  const usage = params.usage && typeof params.usage === "object" ? params.usage : {};
+  const saleDate = params.saleDate && typeof params.saleDate === "object" ? params.saleDate : {};
+
+  const hasRegion = Boolean(region.sido || region.sigungu || region.dong);
+  const body = {
+    dma_pageInfo: {
+      pageNo: String(pageNo),
+      pageSize: String(pageSize),
+      totalYn: params.totalYn === "N" ? "N" : "Y"
+    },
+    dma_srchGdsDtlSrchInfo: {
+      menuNm: "물건상세검색",
+      lafjOrderBy: params.orderBy ? String(params.orderBy) : "",
+      pgmId: "PGJ151F01",
+      bidDvsCd: resolveBidTypeCode(params.bidType),
+      statNum: "1",
+      cortOfcCd: courtCode,
+      jdbnCd: params.judgeDeptCode ? String(params.judgeDeptCode).trim() : "",
+      cortStDvs: hasRegion ? "2" : "1",
+      csNo: "",
+      mvprpRletDvsCd: "00031R",
+      notifyLoc: params.notifyLocation ? "Y" : "",
+      rprsAdongSdCd: region.sido,
+      rprsAdongSggCd: region.sigungu,
+      rprsAdongEmdCd: region.dong,
+      rdnmSdCd: "",
+      rdnmSggCd: "",
+      consonant: "",
+      rdnmNo: "",
+      mvprpDspslPlcAdongSdCd: "",
+      mvprpDspslPlcAdongSggCd: "",
+      mvprpDspslPlcAdongEmdCd: "",
+      rdDspslPlcAdongSdCd: "",
+      rdDspslPlcAdongSggCd: "",
+      rdDspslPlcConsonant: "",
+      rdDspslPlcAdongEmdCd: "",
+      lclDspslGdsLstUsgCd: resolveUsageCode(usage.large, "large"),
+      mclDspslGdsLstUsgCd: resolveUsageCode(usage.medium, "medium"),
+      sclDspslGdsLstUsgCd: resolveUsageCode(usage.small, "small"),
+      aeeEvlAmtMin: rangeValue(params.appraisedPriceRange, "min"),
+      aeeEvlAmtMax: rangeValue(params.appraisedPriceRange, "max"),
+      lwsDspslPrcMin: rangeValue(params.priceRange, "min"),
+      lwsDspslPrcMax: rangeValue(params.priceRange, "max"),
+      lwsDspslPrcRateMin: rangeValue(params.minimumSalePriceRateRange, "min"),
+      lwsDspslPrcRateMax: rangeValue(params.minimumSalePriceRateRange, "max"),
+      objctArDtsMin: rangeValue(params.area, "min"),
+      objctArDtsMax: rangeValue(params.area, "max"),
+      flbdNcntMin: rangeValue(params.flbdCount, "min"),
+      flbdNcntMax: rangeValue(params.flbdCount, "max"),
+      maeMokmulNm: "",
+      mvprpArtclKnd: "",
+      mvrpDspslPlcTyp: "",
+      cortAuctnSrchCondCd: "0004601",
+      bidBgngYmd: optionalYmd(saleDate.from, "saleDate.from"),
+      bidEndYmd: optionalYmd(saleDate.to, "saleDate.to"),
+      rletDspslSpcCondCd: "",
+      dspslDxdyYmd: ""
+    }
+  };
+  return body;
+}
+
+async function searchProperties(params = {}) {
+  const client = ensureClient(params.client, params);
+  const body = buildPropertySearchBody(params);
+  const raw = await client.postJson("propertySearch", body);
+  return normalizePropertySearchResponse(raw, {
+    requestedFilters: body.dma_srchGdsDtlSrchInfo,
+    includeRaw: params.includeRaw !== false
+  });
+}
+
 async function getCourtCodes(options = {}) {
   const client = ensureClient(options.client, options);
   const raw = await client.postJson("courts", {});
@@ -258,6 +367,16 @@ async function getCourtCodes(options = {}) {
 
 function getBidTypes() {
   return listBidTypes();
+}
+
+function getUsageCodes() {
+  const items = listUsageCodes();
+  return { count: items.length, items };
+}
+
+function getRegionCodes() {
+  const items = listRegionCodes();
+  return { count: items.length, items };
 }
 
 module.exports = {
@@ -278,6 +397,10 @@ module.exports = {
   getSaleNoticeDetail,
   buildNoticeDetailBody,
   getCaseByCaseNumber,
+  searchProperties,
+  buildPropertySearchBody,
   getCourtCodes,
-  getBidTypes
+  getBidTypes,
+  getUsageCodes,
+  getRegionCodes
 };

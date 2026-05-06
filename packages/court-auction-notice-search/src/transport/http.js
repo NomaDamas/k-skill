@@ -12,6 +12,7 @@ const ENDPOINT_PATHS = Object.freeze({
   notices: "/pgj/pgj143/selectRletDspslPbanc.on",
   noticeDetail: "/pgj/pgj143/selectRletDspslPbancDtl.on",
   caseDetail: "/pgj/pgj15A/selectAuctnCsSrchRslt.on",
+  propertySearch: "/pgj/pgjsearch/searchControllerMain.on",
   courts: "/pgj/pgjComm/selectCortOfcCdLst.on"
 });
 
@@ -21,6 +22,8 @@ const ENDPOINT_REFERER_HINT = Object.freeze({
     "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01",
   caseDetail:
     "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml&pgjId=159M00",
+  propertySearch:
+    "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml&pgjId=151F00",
   courts: "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01"
 });
 

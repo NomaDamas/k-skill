@@ -1,0 +1,32 @@
+{
+  "source": "courtauction.go.kr PGJ151F01/PGJ151M01 용도분류 controls; frozen representative subset for Workflow C tests and fail-open lookup",
+  "items": [
+    {
+      "level": "large",
+      "code": "0000801",
+      "name": "주거용건물"
+    },
+    {
+      "level": "medium",
+      "parentCode": "0000801",
+      "code": "0000802",
+      "name": "아파트"
+    },
+    {
+      "level": "small",
+      "parentCode": "0000802",
+      "code": "0000803",
+      "name": "아파트"
+    },
+    {
+      "level": "large",
+      "code": "0000901",
+      "name": "상업용및업무용건물"
+    },
+    {
+      "level": "large",
+      "code": "0001001",
+      "name": "토지"
+    }
+  ]
+}

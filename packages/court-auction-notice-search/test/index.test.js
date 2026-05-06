@@ -9,7 +9,11 @@ const {
   searchSaleNotices,
   getSaleNoticeDetail,
   getCaseByCaseNumber,
+  searchProperties,
+  buildPropertySearchBody,
   getCourtCodes,
+  getUsageCodes,
+  getRegionCodes,
   getBidTypes,
   resolveBidTypeCode,
   describeBidTypeCode,
@@ -230,6 +234,139 @@ test("getCaseByCaseNumber returns found:false on status 204", async () => {
   assert.match(result.message, /조회 되는 사건번호 정보가 없습니다/);
 });
 
+test("buildPropertySearchBody maps Workflow C filters to PGJ151M01 search payload", () => {
+  const body = buildPropertySearchBody({
+    region: { sido: "서울특별시", sigungu: "강남구", dong: "역삼동" },
+    usage: { large: "주거용건물", medium: "아파트", small: "아파트" },
+    priceRange: { min: 100000000, max: 500000000 },
+    appraisedPriceRange: { min: 150000000, max: 800000000 },
+    saleDate: { from: "2026-05-01", to: "2026-05-20" },
+    flbdCount: { min: 1, max: 3 },
+    area: { min: 30, max: 85.5 },
+    bidType: "date",
+    courtCode: "B000210",
+    page: 2,
+    pageSize: 20
+  });
+
+  assert.deepEqual(body, {
+    dma_pageInfo: {
+      pageNo: "2",
+      pageSize: "20",
+      totalYn: "Y"
+    },
+    dma_srchGdsDtlSrchInfo: {
+      menuNm: "물건상세검색",
+      lafjOrderBy: "",
+      pgmId: "PGJ151F01",
+      bidDvsCd: "000331",
+      statNum: "1",
+      cortOfcCd: "B000210",
+      jdbnCd: "",
+      cortStDvs: "2",
+      csNo: "",
+      mvprpRletDvsCd: "00031R",
+      notifyLoc: "",
+      rprsAdongSdCd: "11",
+      rprsAdongSggCd: "11680",
+      rprsAdongEmdCd: "11680101",
+      rdnmSdCd: "",
+      rdnmSggCd: "",
+      consonant: "",
+      rdnmNo: "",
+      mvprpDspslPlcAdongSdCd: "",
+      mvprpDspslPlcAdongSggCd: "",
+      mvprpDspslPlcAdongEmdCd: "",
+      rdDspslPlcAdongSdCd: "",
+      rdDspslPlcAdongSggCd: "",
+      rdDspslPlcConsonant: "",
+      rdDspslPlcAdongEmdCd: "",
+      lclDspslGdsLstUsgCd: "0000801",
+      mclDspslGdsLstUsgCd: "0000802",
+      sclDspslGdsLstUsgCd: "0000803",
+      aeeEvlAmtMin: "150000000",
+      aeeEvlAmtMax: "800000000",
+      lwsDspslPrcMin: "100000000",
+      lwsDspslPrcMax: "500000000",
+      lwsDspslPrcRateMin: "",
+      lwsDspslPrcRateMax: "",
+      objctArDtsMin: "30",
+      objctArDtsMax: "85.5",
+      flbdNcntMin: "1",
+      flbdNcntMax: "3",
+      maeMokmulNm: "",
+      mvprpArtclKnd: "",
+      mvrpDspslPlcTyp: "",
+      cortAuctnSrchCondCd: "0004601",
+      bidBgngYmd: "20260501",
+      bidEndYmd: "20260520",
+      rletDspslSpcCondCd: "",
+      dspslDxdyYmd: ""
+    }
+  });
+});
+
+test("searchProperties posts propertySearch and normalizes 80-column result rows", async () => {
+  const client = makeFakeClient((endpoint) => {
+    assert.equal(endpoint, "propertySearch");
+    return loadFixture("properties-sample.json");
+  });
+
+  const result = await searchProperties({
+    region: { sido: "11", sigungu: "11680" },
+    usage: { large: "0000801" },
+    saleDate: { from: "2026-05-01", to: "2026-05-20" },
+    bidType: "date",
+    page: 2,
+    pageSize: 20,
+    client
+  });
+
+  assert.equal(client.calls.length, 1);
+  assert.equal(client.calls[0].body.dma_pageInfo.pageNo, "2");
+  assert.equal(client.calls[0].body.dma_srchGdsDtlSrchInfo.bidBgngYmd, "20260501");
+  assert.equal(result.page.pageNo, 2);
+  assert.equal(result.page.pageSize, 20);
+  assert.equal(result.page.totalCount, 37);
+  assert.equal(result.count, 1);
+  assert.equal(result.items[0].caseNumber, "2024타경100001");
+  assert.equal(result.items[0].itemNumber, "1");
+  assert.equal(result.items[0].address, "서울특별시 강남구 역삼동 123-4");
+  assert.equal(result.items[0].appraisedPrice, 1500000000);
+  assert.equal(result.items[0].minimumSalePrice, 1200000000);
+  assert.equal(result.items[0].flbdCount, 1);
+  assert.equal(result.items[0].statusCode, "매각기일");
+  assert.deepEqual(result.items[0].coordinates, { x: 127.0276, y: 37.4979 });
+  assert.equal(result.items[0].buildingList, "건물 84.91㎡");
+  assert.equal(result.items[0].areaList, "대지권 42.1㎡");
+  assert.equal(result.items[0].landCategoryList, "대");
+});
+
+test("Workflow C code tables expose frozen region and usage lookups", () => {
+  const usages = getUsageCodes();
+  const regions = getRegionCodes();
+  assert.ok(usages.items.some((item) => item.code === "0000801" && item.name === "주거용건물"));
+  assert.ok(regions.items.some((item) => item.sidoCode === "11" && item.sigunguName === "강남구"));
+});
+
+test("buildPropertySearchBody preserves partial region granularity", () => {
+  assert.deepEqual(
+    buildPropertySearchBody({ region: { sido: "서울특별시" } }).dma_srchGdsDtlSrchInfo,
+    {
+      ...buildPropertySearchBody({}).dma_srchGdsDtlSrchInfo,
+      cortStDvs: "2",
+      rprsAdongSdCd: "11"
+    }
+  );
+
+  const sidoSigungu = buildPropertySearchBody({
+    region: { sido: "서울특별시", sigungu: "강남구" }
+  }).dma_srchGdsDtlSrchInfo;
+  assert.equal(sidoSigungu.rprsAdongSdCd, "11");
+  assert.equal(sidoSigungu.rprsAdongSggCd, "11680");
+  assert.equal(sidoSigungu.rprsAdongEmdCd, "");
+});
+
 test("getCourtCodes hits the courts endpoint and returns code/name pairs", async () => {
   const client = makeFakeClient((endpoint) => {
     assert.equal(endpoint, "courts");
@@ -246,6 +383,7 @@ test("ENDPOINT_PATHS exposes the discovered courtauction.go.kr endpoints", () =>
   assert.equal(ENDPOINT_PATHS.noticeDetail, "/pgj/pgj143/selectRletDspslPbancDtl.on");
   assert.equal(ENDPOINT_PATHS.caseDetail, "/pgj/pgj15A/selectAuctnCsSrchRslt.on");
   assert.equal(ENDPOINT_PATHS.courts, "/pgj/pgjComm/selectCortOfcCdLst.on");
+  assert.equal(ENDPOINT_PATHS.propertySearch, "/pgj/pgjsearch/searchControllerMain.on");
 });
 
 test("isPlaywrightFallbackAvailable is a boolean (no crash even when modules are absent)", () => {

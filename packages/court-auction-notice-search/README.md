@@ -6,10 +6,10 @@
 
 - ✅ Workflow A — 매각공고 목록 + 매각공고 상세(사건/물건 펼치기)
 - ✅ Workflow B — 사건번호로 직접 조회 (사건정보·물건내역·매각기일내역·배당요구종기)
-- ✅ 코드테이블 — 법원사무소(60+개) + 입찰구분(기일/기간) 코드 매핑
+- ✅ Workflow C — 자유 조건검색(지역·용도·가격대·면적·유찰횟수·매각기일)
+- ✅ 코드테이블 — 법원사무소(60+개) + 입찰구분(기일/기간) + Workflow C용 용도/지역 대표 코드 매핑
 - ✅ 2-tier transport — direct HTTP 1차, Playwright fallback (`rebrowser-playwright` / `playwright-core`)
 - ✅ 안티봇 가드 — 호출 간 ≥2초 jitter, 세션당 호출 budget(기본 10회), `data.ipcheck === false` 즉시 throw
-- ❌ Workflow C 자유 조건검색(지역/용도/가격대/면적/유찰횟수) — 별도 follow-up 이슈
 - ❌ Workflow D 일별/월별 캘린더 — 별도 follow-up 이슈
 - ❌ 매각물건 사진 / 매각물건명세서 PDF / 감정평가서 PDF — 별도 follow-up 이슈
 - ❌ 동산(자동차·중기) 경매 — 본 패키지 범위 밖
@@ -38,8 +38,11 @@ const {
   searchSaleNotices,
   getSaleNoticeDetail,
   getCaseByCaseNumber,
+  searchProperties,
   getCourtCodes,
-  getBidTypes
+  getBidTypes,
+  getUsageCodes,
+  getRegionCodes
 } = require("court-auction-notice-search");
 
 const courts = await getCourtCodes();
@@ -68,6 +71,20 @@ const caseInfo = await getCaseByCaseNumber({
 if (caseInfo.found) {
   console.log(caseInfo.caseInfo.caseName, caseInfo.schedule.length);
 }
+
+const properties = await searchProperties({
+  region: { sido: "서울특별시", sigungu: "강남구" },
+  usage: { large: "주거용건물", medium: "아파트" },
+  priceRange: { min: 100000000, max: 500000000 },
+  appraisedPriceRange: { min: 150000000, max: 800000000 },
+  saleDate: { from: "2026-05-01", to: "2026-05-20" },
+  flbdCount: { min: 1, max: 3 },
+  area: { min: 30, max: 85.5 },
+  bidType: "date",
+  page: 1,
+  pageSize: 20
+});
+console.log(properties.items[0]);
 ```
 
 ## CLI
@@ -76,7 +93,11 @@ if (caseInfo.found) {
 court-auction-notice-search -h
 court-auction-notice-search codes courts --pretty
 court-auction-notice-search codes bid-types --pretty
+court-auction-notice-search codes usages --pretty
+court-auction-notice-search codes regions --pretty
 court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-type date --pretty
+court-auction-notice-search search --sido 서울특별시 --sigungu 강남구 --usage-large 주거용건물 \
+  --price-min 100000000 --price-max 500000000 --sale-from 2026-05-01 --sale-to 2026-05-20 --pretty
 court-auction-notice-search case --court-code B000210 --case-number "2024타경100001" --pretty
 ```
 
@@ -94,8 +115,18 @@ court-auction-notice-search case --court-code B000210 --case-number "2024타경1
 - `getCaseByCaseNumber({ courtCode, caseNumber, includeRaw?, client? })`
   - `caseNumber`: `"2024타경100001"` 권장. `"2024-100001"`, `"2024_100001"` 등은 자동 정규화.
   - returns `{ found, status, message, caseInfo, items[], schedule[], claimDeadline, relatedCases[], appeals[], stakeholders[], raw? }`
+- `searchProperties({ region?, usage?, priceRange?, appraisedPriceRange?, saleDate?, flbdCount?, area?, bidType?, courtCode?, page?, pageSize?, includeRaw?, client? })`
+  - `region`: `{ sido, sigungu, dong }` — 코드 또는 대표 정적 코드테이블의 한국어명. 입력하면 PGJ151의 소재지(지번주소) 검색(`cortStDvs:"2"`)으로 조회한다.
+  - `usage`: `{ large, medium, small }` — 용도 대/중/소분류 코드 또는 대표 정적 코드테이블의 한국어명.
+  - `priceRange`: 최저매각가격 원 단위 `{ min, max }`
+  - `appraisedPriceRange`: 감정평가액 원 단위 `{ min, max }`
+  - `saleDate`: `{ from, to }` (`YYYY-MM-DD`/`YYYYMMDD`)
+  - `flbdCount`: 유찰횟수 `{ min, max }`
+  - `area`: 면적(㎡) `{ min, max }`
+  - returns `{ requestedFilters, page, count, items[] }` — `items[i]` 가 `{ caseNumber, itemNumber, displayCaseNumber, address, appraisedPrice, minimumSalePrice, flbdCount, statusCode, coordinates, buildingList, areaList, landCategoryList, raw }`
 - `getCourtCodes({ client? })` — 법원사무소 코드표 동적 로드
 - `getBidTypes()` — 입찰구분 정적 코드표 (기일입찰=`000331`, 기간입찰=`000332`)
+- `getUsageCodes()` / `getRegionCodes()` — Workflow C용 정적 대표 코드표. 알 수 없는 코드는 fail-open으로 그대로 upstream에 전달한다.
 - `resolveBidTypeCode(input)`, `describeBidTypeCode(code)` — 코드 변환 헬퍼
 - `CourtAuctionHttpClient` — direct HTTP 클라이언트. fetchImpl, timeoutMs, minDelayMs, jitterMs, maxCallsPerSession 모두 override 가능.
 - `CourtAuctionPlaywrightClient` — `playwright-core` / `rebrowser-playwright` 가 있을 때만 사용. `postJson(endpointKey, body)` 시그니처는 동일.
@@ -136,6 +167,7 @@ discovery 시 직접 캡처한 사이트 내부 endpoint:
 | 매각공고 목록 | `POST /pgj/pgj143/selectRletDspslPbanc.on` | `dma_srchDspslPbanc.{srchYmd, cortOfcCd, bidDvsCd, srchBtnYn:"Y"}` — `srchYmd`는 사이트 검색 버튼과 동일하게 `YYYYMM` 월 단위 |
 | 매각공고 상세 | `POST /pgj/pgj143/selectRletDspslPbancDtl.on` | `dma_srchGnrlPbanc.{cortOfcCd, dspslDxdyYmd, jdbnCd, ...}` |
 | 사건 단건 | `POST /pgj/pgj15A/selectAuctnCsSrchRslt.on` | `dma_srchCsDtlInf.{cortOfcCd, csNo}` |
+| 물건 자유 조건검색 | `POST /pgj/pgjsearch/searchControllerMain.on` | `dma_pageInfo.{pageNo,pageSize,totalYn}` + `dma_srchGdsDtlSrchInfo.{rprsAdong*, lcl/mcl/sclDspslGdsLstUsgCd, aeeEvlAmt*, lwsDspslPrc*, flbdNcnt*, objctArDts*, bidBgngYmd,bidEndYmd,...}` |
 | 법원사무소 | `POST /pgj/pgjComm/selectCortOfcCdLst.on` | `{}` |
 
 ## Verification

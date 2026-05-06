@@ -4,8 +4,11 @@ const {
   searchSaleNotices,
   getSaleNoticeDetail,
   getCaseByCaseNumber,
+  searchProperties,
   getCourtCodes,
   getBidTypes,
+  getUsageCodes,
+  getRegionCodes,
   resolveBidTypeCode,
   CourtAuctionHttpClient
 } = require("./index");
@@ -17,7 +20,14 @@ USAGE
   court-auction-notice-search notice-detail --court-code <B000210> --sale-date <YYYY-MM-DD> --judge-dept-code <jdbnCd>
                                             [--bid-start <YYYY-MM-DD>] [--bid-end <YYYY-MM-DD>] [--bid-type date|period]
   court-auction-notice-search case --court-code <B000210> --case-number <2024타경100001>
+  court-auction-notice-search search [--sido <code|name>] [--sigungu <code|name>] [--dong <code|name>]
+                                    [--usage-large <code|name>] [--usage-medium <code|name>] [--usage-small <code|name>]
+                                    [--price-min <won>] [--price-max <won>] [--appraised-min <won>] [--appraised-max <won>]
+                                    [--sale-from <YYYY-MM-DD>] [--sale-to <YYYY-MM-DD>] [--flbd-min <N>] [--flbd-max <N>]
+                                    [--area-min <m2>] [--area-max <m2>] [--court-code <B000210>] [--bid-type date|period]
   court-auction-notice-search codes courts
+  court-auction-notice-search codes usages
+  court-auction-notice-search codes regions
   court-auction-notice-search codes bid-types
 
 GLOBAL FLAGS
@@ -154,10 +164,46 @@ async function runCase(flags) {
   emit(result, flags);
 }
 
+async function runSearch(flags) {
+  const includeRaw = shouldIncludeRaw(flags);
+  const result = await searchProperties({
+    region: {
+      sido: flags.sido,
+      sigungu: flags.sigungu,
+      dong: flags.dong
+    },
+    usage: {
+      large: flags["usage-large"] || flags.usage,
+      medium: flags["usage-medium"],
+      small: flags["usage-small"]
+    },
+    priceRange: { min: flags["price-min"], max: flags["price-max"] },
+    appraisedPriceRange: { min: flags["appraised-min"], max: flags["appraised-max"] },
+    saleDate: { from: flags["sale-from"], to: flags["sale-to"] },
+    flbdCount: { min: flags["flbd-min"], max: flags["flbd-max"] },
+    area: { min: flags["area-min"], max: flags["area-max"] },
+    bidType: flags["bid-type"],
+    courtCode: flags["court-code"] || flags.court || "",
+    page: flags.page,
+    pageSize: flags["page-size"] || flags.pageSize,
+    client: buildClient(flags),
+    includeRaw: includeRaw === undefined ? true : includeRaw
+  });
+  emit(result, flags);
+}
+
 async function runCodes(positional, flags) {
   const sub = positional[1];
   if (sub === "bid-types" || sub === "bid_types" || sub === "bid") {
     emit({ items: getBidTypes() }, flags);
+    return;
+  }
+  if (sub === "usages" || sub === "usage") {
+    emit(getUsageCodes(), flags);
+    return;
+  }
+  if (sub === "regions" || sub === "region") {
+    emit(getRegionCodes(), flags);
     return;
   }
   if (!sub || sub === "courts") {
@@ -190,6 +236,10 @@ async function main(argv) {
       return 0;
     case "case":
       await runCase(args.flags);
+      return 0;
+    case "search":
+    case "properties":
+      await runSearch(args.flags);
       return 0;
     case "codes":
       await runCodes(args._, args.flags);
