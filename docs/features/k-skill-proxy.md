@@ -272,5 +272,4 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/B552584/ArpltnInforInqireSv
 - 한국 주식 route도 사용자에게 `KRX_API_KEY` 를 배포하지 않습니다.
 - client 쪽에는 upstream API key를 배포하지 않습니다.
 - 도서관 정보나루 route도 사용자에게 `DATA4LIBRARY_AUTH_KEY` 를 배포하지 않습니다.
-- public hosted route rollout 이 끝나기 전에는 서울 지하철/한국 날씨 예시를 local/self-host URL 로 검증합니다.
-- public hosted route rollout 이 끝나기 전에는 한강 수위 route도 local/self-host 또는 배포 확인이 끝난 proxy URL 로 검증합니다.
+- self-host proxy 운영자는 동일 route를 local/self-host URL 로도 검증합니다.

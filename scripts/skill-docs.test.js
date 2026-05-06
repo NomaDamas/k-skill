@@ -414,7 +414,7 @@ test("used-car-price-search docs document the provider survey and SK direct surf
   assert.match(roadmap, /중고차 가격 조회 스킬 출시/);
 });
 
-test("seoul subway docs require an explicit proxy until the hosted route is live", () => {
+test("seoul subway docs default to the hosted proxy when KSKILL_PROXY_BASE_URL is unset", () => {
   const readme = read("README.md");
   const setup = read(path.join("docs", "setup.md"));
   const install = read(path.join("docs", "install.md"));
@@ -427,18 +427,17 @@ test("seoul subway docs require an explicit proxy until the hosted route is live
   const secretsExample = read(path.join("examples", "secrets.env.example"));
 
   assert.match(readme, /\| 서울 지하철 도착정보 조회 \| .* \| 불필요 \|/);
-  assert.match(setup, /\| 서울 지하철 도착정보 조회 \| self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL` \|/);
+  assert.match(setup, /\| 서울 지하철 도착정보 조회 \| 사용자 시크릿 불필요 \(기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`\) \|/);
   assert.match(install, /--skill seoul-subway-arrival/);
 
   for (const doc of [skill, featureDoc]) {
     assert.match(doc, /KSKILL_PROXY_BASE_URL/);
     assert.match(doc, /\/v1\/seoul-subway\/arrival/);
     assert.match(doc, /사용자가 .*OpenAPI key.*직접.*필요(가|는)? 없다|개인 API key 없이/i);
-    assert.match(doc, /self-host|운영 중인 proxy|배포가 끝난 proxy/i);
+    assert.match(doc, /비우면 기본 hosted `https:\/\/k-skill-proxy\.nomadamas\.org`|없으면 기본 hosted proxy/i);
     assert.doesNotMatch(doc, /SEOUL_OPEN_API_KEY/);
     assert.doesNotMatch(doc, /swopenAPI\.seoul\.go\.kr\/api\/subway\/\$\{SEOUL_OPEN_API_KEY\}/);
-    assert.doesNotMatch(doc, /기본값 `https:\/\/k-skill-proxy\.nomadamas\.org`/);
-    assert.doesNotMatch(doc, /없으면 hosted proxy .*기본/);
+    assert.doesNotMatch(doc, /필수: self-host|반드시 명시|먼저 확보|public hosted route rollout 전/);
   }
 
   assert.match(proxyDoc, /GET \/v1\/seoul-subway\/arrival/);
@@ -446,8 +445,8 @@ test("seoul subway docs require an explicit proxy until the hosted route is live
   assert.match(proxyReadme, /GET \/v1\/seoul-subway\/arrival/);
   assert.match(proxyReadme, /SEOUL_OPEN_API_KEY/);
   assert.match(security, /KSKILL_PROXY_BASE_URL/);
-  assert.match(security, /배포가 끝난 proxy|self-host/i);
-  assert.match(setupSkill, /서울 지하철: self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`/);
+  assert.match(security, /서울 지하철.*한국 날씨.*기본 hosted proxy|기본 hosted proxy.*서울 지하철.*한국 날씨/i);
+  assert.match(setupSkill, /서울 지하철: 사용자 시크릿 불필요 \(기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`\)/);
   assert.doesNotMatch(secretsExample, /SEOUL_OPEN_API_KEY/);
   assert.match(secretsExample, /KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com/);
   assert.doesNotMatch(secretsExample, /KSKILL_PROXY_BASE_URL=https:\/\/k-skill-proxy\.nomadamas\.org/);
@@ -488,6 +487,8 @@ test("korea-weather docs route short-term forecast calls through the proxy witho
     assert.match(doc, /nx|ny|위도|경도/u);
     assert.match(doc, /TMP|SKY|PTY|POP/);
     assert.match(doc, /KSKILL_PROXY_BASE_URL|k-skill-proxy\.nomadamas\.org/);
+    assert.match(doc, /비우면 기본 hosted `https:\/\/k-skill-proxy\.nomadamas\.org`|없으면 기본 hosted proxy/i);
+    assert.doesNotMatch(doc, /필수: self-host|반드시 명시|먼저 확보|public hosted route rollout 전/);
     assert.doesNotMatch(doc, /KMA_OPEN_API_KEY=.*사용자/);
   }
 
@@ -2473,7 +2474,7 @@ test("repository docs advertise the han-river-water-level skill and rollout-pend
 
   assert.match(setup, /한강 수위 정보 조회 \| 사용자 시크릿 불필요/);
   assert.match(setup, /한강 수위.*기본 hosted p/i);
-  assert.match(security, /KSKILL_PROXY_BASE_URL.*서울 지하철.*route가 실제 배포된 proxy URL/);
+  assert.match(security, /KSKILL_PROXY_BASE_URL.*서울 지하철.*한국 날씨.*기본 hosted proxy|서울 지하철.*한국 날씨.*KSKILL_PROXY_BASE_URL.*기본 hosted proxy/);
   assert.match(sources, /hrfco\.go\.kr\/web\/openapiPage\/reference\.do/);
   assert.match(sources, /api\.hrfco\.go\.kr/);
   assert.match(roadmap, /한강 수위 정보 조회 스킬 출시/);

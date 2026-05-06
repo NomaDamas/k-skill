@@ -23,18 +23,18 @@ metadata:
 ## Prerequisites
 
 - optional: `jq`
-- self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`
+- optional: `KSKILL_PROXY_BASE_URL` (self-host·별도 프록시를 쓸 때만 설정. 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.)
 
 ## Required environment variables
 
-- `KSKILL_PROXY_BASE_URL` (필수: self-host 또는 배포 확인이 끝난 proxy base URL)
+- 없음. `KSKILL_PROXY_BASE_URL` 은 선택 사항이며, 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
-사용자가 개인 서울 열린데이터 광장 OpenAPI key를 직접 발급할 필요는 없다. 대신 `/v1/seoul-subway/arrival` route가 실제로 올라와 있는 proxy URL 을 `KSKILL_PROXY_BASE_URL` 로 받아야 한다. upstream key는 proxy 서버 쪽에만 보관한다.
+사용자가 개인 서울 열린데이터 광장 OpenAPI key를 직접 발급할 필요는 없다. `/v1/seoul-subway/arrival` route는 기본 hosted proxy에서 호출하고, upstream key는 proxy 서버 쪽에만 보관한다. 별도 proxy를 쓰는 경우에만 `KSKILL_PROXY_BASE_URL` 을 설정한다.
 
 ### Proxy resolution order
 
 1. **`KSKILL_PROXY_BASE_URL` 이 있으면** 그 값을 사용한다.
-2. **없으면** 사용자/운영자에게 self-host 또는 배포 확인이 끝난 proxy URL 을 먼저 확보한다.
+2. **없거나 빈 값이면** 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 3. **직접 proxy를 운영하는 경우에만** proxy 서버 upstream key를 서버 쪽에만 설정한다.
 
 클라이언트/사용자 쪽에서 upstream key를 직접 다루지 않는다.
@@ -48,14 +48,14 @@ metadata:
 
 ### 1. Resolve the proxy base URL
 
-`KSKILL_PROXY_BASE_URL` 로 self-host 또는 배포 확인이 끝난 proxy base URL 을 확인한다.
+`KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
 ### 2. Query the official station arrival endpoint
 
 proxy는 서울 실시간 지하철 API key를 서버에서 주입하고, 역명 기준 실시간 도착정보만 공개 read-only endpoint로 노출한다.
 
 ```bash
-curl -fsS --get 'https://your-proxy.example.com/v1/seoul-subway/arrival' \
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/seoul-subway/arrival' \
   --data-urlencode 'stationName=강남'
 ```
 
@@ -86,7 +86,6 @@ curl -fsS --get 'https://your-proxy.example.com/v1/seoul-subway/arrival' \
 - proxy upstream key 미설정
 - quota 초과
 - 역명 표기 불일치
-- public hosted route rollout 전인데 `KSKILL_PROXY_BASE_URL` 을 비워 둔 경우
 
 ## Notes
 
