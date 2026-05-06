@@ -514,6 +514,7 @@ test("hosted proxy docs keep self-host overrides inactive and demonstrate resolv
   const weatherSkill = read(path.join("korea-weather", "SKILL.md"));
   const subwayFeatureDoc = read(path.join("docs", "features", "seoul-subway-arrival.md"));
   const weatherFeatureDoc = read(path.join("docs", "features", "korea-weather.md"));
+  const proxyDoc = read(path.join("docs", "features", "k-skill-proxy.md"));
 
   for (const doc of [setup, security, setupSkill, secretsExample]) {
     assert.doesNotMatch(doc, /^KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m);
@@ -530,6 +531,12 @@ test("hosted proxy docs keep self-host overrides inactive and demonstrate resolv
     assert.match(doc, /BASE="\$\{KSKILL_PROXY_BASE_URL:-https:\/\/k-skill-proxy\.nomadamas\.org\}"/);
     assert.match(doc, /curl -fsS --get "\$\{BASE\}/);
     assert.doesNotMatch(doc, /curl -fsS --get 'https:\/\/k-skill-proxy\.nomadamas\.org/);
+  }
+
+  assert.match(proxyDoc, /BASE="\$\{KSKILL_PROXY_BASE_URL:-https:\/\/k-skill-proxy\.nomadamas\.org\}"/);
+  for (const endpoint of ["seoul-subway/arrival", "korea-weather/forecast"]) {
+    assert.match(proxyDoc, new RegExp(`curl -fsS --get "\\$\\{BASE\\}/v1/${endpoint}"`));
+    assert.doesNotMatch(proxyDoc, new RegExp(`curl -fsS --get 'http://127\\.0\\.0\\.1:4020/v1/${endpoint}'`));
   }
 });
 

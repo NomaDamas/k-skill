@@ -115,14 +115,16 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/fine-dust/report' \
 서울 지하철 도착정보 endpoint:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/seoul-subway/arrival" \
   --data-urlencode 'stationName=강남'
 ```
 
 한국 날씨 endpoint:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/korea-weather/forecast' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
   --data-urlencode 'lat=37.5665' \
   --data-urlencode 'lon=126.9780'
 ```
