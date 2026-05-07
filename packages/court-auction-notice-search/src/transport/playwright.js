@@ -11,7 +11,7 @@ const {
   createNetworkError
 } = require("./http");
 
-const FALLBACK_MODULE_NAMES = ["rebrowser-playwright", "playwright-core", "playwright"];
+const FALLBACK_MODULE_NAMES = ["playwright-core", "playwright", "rebrowser-playwright"];
 
 const ENDPOINT_SUBMISSION_ID = Object.freeze({
   propertySearch: "mf_wfm_mainFrame_sbm_selectGdsDtlSrch"

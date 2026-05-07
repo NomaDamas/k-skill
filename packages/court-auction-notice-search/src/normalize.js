@@ -396,15 +396,24 @@ function normalizePropertySearchRow(rawRow, includeRaw) {
   const y = parseNumber(row.yCordi);
   const wgsX = parseNumber(row.wgs84Xcordi);
   const wgsY = parseNumber(row.wgs84Ycordi);
+  const itemSeq = nullIfBlank(row.mokmulSer) || nullIfBlank(row.maemulSer);
+  const failedBidCount = parseAmount(row.yuchalCnt) || 0;
+  const status = nullIfBlank(row.mulStatcd);
+  const buildings = stripHtml(row.buldList);
+  const areas = stripHtml(row.areaList);
+  const lotCategories = stripHtml(row.jimokList);
   const out = {
     caseNumber: nullIfBlank(row.saNo),
     displayCaseNumber: nullIfBlank(row.srnSaNo) || nullIfBlank(row.printCsNo),
-    itemNumber: nullIfBlank(row.mokmulSer) || nullIfBlank(row.maemulSer),
+    itemNumber: itemSeq,
+    itemSeq,
     address: buildAddress(row),
     appraisedPrice: parseAmount(row.gamevalAmt),
     minimumSalePrice: parseAmount(row.minmaePrice),
-    flbdCount: parseAmount(row.yuchalCnt) || 0,
-    statusCode: nullIfBlank(row.mulStatcd),
+    flbdCount: failedBidCount,
+    failedBidCount,
+    statusCode: status,
+    status,
     progressStatusCode: nullIfBlank(row.jinstatCd),
     courtCode: nullIfBlank(row.boCd),
     courtName: nullIfBlank(row.jiwonNm),
@@ -426,9 +435,12 @@ function normalizePropertySearchRow(rawRow, includeRaw) {
     },
     coordinates: x === null && y === null ? null : { x, y },
     coordinatesWgs84: wgsX === null && wgsY === null ? null : { x: wgsX, y: wgsY },
-    buildingList: stripHtml(row.buldList),
-    areaList: stripHtml(row.areaList),
-    landCategoryList: stripHtml(row.jimokList),
+    buildingList: buildings,
+    buildings,
+    areaList: areas,
+    areas,
+    landCategoryList: lotCategories,
+    lotCategories,
     propertyDescription: stripHtml(row.pjbBuldList),
     areaRange: {
       min: parseNumber(row.minArea),

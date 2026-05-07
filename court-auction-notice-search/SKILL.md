@@ -189,7 +189,7 @@ court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-ty
 court-auction-notice-search case --court-code B000210 --case-number "2024타경100001" --pretty
 
 # 6. 자유 조건검색
-court-auction-notice-search search --sido 서울특별시 --sigungu 강남구 --usage-large 주거용건물 \
+court-auction-notice-search search --sido 서울특별시 --sigungu 11680 --usage-large 건물 --usage-medium 21200 \
   --price-min 100000000 --price-max 500000000 --sale-from 2026-05-01 --sale-to 2026-05-20 --pretty
 ```
 

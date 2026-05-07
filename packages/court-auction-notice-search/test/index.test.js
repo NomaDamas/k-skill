@@ -304,6 +304,21 @@ test("buildPropertySearchBody maps Workflow C filters using REAL upstream codes 
   assert.equal(s.cortAuctnMbrsId, "", "cortAuctnMbrsId present (canonical)");
 });
 
+test("buildPropertySearchBody keeps the documented raw-code CLI example numeric", () => {
+  const body = buildPropertySearchBody({
+    region: { sido: "서울특별시", sigungu: "11680" },
+    usage: { large: "건물", medium: "21200" },
+    priceRange: { min: 100000000, max: 500000000 },
+    saleDate: { from: "2026-05-01", to: "2026-05-20" }
+  });
+  const s = body.dma_srchGdsDtlSrchInfo;
+  assert.equal(s.rprsAdongSdCd, "11");
+  assert.equal(s.rprsAdongSggCd, "11680");
+  assert.equal(s.lclDspslGdsLstUsgCd, "20000");
+  assert.equal(s.mclDspslGdsLstUsgCd, "21200");
+  assert.equal(s.lwsDspslPrcMin, "100000000");
+});
+
 test("buildPropertySearchBody rejects fractional flbdCount (count must be integer)", () => {
   assert.throws(
     () => buildPropertySearchBody({ flbdCount: { min: 1.5 } }),
@@ -347,10 +362,12 @@ test("searchProperties posts propertySearch and normalizes the real PGJ151 resul
   assert.equal(item.caseNumber, "20220130105284");
   assert.equal(item.displayCaseNumber, "2022타경105284");
   assert.equal(item.itemNumber, "1");
+  assert.equal(item.itemSeq, "1");
   assert.match(item.address, /서울특별시.*강남구.*대치동/);
   assert.equal(item.appraisedPrice, 450000000);
   assert.equal(item.minimumSalePrice, 360000000);
   assert.equal(item.flbdCount, 5);
+  assert.equal(item.failedBidCount, 5);
   assert.equal(item.courtCode, "B000210");
   assert.equal(item.courtName, "서울중앙지방법원");
   assert.equal(item.judgeDeptName, "경매2계");
@@ -358,6 +375,58 @@ test("searchProperties posts propertySearch and normalizes the real PGJ151 resul
   assert.deepEqual(item.regionCodes, { sido: "11", sigungu: "11680", dong: "11680106" });
   assert.equal(item.saleDate, "2026-05-21");
   assert.equal(item.bidTypeCode, "000331");
+  assert.equal(item.status, item.statusCode);
+  assert.equal(item.buildings, item.buildingList);
+  assert.equal(item.areas, item.areaList);
+  assert.equal(item.lotCategories, item.landCategoryList);
+});
+
+test("searchProperties falls back from an explicit HTTP client on Workflow C WAF-style HTTP 400", async () => {
+  const primary = makeFakeClient(() => {
+    const error = new Error("HTTP 400");
+    error.code = "UPSTREAM_ERROR";
+    error.statusCode = 400;
+    throw error;
+  });
+  const fallback = makeFakeClient((endpoint) => {
+    assert.equal(endpoint, "propertySearch");
+    return loadFixture("properties-sample.json");
+  });
+
+  const result = await searchProperties({
+    client: primary,
+    fallbackClient: fallback,
+    courtCode: "B000210",
+    saleDate: { from: "2026-05-08", to: "2026-05-22" },
+    pageSize: 1,
+    includeRaw: false
+  });
+
+  assert.equal(primary.calls.length, 1);
+  assert.equal(fallback.calls.length, 1);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].displayCaseNumber, "2022타경105284");
+});
+
+test("searchProperties honors fallback:false even for Workflow C HTTP 400", async () => {
+  const primary = makeFakeClient(() => {
+    const error = new Error("HTTP 400");
+    error.code = "UPSTREAM_ERROR";
+    error.statusCode = 400;
+    throw error;
+  });
+  const fallback = makeFakeClient(() => loadFixture("properties-sample.json"));
+
+  await assert.rejects(
+    () =>
+      searchProperties({
+        client: primary,
+        fallbackClient: fallback,
+        fallback: false
+      }),
+    /HTTP 400/
+  );
+  assert.equal(fallback.calls.length, 0);
 });
 
 test("Workflow C code tables expose REAL upstream LCL and sido lookups", () => {

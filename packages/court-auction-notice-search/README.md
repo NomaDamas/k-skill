@@ -73,8 +73,8 @@ if (caseInfo.found) {
 }
 
 const properties = await searchProperties({
-  region: { sido: "서울특별시", sigungu: "강남구" },
-  usage: { large: "주거용건물", medium: "아파트" },
+  region: { sido: "서울특별시", sigungu: "11680" },
+  usage: { large: "건물", medium: "21200", small: "21201" },
   priceRange: { min: 100000000, max: 500000000 },
   appraisedPriceRange: { min: 150000000, max: 800000000 },
   saleDate: { from: "2026-05-01", to: "2026-05-20" },
@@ -96,7 +96,7 @@ court-auction-notice-search codes bid-types --pretty
 court-auction-notice-search codes usages --pretty
 court-auction-notice-search codes regions --pretty
 court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-type date --pretty
-court-auction-notice-search search --sido 서울특별시 --sigungu 강남구 --usage-large 주거용건물 \
+court-auction-notice-search search --sido 서울특별시 --sigungu 11680 --usage-large 건물 --usage-medium 21200 \
   --price-min 100000000 --price-max 500000000 --sale-from 2026-05-01 --sale-to 2026-05-20 --pretty
 court-auction-notice-search case --court-code B000210 --case-number "2024타경100001" --pretty
 ```

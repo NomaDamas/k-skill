@@ -390,15 +390,32 @@ async function searchProperties(params = {}) {
   } catch (err) {
     const isBotBlock =
       err && (err.code === "BLOCKED" || (err.code === "UPSTREAM_ERROR" && err.statusCode === 400));
-    const fallbackEnabled = params.fallback !== false && !params.client;
-    if (!isBotBlock || !fallbackEnabled || !isFallbackAvailable()) {
+    const canFallbackFromClient =
+      !params.client || params.fallbackClient || primary instanceof CourtAuctionHttpClient;
+    const fallbackEnabled = params.fallback !== false && canFallbackFromClient;
+    if (!isBotBlock || !fallbackEnabled) {
       throw err;
     }
-    const fallback = new CourtAuctionPlaywrightClient({ headless: params.headless !== false });
+
+    const fallback =
+      params.fallbackClient ||
+      (isFallbackAvailable()
+        ? new CourtAuctionPlaywrightClient({
+            ...pickClientOptions(params),
+            headless: params.headless !== false,
+            chromiumLoader: params.chromiumLoader
+          })
+        : null);
+    if (!fallback) {
+      throw err;
+    }
+
     try {
       raw = await fallback.postJson("propertySearch", body);
     } finally {
-      await fallback.close().catch(() => {});
+      if (!params.fallbackClient && typeof fallback.close === "function") {
+        await fallback.close().catch(() => {});
+      }
     }
   }
 
