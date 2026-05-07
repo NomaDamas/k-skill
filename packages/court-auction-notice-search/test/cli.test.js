@@ -32,9 +32,12 @@ test("USAGE describes the supported subcommands", () => {
   assert.match(USAGE, /notices --date/);
   assert.match(USAGE, /notice-detail/);
   assert.match(USAGE, /case --court-code/);
-  assert.match(USAGE, /search \[--region /);
+  assert.match(USAGE, /search \[--region <시도\[:시군구raw\[:읍면동raw\]\]>/);
   assert.match(USAGE, /\[--usage /);
-  assert.match(USAGE, /\[--sido /);
+  assert.match(USAGE, /\[--sido <code\|name>\]/);
+  assert.match(USAGE, /\[--sigungu <raw-code>\]/);
+  assert.match(USAGE, /\[--dong <raw-code>\]/);
+  assert.match(USAGE, /\[--page-size 10\|20\|50\|100\]/);
   assert.match(USAGE, /\[--usage-large /);
   assert.match(USAGE, /codes courts/);
   assert.match(USAGE, /codes usages/);

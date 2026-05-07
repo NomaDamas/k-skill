@@ -91,7 +91,7 @@ const properties = await searchProperties({
 | 매각공고 목록 | `POST /pgj/pgj143/selectRletDspslPbanc.on` | `{"dma_srchDspslPbanc":{"srchYmd","cortOfcCd","bidDvsCd","srchBtnYn":"Y"}}` (`srchYmd`는 사이트 검색 버튼과 동일하게 `YYYYMM`) |
 | 매각공고 상세 | `POST /pgj/pgj143/selectRletDspslPbancDtl.on` | `{"dma_srchGnrlPbanc":{"cortOfcCd","dspslDxdyYmd","jdbnCd",...}}` |
 | 사건 단건 | `POST /pgj/pgj15A/selectAuctnCsSrchRslt.on` | `{"dma_srchCsDtlInf":{"cortOfcCd","csNo"}}` |
-| 물건 자유 조건검색 | `POST /pgj/pgjsearch/searchControllerMain.on` | canonical body captured via Playwright (`scripts/capture-pgj151-submit.cjs`); fixture at `packages/court-auction-notice-search/test/fixtures/canonical-search-body.json`. `pageNo/pageSize/statNum` 은 number, `notifyLoc` 기본 `"off"`. |
+| 물건 자유 조건검색 | `POST /pgj/pgjsearch/searchControllerMain.on` | canonical body captured via Playwright (`scripts/capture-pgj151-submit.cjs`); fixture at `packages/court-auction-notice-search/test/fixtures/canonical-search-body.json`. `pageNo/pageSize/statNum` 은 number, `pageSize` 는 upstream 드롭다운 값 `10`/`20`/`50`/`100`만 허용, `notifyLoc` 기본 `"off"`. |
 | 법원사무소 코드 | `POST /pgj/pgjComm/selectCortOfcCdLst.on` | `{}` |
 
 세션 cookie(`JSESSIONID`, `WMONID`)는 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01` 으로 사전에 한 번 받아둡니다.

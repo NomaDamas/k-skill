@@ -15,7 +15,7 @@ metadata:
 대한민국 법원이 운영하는 공식 **법원경매정보** 사이트(`courtauction.go.kr`) 의 매각공고와 사건정보를 에이전트가 활용할 수 있는 JSON 형태로 변환해서 돌려준다.
 
 - 공식 OPEN API가 없어 사이트 내부의 WebSquare JSON XHR endpoint를 그대로 호출한다.
-- 1차 transport 는 직접 HTTP, 차단되거나 5xx 가 떨어질 때만 Playwright fallback 으로 전환한다 (`rebrowser-playwright` 또는 `playwright-core` 가 있을 때만).
+- 1차 transport 는 직접 HTTP다. Workflow C 자유검색에서 raw-HTTP WAF성 HTTP 400이 날 때만 Playwright fallback 으로 전환하며, 명시적 차단(`BLOCKED`/`ipcheck=false`)은 기본적으로 중단한다 (`rebrowser-playwright` 또는 `playwright-core` 가 있을 때만).
 - 사이트는 **IP 단위 봇 차단** 이 매우 공격적이다 (16회/30초 정도면 1시간 차단). 이 패키지는 호출 간 최소 2초 jitter, 세션당 호출 budget(기본 10회), `data.ipcheck === false` 즉시 throw 로 보수적으로 동작한다.
 - **참고용 도구**다. 실제 입찰 전에는 반드시 법원 원문 매각공고를 다시 확인해야 한다.
 
@@ -90,9 +90,9 @@ metadata:
    - `saleDate` — `{ from, to }`
    - `flbdCount` — 유찰횟수 `{ min, max }` **정수만**
    - `area` — 면적(㎡) `{ min, max }` (실수 허용)
-   - `pageSize` — 페이지당 결과 수, 최대 100 (기본 10)
+   - `pageSize` — 페이지당 결과 수, upstream PGJ151 드롭다운에서 확인된 `10`/`20`/`50`/`100` 중 하나(기본 10). `1` 등 임의 값은 live endpoint 가 HTTP 400을 반환하므로 로컬에서 거부한다.
 2. `searchProperties({ ... })` 호출 → `POST /pgj/pgjsearch/searchControllerMain.on`.
-   - 1차로 direct HTTP 시도. WAF 차단(HTTP 400 또는 `BLOCKED`)을 만나면 자동으로 Playwright fallback 으로 재시도한다. fallback 을 끄려면 `{ fallback: false }`.
+   - 1차로 direct HTTP 시도. Workflow C raw-HTTP WAF의 HTTP 400을 만나면 자동으로 Playwright fallback 으로 재시도한다. fallback 을 끄려면 `{ fallback: false }`. `BLOCKED`(`ipcheck=false`)는 사이트의 명시적 차단 신호이므로 기본적으로 즉시 중단하며, 사용자가 위험을 이해하고 명시적으로 `{ fallbackOnBlocked: true }` 를 준 경우에만 재시도한다.
 3. 응답의 `items[]` 는 핵심 raw 컬럼을 영문 키로 정규화한다:
    - `saNo` → `caseNumber`, `srnSaNo`/`printCsNo` → `displayCaseNumber`
    - `mokmulSer`/`maemulSer` → `itemNumber`
@@ -114,7 +114,7 @@ metadata:
 - 기본 세션 budget 은 **10회**. 더 많은 조회가 필요하면 새 세션을 열거나 (`new CourtAuctionHttpClient`) `maxCallsPerSession` 을 명시적으로 늘린다.
 - 차단(`data.ipcheck === false`)을 만나면 `BLOCKED` 에러를 즉시 throw 하고 멈춘다. 자동 retry 하지 않는다 (차단 연장 위험).
 - 차단된 IP는 **약 1시간** 후 자연 복구된다. 그 사이에는 다른 IP/네트워크에서 작업하거나 사람이 브라우저로 사이트에 접속해서 차단 해제 화면을 거친다.
-- **Workflow C 자유검색은 사이트 WAF 가 raw HTTP 호출을 더 엄격하게 차단**한다. `searchProperties()` 는 1차 direct HTTP, 실패시 자동으로 Playwright fallback 으로 재시도한다. Playwright fallback 모듈(`rebrowser-playwright` 또는 `playwright-core`)이 설치되어 있으면 자동 동작하고, 없으면 첫 HTTP 실패가 그대로 throw 된다. 안정적인 운영을 위해선 Playwright 모듈 설치를 권장한다.
+- **Workflow C 자유검색은 사이트 WAF 가 raw HTTP 호출을 더 엄격하게 차단**한다. `searchProperties()` 는 1차 direct HTTP에서 WAF성 HTTP 400을 만났을 때만 Playwright fallback 으로 재시도한다. 명시적 차단(`BLOCKED`/`ipcheck=false`)은 기본적으로 즉시 중단하며, 사용자가 위험을 이해하고 `fallbackOnBlocked:true` 를 준 경우에만 재시도한다. Playwright fallback 모듈(`rebrowser-playwright` 또는 `playwright-core`)이 없으면 첫 HTTP 400 실패가 그대로 throw 된다.
 - searchProperties 는 같은 Playwright 클라이언트로 연속 호출하면 **10~15회 간격 호출에서 안정**하다. 그 이상 burst 호출이 필요하면 호출 사이 3~5초 sleep 을 두고 새 클라이언트를 열어라.
 
 ## Node.js example

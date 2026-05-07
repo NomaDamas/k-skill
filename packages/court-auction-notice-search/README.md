@@ -115,7 +115,7 @@ court-auction-notice-search case --court-code B000210 --case-number "2024타경1
 - `getCaseByCaseNumber({ courtCode, caseNumber, includeRaw?, client? })`
   - `caseNumber`: `"2024타경100001"` 권장. `"2024-100001"`, `"2024_100001"` 등은 자동 정규화.
   - returns `{ found, status, message, caseInfo, items[], schedule[], claimDeadline, relatedCases[], appeals[], stakeholders[], raw? }`
-- `searchProperties({ region?, usage?, priceRange?, appraisedPriceRange?, saleDate?, flbdCount?, area?, bidType?, courtCode?, page?, pageSize?, includeRaw?, client?, fallback? })`
+- `searchProperties({ region?, usage?, priceRange?, appraisedPriceRange?, saleDate?, flbdCount?, area?, bidType?, courtCode?, page?, pageSize?, includeRaw?, client?, fallback?, fallbackOnBlocked? })`
   - `region`: `{ sido, sigungu, dong }` — sido는 코드(`"11"`) 또는 한국어명(`"서울특별시"`). 시군구/읍면동은 raw 코드(예: `"11680"`/`"11680101"`)로 전달. 입력하면 `cortStDvs:"2"` 지번주소 검색.
   - `usage`: `{ large, medium, small }` — 5자리 upstream 코드(`"20000"`=건물) 또는 대분류 한국어명(`"건물"`/`"토지"`/`"차량및운송장비"`/`"기타"`).
   - `priceRange`: 최저매각가격 원 단위 `{ min, max }` (실수 허용)
@@ -123,8 +123,8 @@ court-auction-notice-search case --court-code B000210 --case-number "2024타경1
   - `saleDate`: `{ from, to }` (`YYYY-MM-DD`/`YYYYMMDD`)
   - `flbdCount`: 유찰횟수 `{ min, max }` **정수만**
   - `area`: 면적(㎡) `{ min, max }` (실수 허용)
-  - `pageSize`: 1~100 (기본 10)
-  - `fallback`: `false` 면 Playwright auto-fallback 비활성. 기본 true (HTTP 400/BLOCKED 시 Playwright 로 재시도, `playwright-core`/`rebrowser-playwright` 미설치 시 자동 무시).
+  - `pageSize`: upstream PGJ151 드롭다운에서 확인된 `10`, `20`, `50`, `100` 중 하나(기본 10). `1` 등 임의 값은 live endpoint 가 HTTP 400을 반환하므로 로컬에서 거부한다.
+  - `fallback`: `false` 면 Playwright auto-fallback 비활성. 기본 true (Workflow C raw-HTTP WAF의 HTTP 400 시 Playwright 로 재시도, `playwright-core`/`rebrowser-playwright` 미설치 시 자동 무시). `BLOCKED`(`ipcheck=false`)는 기본적으로 즉시 중단하며, 명시적으로 `fallbackOnBlocked:true` 를 준 경우에만 재시도한다.
   - returns `{ requestedFilters, page, count, items[] }` — `items[i]` 가 `{ caseNumber, displayCaseNumber, itemNumber, address, appraisedPrice, minimumSalePrice, flbdCount, statusCode, progressStatusCode, courtCode, courtName, judgeDeptCode, judgeDeptName, documentId, saleDate, salePlace, bidTypeCode, usageCodes, regionCodes, coordinates, coordinatesWgs84, buildingList, areaList, landCategoryList, propertyDescription, areaRange, remarks, raw }`
 - `getCourtCodes({ client? })` — 법원사무소 코드표 동적 로드
 - `getBidTypes()` — 입찰구분 정적 코드표 (기일입찰=`000331`, 기간입찰=`000332`)

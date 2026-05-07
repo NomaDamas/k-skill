@@ -52,6 +52,9 @@ function toPositiveInt(input, fallback, label, opts = {}) {
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(`${label} must be a positive integer, got "${input}"`);
   }
+  if (Array.isArray(opts.allowed) && !opts.allowed.includes(value)) {
+    throw new Error(`${label} must be one of ${opts.allowed.join(", ")}, got ${value}`);
+  }
   if (typeof opts.max === "number" && value > opts.max) {
     throw new Error(
       `${label} must be <= ${opts.max} (court auction site upper bound), got ${value}`
@@ -60,7 +63,7 @@ function toPositiveInt(input, fallback, label, opts = {}) {
   return value;
 }
 
-const PAGE_SIZE_MAX = 100;
+const PAGE_SIZE_VALUES = [10, 20, 50, 100];
 
 function rangeValue(range, key, opts = {}) {
   if (!range || typeof range !== "object") return "";
@@ -297,7 +300,7 @@ async function getCaseByCaseNumber(params = {}) {
 
 function buildPropertySearchBody(params = {}) {
   const pageNo = toPositiveInt(params.page, 1, "page");
-  const pageSize = toPositiveInt(params.pageSize, 10, "pageSize", { max: PAGE_SIZE_MAX });
+  const pageSize = toPositiveInt(params.pageSize, 10, "pageSize", { allowed: PAGE_SIZE_VALUES });
   const courtCodeRaw =
     params.courtCode === undefined || params.courtCode === null ? "" : String(params.courtCode).trim();
   const courtCode = courtCodeRaw === "" ? "" : ensureCourtCode(courtCodeRaw);
@@ -388,12 +391,13 @@ async function searchProperties(params = {}) {
   try {
     raw = await primary.postJson("propertySearch", body);
   } catch (err) {
-    const isBotBlock =
-      err && (err.code === "BLOCKED" || (err.code === "UPSTREAM_ERROR" && err.statusCode === 400));
+    const isConfirmedBlocked = err && err.code === "BLOCKED";
+    const isWafHttp400 = err && err.code === "UPSTREAM_ERROR" && err.statusCode === 400;
+    const isFallbackEligibleError = isWafHttp400 || (isConfirmedBlocked && params.fallbackOnBlocked === true);
     const canFallbackFromClient =
       !params.client || params.fallbackClient || primary instanceof CourtAuctionHttpClient;
     const fallbackEnabled = params.fallback !== false && canFallbackFromClient;
-    if (!isBotBlock || !fallbackEnabled) {
+    if (!isFallbackEligibleError || !fallbackEnabled) {
       throw err;
     }
 

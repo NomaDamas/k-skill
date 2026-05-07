@@ -326,14 +326,6 @@ test("buildPropertySearchBody rejects fractional flbdCount (count must be intege
   );
 });
 
-test("buildPropertySearchBody caps pageSize at 100 to protect upstream", () => {
-  assert.throws(
-    () => buildPropertySearchBody({ pageSize: 500 }),
-    /pageSize must be <= 100/
-  );
-  assert.doesNotThrow(() => buildPropertySearchBody({ pageSize: 100 }));
-});
-
 test("searchProperties posts propertySearch and normalizes the real PGJ151 result row", async () => {
   const client = makeFakeClient((endpoint) => {
     assert.equal(endpoint, "propertySearch");
@@ -381,6 +373,26 @@ test("searchProperties posts propertySearch and normalizes the real PGJ151 resul
   assert.equal(item.lotCategories, item.landCategoryList);
 });
 
+test("searchProperties rejects page sizes outside the observed PGJ151 dropdown values", () => {
+  assert.equal(buildPropertySearchBody({ pageSize: 10 }).dma_pageInfo.pageSize, 10);
+  assert.equal(buildPropertySearchBody({ pageSize: 20 }).dma_pageInfo.pageSize, 20);
+  assert.equal(buildPropertySearchBody({ pageSize: 50 }).dma_pageInfo.pageSize, 50);
+  assert.equal(buildPropertySearchBody({ pageSize: 100 }).dma_pageInfo.pageSize, 100);
+
+  assert.throws(
+    () => buildPropertySearchBody({ pageSize: 1 }),
+    /pageSize must be one of 10, 20, 50, 100/
+  );
+  assert.throws(
+    () => buildPropertySearchBody({ pageSize: 25 }),
+    /pageSize must be one of 10, 20, 50, 100/
+  );
+  assert.throws(
+    () => buildPropertySearchBody({ pageSize: 500 }),
+    /pageSize must be one of 10, 20, 50, 100/
+  );
+});
+
 test("searchProperties falls back from an explicit HTTP client on Workflow C WAF-style HTTP 400", async () => {
   const primary = makeFakeClient(() => {
     const error = new Error("HTTP 400");
@@ -398,7 +410,7 @@ test("searchProperties falls back from an explicit HTTP client on Workflow C WAF
     fallbackClient: fallback,
     courtCode: "B000210",
     saleDate: { from: "2026-05-08", to: "2026-05-22" },
-    pageSize: 1,
+    pageSize: 10,
     includeRaw: false
   });
 
@@ -406,6 +418,46 @@ test("searchProperties falls back from an explicit HTTP client on Workflow C WAF
   assert.equal(fallback.calls.length, 1);
   assert.equal(result.items.length, 2);
   assert.equal(result.items[0].displayCaseNumber, "2022타경105284");
+});
+
+test("searchProperties stops on confirmed BLOCKED responses by default", async () => {
+  const primary = makeFakeClient(() => {
+    const error = new Error("ipcheck false");
+    error.code = "BLOCKED";
+    throw error;
+  });
+  const fallback = makeFakeClient(() => loadFixture("properties-sample.json"));
+
+  await assert.rejects(
+    () =>
+      searchProperties({
+        client: primary,
+        fallbackClient: fallback
+      }),
+    /ipcheck false/
+  );
+  assert.equal(primary.calls.length, 1);
+  assert.equal(fallback.calls.length, 0);
+});
+
+test("searchProperties only retries confirmed BLOCKED responses with explicit fallbackOnBlocked", async () => {
+  const primary = makeFakeClient(() => {
+    const error = new Error("ipcheck false");
+    error.code = "BLOCKED";
+    throw error;
+  });
+  const fallback = makeFakeClient(() => loadFixture("properties-sample.json"));
+
+  const result = await searchProperties({
+    client: primary,
+    fallbackClient: fallback,
+    fallbackOnBlocked: true,
+    includeRaw: false
+  });
+
+  assert.equal(primary.calls.length, 1);
+  assert.equal(fallback.calls.length, 1);
+  assert.equal(result.items.length, 2);
 });
 
 test("searchProperties honors fallback:false even for Workflow C HTTP 400", async () => {

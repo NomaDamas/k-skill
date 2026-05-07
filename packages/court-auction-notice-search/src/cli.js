@@ -20,13 +20,13 @@ USAGE
   court-auction-notice-search notice-detail --court-code <B000210> --sale-date <YYYY-MM-DD> --judge-dept-code <jdbnCd>
                                             [--bid-start <YYYY-MM-DD>] [--bid-end <YYYY-MM-DD>] [--bid-type date|period]
   court-auction-notice-search case --court-code <B000210> --case-number <2024타경100001>
-  court-auction-notice-search search [--region <시도[:시군구[:읍면동]]>] [--usage <대[:중[:소]]>]
-                                    [--sido <code|name>] [--sigungu <code|name>] [--dong <code|name>]
+  court-auction-notice-search search [--region <시도[:시군구raw[:읍면동raw]]>] [--usage <대[:중[:소]]>]
+                                    [--sido <code|name>] [--sigungu <raw-code>] [--dong <raw-code>]
                                     [--usage-large <code|name>] [--usage-medium <code|name>] [--usage-small <code|name>]
                                     [--price-min <won>] [--price-max <won>] [--appraised-min <won>] [--appraised-max <won>]
                                     [--sale-from <YYYY-MM-DD>] [--sale-to <YYYY-MM-DD>] [--flbd-min <N>] [--flbd-max <N>]
                                     [--area-min <m2>] [--area-max <m2>] [--court-code <B000210>] [--bid-type date|period]
-                                    [--page <N>] [--page-size <N>]
+                                    [--page <N>] [--page-size 10|20|50|100]
   court-auction-notice-search codes courts
   court-auction-notice-search codes usages
   court-auction-notice-search codes regions
