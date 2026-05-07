@@ -46,22 +46,37 @@ function optionalYmd(input, label) {
   return toYmd(input, label);
 }
 
-function toPositiveInt(input, fallback, label) {
+function toPositiveInt(input, fallback, label, opts = {}) {
   if (input === null || input === undefined || input === "") return fallback;
   const value = Number(input);
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(`${label} must be a positive integer, got "${input}"`);
   }
+  if (typeof opts.max === "number" && value > opts.max) {
+    throw new Error(
+      `${label} must be <= ${opts.max} (court auction site upper bound), got ${value}`
+    );
+  }
   return value;
 }
 
-function rangeValue(range, key) {
+const PAGE_SIZE_MAX = 100;
+
+function rangeValue(range, key, opts = {}) {
   if (!range || typeof range !== "object") return "";
   const value = range[key];
   if (value === null || value === undefined || value === "") return "";
   const text = String(value).trim().replace(/,/g, "");
-  if (!/^\d+(?:\.\d+)?$/.test(text)) {
-    throw new Error(`${key} range value must be numeric, got "${value}"`);
+  if (opts.integerOnly) {
+    if (!/^\d+$/.test(text)) {
+      throw new Error(
+        `${opts.label || key} range value must be a non-negative integer, got "${value}"`
+      );
+    }
+  } else if (!/^\d+(?:\.\d+)?$/.test(text)) {
+    throw new Error(
+      `${opts.label || key} range value must be numeric, got "${value}"`
+    );
   }
   return text;
 }
@@ -282,7 +297,7 @@ async function getCaseByCaseNumber(params = {}) {
 
 function buildPropertySearchBody(params = {}) {
   const pageNo = toPositiveInt(params.page, 1, "page");
-  const pageSize = toPositiveInt(params.pageSize, 10, "pageSize");
+  const pageSize = toPositiveInt(params.pageSize, 10, "pageSize", { max: PAGE_SIZE_MAX });
   const courtCodeRaw =
     params.courtCode === undefined || params.courtCode === null ? "" : String(params.courtCode).trim();
   const courtCode = courtCodeRaw === "" ? "" : ensureCourtCode(courtCodeRaw);
@@ -293,69 +308,103 @@ function buildPropertySearchBody(params = {}) {
   const hasRegion = Boolean(region.sido || region.sigungu || region.dong);
   const body = {
     dma_pageInfo: {
-      pageNo: String(pageNo),
-      pageSize: String(pageSize),
-      totalYn: params.totalYn === "N" ? "N" : "Y"
+      pageNo,
+      pageSize,
+      bfPageNo: "",
+      startRowNo: "",
+      totalCnt: "",
+      totalYn: params.totalYn === "N" ? "N" : "Y",
+      groupTotalCount: ""
     },
     dma_srchGdsDtlSrchInfo: {
-      menuNm: "물건상세검색",
-      lafjOrderBy: params.orderBy ? String(params.orderBy) : "",
-      pgmId: "PGJ151F01",
+      rletDspslSpcCondCd: "",
       bidDvsCd: resolveBidTypeCode(params.bidType),
-      statNum: "1",
-      cortOfcCd: courtCode,
-      jdbnCd: params.judgeDeptCode ? String(params.judgeDeptCode).trim() : "",
-      cortStDvs: hasRegion ? "2" : "1",
-      csNo: "",
       mvprpRletDvsCd: "00031R",
-      notifyLoc: params.notifyLocation ? "Y" : "",
+      cortAuctnSrchCondCd: "0004601",
       rprsAdongSdCd: region.sido,
       rprsAdongSggCd: region.sigungu,
       rprsAdongEmdCd: region.dong,
       rdnmSdCd: "",
       rdnmSggCd: "",
-      consonant: "",
       rdnmNo: "",
       mvprpDspslPlcAdongSdCd: "",
       mvprpDspslPlcAdongSggCd: "",
       mvprpDspslPlcAdongEmdCd: "",
       rdDspslPlcAdongSdCd: "",
       rdDspslPlcAdongSggCd: "",
-      rdDspslPlcConsonant: "",
       rdDspslPlcAdongEmdCd: "",
+      cortOfcCd: courtCode,
+      jdbnCd: params.judgeDeptCode ? String(params.judgeDeptCode).trim() : "",
+      execrOfcDvsCd: "",
       lclDspslGdsLstUsgCd: resolveUsageCode(usage.large, "large"),
       mclDspslGdsLstUsgCd: resolveUsageCode(usage.medium, "medium"),
       sclDspslGdsLstUsgCd: resolveUsageCode(usage.small, "small"),
-      aeeEvlAmtMin: rangeValue(params.appraisedPriceRange, "min"),
-      aeeEvlAmtMax: rangeValue(params.appraisedPriceRange, "max"),
-      lwsDspslPrcMin: rangeValue(params.priceRange, "min"),
-      lwsDspslPrcMax: rangeValue(params.priceRange, "max"),
-      lwsDspslPrcRateMin: rangeValue(params.minimumSalePriceRateRange, "min"),
-      lwsDspslPrcRateMax: rangeValue(params.minimumSalePriceRateRange, "max"),
-      objctArDtsMin: rangeValue(params.area, "min"),
-      objctArDtsMax: rangeValue(params.area, "max"),
-      flbdNcntMin: rangeValue(params.flbdCount, "min"),
-      flbdNcntMax: rangeValue(params.flbdCount, "max"),
-      maeMokmulNm: "",
-      mvprpArtclKnd: "",
-      mvrpDspslPlcTyp: "",
-      cortAuctnSrchCondCd: "0004601",
+      cortAuctnMbrsId: "",
+      aeeEvlAmtMin: rangeValue(params.appraisedPriceRange, "min", { label: "appraisedPriceRange.min" }),
+      aeeEvlAmtMax: rangeValue(params.appraisedPriceRange, "max", { label: "appraisedPriceRange.max" }),
+      lwsDspslPrcRateMin: rangeValue(params.minimumSalePriceRateRange, "min", { label: "minimumSalePriceRateRange.min" }),
+      lwsDspslPrcRateMax: rangeValue(params.minimumSalePriceRateRange, "max", { label: "minimumSalePriceRateRange.max" }),
+      flbdNcntMin: rangeValue(params.flbdCount, "min", { integerOnly: true, label: "flbdCount.min" }),
+      flbdNcntMax: rangeValue(params.flbdCount, "max", { integerOnly: true, label: "flbdCount.max" }),
+      objctArDtsMin: rangeValue(params.area, "min", { label: "area.min" }),
+      objctArDtsMax: rangeValue(params.area, "max", { label: "area.max" }),
+      mvprpArtclKndCd: "",
+      mvprpArtclNm: "",
+      mvprpAtchmPlcTypCd: "",
+      notifyLoc: params.notifyLocation ? "Y" : "off",
+      lafjOrderBy: params.orderBy ? String(params.orderBy) : "",
+      pgmId: "PGJ151F01",
+      csNo: "",
+      cortStDvs: hasRegion ? "2" : "1",
+      statNum: 1,
       bidBgngYmd: optionalYmd(saleDate.from, "saleDate.from"),
       bidEndYmd: optionalYmd(saleDate.to, "saleDate.to"),
-      rletDspslSpcCondCd: "",
-      dspslDxdyYmd: ""
+      dspslDxdyYmd: "",
+      fstDspslHm: "",
+      scndDspslHm: "",
+      thrdDspslHm: "",
+      fothDspslHm: "",
+      dspslPlcNm: "",
+      lwsDspslPrcMin: rangeValue(params.priceRange, "min", { label: "priceRange.min" }),
+      lwsDspslPrcMax: rangeValue(params.priceRange, "max", { label: "priceRange.max" }),
+      grbxTypCd: "",
+      gdsVendNm: "",
+      fuelKndCd: "",
+      carMdyrMax: "",
+      carMdyrMin: "",
+      carMdlNm: "",
+      sideDvsCd: ""
     }
   };
   return body;
 }
 
 async function searchProperties(params = {}) {
-  const client = ensureClient(params.client, params);
   const body = buildPropertySearchBody(params);
-  const raw = await client.postJson("propertySearch", body);
+  const includeRaw = params.includeRaw !== false;
+
+  const primary = ensureClient(params.client, params);
+  let raw;
+  try {
+    raw = await primary.postJson("propertySearch", body);
+  } catch (err) {
+    const isBotBlock =
+      err && (err.code === "BLOCKED" || (err.code === "UPSTREAM_ERROR" && err.statusCode === 400));
+    const fallbackEnabled = params.fallback !== false && !params.client;
+    if (!isBotBlock || !fallbackEnabled || !isFallbackAvailable()) {
+      throw err;
+    }
+    const fallback = new CourtAuctionPlaywrightClient({ headless: params.headless !== false });
+    try {
+      raw = await fallback.postJson("propertySearch", body);
+    } finally {
+      await fallback.close().catch(() => {});
+    }
+  }
+
   return normalizePropertySearchResponse(raw, {
     requestedFilters: body.dma_srchGdsDtlSrchInfo,
-    includeRaw: params.includeRaw !== false
+    includeRaw
   });
 }
 

@@ -115,18 +115,21 @@ court-auction-notice-search case --court-code B000210 --case-number "2024타경1
 - `getCaseByCaseNumber({ courtCode, caseNumber, includeRaw?, client? })`
   - `caseNumber`: `"2024타경100001"` 권장. `"2024-100001"`, `"2024_100001"` 등은 자동 정규화.
   - returns `{ found, status, message, caseInfo, items[], schedule[], claimDeadline, relatedCases[], appeals[], stakeholders[], raw? }`
-- `searchProperties({ region?, usage?, priceRange?, appraisedPriceRange?, saleDate?, flbdCount?, area?, bidType?, courtCode?, page?, pageSize?, includeRaw?, client? })`
-  - `region`: `{ sido, sigungu, dong }` — 코드 또는 대표 정적 코드테이블의 한국어명. 입력하면 PGJ151의 소재지(지번주소) 검색(`cortStDvs:"2"`)으로 조회한다.
-  - `usage`: `{ large, medium, small }` — 용도 대/중/소분류 코드 또는 대표 정적 코드테이블의 한국어명.
-  - `priceRange`: 최저매각가격 원 단위 `{ min, max }`
-  - `appraisedPriceRange`: 감정평가액 원 단위 `{ min, max }`
+- `searchProperties({ region?, usage?, priceRange?, appraisedPriceRange?, saleDate?, flbdCount?, area?, bidType?, courtCode?, page?, pageSize?, includeRaw?, client?, fallback? })`
+  - `region`: `{ sido, sigungu, dong }` — sido는 코드(`"11"`) 또는 한국어명(`"서울특별시"`). 시군구/읍면동은 raw 코드(예: `"11680"`/`"11680101"`)로 전달. 입력하면 `cortStDvs:"2"` 지번주소 검색.
+  - `usage`: `{ large, medium, small }` — 5자리 upstream 코드(`"20000"`=건물) 또는 대분류 한국어명(`"건물"`/`"토지"`/`"차량및운송장비"`/`"기타"`).
+  - `priceRange`: 최저매각가격 원 단위 `{ min, max }` (실수 허용)
+  - `appraisedPriceRange`: 감정평가액 원 단위 `{ min, max }` (실수 허용)
   - `saleDate`: `{ from, to }` (`YYYY-MM-DD`/`YYYYMMDD`)
-  - `flbdCount`: 유찰횟수 `{ min, max }`
-  - `area`: 면적(㎡) `{ min, max }`
-  - returns `{ requestedFilters, page, count, items[] }` — `items[i]` 가 `{ caseNumber, itemNumber, displayCaseNumber, address, appraisedPrice, minimumSalePrice, flbdCount, statusCode, coordinates, buildingList, areaList, landCategoryList, raw }`
+  - `flbdCount`: 유찰횟수 `{ min, max }` **정수만**
+  - `area`: 면적(㎡) `{ min, max }` (실수 허용)
+  - `pageSize`: 1~100 (기본 10)
+  - `fallback`: `false` 면 Playwright auto-fallback 비활성. 기본 true (HTTP 400/BLOCKED 시 Playwright 로 재시도, `playwright-core`/`rebrowser-playwright` 미설치 시 자동 무시).
+  - returns `{ requestedFilters, page, count, items[] }` — `items[i]` 가 `{ caseNumber, displayCaseNumber, itemNumber, address, appraisedPrice, minimumSalePrice, flbdCount, statusCode, progressStatusCode, courtCode, courtName, judgeDeptCode, judgeDeptName, documentId, saleDate, salePlace, bidTypeCode, usageCodes, regionCodes, coordinates, coordinatesWgs84, buildingList, areaList, landCategoryList, propertyDescription, areaRange, remarks, raw }`
 - `getCourtCodes({ client? })` — 법원사무소 코드표 동적 로드
 - `getBidTypes()` — 입찰구분 정적 코드표 (기일입찰=`000331`, 기간입찰=`000332`)
-- `getUsageCodes()` / `getRegionCodes()` — Workflow C용 정적 대표 코드표. 알 수 없는 코드는 fail-open으로 그대로 upstream에 전달한다.
+- `getUsageCodes()` — Workflow C용 정적 코드표. **upstream `selectLclLst.on` 캡처에서 가져온 4개 대분류(`10000=토지`, `20000=건물`, `30000=차량및운송장비`, `40000=기타`)** 와 대표 중/소분류 일부. 알 수 없는 값은 fail-open.
+- `getRegionCodes()` — Workflow C용 정적 시도 코드표(19행). upstream `selectAdongSdLst.on` 캡처. 시군구/읍면동은 cascade XHR이 안정적으로 노출되지 않아 정적 표에 미포함; raw 코드(`"11680"` 등)를 그대로 전달.
 - `resolveBidTypeCode(input)`, `describeBidTypeCode(code)` — 코드 변환 헬퍼
 - `CourtAuctionHttpClient` — direct HTTP 클라이언트. fetchImpl, timeoutMs, minDelayMs, jitterMs, maxCallsPerSession 모두 override 가능.
 - `CourtAuctionPlaywrightClient` — `playwright-core` / `rebrowser-playwright` 가 있을 때만 사용. `postJson(endpointKey, body)` 시그니처는 동일.
@@ -167,7 +170,7 @@ discovery 시 직접 캡처한 사이트 내부 endpoint:
 | 매각공고 목록 | `POST /pgj/pgj143/selectRletDspslPbanc.on` | `dma_srchDspslPbanc.{srchYmd, cortOfcCd, bidDvsCd, srchBtnYn:"Y"}` — `srchYmd`는 사이트 검색 버튼과 동일하게 `YYYYMM` 월 단위 |
 | 매각공고 상세 | `POST /pgj/pgj143/selectRletDspslPbancDtl.on` | `dma_srchGnrlPbanc.{cortOfcCd, dspslDxdyYmd, jdbnCd, ...}` |
 | 사건 단건 | `POST /pgj/pgj15A/selectAuctnCsSrchRslt.on` | `dma_srchCsDtlInf.{cortOfcCd, csNo}` |
-| 물건 자유 조건검색 | `POST /pgj/pgjsearch/searchControllerMain.on` | `dma_pageInfo.{pageNo,pageSize,totalYn}` + `dma_srchGdsDtlSrchInfo.{rprsAdong*, lcl/mcl/sclDspslGdsLstUsgCd, aeeEvlAmt*, lwsDspslPrc*, flbdNcnt*, objctArDts*, bidBgngYmd,bidEndYmd,...}` |
+| 물건 자유 조건검색 | `POST /pgj/pgjsearch/searchControllerMain.on` | canonical body shape: `dma_pageInfo.{pageNo:Number, pageSize:Number, bfPageNo, startRowNo, totalCnt, totalYn:"Y", groupTotalCount}` + `dma_srchGdsDtlSrchInfo.{rletDspslSpcCondCd, bidDvsCd, mvprpRletDvsCd:"00031R", cortAuctnSrchCondCd:"0004601", rprsAdong*Cd, rdnm*, mvprpDspslPlcAdong*Cd, rdDspslPlcAdong*Cd, cortOfcCd, jdbnCd, execrOfcDvsCd, lcl/mcl/sclDspslGdsLstUsgCd, cortAuctnMbrsId, aeeEvlAmt*, lwsDspslPrcRate*, flbdNcnt*, objctArDts*, mvprpArtclKndCd, mvprpArtclNm, mvprpAtchmPlcTypCd, notifyLoc:"off", lafjOrderBy, pgmId:"PGJ151F01", csNo, cortStDvs:"1"or"2", statNum:1, bidBgngYmd, bidEndYmd, dspslDxdyYmd, fst/scnd/thrd/foth DspslHm, dspslPlcNm, lwsDspslPrc*, grbxTypCd, gdsVendNm, fuelKndCd, carMd*, sideDvsCd}`. Captured 2026-05-08 from a real browser submission via `scripts/capture-pgj151-submit.cjs`; canonical fixture at `test/fixtures/canonical-search-body.json`. |
 | 법원사무소 | `POST /pgj/pgjComm/selectCortOfcCdLst.on` | `{}` |
 
 ## Verification

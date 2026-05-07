@@ -41,40 +41,79 @@ for (const entry of USAGE_CODES) {
   USAGE_BY_NAME.set(entry.name, entry);
 }
 
+/**
+ * Resolve a usage classification name/code to its upstream `lcl/mcl/sclDspslGdsLstUsgCd`.
+ *
+ * Strict-level matching: when `level` is supplied (`"large"`, `"medium"`, `"small"`),
+ * the function only returns a code that is registered at that exact level. If the
+ * input name exists at a different level we fail open (return the raw input) instead
+ * of silently mapping to a wrong-level code — same-name codes (e.g. `"아파트"`) exist
+ * at multiple levels and a wrong-level mapping would silently corrupt the request.
+ *
+ * Codes (5-digit, e.g. `"20000"`) are accepted as-is regardless of `level`.
+ *
+ * Returns `""` for empty input.
+ */
 function resolveUsageCode(input, level) {
   if (input === undefined || input === null || input === "") return "";
   const value = String(input).trim();
   if (value === "") return "";
+
+  // Direct code match — accepted at any level (the upstream determines validity).
   const codeMatch = USAGE_BY_CODE.get(value);
   if (codeMatch) return codeMatch.code;
-  const nameMatch = USAGE_CODES.find((entry) => {
-    if (entry.name !== value) return false;
-    return !level || entry.level === level;
-  }) || USAGE_BY_NAME.get(value);
+
+  if (level) {
+    // Strict-level match. Do NOT fall back to USAGE_BY_NAME because that would
+    // ignore the level constraint and return a wrong-level code for ambiguous names.
+    const nameMatch = USAGE_CODES.find(
+      (entry) => entry.name === value && entry.level === level
+    );
+    if (nameMatch) return nameMatch.code;
+    // Fail open: pass the raw input through so the user sees an upstream error
+    // instead of a silently wrong code.
+    return value;
+  }
+
+  // No level specified — match the first registered name (any level).
+  const nameMatch = USAGE_BY_NAME.get(value);
   if (nameMatch) return nameMatch.code;
   return value;
 }
 
+/**
+ * Resolve a region (sido/sigungu/dong) input to upstream `rprsAdong*Cd` codes.
+ *
+ * - Each component is independently resolved against the static sido table by
+ *   exact code or Korean name match. Sigungu/dong are NOT in the static table
+ *   (the upstream cascading XHRs are not consistently exposed) so they pass
+ *   through unchanged when supplied as raw codes.
+ * - When ALL three inputs are empty, returns `{ "", "", "" }` — this is the
+ *   correct "no region filter" state (cortStDvs:"1" branch in the search body).
+ * - When any input is non-empty, it is returned (resolved-or-passthrough);
+ *   empty inputs stay empty. There is no first-row fallback.
+ */
 function resolveRegionCodes(input = {}) {
   if (!input || typeof input !== "object") {
     return { sido: "", sigungu: "", dong: "" };
   }
-  const sido = input.sido === undefined || input.sido === null ? "" : String(input.sido).trim();
-  const sigungu = input.sigungu === undefined || input.sigungu === null ? "" : String(input.sigungu).trim();
-  const dong = input.dong === undefined || input.dong === null ? "" : String(input.dong).trim();
+  const rawSido = input.sido === undefined || input.sido === null ? "" : String(input.sido).trim();
+  const rawSigungu = input.sigungu === undefined || input.sigungu === null ? "" : String(input.sigungu).trim();
+  const rawDong = input.dong === undefined || input.dong === null ? "" : String(input.dong).trim();
 
-  const match = REGION_CODES.find((entry) => {
-    const sidoMatches = !sido || sido === entry.sidoCode || sido === entry.sidoName;
-    const sigunguMatches = !sigungu || sigungu === entry.sigunguCode || sigungu === entry.sigunguName;
-    const dongMatches = !dong || dong === entry.dongCode || dong === entry.dongName;
-    return sidoMatches && sigunguMatches && dongMatches;
-  });
+  let sido = rawSido;
+  if (sido) {
+    const sidoMatch = REGION_CODES.find(
+      (entry) => entry.sidoCode === sido || entry.sidoName === sido
+    );
+    if (sidoMatch) sido = sidoMatch.sidoCode;
+  }
 
-  return {
-    sido: match ? match.sidoCode : sido,
-    sigungu: sigungu && match ? match.sigunguCode : sigungu,
-    dong: dong && match ? match.dongCode : dong
-  };
+  // Sigungu/dong: pass through raw codes / names. The upstream expects 5-digit
+  // sigungu codes (e.g. "11680" 강남구) and 8-digit dong codes (e.g. "11680101"
+  // 역삼동) observed in dlt_srchResult.srchHjguSiguCd/srchHjguDongCd. Names
+  // without code mapping are passed through unchanged (fail-open).
+  return { sido, sigungu: rawSigungu, dong: rawDong };
 }
 
 function listUsageCodes() {

@@ -32,7 +32,10 @@ test("USAGE describes the supported subcommands", () => {
   assert.match(USAGE, /notices --date/);
   assert.match(USAGE, /notice-detail/);
   assert.match(USAGE, /case --court-code/);
-  assert.match(USAGE, /search \[--sido/);
+  assert.match(USAGE, /search \[--region /);
+  assert.match(USAGE, /\[--usage /);
+  assert.match(USAGE, /\[--sido /);
+  assert.match(USAGE, /\[--usage-large /);
   assert.match(USAGE, /codes courts/);
   assert.match(USAGE, /codes usages/);
   assert.match(USAGE, /codes regions/);
@@ -74,13 +77,44 @@ test("CLI codes usages and regions expose Workflow C frozen codetables", () => {
     encoding: "utf8"
   });
   assert.equal(usages.status, 0, `stderr: ${usages.stderr}`);
-  assert.ok(JSON.parse(usages.stdout).items.some((item) => item.name === "주거용건물"));
+  const usagesParsed = JSON.parse(usages.stdout);
+  assert.ok(
+    usagesParsed.items.some((item) => item.name === "건물" && item.code === "20000"),
+    "expected 건물=20000 to come from upstream selectLclLst.on capture"
+  );
+  assert.ok(
+    usagesParsed.items.some((item) => item.name === "토지" && item.code === "10000")
+  );
 
   const regions = spawnSync(process.execPath, [binPath, "codes", "regions"], {
     encoding: "utf8"
   });
   assert.equal(regions.status, 0, `stderr: ${regions.stderr}`);
-  assert.ok(JSON.parse(regions.stdout).items.some((item) => item.sigunguName === "강남구"));
+  const regionsParsed = JSON.parse(regions.stdout);
+  assert.ok(
+    regionsParsed.items.some((item) => item.sidoName === "서울특별시" && item.sidoCode === "11"),
+    "expected 서울특별시=11 to come from upstream selectAdongSdLst.on capture"
+  );
+  assert.equal(
+    regionsParsed.items.length,
+    19,
+    "expected all 19 시도 from upstream"
+  );
+});
+
+test("CLI search supports --region and --usage colon-form parsing (Issue #184 Q3)", () => {
+  const { parseArgs: pa } = require("../src/cli");
+  const result = pa([
+    "search",
+    "--region",
+    "서울특별시:강남구:역삼동",
+    "--usage",
+    "건물:공동주택:아파트",
+    "--bid-type",
+    "date"
+  ]);
+  assert.equal(result.flags.region, "서울특별시:강남구:역삼동");
+  assert.equal(result.flags.usage, "건물:공동주택:아파트");
 });
 
 test("CLI rejects --date with an obviously invalid format", () => {

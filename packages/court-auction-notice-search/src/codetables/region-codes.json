@@ -1,29 +1,24 @@
 {
-  "source": "courtauction.go.kr PGJ151F01 행정동 controls; frozen representative subset for Workflow C tests and fail-open lookup",
+  "source": "courtauction.go.kr PGJ151F00 initial XHR /pgj/pgj002/selectAdongSdLst.on captured 2026-05-08. Discovery raw: test/fixtures/sido-codes-raw.json. Sigungu/dong are NOT included here because the upstream cascading XHRs are not consistently exposed; resolveRegionCodes() falls open on raw codes (pass `{ sido: \"11\", sigungu: \"11680\", dong: \"11680101\" }` directly when known). The dong/sigungu code shape (5-digit sigungu, 8-digit dong) is observed in dlt_srchResult.srchHjguSiguCd/srchHjguDongCd.",
   "items": [
-    {
-      "sidoCode": "11",
-      "sidoName": "서울특별시",
-      "sigunguCode": "11680",
-      "sigunguName": "강남구",
-      "dongCode": "11680101",
-      "dongName": "역삼동"
-    },
-    {
-      "sidoCode": "11",
-      "sidoName": "서울특별시",
-      "sigunguCode": "11710",
-      "sigunguName": "송파구",
-      "dongCode": "11710101",
-      "dongName": "잠실동"
-    },
-    {
-      "sidoCode": "26",
-      "sidoName": "부산광역시",
-      "sigunguCode": "26440",
-      "sigunguName": "강서구",
-      "dongCode": "26440101",
-      "dongName": "대저1동"
-    }
+    { "sidoCode": "11", "sidoName": "서울특별시" },
+    { "sidoCode": "26", "sidoName": "부산광역시" },
+    { "sidoCode": "27", "sidoName": "대구광역시" },
+    { "sidoCode": "28", "sidoName": "인천광역시" },
+    { "sidoCode": "29", "sidoName": "광주광역시" },
+    { "sidoCode": "30", "sidoName": "대전광역시" },
+    { "sidoCode": "31", "sidoName": "울산광역시" },
+    { "sidoCode": "36", "sidoName": "세종특별자치시" },
+    { "sidoCode": "41", "sidoName": "경기도" },
+    { "sidoCode": "42", "sidoName": "강원도" },
+    { "sidoCode": "43", "sidoName": "충청북도" },
+    { "sidoCode": "44", "sidoName": "충청남도" },
+    { "sidoCode": "45", "sidoName": "전라북도" },
+    { "sidoCode": "46", "sidoName": "전라남도" },
+    { "sidoCode": "47", "sidoName": "경상북도" },
+    { "sidoCode": "48", "sidoName": "경상남도" },
+    { "sidoCode": "50", "sidoName": "제주특별자치도" },
+    { "sidoCode": "51", "sidoName": "강원특별자치도" },
+    { "sidoCode": "52", "sidoName": "전북특별자치도" }
   ]
 }

@@ -2,6 +2,8 @@
 
 const {
   ENDPOINT_PATHS,
+  ENDPOINT_WARMUP_PATH,
+  WARMUP_PATH: DEFAULT_WARMUP_PATH,
   DEFAULT_BASE_URL,
   DEFAULT_USER_AGENT,
   createBlockedError,
@@ -10,7 +12,10 @@ const {
 } = require("./http");
 
 const FALLBACK_MODULE_NAMES = ["rebrowser-playwright", "playwright-core", "playwright"];
-const WARMUP_PATH = "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01";
+
+const ENDPOINT_SUBMISSION_ID = Object.freeze({
+  propertySearch: "mf_wfm_mainFrame_sbm_selectGdsDtlSrch"
+});
 
 let cachedChromium = null;
 
@@ -67,7 +72,7 @@ class CourtAuctionPlaywrightClient {
     this.browser = null;
     this.context = null;
     this.page = null;
-    this.warmedUp = false;
+    this.warmedUp = null;
   }
 
   async ensureBrowser() {
@@ -83,17 +88,18 @@ class CourtAuctionPlaywrightClient {
     this.page = await this.context.newPage();
   }
 
-  async warmup() {
-    if (this.warmedUp) return;
+  async warmup(endpointKey) {
+    const warmupPath = ENDPOINT_WARMUP_PATH[endpointKey] || DEFAULT_WARMUP_PATH;
+    if (this.warmedUp === warmupPath) return;
     await this.ensureBrowser();
     try {
-      await this.page.goto(`${this.baseUrl}${WARMUP_PATH}`, {
+      await this.page.goto(`${this.baseUrl}${warmupPath}`, {
         waitUntil: "domcontentloaded",
         timeout: this.timeoutMs
       });
-      this.warmedUp = true;
+      this.warmedUp = warmupPath;
     } catch (cause) {
-      throw createNetworkError(cause, WARMUP_PATH);
+      throw createNetworkError(cause, warmupPath);
     }
   }
 
@@ -102,29 +108,34 @@ class CourtAuctionPlaywrightClient {
     if (!path) {
       throw new Error(`Unknown court auction endpoint: ${endpointKey}`);
     }
-    await this.warmup();
+    await this.warmup(endpointKey);
 
     const url = `${this.baseUrl}${path}`;
     const requestPayload = JSON.stringify(body || {});
+    const submissionId = ENDPOINT_SUBMISSION_ID[endpointKey] || "";
 
     let response;
     try {
       response = await this.page.evaluate(
-        async ({ targetUrl, payload }) => {
+        async ({ targetUrl, payload, submissionid }) => {
+          const headers = {
+            "Content-Type": "application/json;charset=UTF-8",
+            Accept: "application/json"
+          };
+          if (submissionid) {
+            headers.submissionid = submissionid;
+            headers["sc-userid"] = "SYSTEM";
+          }
           const res = await fetch(targetUrl, {
             method: "POST",
             credentials: "same-origin",
-            headers: {
-              "Content-Type": "application/json; charset=UTF-8",
-              Accept: "application/json, text/javascript, */*; q=0.01",
-              "X-Requested-With": "XMLHttpRequest"
-            },
+            headers,
             body: payload
           });
           const text = await res.text();
           return { status: res.status, body: text };
         },
-        { targetUrl: url, payload: requestPayload }
+        { targetUrl: url, payload: requestPayload, submissionid: submissionId }
       );
     } catch (cause) {
       throw createNetworkError(cause, path);
@@ -181,7 +192,7 @@ class CourtAuctionPlaywrightClient {
     this.page = null;
     this.context = null;
     this.browser = null;
-    this.warmedUp = false;
+    this.warmedUp = null;
   }
 }
 

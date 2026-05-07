@@ -83,26 +83,30 @@ metadata:
 ## Workflow C — 부동산 물건 자유 조건검색
 
 1. 사용자의 조건을 `searchProperties()` 입력으로 매핑한다.
-   - `region: { sido, sigungu, dong }` — 코드 또는 대표 정적 코드테이블의 한국어명. 지역을 주면 지번주소 검색(`cortStDvs:"2"`)으로 조회한다.
-   - `usage: { large, medium, small }` — 용도 대/중/소분류 코드 또는 대표 정적 코드테이블의 한국어명.
-   - `priceRange` — 최저매각가격 원 단위 `{ min, max }`
-   - `appraisedPriceRange` — 감정평가액 원 단위 `{ min, max }`
+   - `region: { sido, sigungu, dong }` — 코드 또는 대표 정적 sido 코드테이블의 한국어명. 지역을 주면 지번주소 검색(`cortStDvs:"2"`)으로, 지역이 없으면 매각공고 모드(`cortStDvs:"1"`)로 조회한다. 시군구/읍면동은 정적 표가 없으므로 코드로 직접 전달(예: `{ sido:"11", sigungu:"11680", dong:"11680101" }`)한다.
+   - `usage: { large, medium, small }` — 용도 대/중/소분류 코드(5자리, 예: 건물=`20000`) 또는 대분류 한국어명(`토지`/`건물`/`차량및운송장비`/`기타`).
+   - `priceRange` — 최저매각가격 원 단위 `{ min, max }` (실수 허용)
+   - `appraisedPriceRange` — 감정평가액 원 단위 `{ min, max }` (실수 허용)
    - `saleDate` — `{ from, to }`
-   - `flbdCount` — 유찰횟수 `{ min, max }`
-   - `area` — 면적(㎡) `{ min, max }`
+   - `flbdCount` — 유찰횟수 `{ min, max }` **정수만**
+   - `area` — 면적(㎡) `{ min, max }` (실수 허용)
+   - `pageSize` — 페이지당 결과 수, 최대 100 (기본 10)
 2. `searchProperties({ ... })` 호출 → `POST /pgj/pgjsearch/searchControllerMain.on`.
+   - 1차로 direct HTTP 시도. WAF 차단(HTTP 400 또는 `BLOCKED`)을 만나면 자동으로 Playwright fallback 으로 재시도한다. fallback 을 끄려면 `{ fallback: false }`.
 3. 응답의 `items[]` 는 핵심 raw 컬럼을 영문 키로 정규화한다:
-   - `saNo` → `caseNumber`
+   - `saNo` → `caseNumber`, `srnSaNo`/`printCsNo` → `displayCaseNumber`
    - `mokmulSer`/`maemulSer` → `itemNumber`
-   - `printCsNo` → `displayCaseNumber`
-   - `realSt`/`printSt` → `address`
-   - `gamevalAmt` → `appraisedPrice`
-   - `minmaePrice` → `minimumSalePrice`
-   - `yuchalCnt` → `flbdCount`
-   - `mulStatcd` → `statusCode`
-   - `xCordi/yCordi` → `coordinates`
+   - `hjguSido + hjguSigu + hjguDong + daepyoLotno + buldNm` → `address`
+   - `gamevalAmt` → `appraisedPrice`, `minmaePrice` → `minimumSalePrice`
+   - `yuchalCnt` → `flbdCount`, `mulStatcd` → `statusCode`, `jinstatCd` → `progressStatusCode`
+   - `boCd` → `courtCode`, `jiwonNm` → `courtName`, `jpDeptNm` → `judgeDeptName`
+   - `lclsUtilCd/mclsUtilCd/sclsUtilCd` → `usageCodes.{large,medium,small}`
+   - `srchHjguSidoCd/SiguCd/DongCd` → `regionCodes.{sido,sigungu,dong}`
+   - `xCordi/yCordi` → `coordinates`, `wgs84Xcordi/Ycordi` → `coordinatesWgs84`
    - `buldList/areaList/jimokList` → `buildingList/areaList/landCategoryList`
-4. `getUsageCodes()` / `getRegionCodes()` 는 Workflow C용 정적 대표 코드표다. 전체 upstream 코드테이블이 변해도 알 수 없는 코드는 fail-open으로 그대로 전달한다.
+   - `pjbBuldList` → `propertyDescription`, `mulBigo` → `remarks`
+4. `getUsageCodes()` 는 4개 대분류(`10000=토지`, `20000=건물`, `30000=차량및운송장비`, `40000=기타`)와 일부 대표 중/소분류를 정적으로 반환한다. `getRegionCodes()` 는 19개 시도 + 코드만 반환한다. 시군구/읍면동은 upstream cascade XHR이 안정적이지 않아 정적 표에 포함하지 않으며 raw 코드를 그대로 전달하면 된다. 알 수 없는 값은 fail-open으로 통과한다.
+5. **Same-name usage codes 보호**: `resolveUsageCode("아파트", "large")` 처럼 입력 이름이 다른 level 에만 존재하면, 같은 이름의 medium/small 코드를 잘못 리턴하지 않고 fail-open(원문 통과)한다.
 
 ## Throttling and call-budget rules
 
@@ -110,6 +114,8 @@ metadata:
 - 기본 세션 budget 은 **10회**. 더 많은 조회가 필요하면 새 세션을 열거나 (`new CourtAuctionHttpClient`) `maxCallsPerSession` 을 명시적으로 늘린다.
 - 차단(`data.ipcheck === false`)을 만나면 `BLOCKED` 에러를 즉시 throw 하고 멈춘다. 자동 retry 하지 않는다 (차단 연장 위험).
 - 차단된 IP는 **약 1시간** 후 자연 복구된다. 그 사이에는 다른 IP/네트워크에서 작업하거나 사람이 브라우저로 사이트에 접속해서 차단 해제 화면을 거친다.
+- **Workflow C 자유검색은 사이트 WAF 가 raw HTTP 호출을 더 엄격하게 차단**한다. `searchProperties()` 는 1차 direct HTTP, 실패시 자동으로 Playwright fallback 으로 재시도한다. Playwright fallback 모듈(`rebrowser-playwright` 또는 `playwright-core`)이 설치되어 있으면 자동 동작하고, 없으면 첫 HTTP 실패가 그대로 throw 된다. 안정적인 운영을 위해선 Playwright 모듈 설치를 권장한다.
+- searchProperties 는 같은 Playwright 클라이언트로 연속 호출하면 **10~15회 간격 호출에서 안정**하다. 그 이상 burst 호출이 필요하면 호출 사이 3~5초 sleep 을 두고 새 클라이언트를 열어라.
 
 ## Node.js example
 

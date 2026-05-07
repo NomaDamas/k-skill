@@ -375,37 +375,61 @@ function normalizePropertySearchResponse(rawPayload, options = {}) {
   };
 }
 
+function buildAddress(row) {
+  const parts = [
+    stripHtml(row.hjguSido),
+    stripHtml(row.hjguSigu),
+    stripHtml(row.hjguDong),
+    stripHtml(row.hjguRd),
+    stripHtml(row.daepyoLotno),
+    stripHtml(row.buldNm)
+  ].filter((part) => part);
+  if (parts.length === 0) {
+    return stripHtml(row.realSt) || stripHtml(row.printSt) || null;
+  }
+  return parts.join(" ");
+}
+
 function normalizePropertySearchRow(rawRow, includeRaw) {
   const row = ensureRow(rawRow);
   const x = parseNumber(row.xCordi);
   const y = parseNumber(row.yCordi);
+  const wgsX = parseNumber(row.wgs84Xcordi);
+  const wgsY = parseNumber(row.wgs84Ycordi);
   const out = {
     caseNumber: nullIfBlank(row.saNo),
-    displayCaseNumber: nullIfBlank(row.printCsNo),
+    displayCaseNumber: nullIfBlank(row.srnSaNo) || nullIfBlank(row.printCsNo),
     itemNumber: nullIfBlank(row.mokmulSer) || nullIfBlank(row.maemulSer),
-    address: stripHtml(row.realSt) || stripHtml(row.printSt),
+    address: buildAddress(row),
     appraisedPrice: parseAmount(row.gamevalAmt),
     minimumSalePrice: parseAmount(row.minmaePrice),
     flbdCount: parseAmount(row.yuchalCnt) || 0,
     statusCode: nullIfBlank(row.mulStatcd),
     progressStatusCode: nullIfBlank(row.jinstatCd),
     courtCode: nullIfBlank(row.boCd),
+    courtName: nullIfBlank(row.jiwonNm),
     judgeDeptCode: nullIfBlank(row.jpDeptCd),
     judgeDeptName: nullIfBlank(row.jpDeptNm),
     documentId: nullIfBlank(row.docid),
     saleDate: formatYmd(row.maeGiil),
     salePlace: nullIfBlank(row.maePlace),
     bidTypeCode: nullIfBlank(row.ipchalGbncd),
-    usage: nullIfBlank(row.dspslUsgNm),
     usageCodes: {
       large: nullIfBlank(row.lclsUtilCd),
       medium: nullIfBlank(row.mclsUtilCd),
       small: nullIfBlank(row.sclsUtilCd)
     },
+    regionCodes: {
+      sido: nullIfBlank(row.srchHjguSidoCd) || nullIfBlank(row.daepyoSidoCd),
+      sigungu: nullIfBlank(row.srchHjguSiguCd) || nullIfBlank(row.daepyoSiguCd),
+      dong: nullIfBlank(row.srchHjguDongCd) || nullIfBlank(row.daepyoDongCd)
+    },
     coordinates: x === null && y === null ? null : { x, y },
+    coordinatesWgs84: wgsX === null && wgsY === null ? null : { x: wgsX, y: wgsY },
     buildingList: stripHtml(row.buldList),
     areaList: stripHtml(row.areaList),
     landCategoryList: stripHtml(row.jimokList),
+    propertyDescription: stripHtml(row.pjbBuldList),
     areaRange: {
       min: parseNumber(row.minArea),
       max: parseNumber(row.maxArea)

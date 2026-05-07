@@ -20,11 +20,13 @@ USAGE
   court-auction-notice-search notice-detail --court-code <B000210> --sale-date <YYYY-MM-DD> --judge-dept-code <jdbnCd>
                                             [--bid-start <YYYY-MM-DD>] [--bid-end <YYYY-MM-DD>] [--bid-type date|period]
   court-auction-notice-search case --court-code <B000210> --case-number <2024타경100001>
-  court-auction-notice-search search [--sido <code|name>] [--sigungu <code|name>] [--dong <code|name>]
+  court-auction-notice-search search [--region <시도[:시군구[:읍면동]]>] [--usage <대[:중[:소]]>]
+                                    [--sido <code|name>] [--sigungu <code|name>] [--dong <code|name>]
                                     [--usage-large <code|name>] [--usage-medium <code|name>] [--usage-small <code|name>]
                                     [--price-min <won>] [--price-max <won>] [--appraised-min <won>] [--appraised-max <won>]
                                     [--sale-from <YYYY-MM-DD>] [--sale-to <YYYY-MM-DD>] [--flbd-min <N>] [--flbd-max <N>]
                                     [--area-min <m2>] [--area-max <m2>] [--court-code <B000210>] [--bid-type date|period]
+                                    [--page <N>] [--page-size <N>]
   court-auction-notice-search codes courts
   court-auction-notice-search codes usages
   court-auction-notice-search codes regions
@@ -164,19 +166,37 @@ async function runCase(flags) {
   emit(result, flags);
 }
 
+function splitColonTriple(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") return null;
+  if (!value.includes(":")) return null;
+  const parts = value.split(":");
+  return [parts[0] || "", parts[1] || "", parts[2] || ""];
+}
+
+function buildRegionFromFlags(flags) {
+  const colon = splitColonTriple(flags.region);
+  return {
+    sido: flags.sido || (colon ? colon[0] : flags.region),
+    sigungu: flags.sigungu || (colon ? colon[1] : ""),
+    dong: flags.dong || (colon ? colon[2] : "")
+  };
+}
+
+function buildUsageFromFlags(flags) {
+  const colon = splitColonTriple(flags.usage);
+  return {
+    large: flags["usage-large"] || (colon ? colon[0] : flags.usage),
+    medium: flags["usage-medium"] || (colon ? colon[1] : ""),
+    small: flags["usage-small"] || (colon ? colon[2] : "")
+  };
+}
+
 async function runSearch(flags) {
   const includeRaw = shouldIncludeRaw(flags);
   const result = await searchProperties({
-    region: {
-      sido: flags.sido,
-      sigungu: flags.sigungu,
-      dong: flags.dong
-    },
-    usage: {
-      large: flags["usage-large"] || flags.usage,
-      medium: flags["usage-medium"],
-      small: flags["usage-small"]
-    },
+    region: buildRegionFromFlags(flags),
+    usage: buildUsageFromFlags(flags),
     priceRange: { min: flags["price-min"], max: flags["price-max"] },
     appraisedPriceRange: { min: flags["appraised-min"], max: flags["appraised-max"] },
     saleDate: { from: flags["sale-from"], to: flags["sale-to"] },
@@ -187,6 +207,7 @@ async function runSearch(flags) {
     page: flags.page,
     pageSize: flags["page-size"] || flags.pageSize,
     client: buildClient(flags),
+    fallback: flags["fallback"] !== "false",
     includeRaw: includeRaw === undefined ? true : includeRaw
   });
   emit(result, flags);
