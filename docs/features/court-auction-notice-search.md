@@ -94,7 +94,7 @@ const properties = await searchProperties({
 | 물건 자유 조건검색 | `POST /pgj/pgjsearch/searchControllerMain.on` | canonical body captured via Playwright (`scripts/capture-pgj151-submit.cjs`); fixture at `packages/court-auction-notice-search/test/fixtures/canonical-search-body.json`. `pageNo/pageSize/statNum` 은 number, `pageSize` 는 upstream 드롭다운 값 `10`/`20`/`50`/`100`만 허용, `notifyLoc` 기본 `"off"`. |
 | 법원사무소 코드 | `POST /pgj/pgjComm/selectCortOfcCdLst.on` | `{}` |
 
-세션 cookie(`JSESSIONID`, `WMONID`)는 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01` 으로 사전에 한 번 받아둡니다.
+세션 cookie(`JSESSIONID`, `WMONID`)는 endpoint별 진입 화면을 먼저 열어 받아둡니다. 매각공고/상세는 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01`, 물건 자유 조건검색(Workflow C)은 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml&pgjId=151F00` 으로 warmup 합니다.
 
 ## 설치
 

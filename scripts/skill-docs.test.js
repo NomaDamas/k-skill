@@ -3872,3 +3872,62 @@ test("repository docs advertise the k-skill-cleaner skill and agent usage source
   assert.match(readme, /\[K-스킬 클리너 가이드\]\(docs\/features\/k-skill-cleaner\.md\)/);
   assert.match(install, /--skill k-skill-cleaner/);
 });
+
+test("court auction Workflow C docs preserve the PGJ151 safety contract", () => {
+  const featureDoc = read(path.join("docs", "features", "court-auction-notice-search.md"));
+
+  assert.match(
+    featureDoc,
+    /물건 자유 조건검색[\s\S]*PGJ151F00/,
+    "Workflow C docs should name the PGJ151F00 warmup path for property search",
+  );
+  assert.match(
+    featureDoc,
+    /pageSize[\s\S]*`10`\/`20`\/`50`\/`100`/,
+    "Workflow C docs should keep pageSize aligned with the observed PGJ151 dropdown values",
+  );
+  assert.doesNotMatch(
+    featureDoc,
+    /세션 cookie\([^\n]+\)는 `GET \/pgj\/index\.on\?w2xPath=\/pgj\/ui\/pgj100\/PGJ143M01\.xml&pgjId=143M01` 으로 사전에 한 번 받아둡니다\./,
+    "Workflow C docs should not imply every endpoint warms up through PGJ143M01 only",
+  );
+});
+
+test("court auction pending changeset does not publish stale fallback or pageSize guidance", () => {
+  const changesetDir = path.join(repoRoot, ".changeset");
+  if (!fs.existsSync(changesetDir)) return;
+
+  const pendingCourtAuctionChangesets = fs
+    .readdirSync(changesetDir)
+    .filter((entry) => entry.endsWith(".md"))
+    .map((entry) => read(path.join(".changeset", entry)))
+    .filter((contents) => contents.includes('"court-auction-notice-search"') && contents.includes("searchProperties()"));
+
+  for (const contents of pendingCourtAuctionChangesets) {
+    assert.doesNotMatch(
+      contents,
+      /direct HTTP call returns `BLOCKED` or `UPSTREAM_ERROR` 400/,
+      "Changeset must not tell users that confirmed BLOCKED/ipcheck=false auto-falls back by default",
+    );
+    assert.doesNotMatch(
+      contents,
+      /`pageSize` is capped at 100/,
+      "Changeset must not describe pageSize as an arbitrary 1..100 cap",
+    );
+    assert.match(
+      contents,
+      /`UPSTREAM_ERROR` 400/,
+      "Changeset should still document the raw-HTTP WAF-style 400 fallback path",
+    );
+    assert.match(
+      contents,
+      /`BLOCKED`[\s\S]*`fallbackOnBlocked:true`/,
+      "Changeset should document that confirmed BLOCKED retry is explicit opt-in",
+    );
+    assert.match(
+      contents,
+      /`10`\/`20`\/`50`\/`100`/,
+      "Changeset should document the exact PGJ151 pageSize allowlist",
+    );
+  }
+});
