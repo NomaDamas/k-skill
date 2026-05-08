@@ -268,7 +268,11 @@ function normalizeCategoriesForSearch(input) {
 }
 
 function build1365DonationSearchUrl(options = {}) {
-  const url = new URL(options.baseUrl || OFFICIAL_1365_DONATION_URL);
+  if (Object.prototype.hasOwnProperty.call(options, "baseUrl")) {
+    throw new Error("baseUrl is not supported for 1365 donation search-assist links.");
+  }
+
+  const url = new URL(OFFICIAL_1365_DONATION_URL);
   const [category] = normalizeCategoriesForSearch(options.category);
   const parts = [options.keyword, options.location].map((value) => String(value || "").trim()).filter(Boolean);
   url.searchParams.set("query", parts.join(" ") || CATEGORIES[category].label);
@@ -282,6 +286,10 @@ function buildCandidateSearchKeyword(place, keyword) {
     return place.name;
   }
   return `${place.name} ${baseKeyword}`;
+}
+
+function selectCandidateSearchCategory(place, categories) {
+  return categories.find((category) => place.categories.includes(category)) || categories[0];
 }
 
 function scoreDonationPlace(place, categories, location) {
@@ -322,7 +330,7 @@ function recommendDonationPlaces(options = {}) {
     match,
     officialSearchUrl: build1365DonationSearchUrl({
       location: location.raw,
-      category: categories[0],
+      category: selectCandidateSearchCategory(place, categories),
       keyword: buildCandidateSearchKeyword(place, keyword)
     })
   }));
@@ -334,7 +342,7 @@ function recommendDonationPlaces(options = {}) {
     notes.push("정확한 지역 일치 기부처를 찾지 못해 전국 단위 기부처를 우선 제안했습니다.");
   }
   if (items.length === 0) {
-    notes.push("조건에 맞는 기본 후보가 없어 1365 기부포털 공식 검색 링크로 최신 등록 기부처를 확인해야 합니다.");
+    notes.push("조건에 맞는 기본 후보가 없어 1365 기부포털 확인 보조 링크로 최신 등록 기부처를 직접 확인해야 합니다.");
   }
 
   return {
@@ -345,7 +353,7 @@ function recommendDonationPlaces(options = {}) {
     meta: {
       totalCandidates: ranked.length,
       limit,
-      source: "curated-fallback-plus-1365-official-search",
+      source: "curated-fallback-plus-1365-search-assist",
       notes
     }
   };
@@ -355,8 +363,11 @@ function normalizeLimit(value) {
   if (value === undefined || value === null || value === "") {
     return 5;
   }
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 20) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) {
+    throw new Error("limit must be an integer between 1 and 20.");
+  }
+  if (parsed < 1 || parsed > 20) {
     throw new Error("limit must be between 1 and 20.");
   }
   return parsed;
@@ -377,7 +388,7 @@ function formatDonationRecommendationReport(result) {
       lines.push(`${index + 1}. ${item.name} — ${item.description}`);
       lines.push(`   - 분야: ${item.categories.map((category) => CATEGORIES[category]?.label || category).join(", ")} / 범위: ${locality}`);
       lines.push(`   - 공식 페이지: ${item.homepageUrl}`);
-      lines.push(`   - 1365 확인: ${item.officialSearchUrl}`);
+      lines.push(`   - 1365 확인 보조 링크: ${item.officialSearchUrl}`);
     });
   }
 
@@ -386,7 +397,7 @@ function formatDonationRecommendationReport(result) {
   for (const note of result.meta.notes) {
     lines.push(`- ${note}`);
   }
-  lines.push(`- 최신 모금 상태는 1365 공식 검색에서 다시 확인하세요: ${result.officialSearchUrl}`);
+  lines.push(`- 1365 링크는 검색 보조용입니다. 최신 모금 상태는 1365 공식 페이지에서 직접 다시 확인하세요: ${result.officialSearchUrl}`);
   return lines.join("\n");
 }
 

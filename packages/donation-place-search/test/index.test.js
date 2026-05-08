@@ -44,7 +44,7 @@ test("parseLocationQuery extracts Korean province and district hints conservativ
   });
 });
 
-test("build1365DonationSearchUrl creates a public official search link without proxy auth", () => {
+test("build1365DonationSearchUrl creates a public 1365 search-assist link without proxy auth", () => {
   const url = new URL(build1365DonationSearchUrl({
     location: "서울 마포구",
     category: "animals",
@@ -86,7 +86,7 @@ test("recommendDonationPlaces ranks local category matches before broad national
   assert.ok(result.items.every((item) => item.categories.includes("animals")));
 });
 
-test("recommendDonationPlaces emits candidate-specific official 1365 search links", () => {
+test("recommendDonationPlaces emits candidate-specific 1365 search-assist links", () => {
   const result = recommendDonationPlaces({
     location: "서울 마포구",
     category: "동물",
@@ -128,6 +128,33 @@ test("recommendDonationPlaces supports multiple category filters and explains no
   assert.equal(result.items.length, 4);
   assert.ok(result.items.every((item) => item.match.category));
   assert.ok(result.meta.notes.some((note) => note.includes("정확한 지역 일치")));
+});
+
+test("recommendDonationPlaces uses each matched candidate category in multi-category item links", () => {
+  const result = recommendDonationPlaces({
+    location: "제주 서귀포시",
+    category: ["장애", "노인"],
+    limit: 4
+  });
+
+  assert.deepEqual(result.category, ["disability", "elderly"]);
+  result.items.forEach((item) => {
+    const url = new URL(item.officialSearchUrl);
+    const urlCategory = url.searchParams.get("category");
+    assert.ok(item.categories.includes(urlCategory), `${item.name} URL category ${urlCategory} must match candidate categories`);
+  });
+});
+
+test("build1365DonationSearchUrl does not allow overriding the official 1365 endpoint", () => {
+  assert.throws(
+    () => build1365DonationSearchUrl({ baseUrl: "https://example.com/dntn/main.do" }),
+    /baseUrl is not supported/
+  );
+});
+
+test("recommendDonationPlaces rejects malformed non-integer limits", () => {
+  assert.throws(() => recommendDonationPlaces({ limit: "2abc" }), /limit must be an integer/);
+  assert.throws(() => recommendDonationPlaces({ limit: "1.9" }), /limit must be an integer/);
 });
 
 test("formatDonationRecommendationReport creates a concise Korean report with verification cautions", () => {

@@ -31,4 +31,4 @@ console.log(formatDonationRecommendationReport(result));
 
 ## 검증 표면
 
-`nanumkorea.go.kr`는 1365 자원봉사/기부 통합 안내를 반환하므로, 스킬은 `www.1365.go.kr/dntn/main.do`를 최신 공식 확인 링크의 기준으로 사용한다. 1365 페이지가 headless HTTP에서 느리거나 빈 응답을 줄 수 있어 화면 스크래핑 대신 공식 검색 링크와 후보 공식 홈페이지를 함께 제시한다.
+`nanumkorea.go.kr`는 1365 자원봉사/기부 통합 안내를 반환하므로, 스킬은 `www.1365.go.kr/dntn/main.do`를 최신 공식 확인 진입점의 기준으로 사용한다. 1365 페이지가 headless HTTP에서 느리거나 빈 응답을 줄 수 있어 화면 스크래핑 대신 best-effort 확인 보조 링크와 후보 공식 홈페이지를 함께 제시하며, 후보별 등록 검증이 이미 완료됐다고 표현하지 않는다.

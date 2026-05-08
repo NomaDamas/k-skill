@@ -1,6 +1,6 @@
 ---
 name: donation-place-search
-description: Use when the user asks where to donate, 기부처 조회, or donation place recommendations by Korean location and category. Recommend recipients with official 1365 verification links and never execute donations.
+description: Use when the user asks where to donate, 기부처 조회, or donation place recommendations by Korean location and category. Recommend recipients with best-effort 1365 verification-assist links and never execute donations.
 license: MIT
 metadata:
   category: utility
@@ -33,7 +33,7 @@ metadata:
 - `category`: 선택. 예: `아동`, `동물보호`, `환경`, `재난 구호`, `장애`, `노인`, `생계`, `의료`, `해외구호`
 - `limit`: 선택. 기본 5개
 
-위치나 카테고리가 없으면 보수적으로 `전국`·`일반/종합` 후보와 공식 1365 검색 링크를 제공한다. 비대화형 자동화에서는 임의로 좁히지 말고 “입력 없음”을 명시한다.
+위치나 카테고리가 없으면 보수적으로 `전국`·`일반/종합` 후보와 1365 공식 확인 보조 링크를 제공한다. 비대화형 자동화에서는 임의로 좁히지 말고 “입력 없음”을 명시한다.
 
 ## Public access path discovered
 
@@ -45,7 +45,7 @@ metadata:
 
 ### Search-link strategy
 
-1365 pages can be slow or unavailable to headless HTTP clients, so the package does not depend on brittle screen scraping. It builds an official search link with the user’s location/category keywords, then ranks a curated fallback list locally:
+1365 pages can be slow or unavailable to headless HTTP clients, so the package does not depend on brittle screen scraping. It builds a best-effort official-entry/search-assist link with the user’s location/category keywords, then ranks a curated fallback list locally. The package does not assert that 1365 has already verified each returned candidate:
 
 ```js
 const { recommendDonationPlaces } = require("donation-place-search");
@@ -60,7 +60,7 @@ console.log(result.items);
 console.log(result.officialSearchUrl);
 ```
 
-The returned `officialSearchUrl` is the first place to verify current registration and campaign status before giving the final answer.
+The returned `officialSearchUrl` is a best-effort verification assist: open it as an official 1365 entry point, then confirm current registration and campaign status before giving the final answer.
 
 ## Workflow
 
@@ -84,14 +84,14 @@ console.log(formatDonationRecommendationReport(result));
 NODE
 ```
 
-3. Open or cite the returned 1365 official search URL for latest verification when fresh browsing is available.
+3. Open or cite the returned best-effort 1365 verification-assist URL for latest verification when fresh browsing is available.
 4. Summarize 3–5 candidates, including:
    - 기부처명
    - 분야/카테고리
    - 지역 일치 여부 또는 전국 단위 여부
    - 왜 맞는지 한 줄
    - 공식 홈페이지
-   - 1365 확인 링크
+   - 1365 확인 보조 링크
 5. Add a caution that campaign status, donation receipt eligibility, and designated-use options must be checked on official pages before donating.
 
 ## Output fields
@@ -113,20 +113,20 @@ The npm helper returns:
     }
   ],
   "officialSearchUrl": "https://www.1365.go.kr/dntn/main.do?...",
-  "meta": { "source": "curated-fallback-plus-1365-official-search" }
+  "meta": { "source": "curated-fallback-plus-1365-search-assist" }
 }
 ```
 
 ## Done when
 
 - 장소/카테고리 조건을 반영해 후보를 3–5개 이내로 정리했다.
-- 각 후보마다 공식 홈페이지 또는 1365 공식 확인 링크를 제공했다.
+- 각 후보마다 공식 홈페이지 또는 1365 확인 보조 링크를 제공했다.
 - 최종 기부 전 등록 상태, 모금 기간, 기부금영수증 가능 여부를 확인하라고 안내했다.
 - 자동 결제/후원 신청을 시도하지 않았다.
 
 ## Failure modes
 
-- 1365 사이트가 느리거나 headless HTTP에서 timeout/empty page를 반환할 수 있다. 이 경우 공식 검색 URL과 후보 홈페이지를 제공하고 “최신 상태는 직접 확인 필요”라고 명시한다.
+- 1365 사이트가 느리거나 headless HTTP에서 timeout/empty page를 반환할 수 있다. 이 경우 확인 보조 URL과 후보 홈페이지를 제공하고 “최신 상태는 직접 확인 필요”라고 명시한다.
 - 위치 문자열이 행정구역으로 파싱되지 않으면 전국 후보 위주로 제안한다.
 - 지역·카테고리 모두 정확히 맞는 후보가 없으면 전국 단위 후보를 fallback으로 보여준다.
 - 특정 단체의 모금 캠페인, 지정기부 가능 여부, 기부금영수증 처리는 수시로 바뀌므로 package 내 curated 설명만으로 확정하지 않는다.

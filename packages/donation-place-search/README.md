@@ -4,7 +4,7 @@ Recommend Korean donation recipients by location and donation category.
 
 The package combines:
 
-- a public 1365 Give Korea (`www.1365.go.kr`) search-link builder for latest official verification;
+- a public 1365 Give Korea (`www.1365.go.kr`) best-effort search-assist link builder for latest official verification;
 - deterministic category/location ranking over a small curated fallback set of well-known donation recipients;
 - Korean report formatting with cautions to verify current registration, campaign period, and donation receipt handling before donating.
 
@@ -37,4 +37,4 @@ console.log(formatDonationRecommendationReport(result));
 
 ## Notes
 
-Donation campaigns and registration status change frequently. Always open the returned official 1365 search link and the recipient's official homepage before recommending a final donation decision.
+Donation campaigns and registration status change frequently. Always treat returned 1365 URLs as best-effort verification assists: open the 1365 official entry/search page and the recipient's official homepage before recommending a final donation decision.
