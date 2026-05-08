@@ -76,7 +76,7 @@ python3 kosis-stats/scripts/run_kosis_stats.py data \
   - `--obj-l 1=ALL --obj-l 2=00` (반복)
 - `bigdata`
   - `--user-stats-id <KOSIS 등록 ID>`
-  - `--format json|sdmx|csv|xls`
+  - `--format json|sdmx|csv` (xls는 바이너리라 helper 미지원 — 필요 시 KOSIS 웹에서 직접 다운로드)
   - `--prd-se`, `--new-est-prd-cnt`
 
 공통 옵션:

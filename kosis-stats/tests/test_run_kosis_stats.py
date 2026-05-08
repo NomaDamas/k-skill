@@ -248,6 +248,25 @@ class CallKosisTest(unittest.TestCase):
             payload = helper.call_kosis("https://example", 5, format_hint="sdmx")
         self.assertEqual(payload, "<sdmx/>")
 
+    def test_call_kosis_detects_json_error_envelope_in_non_json_format(self):
+        body = json.dumps({"err": "11", "errMsg": "유효하지 않은 인증KEY입니다."})
+        with mock.patch.object(helper, "fetch_text", return_value=body):
+            with self.assertRaises(helper.KosisError) as ctx:
+                helper.call_kosis("https://example", 5, format_hint="csv")
+        self.assertEqual(ctx.exception.code, "11")
+
+    def test_call_kosis_returns_csv_text_when_no_error_envelope(self):
+        body = "PRD_DE,DT\n2024,1\n"
+        with mock.patch.object(helper, "fetch_text", return_value=body):
+            payload = helper.call_kosis("https://example", 5, format_hint="csv")
+        self.assertEqual(payload, body)
+
+    def test_bigdata_format_xls_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            helper.parse_args([
+                "bigdata", "--user-stats-id", "abc/def", "--format", "xls",
+            ])
+
 
 class RenderTextTest(unittest.TestCase):
     def test_search_text_lists_each_table(self):

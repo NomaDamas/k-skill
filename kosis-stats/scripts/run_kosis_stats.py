@@ -33,7 +33,10 @@ BIGDATA_URL = "https://kosis.kr/openapi/statisticsBigData.do"
 
 DEFAULT_TIMEOUT = 30
 PRD_SE_VALUES = {"M", "Q", "S", "Y", "F", "IR"}
-BIGDATA_FORMATS = {"json", "sdmx", "csv", "xls"}
+# `xls` is intentionally omitted: KOSIS returns it as a binary Excel payload,
+# but the helper streams text-only output. Use bigdata json/sdmx/csv (text)
+# for now; download xls files manually from the KOSIS web UI if you need them.
+BIGDATA_FORMATS = {"json", "sdmx", "csv"}
 
 ERROR_CODE_HINTS: dict[str, str] = {
     "10": "인증키가 누락되었습니다. KSKILL_KOSIS_API_KEY 환경변수를 확인하세요.",
@@ -371,6 +374,15 @@ def call_kosis(url: str, timeout: int, *, format_hint: str = "json") -> Any:
     if xml_err is not None:
         raise xml_err
     if format_hint != "json":
+        stripped = text.lstrip()
+        if stripped.startswith("{") or stripped.startswith("["):
+            try:
+                payload = parse_kosis_json(text)
+            except json.JSONDecodeError:
+                return text
+            err = detect_kosis_error(payload)
+            if err is not None:
+                raise err
         return text
     payload = parse_kosis_json(text)
     err = detect_kosis_error(payload)

@@ -120,6 +120,8 @@ GET https://kosis.kr/openapi/statisticsBigData.do
 
 응답 형식: `json`, `sdmx` (DSD/Generic/StructureSpecific), `csv`, `xls`.
 
+> `run_kosis_stats.py bigdata --format` 은 텍스트 응답인 `json`, `sdmx`, `csv` 만 지원한다. `xls` 는 KOSIS가 바이너리 Excel 파일로 응답하므로 helper의 텍스트 출력 경로로 다루지 않는다. xls가 필요하면 KOSIS 웹 화면에서 직접 다운로드하거나, 추후 `--output PATH` 바이너리 모드가 추가되면 그때 사용한다.
+
 ---
 
 ## 4. 응답 포맷 주의
