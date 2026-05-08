@@ -170,9 +170,10 @@ python3 kosis-stats/scripts/run_kosis_stats.py search --query "인구" --dry-run
 
 - `missing required environment variable: KSKILL_KOSIS_API_KEY`: 환경변수가 현재 shell에 주입됐는지 확인한다. 없다면 https://kosis.kr/openapi/ 에서 발급한다.
 - `KOSIS error 10` (인증키 누락) / `11` (만료): 키를 재확인하거나 갱신한다. `bigdata` 호출에서 `11` 이 뜨면 해당 `userStatsId` 가 본인 KOSIS 계정에 등록되어 있지 않을 가능성이 높다.
-- `KOSIS error 21` (잘못된 요청 변수): `org_id`/`tbl_id`/`prdSe`/`startPrdDe` 형식과 분류 인덱스를 재확인한다. 표에 존재하지 않는 `objL3=ALL` 같은 인덱스는 거부된다.
+- `KOSIS error 20` (필수 분류 누락): 표마다 필수 차원 수가 다르다. `meta --table-id <ID> --meta-type OBJ` 로 차원 수를 확인하고(OBJ가 비어 있으면 `--meta-type ITM`), `--obj-l 1=<코드> --obj-l 2=<코드>` 형태로 모두 지정한 뒤 재호출한다. 예: `data --table-id DT_1J22001 --prd-se M --start 202401 --end 202401 --obj-l 1=ALL` → 코드 20 → meta 확인 → `--obj-l 1=T10 --obj-l 2=0` 추가 → 성공.
+- `KOSIS error 21` (잘못된 요청 변수): `org_id`/`tbl_id`/`prdSe`/`startPrdDe` 형식과 분류 인덱스를 재확인한다. 표에 존재하지 않는 `objL3=ALL` 같은 인덱스는 거부된다. tblId 의심 시 `search --query <키워드>` 로 정확한 ID를 다시 찾는다.
 - `KOSIS error 30` (결과 없음): 키워드 또는 기간 필터를 완화한다.
-- `KOSIS error 31` / `41` (한도 초과): 기간·지역·항목을 분할해 여러 번 호출하거나 `bigdata` 로 전환한다.
+- `KOSIS error 31` / `41` (한도 초과): 기간을 좁히거나(예: 5년 → 1년) 분류 ALL 을 특정 코드로 바꾼다(예: `--obj-l 1=ALL` → `--obj-l 1=11` 서울만). 그래도 부족하면 `bigdata` 로 전환한다. 행정구역 코드는 시도 2자리, 시군구 5자리 관례.
 - `KOSIS error 40` (호출 한도): 분당 1,000건 한도 도달. 잠시 대기.
 - `KOSIS error 50` (서버 오류): 1~2초 대기 후 재시도.
 - `argparse: unrecognized arguments: --text`: `--text`/`--json`/`--dry-run`/`--timeout` 은 서브커맨드(`search`/`meta`/`data`/`bigdata`) **뒤에** 둔다.

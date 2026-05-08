@@ -181,13 +181,33 @@ class ErrorDetectionTest(unittest.TestCase):
         self.assertIsNotNone(err)
         self.assertEqual(err.code, "31")
         self.assertIn("31", str(err))
-        self.assertIn("분할", str(err))
+        # 31 hint 가 분할 + bigdata + 구체 예시 모두 안내
+        self.assertIn("좁히", str(err))
+        self.assertIn("obj-l", str(err))
+        self.assertIn("bigdata", str(err))
 
     def test_errcode_field_detected(self):
         err = helper.detect_kosis_error({"errCode": "10", "errMsg": "인증키 누락"})
         self.assertIsNotNone(err)
         self.assertEqual(err.code, "10")
         self.assertIn("KSKILL_KOSIS_API_KEY", str(err))
+
+    def test_code_20_hint_directs_to_meta(self):
+        err = helper.detect_kosis_error({"err": "20", "errMsg": "필수요청변수값이 누락"})
+        self.assertIsNotNone(err)
+        self.assertIn("meta", str(err))
+        self.assertIn("--obj-l", str(err))
+
+    def test_code_21_hint_suggests_search(self):
+        err = helper.detect_kosis_error({"err": "21", "errMsg": "잘못된 요청"})
+        self.assertIsNotNone(err)
+        self.assertIn("search", str(err))
+
+    def test_code_30_hint_includes_keyword_relaxation(self):
+        err = helper.detect_kosis_error({"err": "30", "errMsg": "결과 없음"})
+        self.assertIsNotNone(err)
+        self.assertIn("키워드", str(err))
+        self.assertIn("meta-type", str(err))
 
     def test_unknown_code_still_reported(self):
         err = helper.detect_kosis_error({"err": "99", "errMsg": "알 수 없음"})
@@ -237,7 +257,39 @@ class RenderTextTest(unittest.TestCase):
         self.assertIn("1인 가구 비율", text)
 
     def test_search_empty_renders_friendly_message(self):
-        self.assertIn("결과가 없습니다", helper.render_search_text([]))
+        text = helper.render_search_text([])
+        self.assertIn("결과가 없습니다", text)
+        self.assertIn("키워드", text)
+        self.assertIn("--start-count", text)
+
+    def test_search_text_includes_next_step_hint(self):
+        payload = json.loads(read_fixture("search_response.json"))
+        text = helper.render_search_text(payload)
+        self.assertIn("Next", text)
+        self.assertIn("meta", text)
+        self.assertIn("data", text)
+
+    def test_meta_empty_suggests_other_meta_type(self):
+        text = helper.render_meta_text([])
+        self.assertIn("--meta-type", text)
+        self.assertIn("TBL", text)
+
+    def test_data_empty_suggests_filter_relaxation(self):
+        text = helper.render_data_text([])
+        self.assertIn("--obj-l", text)
+        self.assertIn("meta", text)
+
+    def test_data_text_includes_summary_with_period_and_unit(self):
+        payload = json.loads(read_fixture("data_response.json"))
+        text = helper.render_data_text(payload)
+        self.assertIn("[summary]", text)
+        self.assertIn("rows=2", text)
+        self.assertIn("period=2023~2024", text)
+        self.assertIn("unit=%", text)
+
+    def test_data_text_summary_marks_missing_unit(self):
+        text = helper.render_data_text([{"PRD_DE": "2024", "ITM_NM": "x", "DT": "1"}])
+        self.assertIn("UNIT_NM 미포함", text)
 
     def test_meta_text_includes_korean_and_english(self):
         payload = json.loads(read_fixture("meta_response.json"))

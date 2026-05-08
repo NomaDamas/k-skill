@@ -37,13 +37,13 @@ BIGDATA_FORMATS = {"json", "sdmx", "csv", "xls"}
 
 ERROR_CODE_HINTS: dict[str, str] = {
     "10": "인증키가 누락되었습니다. KSKILL_KOSIS_API_KEY 환경변수를 확인하세요.",
-    "11": "인증키가 만료되었습니다. https://kosis.kr/openapi/ 에서 갱신하세요.",
-    "20": "필수 요청 변수가 누락되었습니다. 인자 목록을 확인하세요.",
-    "21": "잘못된 요청 변수입니다. orgId/tblId/기간 형식을 재확인하세요.",
-    "30": "조회 결과가 없습니다. 키워드/기간/분류 필터를 완화해 보세요.",
-    "31": "조회 결과가 한도(40,000셀)를 초과했습니다. 기간/분류를 분할하거나 bigdata 서브커맨드를 사용하세요.",
-    "40": "분당 호출 한도(1,000건)를 초과했습니다. 잠시 대기 후 재시도하세요.",
-    "41": "1회 호출 ROW 한도를 초과했습니다. 쿼리를 분할하세요.",
+    "11": "인증키가 만료되었거나 해당 endpoint에서 무효입니다. https://kosis.kr/openapi/ 에서 갱신하거나, bigdata는 본인이 등록한 userStatsId 인지 확인하세요.",
+    "20": "필수 요청 변수가 누락되었습니다. `meta --table-id <ID> --meta-type ITM --json` 으로 ITM 안에 들어 있는 OBJ_ID(분류 차원)와 코드를 확인하세요(많은 표가 OBJ 메타는 비어 있고 분류가 ITM 안에 들어 있음). 그 뒤 `--obj-l 1=<코드> --obj-l 2=<코드>` 형태로 필요한 차원을 모두 지정해 재호출하세요. 별도 OBJ 메타가 있는 표는 `--meta-type OBJ` 로도 확인 가능합니다.",
+    "21": "잘못된 요청 변수입니다. orgId/tblId/기간 형식을 재확인하세요. tblId가 의심되면 `search --query <키워드>` 로 정확한 ID를 다시 찾으세요.",
+    "30": "조회 결과가 없습니다. 키워드를 더 짧게(예: '1인 가구' → '가구') 또는 다른 표현으로 재검색하거나, 기간/분류 필터를 완화하세요. meta 호출에서 이 에러가 나면 해당 메타 타입을 표가 지원하지 않는 경우이므로 다른 `--meta-type` 을 시도하세요.",
+    "31": "조회 결과가 한도(40,000셀)를 초과했습니다. 기간을 좁히거나(예: 5년→1년) 분류 필터의 ALL 을 특정 코드로 바꾸세요(예: `--obj-l 1=ALL` → `--obj-l 1=11` 서울만). 그래도 부족하면 `bigdata` 서브커맨드 + 사전 등록한 userStatsId 를 사용하세요.",
+    "40": "분당 호출 한도(1,000건)를 초과했습니다. 잠시 대기 후 재시도하거나 호출 간 sleep 을 두세요.",
+    "41": "1회 호출 ROW 한도를 초과했습니다. 기간이나 분류를 좁혀 쿼리를 분할하세요.",
     "42": "사용자별 이용이 제한되었습니다. KOSIS 운영팀에 문의하세요.",
     "50": "KOSIS 서버 오류입니다. 1~2초 대기 후 재시도하세요.",
 }
@@ -381,7 +381,11 @@ def call_kosis(url: str, timeout: int, *, format_hint: str = "json") -> Any:
 
 def render_search_text(payload: Any) -> str:
     if not isinstance(payload, list) or not payload:
-        return "조회 결과가 없습니다."
+        return (
+            "조회 결과가 없습니다. 키워드를 더 짧게(예: '1인 가구' → '가구') "
+            "또는 다른 표현으로 재검색해 보세요. "
+            "`--result-count` 와 `--start-count` 로 더 많은 후보를 페이징할 수도 있습니다."
+        )
     lines = []
     for entry in payload:
         if not isinstance(entry, dict):
@@ -392,12 +396,19 @@ def render_search_text(payload: Any) -> str:
         tbl_id = entry.get("TBL_ID", "?")
         prd = f"{entry.get('STRT_PRD_DE', '?')}~{entry.get('END_PRD_DE', '?')}"
         lines.append(f"- [{org_id}/{tbl_id}] {org} / {tbl} ({prd})")
-    return "\n".join(lines) if lines else "조회 결과가 없습니다."
+    lines.append(
+        "\nNext: `meta --table-id <ID>` 로 분류·항목·단위 확인 → "
+        "`data --table-id <ID> --prd-se <Y|M|Q|...> --start ... --end ...` 로 작은 슬라이스부터 받기."
+    )
+    return "\n".join(lines)
 
 
 def render_meta_text(payload: Any) -> str:
     if not isinstance(payload, list) or not payload:
-        return "메타 정보가 없습니다."
+        return (
+            "메타 정보가 없습니다. 표가 해당 메타 타입을 지원하지 않을 수 있습니다. "
+            "다른 `--meta-type` (TBL/ITM/OBJ) 을 시도해 보세요."
+        )
     lines = []
     for entry in payload:
         if not isinstance(entry, dict):
@@ -411,20 +422,42 @@ def render_meta_text(payload: Any) -> str:
 
 def render_data_text(payload: Any) -> str:
     if not isinstance(payload, list) or not payload:
-        return "데이터가 없습니다."
+        return (
+            "데이터가 없습니다. 기간(`--start`/`--end`), 항목(`--itm-id`), "
+            "분류(`--obj-l`) 필터를 완화하거나 `meta` 로 표 구조를 다시 확인하세요."
+        )
     lines = []
+    units: set[str] = set()
+    periods: set[str] = set()
     for entry in payload[:50]:
         if not isinstance(entry, dict):
             continue
-        prd = entry.get("PRD_DE", "?")
-        unit = entry.get("UNIT_NM", "")
+        prd = str(entry.get("PRD_DE", "?"))
+        unit = str(entry.get("UNIT_NM", "")).strip()
         item = entry.get("ITM_NM", "?")
         c1 = entry.get("C1_NM", "")
         value = entry.get("DT", "?")
         suffix = f" ({c1})" if c1 else ""
-        lines.append(f"- {prd} | {item}{suffix} = {value} {unit}".rstrip())
+        unit_suffix = f" {unit}" if unit else ""
+        lines.append(f"- {prd} | {item}{suffix} = {value}{unit_suffix}".rstrip())
+        if unit:
+            units.add(unit)
+        periods.add(prd)
     if len(payload) > 50:
-        lines.append(f"... ({len(payload) - 50} rows omitted)")
+        lines.append(f"... ({len(payload) - 50} rows omitted; --json 으로 전체 받기)")
+    summary_parts = [f"rows={len(payload)}"]
+    if periods:
+        period_list = sorted(p for p in periods if p and p != "?")
+        if period_list:
+            summary_parts.append(
+                f"period={period_list[0]}~{period_list[-1]}"
+                if len(period_list) > 1 else f"period={period_list[0]}"
+            )
+    if units:
+        summary_parts.append("unit=" + ",".join(sorted(units)))
+    else:
+        summary_parts.append("unit=(KOSIS 응답에 UNIT_NM 미포함)")
+    lines.append("\n[summary] " + ", ".join(summary_parts))
     return "\n".join(lines)
 
 

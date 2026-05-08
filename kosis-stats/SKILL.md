@@ -131,7 +131,11 @@ python3 kosis-stats/scripts/run_kosis_stats.py data \
   --obj-l 1=ALL --json
 ```
 
-40,000셀을 초과하면 KOSIS는 에러 코드 `31` 또는 `41` 을 반환한다. 기간/분류를 분할해 여러 번 호출하거나, 사용자별 통계자료(`userStatsId`)를 등록해 `bigdata` 서브커맨드를 사용한다.
+표마다 필수 분류 차원 수가 다르다. **default `--obj-l 1=ALL` 만으로는 부족한 표가 많다.** KOSIS가 코드 `20` (필수요청변수값 누락 objL)을 돌려주면, `meta --table-id <ID> --meta-type ITM --json` 으로 ITM 안에 들어 있는 `OBJ_ID`(분류 차원)와 코드를 확인한 뒤 `--obj-l 1=<코드> --obj-l 2=<코드>` 형태로 필요한 차원을 모두 지정한다. (많은 표가 OBJ 메타는 비어 있고 분류가 ITM 안에 들어 있음.)
+
+40,000셀을 초과하면 KOSIS는 에러 코드 `31` 또는 `41` 을 반환한다. 기간을 좁히거나(예: 5년→1년) 분류 필터의 ALL 을 특정 코드로 바꿔(예: `--obj-l 1=11` 서울만) 호출을 분할한다. 그래도 부족하면 사용자별 통계자료(`userStatsId`)를 등록해 `bigdata` 서브커맨드를 사용한다.
+
+행정구역 코드 관례: `C1` 코드는 보통 시도가 2자리(`11` 서울, `26` 부산 등), 시군구가 5자리다. `data --json` 응답의 `C1` 필드를 확인해 원하는 단위만 후속 처리에서 필터한다.
 
 ### 5. (Optional) Use bigdata for large datasets
 
@@ -158,14 +162,21 @@ python3 kosis-stats/scripts/run_kosis_stats.py bigdata \
 ## Failure modes
 
 - `KSKILL_KOSIS_API_KEY` 누락: 발급 안내 메시지와 함께 종료(exit 1)
-- KOSIS 에러 코드 `10`/`11`: 인증키 누락/만료 → 키 점검
-- 코드 `21`: 잘못된 요청 변수 → `org_id`/`tbl_id`/기간 형식 재확인
-- 코드 `30`: 결과 없음 → 키워드/기간/분류 완화 후 재시도
-- 코드 `31`/`41`: 한도 초과 → 쿼리 분할 또는 `bigdata` 사용
+- KOSIS 에러 코드 `10`/`11`: 인증키 누락/만료 → 키 점검. `bigdata` 에서 `11` 이 나오면 `userStatsId` 가 본인 KOSIS 계정에 등록된 것이 아닐 가능성이 크다.
+- 코드 `20`: 필수 분류 누락 → `meta --meta-type OBJ` (또는 비어 있으면 `ITM`) 으로 필요한 차원 수와 코드를 확인하고 `--obj-l 1=... --obj-l 2=...` 모두 지정 후 재시도
+- 코드 `21`: 잘못된 요청 변수 → `org_id`/`tbl_id`/기간 형식 재확인. tblId 의심 시 `search` 로 정확한 ID 다시 찾기
+- 코드 `30`: 결과 없음 → 키워드를 더 짧게 또는 다른 표현으로 바꾸거나 기간/분류 완화. **meta 호출에서 30 이 나오면** 표가 해당 메타 타입을 지원하지 않는 경우이므로 다른 `--meta-type` 시도
+- 코드 `31`/`41`: 한도 초과 → 기간 좁히기, 분류 ALL 을 특정 코드로 바꾸기, 또는 `bigdata` 사용
 - 코드 `40`: 분당 1,000건 호출 한도 → 잠시 대기
 - 코드 `50`: KOSIS 서버 오류 → 1~2초 후 재시도
 - 비표준 JSON: KOSIS는 따옴표 없는 키를 가끔 반환한다. helper는 자동 보정한다.
+- 응답에 `UNIT_NM` 누락: 일부 표는 KOSIS 응답에 단위가 비어 있다. helper text 출력의 `[summary]` 라인에 `unit=(KOSIS 응답에 UNIT_NM 미포함)` 으로 명시되며, 단위는 `meta` 응답이나 KOSIS 웹 화면에서 별도 확인한다.
 - HTTPS 전용 (2026-03-05 이후): URL은 항상 `https://`. HTTP 요청은 차단된다.
+
+### 회복 시나리오 예시
+
+- 코드 20 회복: `data --table-id DT_1J22001 --prd-se M --start 202401 --end 202401` → 코드 20 → `meta --table-id DT_1J22001 --meta-type ITM --json` 으로 차원 확인 → `data ... --obj-l 1=T10 --obj-l 2=0` 재호출 → 성공
+- 코드 31 회복: `data --table-id DT_1B26001 --prd-se Y --start 2020 --end 2024 --obj-l 1=ALL --obj-l 2=ALL --obj-l 3=ALL` → 코드 31 → `... --start 2024 --end 2024 --obj-l 1=11 --obj-l 2=ALL --obj-l 3=ALL` (서울만) 재호출 → 성공
 
 ## Maintainer review notes
 
