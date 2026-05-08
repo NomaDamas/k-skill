@@ -86,7 +86,7 @@ main().catch((error) => {
 - 공식 표면이 매장 내 위치를 주지 않으면 `공식 표면에서는 매장 재고까지만 확인된다`고 답합니다.
 - 매장 픽업 재고의 `status` 는 조회 결과 범주입니다. 상품 재고 여부는 `inStock` 또는 `inventoryStatus` 로 설명하고, `status: "available"` 만으로 재고가 있다고 말하지 않습니다.
 - 매장 픽업 재고가 `Unauthorized` 로 차단된 경우에는 `다이소몰이 현재 매장 픽업 재고 API를 차단해 정확한 매장 재고 수량은 확인할 수 없다`고 답하고, 결과의 `retrievalStatus: "blocked"` 와 온라인 재고의 `referenceOnly: true` 참고값을 구분합니다.
-- 픽업 재고가 차단되어도 `pickupEligibility.pickupEligible === true` 면 `이 상품은 해당 매장의 픽업 가능 매장 목록에 등록되어 있어 픽업 자체는 가능합니다. 다만 정확한 수량은 확인할 수 없습니다.` 정도로 보수적으로 답합니다. `pickupEligible === false` 면 `해당 매장은 이 상품의 픽업 가능 매장에 등록되어 있지 않습니다.` 라고 답합니다. `null` 이면 차단으로 확인 불가로 답합니다.
+- 픽업 재고가 차단되어도 `pickupEligibility.pickupEligible === true` 면 `이 상품은 해당 매장의 픽업 가능 매장 목록에 등록되어 있어 픽업 자체는 가능합니다. 다만 정확한 수량은 확인할 수 없습니다.` 정도로 보수적으로 답합니다. `pickupEligible === false` 면 `해당 매장은 이 상품의 픽업 가능 매장에 등록되어 있지 않습니다.` 라고 답합니다. `null` 이면 차단 또는 `insufficient_coverage` 로 확인 불가로 답하고, 특히 검색 키워드가 없거나 첫 페이지가 전체 결과를 덮지 못한 경우에는 불가로 단정하지 않습니다.
 
 ## 라이브 확인 메모
 
@@ -98,5 +98,5 @@ main().catch((error) => {
 - `GET /ssn/search/SearchGoods?searchTerm=...` → 상품 후보 및 `onldPdNo` 확인
 - `POST /api/pd/pdh/selStrPkupStck` → 성공하면 `status: "available"`, `retrievalStatus: "resolved"` 로 조회 성공을 표시하고, 실제 재고 여부는 `inStock` / `inventoryStatus` 로 표시
 - `selStrPkupStck` 가 `401`/`403` 또는 `{ "success": false, "message": "Unauthorized" }` 를 반환하면 `status: "unavailable"`, `retrievalStatus: "blocked"`, `inventoryStatus: "unknown"`, `reason: "unauthorized"` 로 표시
-- `POST /api/ms/msg/selPkupStr` → 픽업 재고가 차단되면 호출. 매장 픽업 가능 매장 목록을 받아 `pickupEligibility.pickupEligible`(true/false/null), `eligibleStoreCount`, `eligibleStores`, `matchedStore` 로 응답 (수량 미제공)
+- `POST /api/ms/msg/selPkupStr` → 픽업 재고가 차단되면 호출. 매장 픽업 가능 매장 목록을 받아 `pickupEligibility.pickupEligible`(true/false/null), `eligibleStoreCount`, `eligibleStores`, `matchedStore`, `searchedKeyword`, `totalCount` 로 응답 (수량 미제공). 검색 범위가 불충분하면 `retrievalStatus: "insufficient_coverage"` 와 `pickupEligible: null` 을 반환합니다.
 - `POST /api/pdo/selOnlStck` → 가능한 경우 온라인 재고 참고값 표시

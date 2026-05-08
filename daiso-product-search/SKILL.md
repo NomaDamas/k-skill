@@ -149,7 +149,7 @@ const eligibility = await getStorePickupEligibility({
 console.log(eligibility)
 ```
 
-`pickupEligible` 가 `true` 이면 그 매장에서 픽업 가능, `false` 면 픽업 불가, `null` 이면 확인 불가다. `eligibleStoreCount` 와 `eligibleStores` 로 다른 후보 매장도 함께 보여줄 수 있다.
+`pickupEligible` 가 `true` 이면 그 매장에서 픽업 가능, `false` 면 픽업 불가, `null` 이면 확인 불가다. `false` 는 검색 범위가 충분할 때만 확정값으로 해석한다. `retrievalStatus: "insufficient_coverage"` 는 매장명/키워드가 없거나 첫 페이지가 전체 결과를 덮지 못해 부재를 증명하지 못했다는 뜻이다. `eligibleStoreCount` 와 `eligibleStores` 로 다른 후보 매장도 함께 보여줄 수 있다.
 
 ### 5. Use the end-to-end helper when both names are already known
 

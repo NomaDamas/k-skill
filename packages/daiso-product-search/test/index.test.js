@@ -419,6 +419,53 @@ test("normalizePickupEligibilityResponse marks selected store as NOT eligible wh
   assert.equal(eligibility.retrievalStatus, "resolved")
 })
 
+test("normalizePickupEligibilityResponse requires pickupAvailable for positive eligibility", () => {
+  const payload = {
+    ...storePickupEligibilityPayload,
+    data: storePickupEligibilityPayload.data.map((item) => ({ ...item, pkupYn: "N" }))
+  }
+
+  const eligibility = normalizePickupEligibilityResponse(payload, {
+    pdNo: "1049275",
+    strCd: "10224",
+    keyword: "강남역",
+    pageSize: 50
+  })
+
+  assert.equal(eligibility.pickupEligible, false)
+  assert.equal(eligibility.matchedStore.strCd, "10224")
+  assert.equal(eligibility.matchedStore.pickupAvailable, false)
+  assert.equal(eligibility.retrievalStatus, "resolved")
+})
+
+test("normalizePickupEligibilityResponse avoids a definitive miss when the first page may be incomplete", () => {
+  const payload = {
+    ...storePickupEligibilityPayload,
+    data: [
+      {
+        ...storePickupEligibilityPayload.data[0],
+        totalCnt: 2,
+        currentPageCnt: 1,
+        strCd: "10000",
+        strNm: "서울테스트점"
+      }
+    ]
+  }
+
+  const eligibility = normalizePickupEligibilityResponse(payload, {
+    pdNo: "1049275",
+    strCd: "10224",
+    keyword: "서울",
+    pageSize: 1
+  })
+
+  assert.equal(eligibility.pickupEligible, null)
+  assert.equal(eligibility.reason, "search_page_not_exhausted")
+  assert.equal(eligibility.retrievalStatus, "insufficient_coverage")
+  assert.equal(eligibility.searchedKeyword, "서울")
+  assert.equal(eligibility.totalCount, 2)
+})
+
 test("normalizePickupEligibilityResponse handles upstream failure as blocked retrieval", () => {
   const eligibility = normalizePickupEligibilityResponse(
     { success: false, message: "Upstream error" },
@@ -457,6 +504,30 @@ test("getStorePickupEligibility posts pdNo and a derived store keyword to selPku
     assert.equal(typeof capturedBody.pageSize, "number")
     assert.equal(eligibility.pickupEligible, true)
     assert.equal(eligibility.matchedStore.strCd, "10224")
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
+test("getStorePickupEligibility does not emit a definitive false without a store keyword", async () => {
+  const originalFetch = global.fetch
+  let fetchCalled = false
+
+  global.fetch = async () => {
+    fetchCalled = true
+    return makeResponse({ ...storePickupEligibilityPayload, data: [] })
+  }
+
+  try {
+    const eligibility = await getStorePickupEligibility({
+      pdNo: "1049275",
+      strCd: "10224"
+    })
+
+    assert.equal(fetchCalled, false)
+    assert.equal(eligibility.pickupEligible, null)
+    assert.equal(eligibility.retrievalStatus, "insufficient_coverage")
+    assert.equal(eligibility.reason, "missing_search_keyword")
   } finally {
     global.fetch = originalFetch
   }

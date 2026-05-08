@@ -126,8 +126,8 @@ main().catch((error) => {
   - 다이소몰이 매장 픽업 재고를 `401`/`403` 또는 `{ "success": false, "message": "Unauthorized" }` 로 차단하면 `status: "unavailable"`, `retrievalStatus: "blocked"`, `inventoryStatus: "unknown"` 결과를 반환합니다.
 - `getStorePickupEligibility({ pdNo, strCd, storeName?, keyword?, pageSize? }, options?)`
   - 공식 `POST /api/ms/msg/selPkupStr` 표면을 호출해 해당 상품의 픽업 가능 매장 목록을 받아 `pickupEligible` 여부를 판정합니다.
-  - `storeName` 이 주어지면 매장명에서 `N호점` 같은 접미사를 제거해 `keyword` 로 자동 변환합니다. `keyword` 를 직접 넘기면 그대로 사용합니다.
-  - 응답은 `pickupEligible`(`true`/`false`/`null`), `eligibleStoreCount`, `eligibleStores`, `matchedStore`, `retrievalStatus`, `raw` 를 포함합니다.
+  - `storeName` 이 주어지면 매장명에서 `N호점` 같은 접미사를 제거해 `keyword` 로 자동 변환합니다. `keyword` 를 직접 넘기면 그대로 사용합니다. `strCd` 조회에서 `storeName`/`keyword` 가 없거나 첫 페이지가 전체 결과를 다 덮지 못하면 확정 `false` 대신 `pickupEligible: null`, `retrievalStatus: "insufficient_coverage"` 를 반환합니다.
+  - 응답은 `pickupEligible`(`true`/`false`/`null`), `eligibleStoreCount`, `eligibleStores`, `matchedStore`, `searchedKeyword`, `pageSize`, `totalCount`, `retrievalStatus`, `raw` 를 포함합니다.
   - 정확한 수량은 제공되지 않습니다. 수량 확인은 `selStrPkupStck` 를 통해야 하며 차단 시에는 확인 불가입니다.
 - `getOnlineStock({ pdNo, onldPdNo? }, options?)`
   - 반환값은 `referenceOnly: true` 를 포함합니다. 온라인 재고는 다이소몰 온라인몰 재고 참고값이며 특정 매장의 픽업/진열 재고가 아닙니다.

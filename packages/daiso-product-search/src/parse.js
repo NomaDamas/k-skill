@@ -401,9 +401,27 @@ function normalizePickupEligibilityStore(item) {
   }
 }
 
+function firstNumericValue(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") {
+      continue
+    }
+
+    const numericValue = Number(value)
+
+    if (Number.isFinite(numericValue)) {
+      return numericValue
+    }
+  }
+
+  return null
+}
+
 function normalizePickupEligibilityResponse(payload, request) {
   const requestStrCd = String(request.strCd || "")
   const requestPdNo = String(request.pdNo || "")
+  const searchedKeyword = String(request.keyword || "").trim()
+  const requestedPageSize = firstNumericValue(request.pageSize)
 
   if (!payload || typeof payload !== "object" || payload.success === false) {
     return {
@@ -412,6 +430,9 @@ function normalizePickupEligibilityResponse(payload, request) {
       pickupEligible: null,
       eligibleStoreCount: null,
       eligibleStores: [],
+      searchedKeyword,
+      pageSize: requestedPageSize,
+      totalCount: null,
       retrievalStatus: "blocked",
       reason: "upstream_error",
       raw: payload || null
@@ -425,14 +446,54 @@ function normalizePickupEligibilityResponse(payload, request) {
   const matchedStore = requestStrCd
     ? eligibleStores.find((store) => store.strCd === requestStrCd) || null
     : null
+  const totalCount = firstNumericValue(
+    payload.totalCnt,
+    payload.totalCount,
+    payload.extraData && payload.extraData.totalCnt,
+    payload.extraData && payload.extraData.totalCount,
+    rawItems[0] && rawItems[0].totalCnt
+  )
+  const currentPageCount = firstNumericValue(
+    payload.currentPageCnt,
+    payload.currentPageCount,
+    payload.extraData && payload.extraData.currentPageCnt,
+    payload.extraData && payload.extraData.currentPageCount,
+    rawItems[0] && rawItems[0].currentPageCnt,
+    rawItems.length
+  )
+  const pageSize = requestedPageSize || currentPageCount
+  const hasMoreUnsearchedRows =
+    Boolean(requestStrCd) &&
+    !matchedStore &&
+    (totalCount === null ? Boolean(pageSize && rawItems.length >= pageSize) : totalCount > rawItems.length)
+
+  if (hasMoreUnsearchedRows) {
+    return {
+      pdNo: requestPdNo,
+      strCd: requestStrCd,
+      pickupEligible: null,
+      eligibleStoreCount: eligibleStores.length,
+      eligibleStores,
+      matchedStore,
+      searchedKeyword,
+      pageSize,
+      totalCount,
+      retrievalStatus: "insufficient_coverage",
+      reason: "search_page_not_exhausted",
+      raw: payload
+    }
+  }
 
   return {
     pdNo: requestPdNo,
     strCd: requestStrCd,
-    pickupEligible: requestStrCd ? Boolean(matchedStore) : null,
+    pickupEligible: requestStrCd ? Boolean(matchedStore && matchedStore.pickupAvailable) : null,
     eligibleStoreCount: eligibleStores.length,
     eligibleStores,
     matchedStore,
+    searchedKeyword,
+    pageSize,
+    totalCount,
     retrievalStatus: "resolved",
     raw: payload
   }

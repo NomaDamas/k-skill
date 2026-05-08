@@ -174,6 +174,23 @@ async function getStorePickupEligibility(request, options = {}) {
     throw new Error("pdNo is required.")
   }
 
+  if (strCd && !derivedKeyword) {
+    return {
+      pdNo,
+      strCd,
+      pickupEligible: null,
+      eligibleStoreCount: null,
+      eligibleStores: [],
+      matchedStore: null,
+      searchedKeyword: "",
+      pageSize,
+      totalCount: null,
+      retrievalStatus: "insufficient_coverage",
+      reason: "missing_search_keyword",
+      raw: null
+    }
+  }
+
   try {
     const payload = await requestJson(`${BASE_API_URL}/ms/msg/selPkupStr`, {
       ...options,
@@ -186,12 +203,17 @@ async function getStorePickupEligibility(request, options = {}) {
       }
     })
 
-    return normalizePickupEligibilityResponse(payload, { pdNo, strCd })
+    return normalizePickupEligibilityResponse(payload, {
+      pdNo,
+      strCd,
+      keyword: derivedKeyword || "",
+      pageSize
+    })
   } catch (error) {
     if (error instanceof DaisoRequestError) {
       return normalizePickupEligibilityResponse(
         error.payload || { success: false, message: `HTTP ${error.status}` },
-        { pdNo, strCd }
+        { pdNo, strCd, keyword: derivedKeyword || "", pageSize }
       )
     }
 
