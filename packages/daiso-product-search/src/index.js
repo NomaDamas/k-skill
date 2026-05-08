@@ -248,9 +248,7 @@ async function lookupStoreProductAvailability(options = {}) {
 
   const selectedStore = storeResult.items[0]
   const selectedProduct = selectPickupPreferredProduct(productResult.items)
-  const [storeDetailPayload, pickupStock, onlineStock] = await Promise.all([
-    getStoreDetail(selectedStore.strCd, options),
-    getStorePickupStock({ pdNo: selectedProduct.pdNo, strCd: selectedStore.strCd }, options),
+  const onlineStockPromise =
     options.includeOnlineStock === false
       ? Promise.resolve(null)
       : getOnlineStock(
@@ -259,7 +257,10 @@ async function lookupStoreProductAvailability(options = {}) {
             onldPdNo: selectedProduct.onldPdNo
           },
           options
-        )
+        ).catch(() => null)
+  const [storeDetailPayload, pickupStock] = await Promise.all([
+    getStoreDetail(selectedStore.strCd, options),
+    getStorePickupStock({ pdNo: selectedProduct.pdNo, strCd: selectedStore.strCd }, options)
   ])
 
   let pickupEligibility = null
@@ -278,6 +279,7 @@ async function lookupStoreProductAvailability(options = {}) {
       options
     )
   }
+  const onlineStock = await onlineStockPromise
 
   return {
     storeQuery,

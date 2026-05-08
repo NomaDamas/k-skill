@@ -430,6 +430,7 @@ function normalizePickupEligibilityResponse(payload, request) {
       pickupEligible: null,
       eligibleStoreCount: null,
       eligibleStores: [],
+      matchedStore: null,
       searchedKeyword,
       pageSize: requestedPageSize,
       totalCount: null,

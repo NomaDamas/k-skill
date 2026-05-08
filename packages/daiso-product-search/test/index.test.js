@@ -392,6 +392,52 @@ test("lookupStoreProductAvailability keeps online-stock fallback when Daiso pick
   }
 })
 
+test("lookupStoreProductAvailability still resolves pickup eligibility when online stock fails", async () => {
+  const originalFetch = global.fetch
+
+  global.fetch = async (url) => {
+    if (String(url).includes("/api/ms/msg/selStr") && !String(url).includes("selStrInfo") && !String(url).includes("selPkupStr")) {
+      return makeResponse(storeSearchPayload)
+    }
+
+    if (String(url).includes("/ssn/search/SearchGoods")) {
+      return makeResponse(searchGoodsPayload)
+    }
+
+    if (String(url).includes("/api/dl/dla-api/selStrInfo")) {
+      return makeResponse(storeDetailPayload)
+    }
+
+    if (String(url).includes("/api/pd/pdh/selStrPkupStck")) {
+      return makeResponse({ success: false, message: "Unauthorized" }, { status: 403 })
+    }
+
+    if (String(url).includes("/api/ms/msg/selPkupStr")) {
+      return makeResponse(storePickupEligibilityPayload)
+    }
+
+    if (String(url).includes("/api/pdo/selOnlStck")) {
+      return makeResponse({ success: false, message: "Internal Server Error" }, { status: 500 })
+    }
+
+    return new Response("not found", { status: 404 })
+  }
+
+  try {
+    const availability = await lookupStoreProductAvailability({
+      storeQuery: "강남역2호점",
+      productQuery: "VT 리들샷 100"
+    })
+
+    assert.equal(availability.pickupStock.retrievalStatus, "blocked")
+    assert.equal(availability.pickupEligibility.pickupEligible, true)
+    assert.equal(availability.pickupEligibility.matchedStore.strCd, "10224")
+    assert.equal(availability.onlineStock, null)
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
 test("normalizePickupEligibilityResponse marks selected store as eligible when present in list", () => {
   const eligibility = normalizePickupEligibilityResponse(storePickupEligibilityPayload, {
     pdNo: "1049275",
@@ -475,6 +521,7 @@ test("normalizePickupEligibilityResponse handles upstream failure as blocked ret
   assert.equal(eligibility.pickupEligible, null)
   assert.equal(eligibility.eligibleStoreCount, null)
   assert.equal(eligibility.eligibleStores.length, 0)
+  assert.equal(eligibility.matchedStore, null)
   assert.equal(eligibility.retrievalStatus, "blocked")
   assert.equal(eligibility.reason, "upstream_error")
 })
@@ -547,6 +594,7 @@ test("getStorePickupEligibility surfaces upstream HTTP errors as blocked retriev
     })
 
     assert.equal(eligibility.pickupEligible, null)
+    assert.equal(eligibility.matchedStore, null)
     assert.equal(eligibility.retrievalStatus, "blocked")
     assert.equal(eligibility.reason, "upstream_error")
   } finally {
