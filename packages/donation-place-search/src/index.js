@@ -208,21 +208,32 @@ const DONATION_PLACES = Object.freeze([
   }
 ]);
 
+function normalizeCategoryToken(value) {
+  return String(value || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+}
+
 function normalizeCategory(input) {
   if (Array.isArray(input)) {
     return input.map(normalizeCategory).filter((value, index, values) => values.indexOf(value) === index);
   }
 
-  const query = String(input || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+  const query = normalizeCategoryToken(input);
   if (!query) {
     return "general";
   }
 
-  for (const [key, category] of Object.entries(CATEGORIES)) {
+  const categoryEntries = Object.entries(CATEGORIES);
+  for (const [key, category] of categoryEntries) {
     if (query === key.toLowerCase()) {
       return key;
     }
-    if (category.keywords.some((keyword) => query.includes(keyword.replace(/\s+/g, "").toLowerCase()))) {
+    if (key !== "general" && category.keywords.some((keyword) => query.includes(normalizeCategoryToken(keyword)))) {
+      return key;
+    }
+  }
+
+  for (const [key, category] of categoryEntries) {
+    if (category.keywords.some((keyword) => query.includes(normalizeCategoryToken(keyword)))) {
       return key;
     }
   }
@@ -260,6 +271,14 @@ function build1365DonationSearchUrl(options = {}) {
 function normalizeCategoriesForSearch(input) {
   const normalized = normalizeCategory(input);
   return Array.isArray(normalized) && normalized.length ? normalized : [normalized];
+}
+
+function buildCandidateSearchKeyword(place, keyword) {
+  const baseKeyword = String(keyword || "").trim();
+  if (!baseKeyword || baseKeyword.includes(place.name)) {
+    return place.name;
+  }
+  return `${place.name} ${baseKeyword}`;
 }
 
 function scoreDonationPlace(place, categories, location) {
@@ -301,7 +320,7 @@ function recommendDonationPlaces(options = {}) {
     officialSearchUrl: build1365DonationSearchUrl({
       location: location.raw,
       category: categories[0],
-      keyword: keyword || place.name
+      keyword: buildCandidateSearchKeyword(place, keyword)
     })
   }));
 

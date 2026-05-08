@@ -19,6 +19,13 @@ test("normalizeCategory maps Korean aliases to canonical donation categories", (
   assert.ok(CATEGORIES.children.keywords.includes("아동"));
 });
 
+test("normalizeCategory prioritizes specific categories in natural donation phrases", () => {
+  assert.equal(normalizeCategory("동물 기부"), "animals");
+  assert.equal(normalizeCategory("아동 기부"), "children");
+  assert.equal(normalizeCategory("환경 모금"), "environment");
+  assert.equal(normalizeCategory("장애인 나눔"), "disability");
+});
+
 test("parseLocationQuery extracts Korean province and district hints conservatively", () => {
   assert.deepEqual(parseLocationQuery("서울시 마포구 공덕동"), {
     raw: "서울시 마포구 공덕동",
@@ -66,6 +73,25 @@ test("recommendDonationPlaces ranks local category matches before broad national
   assert.ok(result.items[0].officialSearchUrl.includes("1365.go.kr"));
   assert.ok(result.items.some((item) => item.coverage === "nationwide"));
   assert.ok(result.items.every((item) => item.categories.includes("animals")));
+});
+
+test("recommendDonationPlaces emits candidate-specific official 1365 search links", () => {
+  const result = recommendDonationPlaces({
+    location: "서울 마포구",
+    category: "동물",
+    limit: 3
+  });
+
+  const itemUrls = result.items.map((item) => new URL(item.officialSearchUrl));
+  const itemQueries = itemUrls.map((url) => url.searchParams.get("query"));
+
+  assert.equal(new Set(result.items.map((item) => item.officialSearchUrl)).size, result.items.length);
+  result.items.forEach((item, index) => {
+    assert.equal(itemUrls[index].origin, "https://www.1365.go.kr");
+    assert.equal(itemUrls[index].searchParams.get("category"), "animals");
+    assert.match(itemQueries[index], new RegExp(item.name));
+    assert.match(itemQueries[index], /서울 마포구/);
+  });
 });
 
 test("recommendDonationPlaces supports multiple category filters and explains no exact local hit", () => {
