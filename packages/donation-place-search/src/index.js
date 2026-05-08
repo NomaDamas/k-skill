@@ -259,18 +259,21 @@ function parseLocationQuery(location) {
   return { raw, province, district };
 }
 
+function normalizeCategoriesForSearch(input) {
+  const normalized = normalizeCategory(input);
+  if (!Array.isArray(normalized)) {
+    return [normalized];
+  }
+  return normalized.length ? normalized : ["general"];
+}
+
 function build1365DonationSearchUrl(options = {}) {
   const url = new URL(options.baseUrl || OFFICIAL_1365_DONATION_URL);
-  const category = normalizeCategory(options.category);
+  const [category] = normalizeCategoriesForSearch(options.category);
   const parts = [options.keyword, options.location].map((value) => String(value || "").trim()).filter(Boolean);
   url.searchParams.set("query", parts.join(" ") || CATEGORIES[category].label);
   url.searchParams.set("category", category);
   return url.toString();
-}
-
-function normalizeCategoriesForSearch(input) {
-  const normalized = normalizeCategory(input);
-  return Array.isArray(normalized) && normalized.length ? normalized : [normalized];
 }
 
 function buildCandidateSearchKeyword(place, keyword) {

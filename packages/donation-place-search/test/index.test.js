@@ -57,6 +57,17 @@ test("build1365DonationSearchUrl creates a public official search link without p
   assert.equal(url.searchParams.get("category"), "animals");
 });
 
+test("build1365DonationSearchUrl treats an empty category list like the default category", () => {
+  const url = new URL(build1365DonationSearchUrl({
+    location: "서울 마포구",
+    category: [],
+    keyword: "기부처"
+  }));
+
+  assert.equal(url.searchParams.get("category"), "general");
+  assert.equal(url.searchParams.get("query"), "기부처 서울 마포구");
+});
+
 test("recommendDonationPlaces ranks local category matches before broad national fallback", () => {
   const result = recommendDonationPlaces({
     location: "서울 마포구",
@@ -92,6 +103,18 @@ test("recommendDonationPlaces emits candidate-specific official 1365 search link
     assert.match(itemQueries[index], new RegExp(item.name));
     assert.match(itemQueries[index], /서울 마포구/);
   });
+});
+
+test("recommendDonationPlaces treats an empty category list like the optional default", () => {
+  const result = recommendDonationPlaces({
+    location: "서울 마포구",
+    category: [],
+    limit: 2
+  });
+
+  assert.deepEqual(result.category, ["general"]);
+  assert.equal(result.items.length, 2);
+  assert.ok(result.items.every((item) => item.match.category));
 });
 
 test("recommendDonationPlaces supports multiple category filters and explains no exact local hit", () => {

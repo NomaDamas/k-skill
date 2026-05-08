@@ -1295,17 +1295,29 @@ test("coupang-product-search docs drop non-allowlisted coupang-mcp-fallback and 
 
 test("root pack:dry-run script covers all publishable workspaces", () => {
   const packageJson = readJson("package.json");
+  const packScript = packageJson.scripts["pack:dry-run"];
+  const publishableWorkspaces = fs
+    .readdirSync(path.join(repoRoot, "packages"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join("packages", entry.name, "package.json"))
+    .filter((packagePath) => fs.existsSync(path.join(repoRoot, packagePath)))
+    .map((packagePath) => readJson(packagePath))
+    .filter((workspacePackage) => workspacePackage.private !== true)
+    .map((workspacePackage) => workspacePackage.name);
 
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace k-lotto/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace daiso-product-search/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace market-kurly-search/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kakao-bar-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace public-restroom-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace court-auction-notice-search/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kbl-results/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kleague-results/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace lck-analytics/);
+  assert.ok(publishableWorkspaces.includes("donation-place-search"));
+  for (const workspaceName of publishableWorkspaces) {
+    assert.match(packScript, new RegExp(`workspace ${escapeRegex(workspaceName)}(?:\\s|$)`));
+  }
+});
+
+test("README main capability table advertises the donation-place-search skill", () => {
+  const readme = read("README.md");
+  const tableSection = findSection(readme, "## 어떤 걸 할 수 있나");
+
+  assert.match(tableSection, /기부처 조회/);
+  assert.match(tableSection, /`donation-place-search`/);
+  assert.match(tableSection, /docs\/features\/donation-place-search\.md/);
 });
 
 test("repository docs advertise the kbl-results skill across the documented surfaces", () => {
