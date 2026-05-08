@@ -319,6 +319,13 @@ python3 scripts/patent_search.py --query "배터리"
 python3 scripts/scholarship_filter.py report --input scholarships.json --today 2026-04-14 --only-open-now
 ```
 
+국가데이터처 KOSIS 통계 조회 helper는 설치된 `kosis-stats` skill 안의 `scripts/run_kosis_stats.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
+
+```bash
+export KSKILL_KOSIS_API_KEY=your-kosis-api-key
+python3 kosis-stats/scripts/run_kosis_stats.py search --query "1인 가구" --text
+```
+
 한국어 맞춤법 검사 helper는 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
 
 ```bash

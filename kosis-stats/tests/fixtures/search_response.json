@@ -1,0 +1,17 @@
+[
+  {
+    "ORG_ID": "101",
+    "ORG_NM": "통계청",
+    "TBL_ID": "DT_1JC1501",
+    "TBL_NM": "1인 가구 비율",
+    "STAT_ID": "A11320180501112233",
+    "STAT_NM": "인구주택총조사",
+    "VW_CD": "MT_ZTITLE",
+    "MT_ATITLE": "주제별 통계 > 인구·가구 > 가구",
+    "STRT_PRD_DE": "2015",
+    "END_PRD_DE": "2024",
+    "TBL_VIEW_URL": "https://kosis.kr/statisticsList/example",
+    "LINK_URL": "https://kosis.kr/statHtml/statHtml.do?orgId=101&tblId=DT_1JC1501",
+    "QUERY": "1인 가구"
+  }
+]

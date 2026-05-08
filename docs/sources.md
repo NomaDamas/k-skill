@@ -6,6 +6,8 @@
 - `SRTrain` / `ryanking13/SRT`: https://github.com/ryanking13/SRT
 - `korail2` / `carpedm20/korail2`: https://github.com/carpedm20/korail2
 - `korail2` anti-bot bypass PR #54: https://github.com/carpedm20/korail2/pull/54
+- 국가데이터처(구 통계청) KOSIS Open API 공식 진입: https://kosis.kr/openapi/ (회원가입·활용신청·개발가이드는 사이트 내부 메뉴 — 직접 deep-link는 SSO/SPA 라우팅으로 빈 화면이 보일 수 있다)
+- KOSIS Open API endpoint host: https://kosis.kr/openapi/ — 모든 helper 호출은 이 host의 `/statisticsSearch.do`, `/statisticsData.do`, `/Param/statisticsParameterData.do`, `/statisticsBigData.do` 를 사용한다 (HTTPS 전용, 2026-03-05 시행)
 - 숲나들e 공식 사이트: https://foresttrip.go.kr/index.jsp
 - 숲나들e 로그인: https://www.foresttrip.go.kr/com/login.do
 - 숲나들e 월별예약조회 화면: https://www.foresttrip.go.kr/rep/or/sssn/monthRsrvtSmplStatus.do

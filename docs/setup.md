@@ -1,6 +1,6 @@
 # 공통 설정 가이드
 
-`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(SRT 예매, KTX 예매, 자연휴양림 빈 객실 조회, 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC`, 한국 특허 정보 검색의 KIPRIS Plus 경로용 `KIPRIS_PLUS_API_KEY`, self-host 프록시 운영용 서울 지하철/한국 날씨/미세먼지/한강홍수통제소/식약처 upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다. 미세먼지, 한강 수위, 주유소 가격, 부동산 실거래가, 한국 주식 정보 조회, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 기본 hosted proxy를 쓰므로 사용자 쪽 키가 불필요하다(단, hosted 프록시 운영 측에서 `DATA_GO_KR_API_KEY`·`KEDU_INFO_KEY`·`DATA4LIBRARY_AUTH_KEY`·`FOODSAFETYKOREA_API_KEY` 등은 서버에 설정되어 있어야 한다).
+`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(SRT 예매, KTX 예매, 자연휴양림 빈 객실 조회, 국가데이터처 KOSIS 통계 조회용 `KSKILL_KOSIS_API_KEY` (https://kosis.kr/openapi/ 에서 무료 발급), 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC`, 한국 특허 정보 검색의 KIPRIS Plus 경로용 `KIPRIS_PLUS_API_KEY`, self-host 프록시 운영용 서울 지하철/한국 날씨/미세먼지/한강홍수통제소/식약처 upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다. 미세먼지, 한강 수위, 주유소 가격, 부동산 실거래가, 한국 주식 정보 조회, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 기본 hosted proxy를 쓰므로 사용자 쪽 키가 불필요하다(단, hosted 프록시 운영 측에서 `DATA_GO_KR_API_KEY`·`KEDU_INFO_KEY`·`DATA4LIBRARY_AUTH_KEY`·`FOODSAFETYKOREA_API_KEY` 등은 서버에 설정되어 있어야 한다).
 
 ## Credential resolution order
 
@@ -26,6 +26,7 @@ KSKILL_KTX_ID=replace-me
 KSKILL_KTX_PASSWORD=replace-me
 KSKILL_FORESTTRIP_ID=replace-me
 KSKILL_FORESTTRIP_PASSWORD=replace-me
+KSKILL_KOSIS_API_KEY=replace-me
 LAW_OC=replace-me
 KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
