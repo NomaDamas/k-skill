@@ -386,6 +386,120 @@ function normalizeOnlineStockResponse(payload, request) {
   }
 }
 
+function normalizePickupEligibilityStore(item) {
+  return {
+    strCd: String(item.strCd || ""),
+    name: item.strNm || "",
+    address: [item.strAddr, item.strDtlAddr].filter(Boolean).join(" "),
+    phone: item.strTno || null,
+    pickupAvailable: item.pkupYn === "Y",
+    openTime: formatStoreTime(item.opngTime),
+    closeTime: formatStoreTime(item.clsngTime),
+    distanceKm: normalizeDistanceKm(item.km),
+    latitude: toNumberOrNull(item.strLttd),
+    longitude: toNumberOrNull(item.strLitd)
+  }
+}
+
+function firstNumericValue(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") {
+      continue
+    }
+
+    const numericValue = Number(value)
+
+    if (Number.isFinite(numericValue)) {
+      return numericValue
+    }
+  }
+
+  return null
+}
+
+function normalizePickupEligibilityResponse(payload, request) {
+  const requestStrCd = String(request.strCd || "")
+  const requestPdNo = String(request.pdNo || "")
+  const searchedKeyword = String(request.keyword || "").trim()
+  const requestedPageSize = firstNumericValue(request.pageSize)
+
+  if (!payload || typeof payload !== "object" || payload.success === false) {
+    return {
+      pdNo: requestPdNo,
+      strCd: requestStrCd,
+      pickupEligible: null,
+      eligibleStoreCount: null,
+      eligibleStores: [],
+      matchedStore: null,
+      searchedKeyword,
+      pageSize: requestedPageSize,
+      totalCount: null,
+      retrievalStatus: "blocked",
+      reason: "upstream_error",
+      raw: payload || null
+    }
+  }
+
+  const rawItems = Array.isArray(payload.data) ? payload.data : []
+  const eligibleStores = rawItems
+    .filter((item) => item && item.strCd)
+    .map(normalizePickupEligibilityStore)
+  const matchedStore = requestStrCd
+    ? eligibleStores.find((store) => store.strCd === requestStrCd) || null
+    : null
+  const totalCount = firstNumericValue(
+    payload.totalCnt,
+    payload.totalCount,
+    payload.extraData && payload.extraData.totalCnt,
+    payload.extraData && payload.extraData.totalCount,
+    rawItems[0] && rawItems[0].totalCnt
+  )
+  const currentPageCount = firstNumericValue(
+    payload.currentPageCnt,
+    payload.currentPageCount,
+    payload.extraData && payload.extraData.currentPageCnt,
+    payload.extraData && payload.extraData.currentPageCount,
+    rawItems[0] && rawItems[0].currentPageCnt,
+    rawItems.length
+  )
+  const pageSize = requestedPageSize || currentPageCount
+  const hasMoreUnsearchedRows =
+    Boolean(requestStrCd) &&
+    !matchedStore &&
+    (totalCount === null ? Boolean(pageSize && rawItems.length >= pageSize) : totalCount > rawItems.length)
+
+  if (hasMoreUnsearchedRows) {
+    return {
+      pdNo: requestPdNo,
+      strCd: requestStrCd,
+      pickupEligible: null,
+      eligibleStoreCount: eligibleStores.length,
+      eligibleStores,
+      matchedStore,
+      searchedKeyword,
+      pageSize,
+      totalCount,
+      retrievalStatus: "insufficient_coverage",
+      reason: "search_page_not_exhausted",
+      raw: payload
+    }
+  }
+
+  return {
+    pdNo: requestPdNo,
+    strCd: requestStrCd,
+    pickupEligible: requestStrCd ? Boolean(matchedStore && matchedStore.pickupAvailable) : null,
+    eligibleStoreCount: eligibleStores.length,
+    eligibleStores,
+    matchedStore,
+    searchedKeyword,
+    pageSize,
+    totalCount,
+    retrievalStatus: "resolved",
+    raw: payload
+  }
+}
+
 module.exports = {
   BASE_API_URL,
   BASE_SEARCH_URL,
@@ -393,6 +507,8 @@ module.exports = {
   STORE_EMPTY_RESULT_ERROR,
   buildSearchGoodsParams,
   normalizeOnlineStockResponse,
+  normalizePickupEligibilityResponse,
+  normalizePickupEligibilityStore,
   normalizeProductIdentifier,
   normalizeProductItem,
   normalizeSearchGoodsResponse,

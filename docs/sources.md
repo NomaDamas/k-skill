@@ -6,6 +6,8 @@
 - `SRTrain` / `ryanking13/SRT`: https://github.com/ryanking13/SRT
 - `korail2` / `carpedm20/korail2`: https://github.com/carpedm20/korail2
 - `korail2` anti-bot bypass PR #54: https://github.com/carpedm20/korail2/pull/54
+- 국가데이터처(구 통계청) KOSIS Open API 공식 진입: https://kosis.kr/openapi/ (회원가입·활용신청·개발가이드는 사이트 내부 메뉴 — 직접 deep-link는 SSO/SPA 라우팅으로 빈 화면이 보일 수 있다)
+- KOSIS Open API endpoint host: https://kosis.kr/openapi/ — 모든 helper 호출은 이 host의 `/statisticsSearch.do`, `/statisticsData.do`, `/Param/statisticsParameterData.do`, `/statisticsBigData.do` 를 사용한다 (HTTPS 전용, 2026-03-05 시행)
 - 숲나들e 공식 사이트: https://foresttrip.go.kr/index.jsp
 - 숲나들e 로그인: https://www.foresttrip.go.kr/com/login.do
 - 숲나들e 월별예약조회 화면: https://www.foresttrip.go.kr/rep/or/sssn/monthRsrvtSmplStatus.do
@@ -108,6 +110,7 @@
 - 다이소몰 상품 검색 목록: https://www.daisomall.co.kr/ssn/search/SearchGoods
 - 다이소몰 상품 요약 목록: https://www.daisomall.co.kr/ssn/search/GoodsMummResult
 - 다이소몰 매장 픽업 재고: https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck (2026-05-05 기준 Unauthorized 차단 가능)
+- 다이소몰 매장 픽업 가능 매장 목록: https://www.daisomall.co.kr/api/ms/msg/selPkupStr (특정 상품의 픽업 가능 매장 리스트, 매장 수량은 미제공)
 - 다이소몰 온라인 재고: https://www.daisomall.co.kr/api/pdo/selOnlStck
 - 마켓컬리 검색 API(v4): https://api.kurly.com/search/v4/sites/market/normal-search
 - 마켓컬리 검색 개수 API(v3): https://api.kurly.com/search/v3/sites/market/normal-search/count

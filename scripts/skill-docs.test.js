@@ -671,8 +671,6 @@ test("ktx-booking helper python regression tests pass", () => {
   );
 });
 
-
-
 test("repository docs advertise the geeknews-search skill across the documented surfaces", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
@@ -1295,17 +1293,48 @@ test("coupang-product-search docs drop non-allowlisted coupang-mcp-fallback and 
 
 test("root pack:dry-run script covers all publishable workspaces", () => {
   const packageJson = readJson("package.json");
+  const packScript = packageJson.scripts["pack:dry-run"];
+  const publishableWorkspaces = fs
+    .readdirSync(path.join(repoRoot, "packages"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join("packages", entry.name, "package.json"))
+    .filter((packagePath) => fs.existsSync(path.join(repoRoot, packagePath)))
+    .map((packagePath) => readJson(packagePath))
+    .filter((workspacePackage) => workspacePackage.private !== true)
+    .map((workspacePackage) => workspacePackage.name);
 
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace k-lotto/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace daiso-product-search/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace market-kurly-search/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kakao-bar-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace public-restroom-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace court-auction-notice-search/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kbl-results/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kleague-results/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace lck-analytics/);
+  assert.ok(publishableWorkspaces.includes("donation-place-search"));
+  for (const workspaceName of publishableWorkspaces) {
+    assert.match(packScript, new RegExp(`workspace ${escapeRegex(workspaceName)}(?:\\s|$)`));
+  }
+});
+
+test("README main capability table advertises the donation-place-search skill", () => {
+  const readme = read("README.md");
+  const tableSection = findSection(readme, "## 어떤 걸 할 수 있나");
+
+  assert.match(tableSection, /기부처 조회/);
+  assert.match(tableSection, /`donation-place-search`/);
+  assert.match(tableSection, /docs\/features\/donation-place-search\.md/);
+});
+
+test("donation-place-search install docs include the skill and npm helper", () => {
+  const install = read(path.join("docs", "install.md"));
+
+  assert.match(install, /--skill donation-place-search/);
+  assert.match(install, /npm install -g .*donation-place-search/);
+});
+
+test("donation-place-search docs describe 1365 links as best-effort verification assists", () => {
+  const skill = read(path.join("donation-place-search", "SKILL.md"));
+  const packageReadme = read(path.join("packages", "donation-place-search", "README.md"));
+  const featureDoc = read(path.join("docs", "features", "donation-place-search.md"));
+  const packageJson = readJson(path.join("packages", "donation-place-search", "package.json"));
+
+  for (const doc of [skill, packageReadme, featureDoc, packageJson.description]) {
+    assert.match(doc, /best-effort|보조|assist/i);
+    assert.doesNotMatch(doc, /candidate-verified|후보별 검증 완료/);
+  }
 });
 
 test("repository docs advertise the kbl-results skill across the documented surfaces", () => {
@@ -1474,8 +1503,6 @@ test("blue-ribbon-nearby package README stays aligned with the location-first an
   assert.match(packageReadme, /https:\/\/www\.bluer\.co\.kr\/restaurants\/map/);
   assert.match(packageReadme, /searchNearbyByLocationQuery/);
 });
-
-
 
 test("repository docs advertise the kakao-bar-nearby skill across the documented surfaces", () => {
   const readme = read("README.md");
@@ -2557,7 +2584,6 @@ test("repository docs advertise the han-river-water-level skill and rollout-pend
   assert.match(roadmap, /한강 수위 정보 조회 스킬 출시/);
 });
 
-
 test("repository docs advertise the MFDS drug and food safety skills", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
@@ -3554,7 +3580,6 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(sources, /startbiz\.go\.kr/);
   assert.match(sources, /law\.go\.kr/);
 });
-
 
 test("iros-registry-automation skill documents safe IROS registry certificate automation and upstream credit", () => {
   const skillPath = path.join(repoRoot, "iros-registry-automation", "SKILL.md");
