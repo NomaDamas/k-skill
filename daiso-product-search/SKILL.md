@@ -1,6 +1,6 @@
 ---
 name: daiso-product-search
-description: Look up Daiso products by store name and product keyword using official Daiso Mall store/search/stock surfaces. Use when the user wants to know whether a product is available at a specific Daiso store.
+description: Look up Daiso products by store name and product keyword using official Daiso Mall store/search/stock surfaces. Reports whether a product is registered as pickup-eligible at a specific Daiso store; the official store-level pickup quantity API has been blocked since 2026-05-05, so exact per-store stock counts are unavailable while that block remains.
 license: MIT
 metadata:
   category: retail
@@ -23,16 +23,25 @@ metadata:
 
 ## When to use
 
-- "강남역2호점에 리들샷 있어?"
-- "다이소 특정 매장 재고 확인해줘"
-- "이 상품 어느 매장에 있는지 확인해줘"
-- "다이소 매장명 주면 그 매장 재고 봐줘"
+- "강남역2호점에서 리들샷 픽업 가능해?" (픽업 가능 여부 확인)
+- "이 상품 어느 매장에서 픽업 가능한지 확인해줘" (픽업 가능 매장 목록)
+- "다이소 매장명 주면 그 매장에서 살 수 있는지 봐줘"
+- 공식 매장 픽업 재고 API 가 응답하면 수량까지, 차단되면 픽업 가능 여부(yes/no)까지
 
 ## When not to use
 
+- **"강남역2호점에 리들샷 몇 개 있어?"** 처럼 정확한 재고 수량을 보장해야 하는 경우 — 2026-05-05 부터 공식 매장 픽업 재고 API 가 `Unauthorized` 로 차단되어 수량을 답할 수 없다.
 - 매장명도 상품명도 전혀 없는 상태에서 바로 재고를 단정해야 하는 경우
 - 결제/주문/픽업 예약까지 자동화해야 하는 경우
-- 비공식 크롤링 결과를 우선해야 하는 경우
+- 매장 내 진열 위치(aisle/매대)를 알려줘야 하는 경우
+- 비공식 크롤링·세션 우회·계정 로그인 우회 결과를 사용해야 하는 경우
+
+## Scope and limits (must read before answering)
+
+- `pickupStock` 이 `retrievalStatus: "resolved"` 로 응답하면 정확한 매장 픽업 재고 수량을 줄 수 있다.
+- `pickupStock` 이 `retrievalStatus: "blocked"` 면 수량은 더 이상 답하지 않는다. `pickupEligibility.pickupEligible` 로 그 매장에서 픽업 가능한 상품인지(yes/no)만 답한다.
+- `onlineStock` 은 `referenceOnly: true` 다이소몰 온라인몰 재고 참고값일 뿐 매장 재고가 아니다. 매장 재고처럼 단정하지 않는다.
+- 차단 우회는 시도하지 않는다.
 
 ## Prerequisites
 
