@@ -35,11 +35,11 @@ SH 사이트는 LH처럼 공공데이터포털 전용 공고 API가 안정적으
 
 목록 조회:
 
-- `q` / `keyword` / `srchWord`: 검색어. 예: `행복주택`, `장기전세`, `공공원룸`, `당첨자`.
-- `srchTp` / `searchType`: `title`/`제목` 또는 `content`/`내용`. 비우면 SH 기본 검색 범위를 따른다.
+- `q` / `keyword` / `srchWord`: 검색어. 예: `행복주택`, `장기전세`, `공공원룸`, `당첨자`. 최대 100자.
+- `srchTp` / `searchType`: `title`/`제목` 또는 `content`/`내용`. 검색어가 있고 비워두면 자동으로 제목 검색(`title`)으로 처리한다. SH 게시판은 `srchTp` 없이 `srchWord`만 보내면 키워드를 무시하고 전체 목록을 돌려주기 때문이다.
 - `page`: 페이지 번호. 기본 `1`.
-- `pageSize`: 반환 개수. 기본 `10`, 최대 `100`.
-- `multiItmSeq`: SH 게시판 분류. 기본 `2`(공고 및 공지).
+- `pageSize`: 반환 개수. 기본 `10`, 최대 `10`. SH 게시판이 한 번 호출에 최대 10건만 내려주기 때문에, 더 많은 결과를 보려면 `page` 를 증가시킨다.
+- `multiItmSeq`: SH 게시판 분류(숫자). 기본 `2`(공고 및 공지).
 
 상세 조회:
 
@@ -137,8 +137,7 @@ curl -fsS --get "${BASE}/v1/sh-notice/detail" \
       {
         "filename": "2022년 2차 행복주택 예비 17차 당첨자명단.pdf",
         "file_seq": "1",
-        "preview_url": "https://www.i-sh.co.kr/app/com/util/htmlConverter.do?...",
-        "download_hint": "https://www.i-sh.co.kr/app/com/file/fileDown.do?..."
+        "preview_url": "https://www.i-sh.co.kr/app/com/util/htmlConverter.do?..."
       }
     ],
     "detail_url": "https://www.i-sh.co.kr/app/lay2/program/S48T1581C563/www/brd/m_247/view.do?multi_itm_seq=2&seq=303994"
@@ -158,9 +157,10 @@ curl -fsS --get "${BASE}/v1/sh-notice/detail" \
 
 ## Failure modes
 
-- `seq` 가 없거나 숫자가 아니면 `400 bad_request`.
+- `seq` 가 없거나 숫자가 아니면 `400 bad_request`. `multiItmSeq` 도 숫자만 허용된다.
+- 검색어가 100자를 넘으면 `400 bad_request`.
 - SH 사이트가 일시 장애이거나 HTML 구조가 바뀌면 `502 upstream_error` 또는 빈 결과가 내려올 수 있다.
-- `download_hint` 는 SH 파일 다운로드 패턴 추정 URL이다. 공식 미리보기 링크(`preview_url`)가 더 안정적이다.
+- 첨부 원문 확인에는 공식 미리보기 링크(`preview_url`)를 우선 사용한다. 직접 다운로드 URL은 SH 사이트 흐름이 바뀔 수 있어 제공하지 않는다.
 
 ## Done when
 

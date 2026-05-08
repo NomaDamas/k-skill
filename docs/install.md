@@ -92,6 +92,7 @@ npx --yes skills add <owner/repo> \
   --skill k-schoollunch-menu \
   --skill korean-character-count \
   --skill court-auction-notice-search \
+  --skill sh-notice-search \
   --skill k-skill-cleaner
 ```
 

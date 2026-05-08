@@ -36,6 +36,16 @@ function absolutizeUrl(url) {
   return new URL(clean, SH_BASE_URL).toString();
 }
 
+function getHtmlAttr(attrs, name) {
+  const match = String(attrs || "").match(new RegExp(`\\b${name}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, "i"));
+  return match ? decodeHtml(match[2]) : "";
+}
+
+function isAttachmentIconLabel(value) {
+  const text = trimOrNull(value);
+  return !text || /^\.(?:pdf|hwp|hwpx|docx?|xlsx?|pptx?|txt|zip|jpg|jpeg|png|gif|mp[34]|etc)$/i.test(text);
+}
+
 function parseBoundedInt(value, { defaultValue, min, max, label }) {
   if (value === undefined || value === null || String(value).trim() === "") return defaultValue;
   const text = String(value).trim();
@@ -46,18 +56,34 @@ function parseBoundedInt(value, { defaultValue, min, max, label }) {
   return parsed;
 }
 
+function normalizeMultiItmSeq(value) {
+  const normalized = trimOrNull(value);
+  if (!normalized) return DEFAULT_MULTI_ITM_SEQ;
+  if (!/^\d{1,10}$/.test(normalized)) throw new Error("multiItmSeq must be digits only.");
+  return normalized;
+}
+
 function normalizeShNoticeSearchQuery(query) {
   const srchTp = trimOrNull(query.srchTp ?? query.searchType ?? query.type);
   if (srchTp && !["title", "content", "1", "2", "제목", "내용"].includes(srchTp)) {
     throw new Error("srchTp must be title/content or 제목/내용.");
   }
   const mappedSrchTp = srchTp === "title" || srchTp === "제목" ? "1" : srchTp === "content" || srchTp === "내용" ? "2" : srchTp;
+  const srchWord = trimOrNull(query.srchWord ?? query.q ?? query.query ?? query.keyword);
+  if (srchWord && srchWord.length > 100) {
+    throw new Error("srchWord must be 100 characters or fewer.");
+  }
+  // SH 게시판은 srchWord만 있고 srchTp가 없으면 키워드를 무시하고 전체 목록을 돌려준다.
+  // 키워드만 들어온 경우 명시적 의도가 없을 때 제목 검색(`1`)로 fallback 한다.
+  const resolvedSrchTp = mappedSrchTp || (srchWord ? "1" : null);
+  // SH 게시판은 응답 페이지에 10건 고정으로 내려주므로, pageSize를 10으로 캡한다.
+  // 값이 더 크면 clamp되며 응답 summary.page_size에도 실제로 반환된 캡 값이 반영된다.
   return {
     page: parseBoundedInt(query.page ?? query.pageNo, { defaultValue: 1, min: 1, max: 1000, label: "page" }),
-    pageSize: parseBoundedInt(query.pageSize ?? query.limit, { defaultValue: 10, min: 1, max: 100, label: "pageSize" }),
-    srchWord: trimOrNull(query.srchWord ?? query.q ?? query.query ?? query.keyword),
-    srchTp: mappedSrchTp || null,
-    multiItmSeq: trimOrNull(query.multiItmSeq ?? query.multi_itm_seq) || DEFAULT_MULTI_ITM_SEQ
+    pageSize: parseBoundedInt(query.pageSize ?? query.limit, { defaultValue: 10, min: 1, max: 10, label: "pageSize" }),
+    srchWord,
+    srchTp: resolvedSrchTp,
+    multiItmSeq: normalizeMultiItmSeq(query.multiItmSeq ?? query.multi_itm_seq)
   };
 }
 
@@ -67,7 +93,7 @@ function normalizeShNoticeDetailQuery(query) {
   if (!/^\d{1,20}$/.test(seq)) throw new Error("seq must be digits only.");
   return {
     seq,
-    multiItmSeq: trimOrNull(query.multiItmSeq ?? query.multi_itm_seq) || DEFAULT_MULTI_ITM_SEQ
+    multiItmSeq: normalizeMultiItmSeq(query.multiItmSeq ?? query.multi_itm_seq)
   };
 }
 
@@ -126,23 +152,48 @@ function parseListRows(html, filters = {}) {
   return rows;
 }
 
-function parseAttachments(html, seq) {
+function parseAttachments(html, _seq) {
   const attachments = [];
-  const rowRegex = /<tr[^>]*>[\s\S]*?<th[^>]*>\s*첨부\s*<\/th>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<\/tr>/gi;
+  // SH 상세 페이지의 첨부 셀 안에는 (1) 확장자별 아이콘 템플릿(`.pdf`, `.hwp` ...)이
+  // 주석 처리된 영역에 먼저 있고, (2) 실제 첨부는 `onclick="existFile('N')"` 가 달린
+  // `btnAttach` 앵커로 따로 등장한다. 단순히 첫 `btnAttach`를 잡으면 아이콘 라벨이 잡힌다.
+  const source = String(html || "").replace(/<!--[\s\S]*?-->/g, " ");
+  const rowRegex = /<tr[^>]*>[\s\S]*?<th[^>]*>\s*첨부(?:파일)?\s*<\/th>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<\/tr>/gi;
   let match;
-  while ((match = rowRegex.exec(String(html || "")))) {
+  while ((match = rowRegex.exec(source))) {
     const cell = match[1];
-    const fileAnchor = cell.match(/<a[^>]*class=["'][^"']*btnAttach[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-    const filename = trimOrNull(stripTags(fileAnchor ? fileAnchor[1] : ""));
-    if (!filename) continue;
-    const previewMatch = cell.match(/<a[^>]*href=["']([^"']*htmlConverter\.do[^"']*)["'][^>]*>/i);
-    const previewUrl = previewMatch ? absolutizeUrl(previewMatch[1]) : null;
-    const fileSeqMatch = previewUrl ? previewUrl.match(/[?&]file_seq=(\d+)/) : null;
-    attachments.push({
-      filename,
-      file_seq: fileSeqMatch ? fileSeqMatch[1] : null,
-      preview_url: previewUrl,
-      download_hint: seq && fileSeqMatch ? `${SH_BASE_URL}/app/com/file/fileDown.do?brd_id=GS0401&seq=${seq}&file_seq=${fileSeqMatch[1]}` : null
+    const anchors = [...cell.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)].map((anchorMatch) => {
+      const attrs = anchorMatch[1];
+      return {
+        attrs,
+        className: getHtmlAttr(attrs, "class"),
+        href: getHtmlAttr(attrs, "href"),
+        onclick: getHtmlAttr(attrs, "onclick"),
+        text: trimOrNull(stripTags(anchorMatch[2]))
+      };
+    });
+
+    const previewUrls = anchors
+      .map((anchor) => anchor.href)
+      .filter((href) => /htmlConverter\.do/i.test(href))
+      .map((href) => absolutizeUrl(href))
+      .filter(Boolean);
+
+    const btnAttachAnchors = anchors.filter((anchor) => /\bbtnAttach\b/i.test(anchor.className));
+    const realFileAnchors = btnAttachAnchors.filter(
+      (anchor) => /existFile\(\s*['"]?\d+['"]?\s*\)/i.test(anchor.onclick) && !isAttachmentIconLabel(anchor.text)
+    );
+    const fallbackFileAnchors = btnAttachAnchors.filter((anchor) => !isAttachmentIconLabel(anchor.text));
+    const fileAnchors = realFileAnchors.length > 0 ? realFileAnchors : fallbackFileAnchors;
+
+    fileAnchors.forEach((anchor, index) => {
+      const previewUrl = previewUrls[index] || null;
+      const fileSeqMatch = previewUrl ? previewUrl.match(/[?&]file_seq=(\d+)/) : null;
+      attachments.push({
+        filename: anchor.text,
+        file_seq: fileSeqMatch ? fileSeqMatch[1] : null,
+        preview_url: previewUrl
+      });
     });
   }
   return attachments;

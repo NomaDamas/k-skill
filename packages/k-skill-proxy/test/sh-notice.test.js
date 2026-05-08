@@ -36,8 +36,13 @@ const DETAIL_HTML = `
   <tbody>
     <tr><td><strong>등록일 :</strong> 2026-05-07 <strong>조회수 :</strong> 1,972</td></tr>
     <tr><th scope="row">첨부</th><td>
+      <a href="#" class="btnAttach v1">.pdf</a>
+      <a href="#" class="btnAttach v2">.hwp</a>
+      <a href="#" class="btnAttach v11">.etc</a>
       <a href="#" class="btnAttach v1" onclick="existFile('0'); return false;">2022년 2차 행복주택 예비 17차 당첨자명단.pdf</a>
       <a href="/app/com/util/htmlConverter.do?brd_id=GS0401&amp;seq=303994&amp;data_tp=A&amp;file_seq=1" class="btn btnWhite h32 icoView" target="_blank">미리보기</a>
+      <a href="#" class="btnAttach v2" onclick="existFile('1'); return false;">추가 안내문.hwp</a>
+      <a href="/app/com/util/htmlConverter.do?brd_id=GS0401&amp;seq=303994&amp;data_tp=A&amp;file_seq=2" class="btn btnWhite h32 icoView" target="_blank">미리보기</a>
     </td></tr>
     <tr><td colspan="2" class="cont"><p>2022년 2차 행복주택 예비17차 당첨자 발표</p><p>계약 안내를 확인하세요.</p></td></tr>
   </tbody>
@@ -48,12 +53,47 @@ test("normalizeShNoticeSearchQuery maps aliases and bounds page size", () => {
   assert.equal(normalized.srchWord, "행복주택");
   assert.equal(normalized.srchTp, "1");
   assert.equal(normalized.page, 2);
-  assert.equal(normalized.pageSize, 100);
+  assert.equal(normalized.pageSize, 10);
+});
+
+test("normalizeShNoticeSearchQuery defaults keyword search to title scope when srchTp is omitted", () => {
+  const normalized = normalizeShNoticeSearchQuery({ q: "행복주택" });
+  assert.equal(normalized.srchWord, "행복주택");
+  assert.equal(normalized.srchTp, "1");
+});
+
+test("normalizeShNoticeSearchQuery keeps srchTp null when no keyword is provided", () => {
+  const normalized = normalizeShNoticeSearchQuery({});
+  assert.equal(normalized.srchWord, null);
+  assert.equal(normalized.srchTp, null);
+});
+
+test("normalizeShNoticeSearchQuery preserves explicit content scope", () => {
+  const normalized = normalizeShNoticeSearchQuery({ q: "행복주택", srchTp: "content" });
+  assert.equal(normalized.srchTp, "2");
+});
+
+test("normalizeShNoticeSearchQuery rejects oversized keyword", () => {
+  assert.throws(
+    () => normalizeShNoticeSearchQuery({ q: "x".repeat(101) }),
+    /100 characters/
+  );
+});
+
+test("normalizeShNoticeSearchQuery rejects non-numeric multiItmSeq", () => {
+  assert.throws(() => normalizeShNoticeSearchQuery({ multiItmSeq: "abc" }), /digits only/);
 });
 
 test("normalizeShNoticeDetailQuery requires numeric seq", () => {
   assert.equal(normalizeShNoticeDetailQuery({ id: "303994" }).seq, "303994");
   assert.throws(() => normalizeShNoticeDetailQuery({ seq: "abc" }), /digits only/);
+});
+
+test("normalizeShNoticeDetailQuery rejects non-numeric multiItmSeq", () => {
+  assert.throws(
+    () => normalizeShNoticeDetailQuery({ seq: "303994", multiItmSeq: "abc" }),
+    /digits only/
+  );
 });
 
 test("buildSearchUrl targets official SH list page", () => {
@@ -86,16 +126,26 @@ test("buildListResponseBody limits returned items and includes total", () => {
   assert.equal(body.summary.returned_count, 1);
 });
 
-test("parseAttachments and parseDetail extract preview links and content", () => {
+test("parseAttachments skips icon-template anchors and returns real attachments with previews", () => {
   const attachments = parseAttachments(DETAIL_HTML, "303994");
-  assert.equal(attachments.length, 1);
+  assert.equal(attachments.length, 2);
+  assert.equal(attachments[0].filename, "2022년 2차 행복주택 예비 17차 당첨자명단.pdf");
   assert.equal(attachments[0].file_seq, "1");
-  assert.equal(attachments[0].preview_url, "https://www.i-sh.co.kr/app/com/util/htmlConverter.do?brd_id=GS0401&seq=303994&data_tp=A&file_seq=1");
+  assert.equal(
+    attachments[0].preview_url,
+    "https://www.i-sh.co.kr/app/com/util/htmlConverter.do?brd_id=GS0401&seq=303994&data_tp=A&file_seq=1"
+  );
+  assert.equal(Object.hasOwn(attachments[0], "download_hint"), false);
+  assert.equal(attachments[1].filename, "추가 안내문.hwp");
+  assert.equal(attachments[1].file_seq, "2");
+});
 
+test("parseDetail extracts title, metadata, and content text", () => {
   const detail = parseDetail(DETAIL_HTML, { seq: "303994", multiItmSeq: "2" });
   assert.equal(detail.title, "행복주택 예비당첨자 게시");
   assert.equal(detail.registered_date, "2026-05-07");
   assert.equal(detail.views, 1972);
   assert.match(detail.content_text, /계약 안내/);
+  assert.equal(detail.attachments.length, 2);
 });
 
