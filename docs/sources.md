@@ -108,6 +108,7 @@
 - 다이소몰 상품 검색 목록: https://www.daisomall.co.kr/ssn/search/SearchGoods
 - 다이소몰 상품 요약 목록: https://www.daisomall.co.kr/ssn/search/GoodsMummResult
 - 다이소몰 매장 픽업 재고: https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck (2026-05-05 기준 Unauthorized 차단 가능)
+- 다이소몰 매장 픽업 가능 매장 목록: https://www.daisomall.co.kr/api/ms/msg/selPkupStr (특정 상품의 픽업 가능 매장 리스트, 매장 수량은 미제공)
 - 다이소몰 온라인 재고: https://www.daisomall.co.kr/api/pdo/selOnlStck
 - 마켓컬리 검색 API(v4): https://api.kurly.com/search/v4/sites/market/normal-search
 - 마켓컬리 검색 개수 API(v3): https://api.kurly.com/search/v3/sites/market/normal-search/count

@@ -3,6 +3,7 @@ const {
   BASE_SEARCH_URL,
   buildSearchGoodsParams,
   normalizeOnlineStockResponse,
+  normalizePickupEligibilityResponse,
   normalizeProductIdentifier,
   normalizeSearchGoodsResponse,
   normalizeStorePickupStockResponse,
@@ -153,6 +154,51 @@ async function getOnlineStock(request, options = {}) {
   return normalizeOnlineStockResponse(payload, normalizedRequest)
 }
 
+function buildPickupEligibilityKeyword(value) {
+  return String(value || "")
+    .replace(/\d+\s*호점\s*$/u, "")
+    .replace(/[(].*?[)]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim()
+}
+
+async function getStorePickupEligibility(request, options = {}) {
+  const pdNo = String(request.pdNo || "").trim()
+  const strCd = String(request.strCd || "").trim()
+  const explicitKeyword =
+    typeof request.keyword === "string" && request.keyword.trim() ? request.keyword.trim() : null
+  const derivedKeyword = explicitKeyword || buildPickupEligibilityKeyword(request.storeName)
+  const pageSize = Number(request.pageSize || 50)
+
+  if (!pdNo) {
+    throw new Error("pdNo is required.")
+  }
+
+  try {
+    const payload = await requestJson(`${BASE_API_URL}/ms/msg/selPkupStr`, {
+      ...options,
+      method: "POST",
+      body: {
+        pdNo,
+        keyword: derivedKeyword || "",
+        currentPage: 1,
+        pageSize
+      }
+    })
+
+    return normalizePickupEligibilityResponse(payload, { pdNo, strCd })
+  } catch (error) {
+    if (error instanceof DaisoRequestError) {
+      return normalizePickupEligibilityResponse(
+        error.payload || { success: false, message: `HTTP ${error.status}` },
+        { pdNo, strCd }
+      )
+    }
+
+    throw error
+  }
+}
+
 async function lookupStoreProductAvailability(options = {}) {
   const storeQuery = String(options.storeQuery || "").trim()
   const productQuery = String(options.productQuery || "").trim()
@@ -194,6 +240,23 @@ async function lookupStoreProductAvailability(options = {}) {
         )
   ])
 
+  let pickupEligibility = null
+
+  if (
+    options.includePickupEligibility !== false &&
+    pickupStock &&
+    pickupStock.retrievalStatus === "blocked"
+  ) {
+    pickupEligibility = await getStorePickupEligibility(
+      {
+        pdNo: selectedProduct.pdNo,
+        strCd: selectedStore.strCd,
+        storeName: selectedStore.name
+      },
+      options
+    )
+  }
+
   return {
     storeQuery,
     productQuery,
@@ -203,6 +266,7 @@ async function lookupStoreProductAvailability(options = {}) {
     storeDetail: storeDetailPayload.data || null,
     selectedProduct,
     pickupStock,
+    pickupEligibility,
     onlineStock
   }
 }
@@ -210,6 +274,7 @@ async function lookupStoreProductAvailability(options = {}) {
 module.exports = {
   getOnlineStock,
   getStoreDetail,
+  getStorePickupEligibility,
   getStorePickupStock,
   lookupStoreProductAvailability,
   searchProducts,

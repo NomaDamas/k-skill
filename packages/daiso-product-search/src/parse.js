@@ -386,6 +386,58 @@ function normalizeOnlineStockResponse(payload, request) {
   }
 }
 
+function normalizePickupEligibilityStore(item) {
+  return {
+    strCd: String(item.strCd || ""),
+    name: item.strNm || "",
+    address: [item.strAddr, item.strDtlAddr].filter(Boolean).join(" "),
+    phone: item.strTno || null,
+    pickupAvailable: item.pkupYn === "Y",
+    openTime: formatStoreTime(item.opngTime),
+    closeTime: formatStoreTime(item.clsngTime),
+    distanceKm: normalizeDistanceKm(item.km),
+    latitude: toNumberOrNull(item.strLttd),
+    longitude: toNumberOrNull(item.strLitd)
+  }
+}
+
+function normalizePickupEligibilityResponse(payload, request) {
+  const requestStrCd = String(request.strCd || "")
+  const requestPdNo = String(request.pdNo || "")
+
+  if (!payload || typeof payload !== "object" || payload.success === false) {
+    return {
+      pdNo: requestPdNo,
+      strCd: requestStrCd,
+      pickupEligible: null,
+      eligibleStoreCount: null,
+      eligibleStores: [],
+      retrievalStatus: "blocked",
+      reason: "upstream_error",
+      raw: payload || null
+    }
+  }
+
+  const rawItems = Array.isArray(payload.data) ? payload.data : []
+  const eligibleStores = rawItems
+    .filter((item) => item && item.strCd)
+    .map(normalizePickupEligibilityStore)
+  const matchedStore = requestStrCd
+    ? eligibleStores.find((store) => store.strCd === requestStrCd) || null
+    : null
+
+  return {
+    pdNo: requestPdNo,
+    strCd: requestStrCd,
+    pickupEligible: requestStrCd ? Boolean(matchedStore) : null,
+    eligibleStoreCount: eligibleStores.length,
+    eligibleStores,
+    matchedStore,
+    retrievalStatus: "resolved",
+    raw: payload
+  }
+}
+
 module.exports = {
   BASE_API_URL,
   BASE_SEARCH_URL,
@@ -393,6 +445,8 @@ module.exports = {
   STORE_EMPTY_RESULT_ERROR,
   buildSearchGoodsParams,
   normalizeOnlineStockResponse,
+  normalizePickupEligibilityResponse,
+  normalizePickupEligibilityStore,
   normalizeProductIdentifier,
   normalizeProductItem,
   normalizeSearchGoodsResponse,

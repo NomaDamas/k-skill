@@ -6,6 +6,7 @@ const path = require("node:path")
 const {
   getOnlineStock,
   getStoreDetail,
+  getStorePickupEligibility,
   getStorePickupStock,
   lookupStoreProductAvailability,
   searchProducts,
@@ -13,6 +14,7 @@ const {
 } = require("../src/index")
 const {
   buildSearchGoodsParams,
+  normalizePickupEligibilityResponse,
   normalizeSearchGoodsResponse,
   normalizeStorePickupStockResponse,
   normalizeStoreSearchResponse
@@ -24,6 +26,9 @@ const searchGoodsPayload = JSON.parse(fs.readFileSync(path.join(fixturesDir, "se
 const storeDetailPayload = JSON.parse(fs.readFileSync(path.join(fixturesDir, "store-detail.json"), "utf8"))
 const storePickupStockPayload = JSON.parse(fs.readFileSync(path.join(fixturesDir, "store-pickup-stock.json"), "utf8"))
 const onlineStockPayload = JSON.parse(fs.readFileSync(path.join(fixturesDir, "online-stock.json"), "utf8"))
+const storePickupEligibilityPayload = JSON.parse(
+  fs.readFileSync(path.join(fixturesDir, "store-pickup-eligibility.json"), "utf8")
+)
 const liveSearchGoodsPayload = {
   resultSet: {
     result: [
@@ -339,7 +344,7 @@ test("lookupStoreProductAvailability keeps online-stock fallback when Daiso pick
   const originalFetch = global.fetch
 
   global.fetch = async (url) => {
-    if (String(url).includes("/api/ms/msg/selStr") && !String(url).includes("selStrInfo")) {
+    if (String(url).includes("/api/ms/msg/selStr") && !String(url).includes("selStrInfo") && !String(url).includes("selPkupStr")) {
       return makeResponse(storeSearchPayload)
     }
 
@@ -353,6 +358,10 @@ test("lookupStoreProductAvailability keeps online-stock fallback when Daiso pick
 
     if (String(url).includes("/api/pd/pdh/selStrPkupStck")) {
       return makeResponse({ success: false, message: "Unauthorized" }, { status: 403 })
+    }
+
+    if (String(url).includes("/api/ms/msg/selPkupStr")) {
+      return makeResponse(storePickupEligibilityPayload)
     }
 
     if (String(url).includes("/api/pdo/selOnlStck")) {
@@ -374,6 +383,196 @@ test("lookupStoreProductAvailability keeps online-stock fallback when Daiso pick
     assert.equal(availability.pickupStock.reason, "unauthorized")
     assert.equal(availability.onlineStock.quantity, 13047)
     assert.equal(availability.onlineStock.referenceOnly, true)
+    assert.notEqual(availability.pickupEligibility, null)
+    assert.equal(availability.pickupEligibility.pickupEligible, true)
+    assert.equal(availability.pickupEligibility.matchedStore.strCd, "10224")
+    assert.equal(availability.pickupEligibility.retrievalStatus, "resolved")
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
+test("normalizePickupEligibilityResponse marks selected store as eligible when present in list", () => {
+  const eligibility = normalizePickupEligibilityResponse(storePickupEligibilityPayload, {
+    pdNo: "1049275",
+    strCd: "10224"
+  })
+
+  assert.equal(eligibility.pickupEligible, true)
+  assert.equal(eligibility.eligibleStoreCount, 1)
+  assert.equal(eligibility.matchedStore.strCd, "10224")
+  assert.equal(eligibility.matchedStore.name, "강남역2호점")
+  assert.equal(eligibility.matchedStore.pickupAvailable, true)
+  assert.equal(eligibility.matchedStore.openTime, "10:00")
+  assert.equal(eligibility.retrievalStatus, "resolved")
+})
+
+test("normalizePickupEligibilityResponse marks selected store as NOT eligible when absent from list", () => {
+  const eligibility = normalizePickupEligibilityResponse(storePickupEligibilityPayload, {
+    pdNo: "1049275",
+    strCd: "99999"
+  })
+
+  assert.equal(eligibility.pickupEligible, false)
+  assert.equal(eligibility.eligibleStoreCount, 1)
+  assert.equal(eligibility.matchedStore, null)
+  assert.equal(eligibility.retrievalStatus, "resolved")
+})
+
+test("normalizePickupEligibilityResponse handles upstream failure as blocked retrieval", () => {
+  const eligibility = normalizePickupEligibilityResponse(
+    { success: false, message: "Upstream error" },
+    { pdNo: "1049275", strCd: "10224" }
+  )
+
+  assert.equal(eligibility.pickupEligible, null)
+  assert.equal(eligibility.eligibleStoreCount, null)
+  assert.equal(eligibility.eligibleStores.length, 0)
+  assert.equal(eligibility.retrievalStatus, "blocked")
+  assert.equal(eligibility.reason, "upstream_error")
+})
+
+test("getStorePickupEligibility posts pdNo and a derived store keyword to selPkupStr", async () => {
+  const originalFetch = global.fetch
+  let capturedBody = null
+  let capturedUrl = null
+
+  global.fetch = async (url, init = {}) => {
+    capturedUrl = String(url)
+    capturedBody = JSON.parse(init.body)
+    return makeResponse(storePickupEligibilityPayload)
+  }
+
+  try {
+    const eligibility = await getStorePickupEligibility({
+      pdNo: "1049275",
+      strCd: "10224",
+      storeName: "강남역2호점"
+    })
+
+    assert.match(capturedUrl, /\/api\/ms\/msg\/selPkupStr$/)
+    assert.equal(capturedBody.pdNo, "1049275")
+    assert.equal(capturedBody.keyword, "강남역")
+    assert.equal(capturedBody.currentPage, 1)
+    assert.equal(typeof capturedBody.pageSize, "number")
+    assert.equal(eligibility.pickupEligible, true)
+    assert.equal(eligibility.matchedStore.strCd, "10224")
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
+test("getStorePickupEligibility surfaces upstream HTTP errors as blocked retrieval", async () => {
+  const originalFetch = global.fetch
+
+  global.fetch = async () =>
+    makeResponse({ success: false, message: "Internal Server Error" }, { status: 500 })
+
+  try {
+    const eligibility = await getStorePickupEligibility({
+      pdNo: "1049275",
+      strCd: "10224",
+      storeName: "강남역2호점"
+    })
+
+    assert.equal(eligibility.pickupEligible, null)
+    assert.equal(eligibility.retrievalStatus, "blocked")
+    assert.equal(eligibility.reason, "upstream_error")
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
+test("lookupStoreProductAvailability skips pickup eligibility lookup when pickup stock resolves", async () => {
+  const originalFetch = global.fetch
+  let eligibilityCalled = false
+
+  global.fetch = async (url) => {
+    if (String(url).includes("/api/ms/msg/selStr") && !String(url).includes("selStrInfo") && !String(url).includes("selPkupStr")) {
+      return makeResponse(storeSearchPayload)
+    }
+
+    if (String(url).includes("/ssn/search/SearchGoods")) {
+      return makeResponse(searchGoodsPayload)
+    }
+
+    if (String(url).includes("/api/dl/dla-api/selStrInfo")) {
+      return makeResponse(storeDetailPayload)
+    }
+
+    if (String(url).includes("/api/pd/pdh/selStrPkupStck")) {
+      return makeResponse(storePickupStockPayload)
+    }
+
+    if (String(url).includes("/api/ms/msg/selPkupStr")) {
+      eligibilityCalled = true
+      return makeResponse(storePickupEligibilityPayload)
+    }
+
+    if (String(url).includes("/api/pdo/selOnlStck")) {
+      return makeResponse(onlineStockPayload)
+    }
+
+    return new Response("not found", { status: 404 })
+  }
+
+  try {
+    const availability = await lookupStoreProductAvailability({
+      storeQuery: "강남역2호점",
+      productQuery: "VT 리들샷 100"
+    })
+
+    assert.equal(availability.pickupStock.retrievalStatus, "resolved")
+    assert.equal(eligibilityCalled, false)
+    assert.equal(availability.pickupEligibility, null)
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
+test("lookupStoreProductAvailability respects includePickupEligibility=false even when pickup stock is blocked", async () => {
+  const originalFetch = global.fetch
+  let eligibilityCalled = false
+
+  global.fetch = async (url) => {
+    if (String(url).includes("/api/ms/msg/selStr") && !String(url).includes("selStrInfo") && !String(url).includes("selPkupStr")) {
+      return makeResponse(storeSearchPayload)
+    }
+
+    if (String(url).includes("/ssn/search/SearchGoods")) {
+      return makeResponse(searchGoodsPayload)
+    }
+
+    if (String(url).includes("/api/dl/dla-api/selStrInfo")) {
+      return makeResponse(storeDetailPayload)
+    }
+
+    if (String(url).includes("/api/pd/pdh/selStrPkupStck")) {
+      return makeResponse({ success: false, message: "Unauthorized" }, { status: 403 })
+    }
+
+    if (String(url).includes("/api/ms/msg/selPkupStr")) {
+      eligibilityCalled = true
+      return makeResponse(storePickupEligibilityPayload)
+    }
+
+    if (String(url).includes("/api/pdo/selOnlStck")) {
+      return makeResponse(onlineStockPayload)
+    }
+
+    return new Response("not found", { status: 404 })
+  }
+
+  try {
+    const availability = await lookupStoreProductAvailability({
+      storeQuery: "강남역2호점",
+      productQuery: "VT 리들샷 100",
+      includePickupEligibility: false
+    })
+
+    assert.equal(availability.pickupStock.retrievalStatus, "blocked")
+    assert.equal(eligibilityCalled, false)
+    assert.equal(availability.pickupEligibility, null)
   } finally {
     global.fetch = originalFetch
   }

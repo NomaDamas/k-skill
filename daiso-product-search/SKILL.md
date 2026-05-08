@@ -18,6 +18,7 @@ metadata:
 - 공식 상품 검색으로 상품 후보를 찾는다.
 - 공식 매장 픽업 재고 표면으로 해당 매장의 재고를 확인한다.
 - 다이소몰이 매장 픽업 재고 표면을 `Unauthorized` 로 차단하면 차단 상태를 그대로 보고하고 세션 우회는 시도하지 않는다.
+- 매장 픽업 재고가 차단되면 공식 픽업 가능 매장 목록(`selPkupStr`) 으로 해당 매장에 상품이 픽업 가능 매장으로 등록되어 있는지 여부를 확인해 `pickupEligibility` 로 답한다. 정확한 수량은 여전히 알 수 없다.
 - **공식 표면이 매장 내 진열 위치를 주지 않으면 재고 중심으로만 답한다.**
 
 ## When to use
@@ -64,6 +65,7 @@ metadata:
 - product search list: `https://www.daisomall.co.kr/ssn/search/SearchGoods`
 - product summary list: `https://www.daisomall.co.kr/ssn/search/GoodsMummResult`
 - store pickup stock: `https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck`
+- store pickup eligibility (pickup-capable stores for a product): `https://www.daisomall.co.kr/api/ms/msg/selPkupStr`
 - optional online stock cross-check: `https://www.daisomall.co.kr/api/pdo/selOnlStck`
 
 ## Workflow
@@ -122,7 +124,25 @@ console.log(stock)
 // 차단 예시: { status: "unavailable", retrievalStatus: "blocked", inventoryStatus: "unknown", reason: "unauthorized", quantity: null, inStock: null }
 ```
 
-### 4. Use the end-to-end helper when both names are already known
+### 4. Fall back to pickup eligibility when stock is blocked
+
+매장 픽업 재고가 `Unauthorized` 로 차단되면 공식 픽업 가능 매장 목록 표면으로 **해당 매장이 그 상품의 픽업 가능 매장에 들어 있는지** 만이라도 확인할 수 있다. 수량은 알 수 없지만 "그 매장에서 이 상품을 픽업으로 살 수 있는지" 는 답할 수 있다.
+
+```js
+const { getStorePickupEligibility } = require("daiso-product-search")
+
+const eligibility = await getStorePickupEligibility({
+  pdNo: "1049275",
+  strCd: "10224",
+  storeName: "강남역2호점"
+})
+
+console.log(eligibility)
+```
+
+`pickupEligible` 가 `true` 이면 그 매장에서 픽업 가능, `false` 면 픽업 불가, `null` 이면 확인 불가다. `eligibleStoreCount` 와 `eligibleStores` 로 다른 후보 매장도 함께 보여줄 수 있다.
+
+### 5. Use the end-to-end helper when both names are already known
 
 ```js
 const { lookupStoreProductAvailability } = require("daiso-product-search")
@@ -135,15 +155,19 @@ const result = await lookupStoreProductAvailability({
 console.log(result.selectedStore)
 console.log(result.selectedProduct)
 console.log(result.pickupStock)
+console.log(result.pickupEligibility)
 ```
 
-### 5. Respond conservatively
+`pickupStock.retrievalStatus === "blocked"` 일 때만 `pickupEligibility` 가 채워진다. `includePickupEligibility: false` 옵션으로 끌 수 있다.
+
+### 6. Respond conservatively
 
 응답은 짧고 명확하게 정리한다.
 
 - 매장명
 - 상품명
 - 매장 재고 수량, 재고 없음, 또는 `retrievalStatus: "blocked"` / `Unauthorized` 로 인한 확인 불가
+- 픽업 재고가 차단된 경우 `pickupEligibility.pickupEligible` 로 그 매장의 픽업 가능 여부만이라도 표시
 - 필요하면 `referenceOnly: true` 로 표시된 온라인 재고 참고값
 - **공식 표면이 매장 내 진열 위치를 주지 않으면 `공식 표면에서는 매장 재고까지만 확인된다`고 분명히 말한다.**
 
