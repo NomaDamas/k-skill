@@ -75,7 +75,7 @@ console.log(result.items)
 CLI:
 
 ```bash
-node packages/korean-marathon-schedule/src/cli.js 서울 --from 2026-05-01 --to 2026-12-31 --include-triathlon --limit 10
+node packages/korean-marathon-schedule/src/cli.js 서울 --from 2026-05-01 --to 2026-12-31 --include-triathlon --limit 10 --max-details-per-source 100
 ```
 
 ### 2. Summarize conservatively
@@ -96,7 +96,7 @@ If no deadline is present, say `신청 마감일을 공개 페이지에서 확�
 ### 3. Use fallback order
 
 1. GoRunning list → same-host GoRunning detail pages for marathon/road-running schedules; continue through the public list until enough matching results are collected, the list is exhausted, or the explicit per-source detail budget is reached.
-2. If the user asks for triathlon or `includeTriathlon` is useful, query the 대한철인3종협회 year list and same-host public detail pages; skip non-competition list entries and continue until enough matching results are collected, the list is exhausted, or the explicit per-source detail budget is reached.
+2. If the user asks for triathlon or `includeTriathlon` is useful, query the 대한철인3종협회 year list and same-host public detail pages; skip non-competition list entries and continue until enough matching results are collected, the selected year lists are exhausted, or the explicit per-source detail budget shared across selected years is reached.
 3. If either source returns an empty, blocked, changed page, or detail-budget warning, report the source-specific failure/warning and return any successfully parsed results from the other source.
 
 ## Done when
@@ -109,7 +109,7 @@ If no deadline is present, say `신청 마감일을 공개 페이지에서 확�
 ## Failure modes
 
 - 일정/접수 정보는 수시로 바뀔 수 있다; always state results are based on the current public page read.
-- GoRunning or triathlon.or.kr HTML structure may change; then parsing may return empty fields or fail. Off-origin detail links are ignored to keep the lookup bounded to documented public sources. If a public list is larger than the per-source detail budget, results can be partial and a warning is returned.
+- GoRunning or triathlon.or.kr HTML structure may change; then parsing may return empty fields or fail. Off-origin detail links are ignored to keep the lookup bounded to documented public sources. If a public list is larger than the per-source detail budget, results can be partial and a warning is returned; triathlon applies that budget once across all selected years.
 - Some official event websites may be linked only from the detail page; if absent, return the source detail URL.
 - Registration may already be closed even if the event date is upcoming.
 - Login, payment, CAPTCHA, or private member-only pages are outside scope and must not be automated.

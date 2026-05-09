@@ -42,13 +42,17 @@ async function searchEvents(options = {}) {
   }
 
   if (includeTriathlon) {
+    let triathlonDetailCount = 0
+    let triathlonSourceCount = 0
     for (const year of years) {
       const listUrl = `${TRIATHLON_TOUR_URL}?sYear=${encodeURIComponent(year)}&vType=list`
       try {
         const triListHtml = await fetchText(fetcher, listUrl)
         const triListItems = parseTriathlonList(triListHtml)
-        const triBudgetedItems = triListItems.slice(0, detailBudget)
-        for (const listItem of triBudgetedItems) {
+        triathlonSourceCount += triListItems.length
+        for (const listItem of triListItems) {
+          if (triathlonDetailCount >= detailBudget) break
+          triathlonDetailCount += 1
           try {
             const detailHtml = await fetchText(fetcher, listItem.url)
             const event = parseTriathlonDetail(detailHtml, listItem.url, listItem)
@@ -58,13 +62,13 @@ async function searchEvents(options = {}) {
           }
           if (items.length >= normalizedLimit) break
         }
-        if (items.length < normalizedLimit && triListItems.length > triBudgetedItems.length) {
-          warnings.push(`triathlon detail budget exhausted after ${triBudgetedItems.length} of ${triListItems.length} source links for ${year}`)
-        }
       } catch (error) {
         warnings.push(`triathlon source failed for ${listUrl}: ${error.message}`)
       }
       if (items.length >= normalizedLimit) break
+    }
+    if (items.length < normalizedLimit && triathlonSourceCount > triathlonDetailCount && triathlonDetailCount >= detailBudget) {
+      warnings.push(`triathlon detail budget exhausted after ${triathlonDetailCount} of ${triathlonSourceCount} source links`)
     }
   }
 

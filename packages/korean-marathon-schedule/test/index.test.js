@@ -1,5 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert/strict")
+const { spawnSync } = require("node:child_process")
 
 const {
   parseGorunningList,
@@ -201,6 +202,79 @@ test("searchEvents warns when a configurable detail budget is exhausted before s
 
   assert.equal(result.items.length, 0)
   assert.match(result.warnings.join("\n"), /gorunning detail budget exhausted after 3 of 6 source links/)
+})
+
+test("searchEvents applies one triathlon detail budget across selected years", async () => {
+  const seenDetails = []
+  const fetcher = async (url) => {
+    const textUrl = String(url)
+    if (textUrl === "https://gorunning.kr/races/") return htmlResponse("")
+    if (textUrl === "https://triathlon.or.kr/events/tour/?sYear=2026&vType=list") {
+      return htmlResponse(`<!doctype html><html><body><table>
+<tr><td><a href="/events/tour/overview/?mode=overview&tourcd=6101">2026 서울 철인3종 대회</a> 장소: 서울 코스: 스탠다드</td></tr>
+</table></body></html>`)
+    }
+    if (textUrl === "https://triathlon.or.kr/events/tour/?sYear=2027&vType=list") {
+      return htmlResponse(`<!doctype html><html><body><table>
+<tr><td><a href="/events/tour/overview/?mode=overview&tourcd=7101">2027 제주 철인3종 대회</a> 장소: 제주 코스: 스탠다드</td></tr>
+</table></body></html>`)
+    }
+    if (textUrl.includes("/events/tour/overview/")) {
+      seenDetails.push(textUrl)
+      const tourcd = new URL(textUrl).searchParams.get("tourcd")
+      return htmlResponse(`<!doctype html><html><body>
+<h2>${tourcd} 철인3종 대회</h2>
+<table>
+<tr><th>대회명</th><td>${tourcd} 철인3종 대회</td></tr>
+<tr><th>대회기간</th><td>${tourcd === "6101" ? "2026" : "2027"}-07-01</td></tr>
+<tr><th>대회장소</th><td>서울 한강</td></tr>
+</table>
+</body></html>`)
+    }
+    return new Response("not found", { status: 404 })
+  }
+
+  const result = await searchEvents({
+    query: "부산",
+    from: "2026-01-01",
+    to: "2027-12-31",
+    includeTriathlon: true,
+    limit: 5,
+    maxDetailsPerSource: 1,
+    fetcher
+  })
+
+  assert.equal(result.items.length, 0)
+  assert.equal(seenDetails.length, 1)
+  assert.deepEqual(seenDetails, [
+    "https://triathlon.or.kr/events/tour/overview/?mode=overview&tourcd=6101"
+  ])
+  assert.match(result.warnings.join("\n"), /triathlon detail budget exhausted after 1 of 2 source links/)
+})
+
+test("CLI help documents max-details-per-source budget option", () => {
+  const result = spawnSync(process.execPath, ["src/cli.js", "--help"], {
+    cwd: __dirname + "/..",
+    encoding: "utf8"
+  })
+
+  assert.equal(result.status, 0)
+  assert.match(result.stdout, /--max-details-per-source <number>/)
+})
+
+test("CLI maps max-details-per-source argument to search options", () => {
+  const { parseArgs } = require("../src/cli")
+
+  const options = parseArgs([
+    "고령",
+    "--from",
+    "2026-01-01",
+    "--include-triathlon",
+    "--max-details-per-source",
+    "7"
+  ])
+
+  assert.equal(options.maxDetailsPerSource, 7)
 })
 
 test("parseTriathlonList keeps race rows isolated from neighboring education rows", () => {
