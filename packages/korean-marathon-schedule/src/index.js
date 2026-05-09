@@ -8,12 +8,14 @@ async function searchEvents(options = {}) {
     to,
     includeTriathlon = false,
     limit = 10,
+    maxDetailsPerSource,
     fetcher = global.fetch
   } = options
 
   if (!fetcher) throw new Error("fetch is required.")
 
   const normalizedLimit = Math.max(1, Number(limit) || 10)
+  const detailBudget = normalizeDetailBudget(maxDetailsPerSource, normalizedLimit)
   const years = collectYears(from, to)
   const items = []
   const warnings = []
@@ -21,7 +23,8 @@ async function searchEvents(options = {}) {
   try {
     const marathonListHtml = await fetchText(fetcher, GORUNNING_RACES_URL)
     const marathonUrls = parseGorunningList(marathonListHtml)
-    for (const url of marathonUrls.slice(0, Math.max(normalizedLimit * 3, normalizedLimit))) {
+    const marathonBudgetedUrls = marathonUrls.slice(0, detailBudget)
+    for (const url of marathonBudgetedUrls) {
       try {
         const detailHtml = await fetchText(fetcher, url)
         const event = parseGorunningDetail(detailHtml, url)
@@ -29,7 +32,10 @@ async function searchEvents(options = {}) {
       } catch (error) {
         warnings.push(`gorunning detail failed for ${url}: ${error.message}`)
       }
-      if (items.length >= normalizedLimit && !includeTriathlon) break
+      if (items.length >= normalizedLimit) break
+    }
+    if (items.length < normalizedLimit && marathonUrls.length > marathonBudgetedUrls.length) {
+      warnings.push(`gorunning detail budget exhausted after ${marathonBudgetedUrls.length} of ${marathonUrls.length} source links`)
     }
   } catch (error) {
     warnings.push(`gorunning source failed: ${error.message}`)
@@ -40,7 +46,9 @@ async function searchEvents(options = {}) {
       const listUrl = `${TRIATHLON_TOUR_URL}?sYear=${encodeURIComponent(year)}&vType=list`
       try {
         const triListHtml = await fetchText(fetcher, listUrl)
-        for (const listItem of parseTriathlonList(triListHtml).slice(0, Math.max(normalizedLimit * 2, normalizedLimit))) {
+        const triListItems = parseTriathlonList(triListHtml)
+        const triBudgetedItems = triListItems.slice(0, detailBudget)
+        for (const listItem of triBudgetedItems) {
           try {
             const detailHtml = await fetchText(fetcher, listItem.url)
             const event = parseTriathlonDetail(detailHtml, listItem.url, listItem)
@@ -49,6 +57,9 @@ async function searchEvents(options = {}) {
             warnings.push(`triathlon detail failed for ${listItem.url}: ${error.message}`)
           }
           if (items.length >= normalizedLimit) break
+        }
+        if (items.length < normalizedLimit && triListItems.length > triBudgetedItems.length) {
+          warnings.push(`triathlon detail budget exhausted after ${triBudgetedItems.length} of ${triListItems.length} source links for ${year}`)
         }
       } catch (error) {
         warnings.push(`triathlon source failed for ${listUrl}: ${error.message}`)
@@ -70,13 +81,21 @@ async function searchEvents(options = {}) {
   }
 }
 
+function normalizeDetailBudget(maxDetailsPerSource, normalizedLimit) {
+  if (maxDetailsPerSource === undefined || maxDetailsPerSource === null) return Math.max(300, normalizedLimit * 10)
+  const numeric = Number(maxDetailsPerSource)
+  if (!Number.isFinite(numeric)) return Math.max(300, normalizedLimit * 10)
+  return Math.max(1, Math.floor(numeric))
+}
+
 function parseGorunningList(html) {
   const urls = new Set()
   const source = String(html || "")
   const linkRe = /<a\b[^>]*href=["']([^"']*\/races\/\d+\/[^"']*)["'][^>]*>/gi
   let match
   while ((match = linkRe.exec(source))) {
-    urls.add(new URL(decodeHtml(match[1]), GORUNNING_RACES_URL).toString())
+    const url = resolveAllowedUrl(decodeHtml(match[1]), GORUNNING_RACES_URL, "gorunning.kr")
+    if (url) urls.add(url)
   }
   return [...urls]
 }
@@ -116,12 +135,46 @@ function parseTriathlonList(html) {
   const linkRe = /<a\b[^>]*href=["']([^"']*\/events\/tour\/overview\/[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi
   let match
   while ((match = linkRe.exec(source))) {
-    const url = new URL(decodeHtml(match[1]), "https://triathlon.or.kr").toString()
-    const context = source.slice(Math.max(0, match.index - 300), Math.min(source.length, match.index + 700))
-    const categories = splitCategories(textAfterInlineLabel(htmlToText(context), "코스"))
+    const url = resolveAllowedUrl(decodeHtml(match[1]), "https://triathlon.or.kr", "triathlon.or.kr")
+    if (!url) continue
+    const title = cleanText(htmlToText(match[2]))
+    const context = enclosingTagSource(source, match.index, "tr") || source.slice(Math.max(0, match.index - 300), Math.min(source.length, match.index + 700))
+    const contextText = htmlToText(context)
+    if (!isTriathlonCompetitionText(title, contextText)) continue
+    const categories = splitCategories(textAfterInlineLabel(contextText, "코스"))
     items.set(url, { url, categories })
   }
   return [...items.values()]
+}
+
+function enclosingTagSource(source, index, tagName) {
+  const tag = escapeRegExp(tagName)
+  const before = source.slice(0, index)
+  const openMatch = [...before.matchAll(new RegExp(`<${tag}\\b[^>]*>`, "gi"))].pop()
+  if (!openMatch) return null
+  const closeRe = new RegExp(`</${tag}>`, "i")
+  const closeMatch = closeRe.exec(source.slice(index))
+  if (!closeMatch) return null
+  return source.slice(openMatch.index, index + closeMatch.index + closeMatch[0].length)
+}
+
+function resolveAllowedUrl(href, baseUrl, allowedHostname) {
+  try {
+    const url = new URL(href, baseUrl)
+    return url.hostname === allowedHostname ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
+function isTriathlonCompetitionText(title, context = "") {
+  const titleText = cleanText(title)
+  const contextText = cleanText(context)
+  if (!titleText && !contextText) return false
+  if (/교육|강습|세미나|설명회|회의|공지|대회규정|심판|지도자|워크숍/.test(titleText)) return false
+  if (/대회|컵|선수권|챔피언십|철인3종|트라이애슬론|듀애슬론|아쿠아슬론/.test(titleText)) return true
+  if (/교육|강습|세미나|설명회|회의|공지|대회규정|심판|지도자|워크숍/.test(contextText)) return false
+  return /대회|컵|선수권|챔피언십|철인3종|트라이애슬론|듀애슬론|아쿠아슬론/.test(contextText)
 }
 
 function parseTriathlonDetail(html, url, listMetadata = {}) {
