@@ -78,6 +78,23 @@ test("parseGorunningDetail normalizes venue, deadline, and categories", () => {
   assert.equal(event.officialUrl, "https://mara1080.com/event/abc")
 })
 
+test("parseGorunningDetail infers region from event location before unrelated page text", () => {
+  const yonginHtml = `<!doctype html><html><body>
+<nav>서울 인기 마라톤 바로가기</nav>
+<h1>2026 용인마라톤</h1>
+<p>10km 5km</p>
+<p>2026/06/06 (토) 08:00 D-30</p>
+<p>경기도 용인특례시청 잔디광장</p>
+<p>등록 기간</p><p>2026/04/01 ~ 2026/05/15 등록중</p>
+<p>주소</p><p>경기도 용인특례시청 잔디광장</p>
+</body></html>`
+
+  const event = parseGorunningDetail(yonginHtml, "https://gorunning.kr/races/9999/yongin-marathon/")
+
+  assert.equal(event.region, "경기")
+  assert.equal(event.venue, "경기도 용인특례시청 잔디광장")
+})
+
 test("parseTriathlonList extracts official federation detail URLs with list categories", () => {
   assert.deepEqual(parseTriathlonList(triathlonListHtml), [
     {

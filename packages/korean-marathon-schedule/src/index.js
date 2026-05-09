@@ -88,7 +88,7 @@ function parseGorunningDetail(html, url) {
   const eventDate = parseFirstDateAfterTitle(plain, title) || parseFirstIsoDate(plain)
   const address = textBetweenLabels(html, "주소")
   const locationLine = findLocationLine(plain)
-  const region = inferRegion(plain, address || locationLine)
+  const region = inferRegion([address, locationLine], plain)
   const venue = address || stripRegion(locationLine, region) || locationLine || ""
   const officialUrl = findOfficialUrl(html, url)
   const categories = extractGorunningCategories(plain, title)
@@ -255,10 +255,17 @@ function stripRegion(locationLine, region) {
   return cleanText(String(locationLine).replace(new RegExp(`^${escapeRegExp(region)}\\s*`), ""))
 }
 
-function inferRegion(text, location) {
+function inferRegion(locations, fallbackText) {
   const candidates = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"]
-  const haystack = cleanText(`${text || ""} ${location || ""}`)
-  return candidates.find((candidate) => haystack.includes(candidate)) || normalizeRegion(String(location || "").split(/\s+/)[0])
+  for (const location of Array.isArray(locations) ? locations : [locations]) {
+    const locationText = cleanText(location || "")
+    const firstTokenRegion = normalizeRegion(String(locationText).split(/\s+/)[0])
+    const locationRegion = (candidates.includes(firstTokenRegion) ? firstTokenRegion : null) || candidates.find((candidate) => locationText.includes(candidate))
+    if (locationRegion) return locationRegion
+  }
+
+  const fallbackHaystack = cleanText(fallbackText || "")
+  return candidates.find((candidate) => fallbackHaystack.includes(candidate)) || null
 }
 
 function normalizeRegion(region) {
