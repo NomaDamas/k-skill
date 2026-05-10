@@ -8,13 +8,13 @@
 
 - ✅ Workflow A — **매각공고 브라우징**: 매각기일·법원·기일/기간 입찰을 조건으로 매각공고 목록 → 그 공고 안의 사건번호·용도·주소·감정평가액·최저매각가격 펼치기
 - ✅ Workflow B — **사건번호 직접 조회**: 법원사무소코드 + 사건번호(`2024타경100001`) → 사건정보·물건내역·매각기일별 이력·배당요구종기
-- ✅ 법원사무소 코드(60+개) + 입찰구분 코드(기일입찰=`000331`, 기간입찰=`000332`) 변환
+- ✅ Workflow C — **부동산 물건 자유 조건검색**: 지역·용도·가격대·면적·유찰횟수·매각기일 조건 → 물건 목록 JSON
+- ✅ 법원사무소 코드(60+개) + 입찰구분 코드(기일입찰=`000331`, 기간입찰=`000332`) + Workflow C용 대표 용도/지역 코드 변환
 - ✅ 2-tier transport — direct HTTP 1차, Playwright fallback 옵션
 - ✅ 안티봇 가드 — 호출 간 ≥2초 jitter, 세션당 호출 budget, `data.ipcheck === false` 즉시 `BLOCKED` throw
 
 ## 무엇을 할 수 없나 (별도 follow-up 이슈)
 
-- ❌ Workflow C 자유 조건검색 (지역·용도·가격대·면적·유찰횟수)
 - ❌ Workflow D 일별/월별 캘린더
 - ❌ 매각물건 사진(전경/개황/내부) URL 노출
 - ❌ 매각물건명세서·현황조사서·감정평가서 PDF 다운로드
@@ -36,7 +36,11 @@
 court-auction-notice-search -h
 court-auction-notice-search codes courts --pretty | head -40
 court-auction-notice-search codes bid-types --pretty
+court-auction-notice-search codes usages --pretty
+court-auction-notice-search codes regions --pretty
 court-auction-notice-search notices --date 2026-04 --court-code B000210 --bid-type date --pretty
+court-auction-notice-search search --sido 서울특별시 --sigungu 11680 --usage-large 건물 --usage-medium 21200 \
+  --price-min 100000000 --price-max 500000000 --sale-from 2026-05-01 --sale-to 2026-05-20 --pretty
 court-auction-notice-search case --court-code B000210 --case-number "2024타경100001" --pretty
 ```
 
@@ -46,7 +50,8 @@ court-auction-notice-search case --court-code B000210 --case-number "2024타경1
 const {
   searchSaleNotices,
   getSaleNoticeDetail,
-  getCaseByCaseNumber
+  getCaseByCaseNumber,
+  searchProperties
 } = require("court-auction-notice-search");
 
 const notices = await searchSaleNotices({
@@ -67,6 +72,16 @@ const caseInfo = await getCaseByCaseNumber({
   courtCode: "B000210",
   caseNumber: "2024타경100001"
 });
+
+const properties = await searchProperties({
+  region: { sido: "서울특별시", sigungu: "11680", dong: "11680101" },
+  usage: { large: "건물" },
+  priceRange: { min: 100000000, max: 500000000 },
+  saleDate: { from: "2026-05-01", to: "2026-05-20" },
+  flbdCount: { min: 1 },
+  page: 1,
+  pageSize: 20
+});
 ```
 
 ## 사이트 내부 endpoint (직접 캡처한 것)
@@ -76,9 +91,10 @@ const caseInfo = await getCaseByCaseNumber({
 | 매각공고 목록 | `POST /pgj/pgj143/selectRletDspslPbanc.on` | `{"dma_srchDspslPbanc":{"srchYmd","cortOfcCd","bidDvsCd","srchBtnYn":"Y"}}` (`srchYmd`는 사이트 검색 버튼과 동일하게 `YYYYMM`) |
 | 매각공고 상세 | `POST /pgj/pgj143/selectRletDspslPbancDtl.on` | `{"dma_srchGnrlPbanc":{"cortOfcCd","dspslDxdyYmd","jdbnCd",...}}` |
 | 사건 단건 | `POST /pgj/pgj15A/selectAuctnCsSrchRslt.on` | `{"dma_srchCsDtlInf":{"cortOfcCd","csNo"}}` |
+| 물건 자유 조건검색 | `POST /pgj/pgjsearch/searchControllerMain.on` | canonical body captured via Playwright (`scripts/capture-pgj151-submit.cjs`); fixture at `packages/court-auction-notice-search/test/fixtures/canonical-search-body.json`. `pageNo/pageSize/statNum` 은 number, `pageSize` 는 upstream 드롭다운 값 `10`/`20`/`50`/`100`만 허용, `notifyLoc` 기본 `"off"`. |
 | 법원사무소 코드 | `POST /pgj/pgjComm/selectCortOfcCdLst.on` | `{}` |
 
-세션 cookie(`JSESSIONID`, `WMONID`)는 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01` 으로 사전에 한 번 받아둡니다.
+세션 cookie(`JSESSIONID`, `WMONID`)는 endpoint별 진입 화면을 먼저 열어 받아둡니다. 매각공고/상세는 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01`, 물건 자유 조건검색(Workflow C)은 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml&pgjId=151F00` 으로 warmup 합니다.
 
 ## 설치
 
@@ -92,5 +108,5 @@ npm install playwright-core
 
 ## 관련 이슈
 
-- 이 패키지는 [Issue #167](https://github.com/NomaDamas/k-skill/issues/167) 에서 출발했고, A/B 워크플로 + 코드테이블 MVP만 포함합니다.
-- 자유 조건검색·캘린더·물건 사진·PDF·동산 경매는 별도 follow-up 이슈로 분리되어 추적됩니다.
+- 이 패키지는 [Issue #167](https://github.com/NomaDamas/k-skill/issues/167) 에서 출발했고, #184에서 Workflow C 자유 조건검색을 추가했습니다.
+- 캘린더·물건 사진·PDF·동산 경매는 별도 follow-up 이슈로 분리되어 추적됩니다.

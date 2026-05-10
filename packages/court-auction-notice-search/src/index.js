@@ -15,13 +15,18 @@ const {
   resolveBidTypeCode,
   describeBidTypeCode,
   listBidTypes,
-  BID_TYPES
+  BID_TYPES,
+  resolveUsageCode,
+  resolveRegionCodes,
+  listUsageCodes,
+  listRegionCodes
 } = require("./codetables");
 const {
   normalizeNoticeListResponse,
   normalizeNoticeDetailResponse,
   normalizeCourtCodesResponse,
-  normalizeCaseDetailResponse
+  normalizeCaseDetailResponse,
+  normalizePropertySearchResponse
 } = require("./normalize");
 
 function toYmd(input, label) {
@@ -34,6 +39,49 @@ function toYmd(input, label) {
     throw new Error(`${label} must be YYYY-MM-DD or YYYYMMDD, got "${input}"`);
   }
   return compact;
+}
+
+function optionalYmd(input, label) {
+  if (input === null || input === undefined || input === "") return "";
+  return toYmd(input, label);
+}
+
+function toPositiveInt(input, fallback, label, opts = {}) {
+  if (input === null || input === undefined || input === "") return fallback;
+  const value = Number(input);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${label} must be a positive integer, got "${input}"`);
+  }
+  if (Array.isArray(opts.allowed) && !opts.allowed.includes(value)) {
+    throw new Error(`${label} must be one of ${opts.allowed.join(", ")}, got ${value}`);
+  }
+  if (typeof opts.max === "number" && value > opts.max) {
+    throw new Error(
+      `${label} must be <= ${opts.max} (court auction site upper bound), got ${value}`
+    );
+  }
+  return value;
+}
+
+const PAGE_SIZE_VALUES = [10, 20, 50, 100];
+
+function rangeValue(range, key, opts = {}) {
+  if (!range || typeof range !== "object") return "";
+  const value = range[key];
+  if (value === null || value === undefined || value === "") return "";
+  const text = String(value).trim().replace(/,/g, "");
+  if (opts.integerOnly) {
+    if (!/^\d+$/.test(text)) {
+      throw new Error(
+        `${opts.label || key} range value must be a non-negative integer, got "${value}"`
+      );
+    }
+  } else if (!/^\d+(?:\.\d+)?$/.test(text)) {
+    throw new Error(
+      `${opts.label || key} range value must be numeric, got "${value}"`
+    );
+  }
+  return text;
 }
 
 function toNoticeSearchDate(input, label) {
@@ -250,6 +298,137 @@ async function getCaseByCaseNumber(params = {}) {
   });
 }
 
+function buildPropertySearchBody(params = {}) {
+  const pageNo = toPositiveInt(params.page, 1, "page");
+  const pageSize = toPositiveInt(params.pageSize, 10, "pageSize", { allowed: PAGE_SIZE_VALUES });
+  const courtCodeRaw =
+    params.courtCode === undefined || params.courtCode === null ? "" : String(params.courtCode).trim();
+  const courtCode = courtCodeRaw === "" ? "" : ensureCourtCode(courtCodeRaw);
+  const region = resolveRegionCodes(params.region || {});
+  const usage = params.usage && typeof params.usage === "object" ? params.usage : {};
+  const saleDate = params.saleDate && typeof params.saleDate === "object" ? params.saleDate : {};
+
+  const hasRegion = Boolean(region.sido || region.sigungu || region.dong);
+  const body = {
+    dma_pageInfo: {
+      pageNo,
+      pageSize,
+      bfPageNo: "",
+      startRowNo: "",
+      totalCnt: "",
+      totalYn: params.totalYn === "N" ? "N" : "Y",
+      groupTotalCount: ""
+    },
+    dma_srchGdsDtlSrchInfo: {
+      rletDspslSpcCondCd: "",
+      bidDvsCd: resolveBidTypeCode(params.bidType),
+      mvprpRletDvsCd: "00031R",
+      cortAuctnSrchCondCd: "0004601",
+      rprsAdongSdCd: region.sido,
+      rprsAdongSggCd: region.sigungu,
+      rprsAdongEmdCd: region.dong,
+      rdnmSdCd: "",
+      rdnmSggCd: "",
+      rdnmNo: "",
+      mvprpDspslPlcAdongSdCd: "",
+      mvprpDspslPlcAdongSggCd: "",
+      mvprpDspslPlcAdongEmdCd: "",
+      rdDspslPlcAdongSdCd: "",
+      rdDspslPlcAdongSggCd: "",
+      rdDspslPlcAdongEmdCd: "",
+      cortOfcCd: courtCode,
+      jdbnCd: params.judgeDeptCode ? String(params.judgeDeptCode).trim() : "",
+      execrOfcDvsCd: "",
+      lclDspslGdsLstUsgCd: resolveUsageCode(usage.large, "large"),
+      mclDspslGdsLstUsgCd: resolveUsageCode(usage.medium, "medium"),
+      sclDspslGdsLstUsgCd: resolveUsageCode(usage.small, "small"),
+      cortAuctnMbrsId: "",
+      aeeEvlAmtMin: rangeValue(params.appraisedPriceRange, "min", { label: "appraisedPriceRange.min" }),
+      aeeEvlAmtMax: rangeValue(params.appraisedPriceRange, "max", { label: "appraisedPriceRange.max" }),
+      lwsDspslPrcRateMin: rangeValue(params.minimumSalePriceRateRange, "min", { label: "minimumSalePriceRateRange.min" }),
+      lwsDspslPrcRateMax: rangeValue(params.minimumSalePriceRateRange, "max", { label: "minimumSalePriceRateRange.max" }),
+      flbdNcntMin: rangeValue(params.flbdCount, "min", { integerOnly: true, label: "flbdCount.min" }),
+      flbdNcntMax: rangeValue(params.flbdCount, "max", { integerOnly: true, label: "flbdCount.max" }),
+      objctArDtsMin: rangeValue(params.area, "min", { label: "area.min" }),
+      objctArDtsMax: rangeValue(params.area, "max", { label: "area.max" }),
+      mvprpArtclKndCd: "",
+      mvprpArtclNm: "",
+      mvprpAtchmPlcTypCd: "",
+      notifyLoc: params.notifyLocation ? "Y" : "off",
+      lafjOrderBy: params.orderBy ? String(params.orderBy) : "",
+      pgmId: "PGJ151F01",
+      csNo: "",
+      cortStDvs: hasRegion ? "2" : "1",
+      statNum: 1,
+      bidBgngYmd: optionalYmd(saleDate.from, "saleDate.from"),
+      bidEndYmd: optionalYmd(saleDate.to, "saleDate.to"),
+      dspslDxdyYmd: "",
+      fstDspslHm: "",
+      scndDspslHm: "",
+      thrdDspslHm: "",
+      fothDspslHm: "",
+      dspslPlcNm: "",
+      lwsDspslPrcMin: rangeValue(params.priceRange, "min", { label: "priceRange.min" }),
+      lwsDspslPrcMax: rangeValue(params.priceRange, "max", { label: "priceRange.max" }),
+      grbxTypCd: "",
+      gdsVendNm: "",
+      fuelKndCd: "",
+      carMdyrMax: "",
+      carMdyrMin: "",
+      carMdlNm: "",
+      sideDvsCd: ""
+    }
+  };
+  return body;
+}
+
+async function searchProperties(params = {}) {
+  const body = buildPropertySearchBody(params);
+  const includeRaw = params.includeRaw !== false;
+
+  const primary = ensureClient(params.client, params);
+  let raw;
+  try {
+    raw = await primary.postJson("propertySearch", body);
+  } catch (err) {
+    const isConfirmedBlocked = err && err.code === "BLOCKED";
+    const isWafHttp400 = err && err.code === "UPSTREAM_ERROR" && err.statusCode === 400;
+    const isFallbackEligibleError = isWafHttp400 || (isConfirmedBlocked && params.fallbackOnBlocked === true);
+    const canFallbackFromClient =
+      !params.client || params.fallbackClient || primary instanceof CourtAuctionHttpClient;
+    const fallbackEnabled = params.fallback !== false && canFallbackFromClient;
+    if (!isFallbackEligibleError || !fallbackEnabled) {
+      throw err;
+    }
+
+    const fallback =
+      params.fallbackClient ||
+      (isFallbackAvailable()
+        ? new CourtAuctionPlaywrightClient({
+            ...pickClientOptions(params),
+            headless: params.headless !== false,
+            chromiumLoader: params.chromiumLoader
+          })
+        : null);
+    if (!fallback) {
+      throw err;
+    }
+
+    try {
+      raw = await fallback.postJson("propertySearch", body);
+    } finally {
+      if (!params.fallbackClient && typeof fallback.close === "function") {
+        await fallback.close().catch(() => {});
+      }
+    }
+  }
+
+  return normalizePropertySearchResponse(raw, {
+    requestedFilters: body.dma_srchGdsDtlSrchInfo,
+    includeRaw
+  });
+}
+
 async function getCourtCodes(options = {}) {
   const client = ensureClient(options.client, options);
   const raw = await client.postJson("courts", {});
@@ -258,6 +437,16 @@ async function getCourtCodes(options = {}) {
 
 function getBidTypes() {
   return listBidTypes();
+}
+
+function getUsageCodes() {
+  const items = listUsageCodes();
+  return { count: items.length, items };
+}
+
+function getRegionCodes() {
+  const items = listRegionCodes();
+  return { count: items.length, items };
 }
 
 module.exports = {
@@ -278,6 +467,10 @@ module.exports = {
   getSaleNoticeDetail,
   buildNoticeDetailBody,
   getCaseByCaseNumber,
+  searchProperties,
+  buildPropertySearchBody,
   getCourtCodes,
-  getBidTypes
+  getBidTypes,
+  getUsageCodes,
+  getRegionCodes
 };

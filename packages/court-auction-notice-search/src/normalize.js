@@ -34,6 +34,16 @@ function parseAmount(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function parseNumber(value) {
+  if (value === null || value === undefined) return null;
+  const stripped = stripHtml(value);
+  if (!stripped) return null;
+  const normalized = stripped.replace(/[, ]/g, "");
+  if (!/^-?\d+(?:\.\d+)?$/.test(normalized)) return null;
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : null;
+}
+
 function formatYmd(value) {
   if (value === null || value === undefined) return null;
   const trimmed = String(value).trim();
@@ -344,6 +354,106 @@ function normalizeCaseDetailResponse(rawPayload, options = {}) {
   return result;
 }
 
+function normalizePropertySearchResponse(rawPayload, options = {}) {
+  const data = rawPayload && typeof rawPayload === "object" ? rawPayload.data : null;
+  const pageInfo = data && typeof data.dma_pageInfo === "object" ? data.dma_pageInfo : {};
+  const list = data && Array.isArray(data.dlt_srchResult) ? data.dlt_srchResult : [];
+  const includeRaw = options.includeRaw !== false;
+  const items = list.map((row) => normalizePropertySearchRow(row, includeRaw));
+
+  return {
+    requestedFilters: options.requestedFilters || null,
+    page: {
+      pageNo: parseAmount(pageInfo.pageNo) || 1,
+      pageSize: parseAmount(pageInfo.pageSize) || items.length,
+      totalCount: parseAmount(pageInfo.totalCnt) || items.length,
+      totalYn: nullIfBlank(pageInfo.totalYn),
+      groupTotalCount: parseAmount(pageInfo.groupTotalCount)
+    },
+    count: items.length,
+    items
+  };
+}
+
+function buildAddress(row) {
+  const parts = [
+    stripHtml(row.hjguSido),
+    stripHtml(row.hjguSigu),
+    stripHtml(row.hjguDong),
+    stripHtml(row.hjguRd),
+    stripHtml(row.daepyoLotno),
+    stripHtml(row.buldNm)
+  ].filter((part) => part);
+  if (parts.length === 0) {
+    return stripHtml(row.realSt) || stripHtml(row.printSt) || null;
+  }
+  return parts.join(" ");
+}
+
+function normalizePropertySearchRow(rawRow, includeRaw) {
+  const row = ensureRow(rawRow);
+  const x = parseNumber(row.xCordi);
+  const y = parseNumber(row.yCordi);
+  const wgsX = parseNumber(row.wgs84Xcordi);
+  const wgsY = parseNumber(row.wgs84Ycordi);
+  const itemSeq = nullIfBlank(row.mokmulSer) || nullIfBlank(row.maemulSer);
+  const failedBidCount = parseAmount(row.yuchalCnt) || 0;
+  const status = nullIfBlank(row.mulStatcd);
+  const buildings = stripHtml(row.buldList);
+  const areas = stripHtml(row.areaList);
+  const lotCategories = stripHtml(row.jimokList);
+  const out = {
+    caseNumber: nullIfBlank(row.saNo),
+    displayCaseNumber: nullIfBlank(row.srnSaNo) || nullIfBlank(row.printCsNo),
+    itemNumber: itemSeq,
+    itemSeq,
+    address: buildAddress(row),
+    appraisedPrice: parseAmount(row.gamevalAmt),
+    minimumSalePrice: parseAmount(row.minmaePrice),
+    flbdCount: failedBidCount,
+    failedBidCount,
+    statusCode: status,
+    status,
+    progressStatusCode: nullIfBlank(row.jinstatCd),
+    courtCode: nullIfBlank(row.boCd),
+    courtName: nullIfBlank(row.jiwonNm),
+    judgeDeptCode: nullIfBlank(row.jpDeptCd),
+    judgeDeptName: nullIfBlank(row.jpDeptNm),
+    documentId: nullIfBlank(row.docid),
+    saleDate: formatYmd(row.maeGiil),
+    salePlace: nullIfBlank(row.maePlace),
+    bidTypeCode: nullIfBlank(row.ipchalGbncd),
+    usageCodes: {
+      large: nullIfBlank(row.lclsUtilCd),
+      medium: nullIfBlank(row.mclsUtilCd),
+      small: nullIfBlank(row.sclsUtilCd)
+    },
+    regionCodes: {
+      sido: nullIfBlank(row.srchHjguSidoCd) || nullIfBlank(row.daepyoSidoCd),
+      sigungu: nullIfBlank(row.srchHjguSiguCd) || nullIfBlank(row.daepyoSiguCd),
+      dong: nullIfBlank(row.srchHjguDongCd) || nullIfBlank(row.daepyoDongCd)
+    },
+    coordinates: x === null && y === null ? null : { x, y },
+    coordinatesWgs84: wgsX === null && wgsY === null ? null : { x: wgsX, y: wgsY },
+    buildingList: buildings,
+    buildings,
+    areaList: areas,
+    areas,
+    landCategoryList: lotCategories,
+    lotCategories,
+    propertyDescription: stripHtml(row.pjbBuldList),
+    areaRange: {
+      min: parseNumber(row.minArea),
+      max: parseNumber(row.maxArea)
+    },
+    remarks: stripHtml(row.mulBigo)
+  };
+  if (includeRaw) {
+    out.raw = { ...row };
+  }
+  return out;
+}
+
 module.exports = {
   normalizeNoticeListResponse,
   normalizeNoticeRow,
@@ -351,7 +461,10 @@ module.exports = {
   normalizeNoticeDetailRow,
   normalizeCourtCodesResponse,
   normalizeCaseDetailResponse,
+  normalizePropertySearchResponse,
+  normalizePropertySearchRow,
   parseAmount,
+  parseNumber,
   stripHtml,
   formatYmd,
   formatHm

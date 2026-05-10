@@ -1,0 +1,13 @@
+{
+  "_source": "POST /pgj/pgj002/selectLclLst.on body={dsignUsgDvsCd:\"\"} captured 2026-05-08 from production courtauction.go.kr (PGJ151F00 page initial XHR). Discovery script: packages/court-auction-notice-search/scripts/capture-pgj151.cjs",
+  "status": 200,
+  "message": "대분류 목록 조회가 완료되었습니다.",
+  "data": {
+    "usgLclLst": [
+      { "name": "토지", "code": "10000" },
+      { "name": "건물", "code": "20000" },
+      { "name": "차량및운송장비", "code": "30000" },
+      { "name": "기타", "code": "40000" }
+    ]
+  }
+}

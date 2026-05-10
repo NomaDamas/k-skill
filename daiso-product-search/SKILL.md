@@ -1,6 +1,6 @@
 ---
 name: daiso-product-search
-description: Look up Daiso products by store name and product keyword using official Daiso Mall store/search/stock surfaces. Use when the user wants to know whether a product is available at a specific Daiso store.
+description: Look up Daiso products by store name and product keyword using official Daiso Mall store/search/stock surfaces. Reports whether a product is registered as pickup-eligible at a specific Daiso store; the official store-level pickup quantity API has been blocked since 2026-05-05, so exact per-store stock counts are unavailable while that block remains.
 license: MIT
 metadata:
   category: retail
@@ -17,20 +17,31 @@ metadata:
 - 공식 매장 검색으로 매장 코드를 찾는다.
 - 공식 상품 검색으로 상품 후보를 찾는다.
 - 공식 매장 픽업 재고 표면으로 해당 매장의 재고를 확인한다.
+- 다이소몰이 매장 픽업 재고 표면을 `Unauthorized` 로 차단하면 차단 상태를 그대로 보고하고 세션 우회는 시도하지 않는다.
+- 매장 픽업 재고가 차단되면 공식 픽업 가능 매장 목록(`selPkupStr`) 으로 해당 매장에 상품이 픽업 가능 매장으로 등록되어 있는지 여부를 확인해 `pickupEligibility` 로 답한다. 정확한 수량은 여전히 알 수 없다.
 - **공식 표면이 매장 내 진열 위치를 주지 않으면 재고 중심으로만 답한다.**
 
 ## When to use
 
-- "강남역2호점에 리들샷 있어?"
-- "다이소 특정 매장 재고 확인해줘"
-- "이 상품 어느 매장에 있는지 확인해줘"
-- "다이소 매장명 주면 그 매장 재고 봐줘"
+- "강남역2호점에서 리들샷 픽업 가능해?" (픽업 가능 여부 확인)
+- "이 상품 어느 매장에서 픽업 가능한지 확인해줘" (픽업 가능 매장 목록)
+- "다이소 매장명 주면 그 매장에서 살 수 있는지 봐줘"
+- 공식 매장 픽업 재고 API 가 응답하면 수량까지, 차단되면 픽업 가능 여부(yes/no)까지
 
 ## When not to use
 
+- **"강남역2호점에 리들샷 몇 개 있어?"** 처럼 정확한 재고 수량을 보장해야 하는 경우 — 2026-05-05 부터 공식 매장 픽업 재고 API 가 `Unauthorized` 로 차단되어 수량을 답할 수 없다.
 - 매장명도 상품명도 전혀 없는 상태에서 바로 재고를 단정해야 하는 경우
 - 결제/주문/픽업 예약까지 자동화해야 하는 경우
-- 비공식 크롤링 결과를 우선해야 하는 경우
+- 매장 내 진열 위치(aisle/매대)를 알려줘야 하는 경우
+- 비공식 크롤링·세션 우회·계정 로그인 우회 결과를 사용해야 하는 경우
+
+## Scope and limits (must read before answering)
+
+- `pickupStock` 이 `retrievalStatus: "resolved"` 로 응답하면 정확한 매장 픽업 재고 수량을 줄 수 있다.
+- `pickupStock` 이 `retrievalStatus: "blocked"` 면 수량은 더 이상 답하지 않는다. `pickupEligibility.pickupEligible` 로 그 매장에서 픽업 가능한 상품인지(yes/no)만 답한다.
+- `onlineStock` 은 `referenceOnly: true` 다이소몰 온라인몰 재고 참고값일 뿐 매장 재고가 아니다. 매장 재고처럼 단정하지 않는다.
+- 차단 우회는 시도하지 않는다.
 
 ## Prerequisites
 
@@ -63,6 +74,7 @@ metadata:
 - product search list: `https://www.daisomall.co.kr/ssn/search/SearchGoods`
 - product summary list: `https://www.daisomall.co.kr/ssn/search/GoodsMummResult`
 - store pickup stock: `https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck`
+- store pickup eligibility (pickup-capable stores for a product): `https://www.daisomall.co.kr/api/ms/msg/selPkupStr`
 - optional online stock cross-check: `https://www.daisomall.co.kr/api/pdo/selOnlStck`
 
 ## Workflow
@@ -106,7 +118,7 @@ console.log(productResult.items)
 
 ### 3. Check the store pickup stock
 
-공식 매장 픽업 재고 API로 해당 매장의 재고를 확인한다.
+공식 매장 픽업 재고 API로 해당 매장의 재고를 확인한다. 2026-05-05 기준 이 엔드포인트가 `Unauthorized` 로 차단될 수 있으므로, `stock.retrievalStatus === "blocked"` 또는 `stock.status === "unavailable"` 이면 정확한 매장 수량을 단정하지 않는다. `stock.status` 는 조회 결과 범주이고, 실제 재고 여부는 `stock.inStock` 또는 `stock.inventoryStatus` 로 판단한다.
 
 ```js
 const { getStorePickupStock } = require("daiso-product-search")
@@ -117,9 +129,29 @@ const stock = await getStorePickupStock({
 })
 
 console.log(stock)
+// 품절 예시: { status: "available", retrievalStatus: "resolved", inventoryStatus: "out_of_stock", quantity: 0, inStock: false }
+// 차단 예시: { status: "unavailable", retrievalStatus: "blocked", inventoryStatus: "unknown", reason: "unauthorized", quantity: null, inStock: null }
 ```
 
-### 4. Use the end-to-end helper when both names are already known
+### 4. Fall back to pickup eligibility when stock is blocked
+
+매장 픽업 재고가 `Unauthorized` 로 차단되면 공식 픽업 가능 매장 목록 표면으로 **해당 매장이 그 상품의 픽업 가능 매장에 들어 있는지** 만이라도 확인할 수 있다. 수량은 알 수 없지만 "그 매장에서 이 상품을 픽업으로 살 수 있는지" 는 답할 수 있다.
+
+```js
+const { getStorePickupEligibility } = require("daiso-product-search")
+
+const eligibility = await getStorePickupEligibility({
+  pdNo: "1049275",
+  strCd: "10224",
+  storeName: "강남역2호점"
+})
+
+console.log(eligibility)
+```
+
+`pickupEligible` 가 `true` 이면 그 매장에서 픽업 가능, `false` 면 픽업 불가, `null` 이면 확인 불가다. `false` 는 검색 범위가 충분할 때만 확정값으로 해석한다. `retrievalStatus: "insufficient_coverage"` 는 매장명/키워드가 없거나 첫 페이지가 전체 결과를 덮지 못해 부재를 증명하지 못했다는 뜻이다. `eligibleStoreCount` 와 `eligibleStores` 로 다른 후보 매장도 함께 보여줄 수 있다.
+
+### 5. Use the end-to-end helper when both names are already known
 
 ```js
 const { lookupStoreProductAvailability } = require("daiso-product-search")
@@ -132,23 +164,27 @@ const result = await lookupStoreProductAvailability({
 console.log(result.selectedStore)
 console.log(result.selectedProduct)
 console.log(result.pickupStock)
+console.log(result.pickupEligibility)
 ```
 
-### 5. Respond conservatively
+`pickupStock.retrievalStatus === "blocked"` 일 때만 `pickupEligibility` 가 채워진다. `includePickupEligibility: false` 옵션으로 끌 수 있다.
+
+### 6. Respond conservatively
 
 응답은 짧고 명확하게 정리한다.
 
 - 매장명
 - 상품명
-- 매장 재고 수량 또는 재고 없음
-- 필요하면 온라인 재고 참고값
+- 매장 재고 수량, 재고 없음, 또는 `retrievalStatus: "blocked"` / `Unauthorized` 로 인한 확인 불가
+- 픽업 재고가 차단된 경우 `pickupEligibility.pickupEligible` 로 그 매장의 픽업 가능 여부만이라도 표시
+- 필요하면 `referenceOnly: true` 로 표시된 온라인 재고 참고값
 - **공식 표면이 매장 내 진열 위치를 주지 않으면 `공식 표면에서는 매장 재고까지만 확인된다`고 분명히 말한다.**
 
 ## Done when
 
 - 매장명과 상품명이 모두 확인되었다.
 - 공식 표면으로 매장 후보와 상품 후보를 찾았다.
-- 공식 매장 재고 결과를 최소 1회 반환했다.
+- 공식 매장 재고 결과 또는 `Unauthorized` 차단 상태를 최소 1회 반환했다.
 - 위치 정보가 없으면 없다고 분명히 고지했다.
 
 ## Failure modes
@@ -156,6 +192,7 @@ console.log(result.pickupStock)
 - 매장명이 너무 넓으면 같은 상권의 여러 지점이 동시에 잡힐 수 있다.
 - 상품명이 너무 넓으면 다른 용량/호수 후보가 많이 섞일 수 있다.
 - 공식 재고는 시점 차이로 실제 방문 시 수량이 달라질 수 있다.
+- `selStrPkupStck` 가 `Unauthorized` 로 차단되면 매장 픽업 수량은 확인 불가로 답하고, 온라인 재고를 매장 재고처럼 단정하지 않는다.
 - 현재 확인된 공식 표면은 **매장 내 aisle/진열 위치**를 직접 주지 않을 수 있다.
 
 ## Notes

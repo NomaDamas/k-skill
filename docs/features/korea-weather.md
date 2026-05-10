@@ -10,13 +10,13 @@
 
 - [공통 설정 가이드](../setup.md) 완료
 - [보안/시크릿 정책](../security-and-secrets.md) 확인
-- self-host 또는 배포 확인이 끝난 proxy base URL: `KSKILL_PROXY_BASE_URL`
+- optional: `KSKILL_PROXY_BASE_URL` (self-host·별도 프록시를 쓸 때만 설정. 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용)
 
 ## 필요한 환경변수
 
-- `KSKILL_PROXY_BASE_URL` (필수: self-host 또는 배포 확인이 끝난 proxy base URL)
+- 없음. `KSKILL_PROXY_BASE_URL` 은 선택 사항이며, 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
-사용자가 공공데이터포털 기상청 단기예보 API key를 직접 발급할 필요는 없다. 대신 `KSKILL_PROXY_BASE_URL` 은 `/v1/korea-weather/forecast` route가 실제로 배포된 proxy 를 가리켜야 한다. upstream `KMA_OPEN_API_KEY` 는 proxy 서버에서만 관리한다.
+사용자가 공공데이터포털 기상청 단기예보 API key를 직접 발급할 필요는 없다. `/v1/korea-weather/forecast` route는 기본 hosted proxy에서 호출하고, upstream `KMA_OPEN_API_KEY` 는 proxy 서버에서만 관리한다. 별도 proxy를 쓰는 경우에만 `KSKILL_PROXY_BASE_URL` 을 설정한다.
 
 ## 입력값
 
@@ -26,7 +26,7 @@
 
 ## 기본 흐름
 
-1. `KSKILL_PROXY_BASE_URL` 로 self-host 또는 배포 확인이 끝난 proxy base URL 을 확인한다.
+1. `KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없거나 비어 있으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 2. `/v1/korea-weather/forecast` 로 한국 기상청 단기예보를 조회한다.
 3. `baseDate` / `baseTime` 을 생략하면 proxy 가 KST 기준 최신 발표 시각을 자동으로 선택한다.
 4. 응답의 `item[]` 에서 `TMP`, `SKY`, `PTY`, `POP`, `PCP`, `SNO`, `REH`, `WSD` 를 우선 요약한다.
@@ -36,7 +36,8 @@
 위도/경도 기준:
 
 ```bash
-curl -fsS --get 'https://your-proxy.example.com/v1/korea-weather/forecast' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
   --data-urlencode 'lat=37.5665' \
   --data-urlencode 'lon=126.9780'
 ```
@@ -44,7 +45,8 @@ curl -fsS --get 'https://your-proxy.example.com/v1/korea-weather/forecast' \
 격자 좌표 기준:
 
 ```bash
-curl -fsS --get 'https://your-proxy.example.com/v1/korea-weather/forecast' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
   --data-urlencode 'nx=60' \
   --data-urlencode 'ny=127' \
   --data-urlencode 'baseDate=20260405' \
@@ -66,5 +68,4 @@ curl -fsS --get 'https://your-proxy.example.com/v1/korea-weather/forecast' \
 
 - 단기예보는 5km 격자 기반이라 행정구역 경계와 완전히 일치하지 않을 수 있다.
 - 발표 시각 직후에는 최신 `baseTime` 이 아직 준비되지 않았을 수 있다. proxy 는 보수적으로 직전 발표 시각을 선택한다.
-- public hosted route rollout 이 끝나기 전까지는 `KSKILL_PROXY_BASE_URL` 을 반드시 명시한다.
 - self-host proxy 설정은 [k-skill 프록시 서버 가이드](k-skill-proxy.md)를 본다.

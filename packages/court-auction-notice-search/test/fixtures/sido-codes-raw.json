@@ -1,0 +1,28 @@
+{
+  "_source": "POST /pgj/pgj002/selectAdongSdLst.on body={pbancMidYn:\"Y\",srchDvsCd:\"B\",pbancDvsCd:\"A\"} captured 2026-05-08 from production courtauction.go.kr (PGJ151F00 page initial XHR). Discovery script: packages/court-auction-notice-search/scripts/capture-pgj151.cjs",
+  "status": 200,
+  "message": "시/도 리스트 조회가 완료되었습니다.",
+  "data": {
+    "adongSdLst": [
+      { "name": "서울특별시", "code": "11", "value": "서울특별시" },
+      { "name": "부산광역시", "code": "26", "value": "부산광역시" },
+      { "name": "대구광역시", "code": "27", "value": "대구광역시" },
+      { "name": "인천광역시", "code": "28", "value": "인천광역시" },
+      { "name": "광주광역시", "code": "29", "value": "광주광역시" },
+      { "name": "대전광역시", "code": "30", "value": "대전광역시" },
+      { "name": "울산광역시", "code": "31", "value": "울산광역시" },
+      { "name": "세종특별자치시", "code": "36", "value": "세종특별자치시" },
+      { "name": "경기도", "code": "41", "value": "경기도" },
+      { "name": "강원도", "code": "42", "value": "강원도" },
+      { "name": "충청북도", "code": "43", "value": "충청북도" },
+      { "name": "충청남도", "code": "44", "value": "충청남도" },
+      { "name": "전라북도", "code": "45", "value": "전라북도" },
+      { "name": "전라남도", "code": "46", "value": "전라남도" },
+      { "name": "경상북도", "code": "47", "value": "경상북도" },
+      { "name": "경상남도", "code": "48", "value": "경상남도" },
+      { "name": "제주특별자치도", "code": "50", "value": "제주특별자치도" },
+      { "name": "강원특별자치도", "code": "51", "value": "강원특별자치도" },
+      { "name": "전북특별자치도", "code": "52", "value": "전북특별자치도" }
+    ]
+  }
+}

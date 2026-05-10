@@ -12,6 +12,7 @@ const ENDPOINT_PATHS = Object.freeze({
   notices: "/pgj/pgj143/selectRletDspslPbanc.on",
   noticeDetail: "/pgj/pgj143/selectRletDspslPbancDtl.on",
   caseDetail: "/pgj/pgj15A/selectAuctnCsSrchRslt.on",
+  propertySearch: "/pgj/pgjsearch/searchControllerMain.on",
   courts: "/pgj/pgjComm/selectCortOfcCdLst.on"
 });
 
@@ -21,7 +22,24 @@ const ENDPOINT_REFERER_HINT = Object.freeze({
     "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01",
   caseDetail:
     "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml&pgjId=159M00",
+  propertySearch:
+    "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml&pgjId=151F00",
   courts: "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01"
+});
+
+const ENDPOINT_WARMUP_PATH = Object.freeze({
+  notices: "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01",
+  noticeDetail:
+    "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01",
+  caseDetail:
+    "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml&pgjId=159M00",
+  propertySearch:
+    "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml&pgjId=151F00",
+  courts: "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01"
+});
+
+const ENDPOINT_SUBMISSION_ID = Object.freeze({
+  propertySearch: "mf_wfm_mainFrame_sbm_selectGdsDtlSrch"
 });
 
 function createBlockedError(message, payload) {
@@ -130,7 +148,7 @@ class CourtAuctionHttpClient {
       ? options.maxCallsPerSession
       : 10;
     this.cookieJar = new Map();
-    this.warmedUp = false;
+    this.warmedUp = null;
     this.callsSoFar = 0;
     this.lastCallAt = 0;
     this.now = typeof options.now === "function" ? options.now : () => Date.now();
@@ -139,7 +157,7 @@ class CourtAuctionHttpClient {
 
   resetSession() {
     this.cookieJar = new Map();
-    this.warmedUp = false;
+    this.warmedUp = null;
     this.callsSoFar = 0;
     this.lastCallAt = 0;
   }
@@ -155,6 +173,12 @@ class CourtAuctionHttpClient {
       "X-Requested-With": "XMLHttpRequest"
     };
 
+    const submissionId = ENDPOINT_SUBMISSION_ID[endpointKey];
+    if (submissionId) {
+      headers.submissionid = submissionId;
+      headers["sc-userid"] = "SYSTEM";
+    }
+
     const cookieHeader = buildCookieHeader(this.cookieJar);
     if (cookieHeader) {
       headers.Cookie = cookieHeader;
@@ -163,21 +187,22 @@ class CourtAuctionHttpClient {
     return Object.assign(headers, extra);
   }
 
-  async warmup() {
-    if (this.warmedUp) return;
-    const url = `${this.baseUrl}${WARMUP_PATH}`;
+  async warmup(endpointKey) {
+    const warmupPath = ENDPOINT_WARMUP_PATH[endpointKey] || WARMUP_PATH;
+    if (this.warmedUp === warmupPath) return;
+    const url = `${this.baseUrl}${warmupPath}`;
     const controller = createAbortController(this.timeoutMs);
     try {
       const response = await this.fetchImpl(url, {
         method: "GET",
-        headers: this.buildHeaders("notices"),
+        headers: this.buildHeaders(endpointKey || "notices"),
         redirect: "manual",
         signal: controller.signal
       });
       ingestSetCookie(this.cookieJar, response.headers);
-      this.warmedUp = true;
+      this.warmedUp = warmupPath;
     } catch (cause) {
-      throw createNetworkError(cause, WARMUP_PATH);
+      throw createNetworkError(cause, warmupPath);
     } finally {
       controller.cleanup();
     }
@@ -206,7 +231,7 @@ class CourtAuctionHttpClient {
     if (!path) {
       throw new Error(`Unknown court auction endpoint: ${endpointKey}`);
     }
-    await this.warmup();
+    await this.warmup(endpointKey);
     await this.ensureBudget();
 
     this.callsSoFar += 1;
@@ -288,6 +313,9 @@ function createAbortController(timeoutMs) {
 module.exports = {
   CourtAuctionHttpClient,
   ENDPOINT_PATHS,
+  ENDPOINT_REFERER_HINT,
+  ENDPOINT_WARMUP_PATH,
+  ENDPOINT_SUBMISSION_ID,
   WARMUP_PATH,
   DEFAULT_BASE_URL,
   DEFAULT_USER_AGENT,

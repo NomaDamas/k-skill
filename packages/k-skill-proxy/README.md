@@ -27,6 +27,8 @@
 - `GET /v1/data4library/book-exists` — 도서관별 도서 소장여부(`DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/lh-notice/search` — LH 청약 공고 목록(`DATA_GO_KR_API_KEY`)
 - `GET /v1/lh-notice/detail` — LH 청약 공고 상세(`DATA_GO_KR_API_KEY`)
+- `GET /v1/sh-notice/search` — SH 서울주택도시개발공사 공고/공지 목록(공식 i-sh.co.kr HTML 게시판; 무인증)
+- `GET /v1/sh-notice/detail` — SH 공고/공지 상세 본문 및 첨부 미리보기 링크(무인증)
 
 ## `/health` 업스트림 플래그 의미
 
@@ -201,6 +203,21 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/detail' \
   --data-urlencode 'panId=2015122300019828' \
   --data-urlencode 'ccrCnntSysDsCd=03' \
   --data-urlencode 'splInfTpCd=051'
+```
+
+SH 공고/공지 검색 예시 (공식 `i-sh.co.kr` HTML 게시판, 무인증). 키워드만 보내면 자동으로 제목 검색으로 처리되고, `pageSize` 는 SH 게시판 응답 한 페이지 분량인 10건으로 캡됩니다:
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/sh-notice/search' \
+  --data-urlencode 'q=행복주택' \
+  --data-urlencode 'pageSize=10'
+```
+
+SH 공고/공지 상세:
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/sh-notice/detail' \
+  --data-urlencode 'seq=303994'
 ```
 
 프록시는 내부적으로 `waterlevel/info.json` 으로 관측소를 해석하고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 수위/유량을 조회합니다. 한국 주식 route는 KRX Open API에 `AUTH_KEY` 헤더를 서버 쪽에서만 주입합니다.

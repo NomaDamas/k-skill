@@ -41,7 +41,8 @@ client/skill -> k-skill-proxy -> upstream public API
 
 클라이언트(스킬) 쪽:
 
-- `KSKILL_PROXY_BASE_URL=https://your-proxy.example.com`
+- 일반 hosted client는 `KSKILL_PROXY_BASE_URL`을 unset/empty로 비워 두면 hosted `https://k-skill-proxy.nomadamas.org`를 기본값으로 사용합니다.
+- `KSKILL_PROXY_BASE_URL=https://your-proxy.example.com`은 self-host 또는 alternate proxy를 명시적으로 쓰는 경우에만 설정하는 override 예시입니다.
 
 프록시 서버 쪽:
 
@@ -114,14 +115,16 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/fine-dust/report' \
 서울 지하철 도착정보 endpoint:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/seoul-subway/arrival" \
   --data-urlencode 'stationName=강남'
 ```
 
 한국 날씨 endpoint:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/korea-weather/forecast' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
   --data-urlencode 'lat=37.5665' \
   --data-urlencode 'lon=126.9780'
 ```
@@ -272,5 +275,4 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/B552584/ArpltnInforInqireSv
 - 한국 주식 route도 사용자에게 `KRX_API_KEY` 를 배포하지 않습니다.
 - client 쪽에는 upstream API key를 배포하지 않습니다.
 - 도서관 정보나루 route도 사용자에게 `DATA4LIBRARY_AUTH_KEY` 를 배포하지 않습니다.
-- public hosted route rollout 이 끝나기 전에는 서울 지하철/한국 날씨 예시를 local/self-host URL 로 검증합니다.
-- public hosted route rollout 이 끝나기 전에는 한강 수위 route도 local/self-host 또는 배포 확인이 끝난 proxy URL 로 검증합니다.
+- self-host proxy 운영자는 동일 route를 local/self-host URL 로도 검증합니다.

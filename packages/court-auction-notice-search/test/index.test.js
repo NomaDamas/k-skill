@@ -9,7 +9,11 @@ const {
   searchSaleNotices,
   getSaleNoticeDetail,
   getCaseByCaseNumber,
+  searchProperties,
+  buildPropertySearchBody,
   getCourtCodes,
+  getUsageCodes,
+  getRegionCodes,
   getBidTypes,
   resolveBidTypeCode,
   describeBidTypeCode,
@@ -230,6 +234,294 @@ test("getCaseByCaseNumber returns found:false on status 204", async () => {
   assert.match(result.message, /조회 되는 사건번호 정보가 없습니다/);
 });
 
+test("buildPropertySearchBody matches the canonical PGJ151M01 body captured from a real browser submission", () => {
+  const canonical = loadFixture("canonical-search-body.json");
+  delete canonical._source;
+
+  const body = buildPropertySearchBody({
+    bidType: "date",
+    courtCode: "B000210",
+    saleDate: { from: "2026-05-08", to: "2026-05-22" },
+    page: 1,
+    pageSize: 10
+  });
+
+  assert.deepEqual(body, canonical);
+  assert.equal(typeof body.dma_pageInfo.pageNo, "number", "pageNo must be numeric (matches captured body)");
+  assert.equal(typeof body.dma_pageInfo.pageSize, "number", "pageSize must be numeric");
+  assert.equal(typeof body.dma_srchGdsDtlSrchInfo.statNum, "number", "statNum must be numeric");
+  assert.equal(body.dma_srchGdsDtlSrchInfo.cortStDvs, "1", "no region → cortStDvs=1");
+  assert.equal(body.dma_srchGdsDtlSrchInfo.notifyLoc, "off");
+});
+
+test("buildPropertySearchBody maps Workflow C filters using REAL upstream codes (lcl/sigungu/dong)", () => {
+  const body = buildPropertySearchBody({
+    region: { sido: "서울특별시", sigungu: "11680", dong: "11680101" },
+    usage: { large: "건물", medium: "21200", small: "21201" },
+    priceRange: { min: 100000000, max: 500000000 },
+    appraisedPriceRange: { min: 150000000, max: 800000000 },
+    saleDate: { from: "2026-05-01", to: "2026-05-20" },
+    flbdCount: { min: 1, max: 3 },
+    area: { min: 30, max: 85.5 },
+    bidType: "date",
+    courtCode: "B000210",
+    page: 2,
+    pageSize: 20
+  });
+
+  assert.equal(body.dma_pageInfo.pageNo, 2);
+  assert.equal(body.dma_pageInfo.pageSize, 20);
+  assert.equal(body.dma_pageInfo.totalYn, "Y");
+
+  const s = body.dma_srchGdsDtlSrchInfo;
+  assert.equal(s.bidDvsCd, "000331");
+  assert.equal(s.cortOfcCd, "B000210");
+  assert.equal(s.cortStDvs, "2");
+  assert.equal(s.rprsAdongSdCd, "11");
+  assert.equal(s.rprsAdongSggCd, "11680");
+  assert.equal(s.rprsAdongEmdCd, "11680101");
+  assert.equal(s.lclDspslGdsLstUsgCd, "20000", "건물 → 20000 (real upstream LCL code)");
+  assert.equal(s.mclDspslGdsLstUsgCd, "21200");
+  assert.equal(s.sclDspslGdsLstUsgCd, "21201");
+  assert.equal(s.lwsDspslPrcMin, "100000000");
+  assert.equal(s.lwsDspslPrcMax, "500000000");
+  assert.equal(s.aeeEvlAmtMin, "150000000");
+  assert.equal(s.aeeEvlAmtMax, "800000000");
+  assert.equal(s.flbdNcntMin, "1");
+  assert.equal(s.flbdNcntMax, "3");
+  assert.equal(s.objctArDtsMin, "30");
+  assert.equal(s.objctArDtsMax, "85.5");
+  assert.equal(s.bidBgngYmd, "20260501");
+  assert.equal(s.bidEndYmd, "20260520");
+
+  assert.equal(s.mvprpArtclKndCd, "", "real upstream uses mvprpArtclKndCd not mvprpArtclKnd");
+  assert.equal(s.mvprpAtchmPlcTypCd, "", "real upstream uses mvprpAtchmPlcTypCd not mvrpDspslPlcTyp");
+  assert.ok(!Object.prototype.hasOwnProperty.call(s, "mvprpArtclKnd"), "old wrong key removed");
+  assert.ok(!Object.prototype.hasOwnProperty.call(s, "mvrpDspslPlcTyp"), "old wrong key removed");
+  assert.ok(!Object.prototype.hasOwnProperty.call(s, "consonant"), "consonant is not in canonical body");
+  assert.ok(!Object.prototype.hasOwnProperty.call(s, "maeMokmulNm"), "maeMokmulNm is not in canonical body");
+  assert.equal(s.execrOfcDvsCd, "", "execrOfcDvsCd present (canonical)");
+  assert.equal(s.cortAuctnMbrsId, "", "cortAuctnMbrsId present (canonical)");
+});
+
+test("buildPropertySearchBody keeps the documented raw-code CLI example numeric", () => {
+  const body = buildPropertySearchBody({
+    region: { sido: "서울특별시", sigungu: "11680" },
+    usage: { large: "건물", medium: "21200" },
+    priceRange: { min: 100000000, max: 500000000 },
+    saleDate: { from: "2026-05-01", to: "2026-05-20" }
+  });
+  const s = body.dma_srchGdsDtlSrchInfo;
+  assert.equal(s.rprsAdongSdCd, "11");
+  assert.equal(s.rprsAdongSggCd, "11680");
+  assert.equal(s.lclDspslGdsLstUsgCd, "20000");
+  assert.equal(s.mclDspslGdsLstUsgCd, "21200");
+  assert.equal(s.lwsDspslPrcMin, "100000000");
+});
+
+test("buildPropertySearchBody rejects fractional flbdCount (count must be integer)", () => {
+  assert.throws(
+    () => buildPropertySearchBody({ flbdCount: { min: 1.5 } }),
+    /flbdCount\.min .*non-negative integer.*1\.5/
+  );
+});
+
+test("searchProperties posts propertySearch and normalizes the real PGJ151 result row", async () => {
+  const client = makeFakeClient((endpoint) => {
+    assert.equal(endpoint, "propertySearch");
+    return loadFixture("properties-sample.json");
+  });
+
+  const result = await searchProperties({
+    region: { sido: "11", sigungu: "11680" },
+    usage: { large: "20000" },
+    saleDate: { from: "2026-05-01", to: "2026-05-20" },
+    bidType: "date",
+    page: 2,
+    pageSize: 20,
+    client
+  });
+
+  assert.equal(client.calls.length, 1);
+  assert.equal(client.calls[0].body.dma_pageInfo.pageNo, 2);
+  assert.equal(client.calls[0].body.dma_srchGdsDtlSrchInfo.bidBgngYmd, "20260501");
+  assert.equal(result.page.pageNo, 2);
+  assert.equal(result.page.pageSize, 20);
+  assert.equal(result.page.totalCount, 37);
+  assert.equal(result.count, 2);
+
+  const item = result.items[0];
+  assert.equal(item.caseNumber, "20220130105284");
+  assert.equal(item.displayCaseNumber, "2022타경105284");
+  assert.equal(item.itemNumber, "1");
+  assert.equal(item.itemSeq, "1");
+  assert.match(item.address, /서울특별시.*강남구.*대치동/);
+  assert.equal(item.appraisedPrice, 450000000);
+  assert.equal(item.minimumSalePrice, 360000000);
+  assert.equal(item.flbdCount, 5);
+  assert.equal(item.failedBidCount, 5);
+  assert.equal(item.courtCode, "B000210");
+  assert.equal(item.courtName, "서울중앙지방법원");
+  assert.equal(item.judgeDeptName, "경매2계");
+  assert.deepEqual(item.usageCodes, { large: "20000", medium: "21100", small: "21101" });
+  assert.deepEqual(item.regionCodes, { sido: "11", sigungu: "11680", dong: "11680106" });
+  assert.equal(item.saleDate, "2026-05-21");
+  assert.equal(item.bidTypeCode, "000331");
+  assert.equal(item.status, item.statusCode);
+  assert.equal(item.buildings, item.buildingList);
+  assert.equal(item.areas, item.areaList);
+  assert.equal(item.lotCategories, item.landCategoryList);
+});
+
+test("searchProperties rejects page sizes outside the observed PGJ151 dropdown values", () => {
+  assert.equal(buildPropertySearchBody({ pageSize: 10 }).dma_pageInfo.pageSize, 10);
+  assert.equal(buildPropertySearchBody({ pageSize: 20 }).dma_pageInfo.pageSize, 20);
+  assert.equal(buildPropertySearchBody({ pageSize: 50 }).dma_pageInfo.pageSize, 50);
+  assert.equal(buildPropertySearchBody({ pageSize: 100 }).dma_pageInfo.pageSize, 100);
+
+  assert.throws(
+    () => buildPropertySearchBody({ pageSize: 1 }),
+    /pageSize must be one of 10, 20, 50, 100/
+  );
+  assert.throws(
+    () => buildPropertySearchBody({ pageSize: 25 }),
+    /pageSize must be one of 10, 20, 50, 100/
+  );
+  assert.throws(
+    () => buildPropertySearchBody({ pageSize: 500 }),
+    /pageSize must be one of 10, 20, 50, 100/
+  );
+});
+
+test("searchProperties falls back from an explicit HTTP client on Workflow C WAF-style HTTP 400", async () => {
+  const primary = makeFakeClient(() => {
+    const error = new Error("HTTP 400");
+    error.code = "UPSTREAM_ERROR";
+    error.statusCode = 400;
+    throw error;
+  });
+  const fallback = makeFakeClient((endpoint) => {
+    assert.equal(endpoint, "propertySearch");
+    return loadFixture("properties-sample.json");
+  });
+
+  const result = await searchProperties({
+    client: primary,
+    fallbackClient: fallback,
+    courtCode: "B000210",
+    saleDate: { from: "2026-05-08", to: "2026-05-22" },
+    pageSize: 10,
+    includeRaw: false
+  });
+
+  assert.equal(primary.calls.length, 1);
+  assert.equal(fallback.calls.length, 1);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].displayCaseNumber, "2022타경105284");
+});
+
+test("searchProperties stops on confirmed BLOCKED responses by default", async () => {
+  const primary = makeFakeClient(() => {
+    const error = new Error("ipcheck false");
+    error.code = "BLOCKED";
+    throw error;
+  });
+  const fallback = makeFakeClient(() => loadFixture("properties-sample.json"));
+
+  await assert.rejects(
+    () =>
+      searchProperties({
+        client: primary,
+        fallbackClient: fallback
+      }),
+    /ipcheck false/
+  );
+  assert.equal(primary.calls.length, 1);
+  assert.equal(fallback.calls.length, 0);
+});
+
+test("searchProperties only retries confirmed BLOCKED responses with explicit fallbackOnBlocked", async () => {
+  const primary = makeFakeClient(() => {
+    const error = new Error("ipcheck false");
+    error.code = "BLOCKED";
+    throw error;
+  });
+  const fallback = makeFakeClient(() => loadFixture("properties-sample.json"));
+
+  const result = await searchProperties({
+    client: primary,
+    fallbackClient: fallback,
+    fallbackOnBlocked: true,
+    includeRaw: false
+  });
+
+  assert.equal(primary.calls.length, 1);
+  assert.equal(fallback.calls.length, 1);
+  assert.equal(result.items.length, 2);
+});
+
+test("searchProperties honors fallback:false even for Workflow C HTTP 400", async () => {
+  const primary = makeFakeClient(() => {
+    const error = new Error("HTTP 400");
+    error.code = "UPSTREAM_ERROR";
+    error.statusCode = 400;
+    throw error;
+  });
+  const fallback = makeFakeClient(() => loadFixture("properties-sample.json"));
+
+  await assert.rejects(
+    () =>
+      searchProperties({
+        client: primary,
+        fallbackClient: fallback,
+        fallback: false
+      }),
+    /HTTP 400/
+  );
+  assert.equal(fallback.calls.length, 0);
+});
+
+test("Workflow C code tables expose REAL upstream LCL and sido lookups", () => {
+  const usages = getUsageCodes();
+  const regions = getRegionCodes();
+  assert.ok(
+    usages.items.some((item) => item.code === "20000" && item.name === "건물" && item.level === "large"),
+    "건물=20000 from upstream selectLclLst.on"
+  );
+  assert.ok(
+    usages.items.some((item) => item.code === "10000" && item.name === "토지"),
+    "토지=10000 from upstream"
+  );
+  assert.ok(
+    regions.items.some((item) => item.sidoCode === "11" && item.sidoName === "서울특별시"),
+    "서울특별시=11 from upstream selectAdongSdLst.on"
+  );
+  assert.equal(regions.items.length, 19, "all 19 sido from upstream");
+});
+
+test("buildPropertySearchBody returns empty region when no region input given", () => {
+  const empty = buildPropertySearchBody({}).dma_srchGdsDtlSrchInfo;
+  assert.equal(empty.cortStDvs, "1", "no region → cortStDvs=1");
+  assert.equal(empty.rprsAdongSdCd, "", "no region → empty sido (no first-row fallback)");
+  assert.equal(empty.rprsAdongSggCd, "");
+  assert.equal(empty.rprsAdongEmdCd, "");
+});
+
+test("buildPropertySearchBody preserves partial region granularity (sido-only and sido+sigungu)", () => {
+  const sidoOnly = buildPropertySearchBody({ region: { sido: "서울특별시" } }).dma_srchGdsDtlSrchInfo;
+  assert.equal(sidoOnly.cortStDvs, "2");
+  assert.equal(sidoOnly.rprsAdongSdCd, "11");
+  assert.equal(sidoOnly.rprsAdongSggCd, "");
+  assert.equal(sidoOnly.rprsAdongEmdCd, "");
+
+  const sidoSigungu = buildPropertySearchBody({
+    region: { sido: "서울특별시", sigungu: "11680" }
+  }).dma_srchGdsDtlSrchInfo;
+  assert.equal(sidoSigungu.rprsAdongSdCd, "11");
+  assert.equal(sidoSigungu.rprsAdongSggCd, "11680");
+  assert.equal(sidoSigungu.rprsAdongEmdCd, "");
+});
+
 test("getCourtCodes hits the courts endpoint and returns code/name pairs", async () => {
   const client = makeFakeClient((endpoint) => {
     assert.equal(endpoint, "courts");
@@ -246,6 +538,7 @@ test("ENDPOINT_PATHS exposes the discovered courtauction.go.kr endpoints", () =>
   assert.equal(ENDPOINT_PATHS.noticeDetail, "/pgj/pgj143/selectRletDspslPbancDtl.on");
   assert.equal(ENDPOINT_PATHS.caseDetail, "/pgj/pgj15A/selectAuctnCsSrchRslt.on");
   assert.equal(ENDPOINT_PATHS.courts, "/pgj/pgjComm/selectCortOfcCdLst.on");
+  assert.equal(ENDPOINT_PATHS.propertySearch, "/pgj/pgjsearch/searchControllerMain.on");
 });
 
 test("isPlaywrightFallbackAvailable is a boolean (no crash even when modules are absent)", () => {

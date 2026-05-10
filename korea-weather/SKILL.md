@@ -24,13 +24,13 @@ metadata:
 ## Prerequisites
 
 - optional: `jq`
-- self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`
+- optional: `KSKILL_PROXY_BASE_URL` (self-host·별도 프록시를 쓸 때만 설정. 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.)
 
 ## Required environment variables
 
-- `KSKILL_PROXY_BASE_URL` (필수: self-host 또는 배포 확인이 끝난 proxy base URL)
+- 없음. `KSKILL_PROXY_BASE_URL` 은 선택 사항이며, 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
-사용자가 공공데이터포털 기상청 API key를 직접 다룰 필요는 없다. 대신 `/v1/korea-weather/forecast` route가 실제로 올라와 있는 proxy URL 을 `KSKILL_PROXY_BASE_URL` 로 받는다. upstream `KMA_OPEN_API_KEY` 는 proxy 서버에서만 관리한다.
+사용자가 공공데이터포털 기상청 API key를 직접 다룰 필요는 없다. `/v1/korea-weather/forecast` route는 기본 hosted proxy에서 호출하고, upstream `KMA_OPEN_API_KEY` 는 proxy 서버에서만 관리한다. 별도 proxy를 쓰는 경우에만 `KSKILL_PROXY_BASE_URL` 을 설정한다.
 
 ## Inputs
 
@@ -44,14 +44,15 @@ metadata:
 
 ### 1. Resolve the proxy base URL
 
-`KSKILL_PROXY_BASE_URL` 로 self-host 또는 배포 확인이 끝난 proxy base URL 을 확인한다.
+`KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없거나 비어 있으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 
 ### 2. Query the short-term forecast endpoint
 
 격자 좌표가 이미 있으면 그대로 넣고, 위도/경도만 있으면 proxy 에 그대로 넘긴다.
 
 ```bash
-curl -fsS --get 'https://your-proxy.example.com/v1/korea-weather/forecast' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
   --data-urlencode 'lat=37.5665' \
   --data-urlencode 'lon=126.9780'
 ```
@@ -59,7 +60,8 @@ curl -fsS --get 'https://your-proxy.example.com/v1/korea-weather/forecast' \
 격자 좌표 예시:
 
 ```bash
-curl -fsS --get 'https://your-proxy.example.com/v1/korea-weather/forecast' \
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
   --data-urlencode 'nx=60' \
   --data-urlencode 'ny=127' \
   --data-urlencode 'baseDate=20260405' \
@@ -89,7 +91,7 @@ curl -fsS --get 'https://your-proxy.example.com/v1/korea-weather/forecast' \
 
 ## Failure modes
 
-- `KSKILL_PROXY_BASE_URL` 이 비어 있거나 weather route가 아직 배포되지 않은 경우
+- proxy upstream key 미설정 또는 hosted/self-host route 장애
 - `nx` / `ny` 또는 `lat` / `lon` 이 불완전한 경우
 - 기상청 quota 초과 또는 upstream 장애
 - 선택한 발표 시각에 아직 예보가 준비되지 않은 경우

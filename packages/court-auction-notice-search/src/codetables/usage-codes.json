@@ -1,0 +1,13 @@
+{
+  "source": "courtauction.go.kr PGJ151F00 initial XHR /pgj/pgj002/selectLclLst.on captured 2026-05-08; mid/small representative codes observed in dlt_srchResult.lclsUtilCd/mclsUtilCd/sclsUtilCd. Discovery raw: test/fixtures/lcl-codes-raw.json. Workflow C resolver fails open on unknown values (raw codes pass through unchanged). Mid/small classifications are NOT exhaustive — the upstream PGJ151 cascading dropdown does not return them via a public XHR; pass raw codes when known.",
+  "items": [
+    { "level": "large", "code": "10000", "name": "토지" },
+    { "level": "large", "code": "20000", "name": "건물" },
+    { "level": "large", "code": "30000", "name": "차량및운송장비" },
+    { "level": "large", "code": "40000", "name": "기타" },
+    { "level": "medium", "parentCode": "20000", "code": "21100", "name": "단독주택" },
+    { "level": "medium", "parentCode": "20000", "code": "21200", "name": "공동주택" },
+    { "level": "small", "parentCode": "21100", "code": "21101", "name": "단독주택(소분류)" },
+    { "level": "small", "parentCode": "21200", "code": "21201", "name": "아파트" }
+  ]
+}

@@ -152,6 +152,40 @@ test("README advertises OpenClaw among the supported coding agents", () => {
   );
 });
 
+test("repository publishes Korean contribution guidance for external contributors", () => {
+  const contributingPath = path.join(repoRoot, "CONTRIBUTING.md");
+
+  assert.ok(fs.existsSync(contributingPath), "expected CONTRIBUTING.md to exist");
+
+  const contributing = read("CONTRIBUTING.md");
+
+  assert.match(contributing, /^# 기여 가이드$/m);
+  assert.match(contributing, /PR 코멘트, 이슈, 리뷰 등 모든 소통은 한국어로 진행/);
+  assert.match(contributing, /PR의 대상 브랜치는 반드시 `dev`/);
+  assert.match(contributing, /`main` 브랜치로 PR을 만들 수 있는 사람은 `@vkehfdl1`뿐/);
+  assert.match(contributing, /스킬을 추가하거나 변경할 때는 관련 기능 문서와 `README\.md`의 표/);
+  assert.match(contributing, /npm 패키지를 수정할 때는 Changesets/);
+  assert.match(contributing, /Changeset 파일의 존재 여부를 테스트로 검증하지 않는다/);
+  assert.match(contributing, /`package\.json`과 `package-lock\.json`의 `version` 필드를 테스트에서 고정하지 않는다/);
+  assert.match(contributing, /`name`, `license`, `engines\.node`, workspace link metadata/);
+  assert.match(contributing, /현재 구현이 registry token 기반인 경우에도 신규 또는 재설계 흐름은 trusted publishing\/OIDC를 우선/);
+  assert.match(contributing, /신규 proxy route는 upstream이 API key를 요구하는 무료 API인 경우에만 `k-skill-proxy` 경유를 검토/);
+  assert.match(contributing, /인증 없이 동작하는 공개 read-only endpoint는 기본적으로 사용자 머신에서 직접 호출/);
+  assert.doesNotMatch(contributing, /무료 API이고 1일 리미트가 충분한 경우/);
+  assert.match(contributing, /유료 API/);
+  assert.match(contributing, /`k-skill-proxy`를 타지 않도록 설계/);
+  assert.match(contributing, /릴리스나 패키징 관련 변경은 `npm run ci`/);
+  assert.match(contributing, /`~\/\.claude\/skills\/<skill-name>`/);
+  assert.match(contributing, /`~\/\.agents\/skills\/<skill-name>`/);
+  assert.match(contributing, /프로덕션 프록시는 `~\/\.local\/share\/k-skill-proxy`/);
+});
+
+test("README links to the contribution guide", () => {
+  const readme = read("README.md");
+
+  assert.match(readme, /\[기여 가이드\]\(CONTRIBUTING\.md\)/);
+});
+
 test("hwp skill documents kordoc-based parsing and supported operations", () => {
   const skillPath = path.join(repoRoot, "hwp", "SKILL.md");
 
@@ -414,7 +448,7 @@ test("used-car-price-search docs document the provider survey and SK direct surf
   assert.match(roadmap, /중고차 가격 조회 스킬 출시/);
 });
 
-test("seoul subway docs require an explicit proxy until the hosted route is live", () => {
+test("seoul subway docs default to the hosted proxy when KSKILL_PROXY_BASE_URL is unset", () => {
   const readme = read("README.md");
   const setup = read(path.join("docs", "setup.md"));
   const install = read(path.join("docs", "install.md"));
@@ -427,29 +461,35 @@ test("seoul subway docs require an explicit proxy until the hosted route is live
   const secretsExample = read(path.join("examples", "secrets.env.example"));
 
   assert.match(readme, /\| 서울 지하철 도착정보 조회 \| .* \| 불필요 \|/);
-  assert.match(setup, /\| 서울 지하철 도착정보 조회 \| self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL` \|/);
+  assert.match(setup, /\| 서울 지하철 도착정보 조회 \| 사용자 시크릿 불필요 \(기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`\) \|/);
   assert.match(install, /--skill seoul-subway-arrival/);
 
   for (const doc of [skill, featureDoc]) {
     assert.match(doc, /KSKILL_PROXY_BASE_URL/);
     assert.match(doc, /\/v1\/seoul-subway\/arrival/);
     assert.match(doc, /사용자가 .*OpenAPI key.*직접.*필요(가|는)? 없다|개인 API key 없이/i);
-    assert.match(doc, /self-host|운영 중인 proxy|배포가 끝난 proxy/i);
+    assert.match(doc, /비우면 기본 hosted `https:\/\/k-skill-proxy\.nomadamas\.org`|없으면 기본 hosted proxy/i);
     assert.doesNotMatch(doc, /SEOUL_OPEN_API_KEY/);
     assert.doesNotMatch(doc, /swopenAPI\.seoul\.go\.kr\/api\/subway\/\$\{SEOUL_OPEN_API_KEY\}/);
-    assert.doesNotMatch(doc, /기본값 `https:\/\/k-skill-proxy\.nomadamas\.org`/);
-    assert.doesNotMatch(doc, /없으면 hosted proxy .*기본/);
+    assert.doesNotMatch(doc, /필수: self-host|반드시 명시|먼저 확보|public hosted route rollout 전/);
   }
 
   assert.match(proxyDoc, /GET \/v1\/seoul-subway\/arrival/);
+  assert.match(proxyDoc, /KSKILL_PROXY_BASE_URL/);
+  assert.match(proxyDoc, /unset\/empty|비워 두면/);
+  assert.match(proxyDoc, /https:\/\/k-skill-proxy\.nomadamas\.org/);
+  assert.match(proxyDoc, /KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com/);
+  assert.match(proxyDoc, /self-host|alternate proxy/i);
+  assert.match(proxyDoc, /override/i);
   assert.match(proxyDoc, /SEOUL_OPEN_API_KEY/);
   assert.match(proxyReadme, /GET \/v1\/seoul-subway\/arrival/);
   assert.match(proxyReadme, /SEOUL_OPEN_API_KEY/);
   assert.match(security, /KSKILL_PROXY_BASE_URL/);
-  assert.match(security, /배포가 끝난 proxy|self-host/i);
-  assert.match(setupSkill, /서울 지하철: self-host 또는 배포 확인이 끝난 `KSKILL_PROXY_BASE_URL`/);
+  assert.match(security, /서울 지하철.*한국 날씨.*기본 hosted proxy|기본 hosted proxy.*서울 지하철.*한국 날씨/i);
+  assert.match(setupSkill, /서울 지하철: 사용자 시크릿 불필요 \(기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`\)/);
   assert.doesNotMatch(secretsExample, /SEOUL_OPEN_API_KEY/);
-  assert.match(secretsExample, /KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com/);
+  assert.doesNotMatch(secretsExample, /^KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m);
+  assert.match(secretsExample, /^(#\s*)?KSKILL_PROXY_BASE_URL=$|^#\s*KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m);
   assert.doesNotMatch(secretsExample, /KSKILL_PROXY_BASE_URL=https:\/\/k-skill-proxy\.nomadamas\.org/);
 });
 
@@ -488,6 +528,8 @@ test("korea-weather docs route short-term forecast calls through the proxy witho
     assert.match(doc, /nx|ny|위도|경도/u);
     assert.match(doc, /TMP|SKY|PTY|POP/);
     assert.match(doc, /KSKILL_PROXY_BASE_URL|k-skill-proxy\.nomadamas\.org/);
+    assert.match(doc, /비우면 기본 hosted `https:\/\/k-skill-proxy\.nomadamas\.org`|없으면 기본 hosted proxy/i);
+    assert.doesNotMatch(doc, /필수: self-host|반드시 명시|먼저 확보|public hosted route rollout 전/);
     assert.doesNotMatch(doc, /KMA_OPEN_API_KEY=.*사용자/);
   }
 
@@ -495,6 +537,41 @@ test("korea-weather docs route short-term forecast calls through the proxy witho
   assert.match(proxyDoc, /KMA_OPEN_API_KEY/);
   assert.match(proxyReadme, /GET \/v1\/korea-weather\/forecast/);
   assert.match(proxyReadme, /KMA_OPEN_API_KEY/);
+});
+
+test("hosted proxy docs keep self-host overrides inactive and demonstrate resolver fallback", () => {
+  const setup = read(path.join("docs", "setup.md"));
+  const security = read(path.join("docs", "security-and-secrets.md"));
+  const setupSkill = read(path.join("k-skill-setup", "SKILL.md"));
+  const secretsExample = read(path.join("examples", "secrets.env.example"));
+  const subwaySkill = read(path.join("seoul-subway-arrival", "SKILL.md"));
+  const weatherSkill = read(path.join("korea-weather", "SKILL.md"));
+  const subwayFeatureDoc = read(path.join("docs", "features", "seoul-subway-arrival.md"));
+  const weatherFeatureDoc = read(path.join("docs", "features", "korea-weather.md"));
+  const proxyDoc = read(path.join("docs", "features", "k-skill-proxy.md"));
+
+  for (const doc of [setup, security, setupSkill, secretsExample]) {
+    assert.doesNotMatch(doc, /^KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m);
+  }
+
+  for (const doc of [setup, security, setupSkill, secretsExample]) {
+    assert.match(
+      doc,
+      /^(#\s*)?KSKILL_PROXY_BASE_URL=$|^#\s*KSKILL_PROXY_BASE_URL=https:\/\/your-proxy\.example\.com$/m,
+    );
+  }
+
+  for (const doc of [subwaySkill, weatherSkill, subwayFeatureDoc, weatherFeatureDoc]) {
+    assert.match(doc, /BASE="\$\{KSKILL_PROXY_BASE_URL:-https:\/\/k-skill-proxy\.nomadamas\.org\}"/);
+    assert.match(doc, /curl -fsS --get "\$\{BASE\}/);
+    assert.doesNotMatch(doc, /curl -fsS --get 'https:\/\/k-skill-proxy\.nomadamas\.org/);
+  }
+
+  assert.match(proxyDoc, /BASE="\$\{KSKILL_PROXY_BASE_URL:-https:\/\/k-skill-proxy\.nomadamas\.org\}"/);
+  for (const endpoint of ["seoul-subway/arrival", "korea-weather/forecast"]) {
+    assert.match(proxyDoc, new RegExp(`curl -fsS --get "\\$\\{BASE\\}/v1/${endpoint}"`));
+    assert.doesNotMatch(proxyDoc, new RegExp(`curl -fsS --get 'http://127\\.0\\.0\\.1:4020/v1/${endpoint}'`));
+  }
 });
 
 test("kakaotalk-mac skill documents safe macOS kakaocli usage", () => {
@@ -593,8 +670,6 @@ test("ktx-booking helper python regression tests pass", () => {
     `expected python KTX helper regression tests to pass\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
   );
 });
-
-
 
 test("repository docs advertise the geeknews-search skill across the documented surfaces", () => {
   const readme = read("README.md");
@@ -1218,16 +1293,48 @@ test("coupang-product-search docs drop non-allowlisted coupang-mcp-fallback and 
 
 test("root pack:dry-run script covers all publishable workspaces", () => {
   const packageJson = readJson("package.json");
+  const packScript = packageJson.scripts["pack:dry-run"];
+  const publishableWorkspaces = fs
+    .readdirSync(path.join(repoRoot, "packages"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join("packages", entry.name, "package.json"))
+    .filter((packagePath) => fs.existsSync(path.join(repoRoot, packagePath)))
+    .map((packagePath) => readJson(packagePath))
+    .filter((workspacePackage) => workspacePackage.private !== true)
+    .map((workspacePackage) => workspacePackage.name);
 
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace k-lotto/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace daiso-product-search/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace market-kurly-search/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace blue-ribbon-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kakao-bar-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace public-restroom-nearby/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kbl-results/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace kleague-results/);
-  assert.match(packageJson.scripts["pack:dry-run"], /workspace lck-analytics/);
+  assert.ok(publishableWorkspaces.includes("donation-place-search"));
+  for (const workspaceName of publishableWorkspaces) {
+    assert.match(packScript, new RegExp(`workspace ${escapeRegex(workspaceName)}(?:\\s|$)`));
+  }
+});
+
+test("README main capability table advertises the donation-place-search skill", () => {
+  const readme = read("README.md");
+  const tableSection = findSection(readme, "## 어떤 걸 할 수 있나");
+
+  assert.match(tableSection, /기부처 조회/);
+  assert.match(tableSection, /`donation-place-search`/);
+  assert.match(tableSection, /docs\/features\/donation-place-search\.md/);
+});
+
+test("donation-place-search install docs include the skill and npm helper", () => {
+  const install = read(path.join("docs", "install.md"));
+
+  assert.match(install, /--skill donation-place-search/);
+  assert.match(install, /npm install -g .*donation-place-search/);
+});
+
+test("donation-place-search docs describe 1365 links as best-effort verification assists", () => {
+  const skill = read(path.join("donation-place-search", "SKILL.md"));
+  const packageReadme = read(path.join("packages", "donation-place-search", "README.md"));
+  const featureDoc = read(path.join("docs", "features", "donation-place-search.md"));
+  const packageJson = readJson(path.join("packages", "donation-place-search", "package.json"));
+
+  for (const doc of [skill, packageReadme, featureDoc, packageJson.description]) {
+    assert.match(doc, /best-effort|보조|assist/i);
+    assert.doesNotMatch(doc, /candidate-verified|후보별 검증 완료/);
+  }
 });
 
 test("repository docs advertise the kbl-results skill across the documented surfaces", () => {
@@ -1396,8 +1503,6 @@ test("blue-ribbon-nearby package README stays aligned with the location-first an
   assert.match(packageReadme, /https:\/\/www\.bluer\.co\.kr\/restaurants\/map/);
   assert.match(packageReadme, /searchNearbyByLocationQuery/);
 });
-
-
 
 test("repository docs advertise the kakao-bar-nearby skill across the documented surfaces", () => {
   const readme = read("README.md");
@@ -1695,7 +1800,6 @@ test("package-lock captures the toss-securities workspace metadata for npm ci", 
     resolved: "packages/toss-securities",
     link: true,
   });
-  assert.equal(packageLock.packages["packages/toss-securities"].version, "0.2.0");
   assert.equal(packageLock.packages["packages/toss-securities"].license, "MIT");
   assert.equal(packageLock.packages["packages/toss-securities"].engines.node, ">=18");
 });
@@ -2474,12 +2578,11 @@ test("repository docs advertise the han-river-water-level skill and rollout-pend
 
   assert.match(setup, /한강 수위 정보 조회 \| 사용자 시크릿 불필요/);
   assert.match(setup, /한강 수위.*기본 hosted p/i);
-  assert.match(security, /KSKILL_PROXY_BASE_URL.*서울 지하철.*route가 실제 배포된 proxy URL/);
+  assert.match(security, /KSKILL_PROXY_BASE_URL.*서울 지하철.*한국 날씨.*기본 hosted proxy|서울 지하철.*한국 날씨.*KSKILL_PROXY_BASE_URL.*기본 hosted proxy/);
   assert.match(sources, /hrfco\.go\.kr\/web\/openapiPage\/reference\.do/);
   assert.match(sources, /api\.hrfco\.go\.kr/);
   assert.match(roadmap, /한강 수위 정보 조회 스킬 출시/);
 });
-
 
 test("repository docs advertise the MFDS drug and food safety skills", () => {
   const readme = read("README.md");
@@ -3478,7 +3581,6 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(sources, /law\.go\.kr/);
 });
 
-
 test("iros-registry-automation skill documents safe IROS registry certificate automation and upstream credit", () => {
   const skillPath = path.join(repoRoot, "iros-registry-automation", "SKILL.md");
   const featureDocPath = path.join(repoRoot, "docs", "features", "iros-registry-automation.md");
@@ -3837,4 +3939,63 @@ test("repository docs advertise the k-skill-cleaner skill and agent usage source
   assert.match(readme, /\| K-스킬 클리너 \| `k-skill-cleaner` \|/);
   assert.match(readme, /\[K-스킬 클리너 가이드\]\(docs\/features\/k-skill-cleaner\.md\)/);
   assert.match(install, /--skill k-skill-cleaner/);
+});
+
+test("court auction Workflow C docs preserve the PGJ151 safety contract", () => {
+  const featureDoc = read(path.join("docs", "features", "court-auction-notice-search.md"));
+
+  assert.match(
+    featureDoc,
+    /물건 자유 조건검색[\s\S]*PGJ151F00/,
+    "Workflow C docs should name the PGJ151F00 warmup path for property search",
+  );
+  assert.match(
+    featureDoc,
+    /pageSize[\s\S]*`10`\/`20`\/`50`\/`100`/,
+    "Workflow C docs should keep pageSize aligned with the observed PGJ151 dropdown values",
+  );
+  assert.doesNotMatch(
+    featureDoc,
+    /세션 cookie\([^\n]+\)는 `GET \/pgj\/index\.on\?w2xPath=\/pgj\/ui\/pgj100\/PGJ143M01\.xml&pgjId=143M01` 으로 사전에 한 번 받아둡니다\./,
+    "Workflow C docs should not imply every endpoint warms up through PGJ143M01 only",
+  );
+});
+
+test("court auction pending changeset does not publish stale fallback or pageSize guidance", () => {
+  const changesetDir = path.join(repoRoot, ".changeset");
+  if (!fs.existsSync(changesetDir)) return;
+
+  const pendingCourtAuctionChangesets = fs
+    .readdirSync(changesetDir)
+    .filter((entry) => entry.endsWith(".md"))
+    .map((entry) => read(path.join(".changeset", entry)))
+    .filter((contents) => contents.includes('"court-auction-notice-search"') && contents.includes("searchProperties()"));
+
+  for (const contents of pendingCourtAuctionChangesets) {
+    assert.doesNotMatch(
+      contents,
+      /direct HTTP call returns `BLOCKED` or `UPSTREAM_ERROR` 400/,
+      "Changeset must not tell users that confirmed BLOCKED/ipcheck=false auto-falls back by default",
+    );
+    assert.doesNotMatch(
+      contents,
+      /`pageSize` is capped at 100/,
+      "Changeset must not describe pageSize as an arbitrary 1..100 cap",
+    );
+    assert.match(
+      contents,
+      /`UPSTREAM_ERROR` 400/,
+      "Changeset should still document the raw-HTTP WAF-style 400 fallback path",
+    );
+    assert.match(
+      contents,
+      /`BLOCKED`[\s\S]*`fallbackOnBlocked:true`/,
+      "Changeset should document that confirmed BLOCKED retry is explicit opt-in",
+    );
+    assert.match(
+      contents,
+      /`10`\/`20`\/`50`\/`100`/,
+      "Changeset should document the exact PGJ151 pageSize allowlist",
+    );
+  }
 });

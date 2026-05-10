@@ -19,6 +19,12 @@ const {
   normalizeLhNoticeDetailQuery,
   normalizeLhNoticeSearchQuery
 } = require("./lh-notice");
+const {
+  fetchShNoticeDetail,
+  fetchShNoticeList,
+  normalizeShNoticeDetailQuery,
+  normalizeShNoticeSearchQuery
+} = require("./sh-notice");
 const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
@@ -2244,6 +2250,118 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
           hit: false,
           ttl_ms: config.cacheTtlMs
         },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/sh-notice/search", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeShNoticeSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "sh-notice-search",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let body;
+    try {
+      body = await fetchShNoticeList({ filters: normalized });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    const payload = {
+      ...body,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/sh-notice/detail", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeShNoticeDetailQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "sh-notice-detail",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let body;
+    try {
+      body = await fetchShNoticeDetail({ filters: normalized });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    const payload = {
+      ...body,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
         requested_at: new Date().toISOString()
       }
     };

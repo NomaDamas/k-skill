@@ -87,7 +87,7 @@ test("warmup GETs the index page and stores JSESSIONID/WMONID cookies", async ()
   });
 
   await client.warmup();
-  assert.equal(client.warmedUp, true);
+  assert.equal(client.warmedUp, WARMUP_PATH);
   assert.equal(client.cookieJar.get("JSESSIONID"), "abc123");
   assert.equal(client.cookieJar.get("WMONID"), "def456");
 });
