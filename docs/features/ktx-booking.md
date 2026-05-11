@@ -91,6 +91,38 @@ python3 scripts/ktx_booking.py cancel <reservation_id>
 
 응답은 JSON 으로 나오며 예약번호, 구입기한, 운임 확인에 바로 쓸 수 있다. **결제는 제외** 하고 예약까지만 자동화한다.
 
+## N카드 할인 예약
+
+### 1. 보유 N카드 조회
+
+```bash
+python3 scripts/ktx_booking.py ncard-list
+```
+
+응답 JSON 의 `index` 와 `card_no` 를 다음 단계에서 사용한다.
+
+### 2. N카드 할인 열차 조회
+
+```bash
+python3 scripts/ktx_booking.py ncard-search 대전 서울 20260512 100000 --ncard-index 1
+```
+
+`--ncard-index` 는 `ncard-list` 결과의 순번(1부터). `--train-type` 으로 열차 종류를 지정할 수 있다(기본 `ktx`).
+
+응답에는 일반 열차 조회와 동일한 `train_id` 외에 `discount_name`, `price`, `general_remaining_seats` 가 추가로 포함된다.
+
+### 3. N카드로 예약
+
+`reserve` 에 `--ncard-no` 를 붙인다. `--adults` 등 승객 옵션은 무시된다.
+
+```bash
+python3 scripts/ktx_booking.py reserve 대전 서울 20260512 100000 \
+  --train-id <train_id> \
+  --ncard-no <card_no>
+```
+
+**결제는 공식 앱 또는 웹사이트에서 직접 완료해야 한다.**
+
 ## 주의할 점
 
 - SRT 예매와는 별도 표면이므로 혼용하지 않는다.

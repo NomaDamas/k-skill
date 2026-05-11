@@ -28,6 +28,7 @@ try:
         ChildPassenger,
         Korail,
         KorailError,
+        NCardPassenger,
         NeedToLoginError,
         NoResultsError,
         Passenger,
@@ -75,6 +76,10 @@ except ModuleNotFoundError as exc:
 
     class SeniorPassenger(Passenger):
         pass
+
+    class NCardPassenger(AdultPassenger):
+        def __init__(self, count=1, card_no='', card='', card_pw='', discount_type='153'):
+            AdultPassenger.__init__(self, count)
 
     class ReserveOption:
         GENERAL_FIRST = "GENERAL_FIRST"
@@ -636,6 +641,27 @@ def normalize_reservation(reservation) -> dict[str, object]:
     }
 
 
+def normalize_ncard(ncard, index: int) -> dict[str, object]:
+    return {
+        "index": index,
+        "card_no": ncard.discount_card_no or "",
+        "ticket_kind": ncard.ticket_kind_name or "",
+        "dep_name": ncard.dep_name or "",
+        "arr_name": ncard.arr_name or "",
+        "valid": ncard.valid or "",
+        "description": str(ncard),
+    }
+
+
+def normalize_ncard_train(train, index: int) -> dict[str, object]:
+    base = normalize_train(train, index)
+    for attr in ("price", "discount_name", "general_remaining_seats", "standing_remaining_seats"):
+        value = getattr(train, attr, None)
+        if value is not None:
+            base[attr] = value
+    return base
+
+
 def print_json(payload: dict[str, object]) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
@@ -676,9 +702,46 @@ def command_search(args: argparse.Namespace) -> None:
     })
 
 
+def command_ncard_list(args: argparse.Namespace) -> None:
+    client = build_client()
+    ncards = client.owned_ncards()
+    print_json({
+        "count": len(ncards),
+        "ncards": [normalize_ncard(ncard, index) for index, ncard in enumerate(ncards, start=1)],
+    })
+
+
+def command_ncard_search(args: argparse.Namespace) -> None:
+    client = build_client()
+    ncards = client.owned_ncards()
+    if not ncards:
+        raise SystemExit("보유한 N카드가 없습니다.")
+    if args.ncard_index < 1 or args.ncard_index > len(ncards):
+        raise SystemExit(f"ncard-index는 1~{len(ncards)} 사이여야 합니다.")
+    ncard = ncards[args.ncard_index - 1]
+    trains = client.search_owned_ncard_trains(
+        ncard,
+        dep=args.dep,
+        arr=args.arr,
+        date=args.date,
+        time=args.time,
+        train_type=TRAIN_TYPE_MAP[args.train_type],
+    )
+    visible_trains = trains[: args.limit]
+    print_json({
+        "count": len(visible_trains),
+        "ncard": normalize_ncard(ncard, args.ncard_index),
+        "trains": [normalize_ncard_train(train, index) for index, train in enumerate(visible_trains, start=1)],
+    })
+
+
 def command_reserve(args: argparse.Namespace) -> None:
     client = build_client()
-    passengers = parse_passengers(args)
+    ncard_no = getattr(args, "ncard_no", None)
+    if ncard_no:
+        passengers = [NCardPassenger(card_no=ncard_no)]
+    else:
+        passengers = parse_passengers(args)
     include_waiting_list = args.include_waiting_list or args.try_waiting
     trains = client.search_train(
         args.dep,
@@ -766,7 +829,34 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="좌석이 없으면 예약대기를 시도 (reserve 재조회 시 예약대기 열차 자동 포함)",
     )
+    reserve_parser.add_argument(
+        "--ncard-no",
+        default=None,
+        metavar="CARD_NO",
+        help="N카드 번호 (N카드 할인 예약 시 사용; --adults 등 승객 옵션 대신 적용됨)",
+    )
     reserve_parser.set_defaults(func=command_reserve)
+
+    ncard_list_parser = subparsers.add_parser("ncard-list", help="보유한 N카드 목록을 조회합니다")
+    ncard_list_parser.set_defaults(func=command_ncard_list)
+
+    ncard_search_parser = subparsers.add_parser("ncard-search", help="N카드 할인 열차를 조회합니다")
+    ncard_search_parser.add_argument("dep", help="출발역")
+    ncard_search_parser.add_argument("arr", help="도착역")
+    ncard_search_parser.add_argument("date", help="출발일 YYYYMMDD")
+    ncard_search_parser.add_argument("time", help="희망 시작 시각 HHMMSS")
+    ncard_search_parser.add_argument(
+        "--ncard-index", type=int, required=True, metavar="N",
+        help="ncard-list 결과의 N카드 순번 (1부터)",
+    )
+    ncard_search_parser.add_argument("--limit", type=int, default=5, help="출력할 최대 열차 수")
+    ncard_search_parser.add_argument(
+        "--train-type",
+        choices=sorted(TRAIN_TYPE_MAP),
+        default="ktx",
+        help="조회할 열차 종류 (기본 ktx)",
+    )
+    ncard_search_parser.set_defaults(func=command_ncard_search)
 
     reservations_parser = subparsers.add_parser("reservations", help="현재 예약 목록을 조회합니다")
     reservations_parser.set_defaults(func=command_reservations)

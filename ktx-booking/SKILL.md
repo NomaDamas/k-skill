@@ -22,6 +22,9 @@ metadata:
 - "코레일 예약 확인해줘"
 - "KTX 취소해줘"
 - "오전 9시 이후 KTX 중 제일 빠른 거 잡아줘"
+- "N카드로 할인 열차 찾아줘"
+- "내 N카드 목록 보여줘"
+- "N카드 할인 적용해서 예약해줘"
 
 ## When not to use
 
@@ -121,6 +124,30 @@ python3 scripts/ktx_booking.py reserve 남춘천 용산 20260503 150000 --train-
 
 응답에는 예약번호, 운임, 구입기한이 포함된다. **결제는 자동화하지 않는다.**
 좌석이 없을 때는 조회 단계에서 `--include-waiting-list` 를 켜고 예약 단계에서 `--try-waiting` 으로 예약 대기까지 시도할 수 있다.
+
+### 4-1. N-card discounted reservation
+
+N카드 할인을 적용하려면 먼저 보유 N카드 목록을 조회해 카드 번호를 확인한다.
+
+```bash
+python3 scripts/ktx_booking.py ncard-list
+```
+
+N카드로 할인 열차를 조회한다 (`--ncard-index` 는 `ncard-list` 결과의 순번).
+
+```bash
+python3 scripts/ktx_booking.py ncard-search 대전 서울 20260512 100000 --ncard-index 1 --train-type ktx
+```
+
+응답의 `train_id` 를 복사해 `reserve` 에 `--ncard-no` 를 붙여 예약한다.
+
+```bash
+python3 scripts/ktx_booking.py reserve 대전 서울 20260512 100000 \
+  --train-id <train_id> \
+  --ncard-no <card_no>
+```
+
+`--ncard-no` 를 지정하면 `--adults` 등 승객 옵션은 무시되고 N카드 승객 1명으로 처리된다. **결제는 자동화하지 않는다.**
 
 ### 5. Inspect or cancel
 
