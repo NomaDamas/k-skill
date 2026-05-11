@@ -28,7 +28,6 @@ try:
         ChildPassenger,
         Korail,
         KorailError,
-        NCardPassenger,
         NeedToLoginError,
         NoResultsError,
         Passenger,
@@ -77,10 +76,6 @@ except ModuleNotFoundError as exc:
     class SeniorPassenger(Passenger):
         pass
 
-    class NCardPassenger(AdultPassenger):
-        def __init__(self, count=1, card_no='', card='', card_pw='', discount_type='153'):
-            AdultPassenger.__init__(self, count)
-
     class ReserveOption:
         GENERAL_FIRST = "GENERAL_FIRST"
         GENERAL_ONLY = "GENERAL_ONLY"
@@ -113,6 +108,16 @@ except ModuleNotFoundError as exc:
     korail_mod = _FallbackKorailModule()
 else:
     _KORAIL_IMPORT_ERROR = None
+
+try:
+    from korail2 import NCardPassenger
+    _NCARD_AVAILABLE = True
+except ImportError:
+    _NCARD_AVAILABLE = False
+
+    class NCardPassenger(AdultPassenger):
+        def __init__(self, count=1, card_no='', card='', card_pw='', discount_type='153'):
+            AdultPassenger.__init__(self, count)
 
 DEFAULT_USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 13; SM-S928N Build/UP1A.231005.007)"
 DYNAPATH_PATHS = [
@@ -703,6 +708,8 @@ def command_search(args: argparse.Namespace) -> None:
 
 
 def command_ncard_list(args: argparse.Namespace) -> None:
+    if not _NCARD_AVAILABLE:
+        raise SystemExit("N카드 기능을 사용하려면 korail2-ncard 패키지가 필요합니다: pip install korail2-ncard pycryptodome")
     client = build_client()
     ncards = client.owned_ncards()
     print_json({
@@ -712,6 +719,8 @@ def command_ncard_list(args: argparse.Namespace) -> None:
 
 
 def command_ncard_search(args: argparse.Namespace) -> None:
+    if not _NCARD_AVAILABLE:
+        raise SystemExit("N카드 기능을 사용하려면 korail2-ncard 패키지가 필요합니다: pip install korail2-ncard pycryptodome")
     client = build_client()
     ncards = client.owned_ncards()
     if not ncards:
@@ -739,6 +748,8 @@ def command_reserve(args: argparse.Namespace) -> None:
     client = build_client()
     ncard_no = getattr(args, "ncard_no", None)
     if ncard_no:
+        if not _NCARD_AVAILABLE:
+            raise SystemExit("N카드 기능을 사용하려면 korail2-ncard 패키지가 필요합니다: pip install korail2-ncard pycryptodome")
         passengers = [NCardPassenger(card_no=ncard_no)]
     else:
         passengers = parse_passengers(args)

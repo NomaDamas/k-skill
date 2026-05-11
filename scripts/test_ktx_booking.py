@@ -343,9 +343,10 @@ class KtxBookingTests(unittest.TestCase):
         ncard = FakeNCard()
         client = FakeClient([], ncards=[ncard])
         output = io.StringIO()
-        with patch.object(ktx_booking, "build_client", return_value=client):
-            with redirect_stdout(output):
-                ktx_booking.command_ncard_list(argparse.Namespace())
+        with patch.object(ktx_booking, "_NCARD_AVAILABLE", True):
+            with patch.object(ktx_booking, "build_client", return_value=client):
+                with redirect_stdout(output):
+                    ktx_booking.command_ncard_list(argparse.Namespace())
         result = json.loads(output.getvalue())
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["ncards"][0]["index"], 1)
@@ -368,9 +369,10 @@ class KtxBookingTests(unittest.TestCase):
             ncard_index=1, limit=5, train_type="ktx",
         )
         output = io.StringIO()
-        with patch.object(ktx_booking, "build_client", return_value=client):
-            with redirect_stdout(output):
-                ktx_booking.command_ncard_search(args)
+        with patch.object(ktx_booking, "_NCARD_AVAILABLE", True):
+            with patch.object(ktx_booking, "build_client", return_value=client):
+                with redirect_stdout(output):
+                    ktx_booking.command_ncard_search(args)
         result = json.loads(output.getvalue())
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["trains"][0]["discount_name"], "15%할인")
@@ -384,9 +386,10 @@ class KtxBookingTests(unittest.TestCase):
             dep="대전", arr="서울", date="20260512", time="100000",
             ncard_index=5, limit=5, train_type="ktx",
         )
-        with patch.object(ktx_booking, "build_client", return_value=client):
-            with self.assertRaises(SystemExit):
-                ktx_booking.command_ncard_search(args)
+        with patch.object(ktx_booking, "_NCARD_AVAILABLE", True):
+            with patch.object(ktx_booking, "build_client", return_value=client):
+                with self.assertRaises(SystemExit):
+                    ktx_booking.command_ncard_search(args)
 
     def test_command_reserve_with_ncard_no_uses_ncard_passenger(self):
         selected = FakeTrain(train_no="009", dep_time="100000", arr_time="105700",
@@ -401,9 +404,10 @@ class KtxBookingTests(unittest.TestCase):
             include_waiting_list=False, try_waiting=False,
             ncard_no="1234567890123456",
         )
-        with patch.object(ktx_booking, "build_client", return_value=client):
-            with redirect_stdout(io.StringIO()):
-                ktx_booking.command_reserve(args)
+        with patch.object(ktx_booking, "_NCARD_AVAILABLE", True):
+            with patch.object(ktx_booking, "build_client", return_value=client):
+                with redirect_stdout(io.StringIO()):
+                    ktx_booking.command_reserve(args)
         self.assertIsNotNone(client.reserved_passengers)
         self.assertEqual(len(client.reserved_passengers), 1)
         self.assertIsInstance(client.reserved_passengers[0], ktx_booking.NCardPassenger)
