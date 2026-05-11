@@ -45,6 +45,9 @@ done < <(
     ! -name .changeset \
     ! -name .cursor \
     ! -name .vscode \
+    ! -name .sisyphus \
+    ! -name .idea \
+    ! -name dist \
     ! -name docs \
     ! -name node_modules \
     ! -name packages \
