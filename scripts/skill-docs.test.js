@@ -3450,7 +3450,8 @@ test("corporate-registration-consulting skill covers court registry workflow, ta
   assert.match(skill, /inspection-report\.hwp/);
   assert.match(skill, /officer-acceptance-director-ceo\.hwp/);
   assert.match(skill, /rhwp-edit/);
-  assert.match(skill, /k-skill-rhwp/);
+  assert.doesNotMatch(skill, /k-skill-rhwp/);
+  assert.match(skill, /@rhwp\/core/);
   assert.match(skill, /본문[\s\S]*replace-all|replace-all[\s\S]*본문/);
   assert.match(skill, /replace-all[\s\S]*shortcut/);
   assert.match(skill, /한 장 한 장[\s\S]*순차/);
@@ -3681,23 +3682,25 @@ test("iros-registry-automation skill documents safe IROS registry certificate au
   assert.match(roadmap, /등기부등본 자동화 스킬 출시/);
 });
 
-test("rhwp-edit skill pins the k-skill-rhwp CLI as the editing engine and disclaims kordoc/rhwp-advanced routing", () => {
+test("rhwp-edit skill uses @rhwp/core directly and disclaims kordoc/rhwp-advanced routing", () => {
   const skill = read(path.join("rhwp-edit", "SKILL.md"));
 
   assert.match(skill, /^---\nname: rhwp-edit\n/);
-  assert.match(skill, /k-skill-rhwp/);
+  assert.doesNotMatch(skill, /k-skill-rhwp/);
   assert.match(skill, /@rhwp\/core/);
+  assert.match(skill, /HwpDocument/);
+  assert.match(skill, /measureTextWidth/);
   assert.match(skill, /hwp\/SKILL\.md/);
   assert.match(skill, /rhwp-advanced\/SKILL\.md/);
-  assert.match(skill, /insert-text/);
-  assert.match(skill, /delete-text/);
-  assert.match(skill, /replace-all/);
-  assert.match(skill, /create-table/);
-  assert.match(skill, /set-cell-text/);
+  assert.match(skill, /insertText/);
+  assert.match(skill, /deleteText/);
+  assert.match(skill, /replaceAll/);
+  assert.match(skill, /createTable/);
+  assert.match(skill, /insertTextInCell/);
   assert.match(skill, /create-blank/);
   assert.match(skill, /#196/);
   assert.match(skill, /본문 문단만/, "SKILL.md must document body-only scope for search/replace-all");
-  assert.match(skill, /set-cell-text/, "SKILL.md must reference set-cell-text for cell content workflow");
+  assert.match(skill, /insertTextInCell/, "SKILL.md must reference insertTextInCell for cell content workflow");
   assert.match(skill, /non-overlapping|개행|문단 경계/, "SKILL.md must document replace-all edge cases");
   assert.match(
     skill,
@@ -3746,9 +3749,10 @@ test("rhwp feature docs, README, install, roadmap, and sources are wired for the
   assert.match(sources, /@rhwp\/core/);
   assert.match(sources, /issues\/196/);
 
-  assert.match(editDoc, /k-skill-rhwp/);
-  assert.match(editDoc, /insert-text/);
-  assert.match(editDoc, /create-table/);
+  assert.doesNotMatch(editDoc, /k-skill-rhwp/);
+  assert.match(editDoc, /@rhwp\/core/);
+  assert.match(editDoc, /insertText/);
+  assert.match(editDoc, /createTable/);
   assert.match(editDoc, /#196/);
   assert.match(
     editDoc,
@@ -3765,26 +3769,6 @@ test("rhwp feature docs, README, install, roadmap, and sources are wired for the
   assert.match(advancedDoc, /export-svg/);
   assert.match(advancedDoc, /ir-diff/);
   assert.match(advancedDoc, /편집/);
-});
-
-test("k-skill-rhwp package ships CLI bin, WASM-init shim, and minor semver changeset", () => {
-  const packagePath = path.join(repoRoot, "packages", "k-skill-rhwp", "package.json");
-  assert.ok(fs.existsSync(packagePath), "expected packages/k-skill-rhwp/package.json");
-  const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-
-  assert.equal(pkg.name, "k-skill-rhwp");
-  assert.ok(pkg.bin && pkg.bin["k-skill-rhwp"] === "bin/k-skill-rhwp.js", "expected bin mapping");
-  assert.ok(pkg.dependencies && pkg.dependencies["@rhwp/core"], "expected @rhwp/core dependency");
-  assert.ok(pkg.engines && /\^|>=\s*1[89]/.test(pkg.engines.node || ""), "expected Node 18+");
-  assert.ok(
-    fs.existsSync(path.join(repoRoot, "packages", "k-skill-rhwp", "src", "wasm-init.js")),
-    "expected src/wasm-init.js"
-  );
-  assert.ok(
-    fs.existsSync(path.join(repoRoot, "packages", "k-skill-rhwp", "bin", "k-skill-rhwp.js")),
-    "expected bin/k-skill-rhwp.js"
-  );
-
 });
 
 const README_SKILL_NAME_COLUMN_MAPPING = [

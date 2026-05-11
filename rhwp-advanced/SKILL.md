@@ -13,7 +13,7 @@ metadata:
 ## What this skill does
 
 **업스트림 `rhwp` CLI**(Rust 네이티브 바이너리)를 써서 HWP 파일의 **레이아웃 디버깅·IR 구조 검사·버전 비교·썸네일 추출·배포용 문서 잠금 해제** 를 수행한다.
-`k-skill-rhwp`(Node 편집 CLI)가 다루지 못하는 구조 분석·렌더 문제 진단용이다.
+`rhwp-edit` 스킬(`@rhwp/core` 직접 사용)이 다루지 못하는 구조 분석·렌더 문제 진단용이다.
 
 이 스킬은 **편집을 하지 않는다**. 편집은 [`rhwp-edit`](../rhwp-edit/SKILL.md) 스킬, 문서 → Markdown/JSON 변환은 [`hwp`](../hwp/SKILL.md) 스킬(kordoc) 을 쓴다.
 
@@ -28,10 +28,10 @@ metadata:
 
 ## When not to use
 
-- **텍스트/표 편집** → `rhwp-edit` 스킬 (`k-skill-rhwp` CLI)
+- **텍스트/표 편집** → `rhwp-edit` 스킬 (`@rhwp/core` 직접 사용)
 - **HWP → Markdown/JSON/양식필드 변환** → `hwp` 스킬 (`kordoc`)
 - **GUI 자동화, 한컴 보안모듈 우회, Windows 레지스트리 제어** → 범위 밖이다.
-- **Node 코드에서 라이브러리 API 로 편집** → `k-skill-rhwp` 를 Node API 로 쓴다.
+- **Node 코드에서 라이브러리 API 로 편집** → `@rhwp/core` 를 직접 import 해서 쓴다(`rhwp-edit` 스킬 참조).
 
 ## Prerequisites
 
@@ -64,7 +64,7 @@ metadata:
 | 배포용(읽기전용) → 편집 가능 변환 | `rhwp convert` | `rhwp convert locked.hwp unlocked.hwp` |
 | 빈 표 포함 문서 템플릿 생성 | `rhwp gen-table` | `rhwp gen-table out.hwp` |
 
-> `rhwp` v0.7.3 CLI 에는 **편집(edit/insert-text/save) 서브커맨드가 없다.** 편집은 `rhwp-edit` 스킬 (`k-skill-rhwp` CLI) 을 쓴다.
+> `rhwp` v0.7.3 CLI 에는 **편집(edit/insert-text/save) 서브커맨드가 없다.** 편집은 `rhwp-edit` 스킬(`@rhwp/core` 직접 사용)을 쓴다.
 
 ## Workflow
 
@@ -120,7 +120,7 @@ metadata:
 
      ```bash
      rhwp convert locked.hwp unlocked.hwp
-     # 이후 편집은 rhwp-edit 스킬의 k-skill-rhwp CLI 로 수행
+     # 이후 편집은 rhwp-edit 스킬(@rhwp/core 직접 호출)로 수행
      ```
 
 4. **결과를 PR/보고서에 붙일 때**: SVG/PDF/썸네일은 파일 자체를 첨부하고, 덤프 출력은 너무 길면 상위 200~500 줄만 인용하고 전체는 파일로 첨부한다. 개인정보가 포함된 문서의 본문 텍스트는 마스킹한다.
@@ -152,4 +152,4 @@ metadata:
 - 업스트림: https://github.com/edwardkim/rhwp
 - 편집 경로(이 repo): [`rhwp-edit`](../rhwp-edit/SKILL.md)
 - 조회/변환 경로(이 repo): [`hwp`](../hwp/SKILL.md)
-- 이 스킬은 **설치 안내 + 실행 레시피**에 가까운 안내형 스킬이다. 프로그램적 제어가 필요하면 `rhwp-edit` 의 Node API(`k-skill-rhwp`)를 쓰고, 여기서는 빠른 디버깅용으로만 사용한다.
+- 이 스킬은 **설치 안내 + 실행 레시피**에 가까운 안내형 스킬이다. 프로그램적 제어가 필요하면 `rhwp-edit` 스킬의 `@rhwp/core` Node API를 쓰고, 여기서는 빠른 디버깅용으로만 사용한다.

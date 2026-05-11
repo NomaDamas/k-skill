@@ -1,7 +1,7 @@
 {
   "form": "form-65-1-stock-company-incorporation-promoter.hwp",
   "title": "[양식 제65-1호] 주식회사 설립 등기(발기설립)",
-  "engine": "k-skill-rhwp set-cell-text",
+  "engine": "@rhwp/core insertTextInCell",
   "warning": "이 매핑은 국가법령정보센터 HWP 별지 양식의 표 셀 인덱스에 맞춘 보조 자동작성 맵입니다. 자동 작성 후 한컴오피스/호환 뷰어에서 셀 위치, 줄바꿈, 날인란, 첨부서면 통수를 반드시 사람이 확인하세요.",
   "fields": {
     "registration_purpose": { "section": 0, "parentParagraph": 2, "control": 0, "cell": 18, "default": "주식회사설립" },

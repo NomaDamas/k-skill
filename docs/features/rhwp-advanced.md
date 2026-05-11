@@ -2,7 +2,7 @@
 
 `rhwp-advanced` 스킬은 **업스트림 `rhwp` Rust CLI** 를 실제로 설치해서 HWP 파일의 **구조·레이아웃·버전 차이·썸네일**을 꺼내 보는 디버깅/검사 스킬이다. 편집은 하지 않는다.
 
-- 편집 → [`rhwp-edit` 스킬](rhwp-edit.md) (`k-skill-rhwp` CLI + `@rhwp/core` WASM)
+- 편집 → [`rhwp-edit` 스킬](rhwp-edit.md) (`@rhwp/core` WASM 직접 사용)
 - 조회/변환 → [`hwp` 스킬](hwp.md) (kordoc)
 
 ## 준비
@@ -39,7 +39,7 @@ command -v rhwp && rhwp --help | head
 | 배포용(읽기전용) 잠금 해제 | `rhwp convert` | `rhwp convert locked.hwp unlocked.hwp` |
 | 표 템플릿 신규 문서 생성 | `rhwp gen-table` | `rhwp gen-table out.hwp` |
 
-> **편집 서브커맨드는 없다.** v0.7.3 기준 업스트림 `rhwp` CLI 에는 `edit` / `insert-text` / `save` 같은 in-place 편집 명령이 없다. 편집은 `rhwp-edit` 스킬 (`k-skill-rhwp` CLI) 이 맡는다.
+> **편집 서브커맨드는 없다.** v0.7.3 기준 업스트림 `rhwp` CLI 에는 `edit` / `insert-text` / `save` 같은 in-place 편집 명령이 없다. 편집은 `rhwp-edit` 스킬(`@rhwp/core` 직접 사용)이 맡는다.
 
 ## 자주 쓰는 플로우
 
@@ -84,7 +84,7 @@ rhwp thumbnail sample.hwp --data-uri
 
 ```bash
 rhwp convert locked.hwp unlocked.hwp
-# 이후 편집은 `k-skill-rhwp` CLI (rhwp-edit 스킬) 로
+# 이후 편집은 `rhwp-edit` 스킬(`@rhwp/core` 직접 호출)로
 ```
 
 ## 검증 포인트

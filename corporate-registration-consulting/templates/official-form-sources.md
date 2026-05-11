@@ -81,11 +81,11 @@ chmod 700 "$workdir"
 python3 corporate-registration-consulting/scripts/fill_official_hwp.py \
   --input-json "$workdir/form-data.json" \
   --output "$workdir/form-65-1-filled.hwp"
-npx k-skill-rhwp info "$workdir/form-65-1-filled.hwp"
+node --input-type=module -e 'import{readFileSync}from"node:fs";globalThis.measureTextWidth=(f,t)=>{const m=String(f||"").match(/([0-9.]+)px/);const s=m?parseFloat(m[1]):12;let w=0;for(const c of String(t||"")){w+=(c.codePointAt(0)>=0x1100&&c.codePointAt(0)<=0xffdc)?s:s*0.55}return w};const c=await import("@rhwp/core");await c.default({module_or_path:readFileSync(await import("module").then(m=>m.createRequire(import.meta.url).resolve("@rhwp/core/rhwp_bg.wasm")))});const d=new c.HwpDocument(new Uint8Array(readFileSync(process.argv[1])));console.log(d.getDocumentInfo());d.free()' "$workdir/form-65-1-filled.hwp"
 ```
 
 ## HWP/HWPX 처리 주의
 
 - 공식 파일을 새로 내려받거나 번들 HWP를 채운 산출물은 레포 밖 임시 디렉터리에 보관한다.
-- `k-skill-rhwp info <공식양식>`로 구조를 확인한 뒤 표/셀은 `set-cell-text`, 본문 자리표시자는 `replace-all`을 우선 사용한다. 다만 replace-all에 의존하지 말고 각 양식의 앞부분·본문·하단 날짜·서명/날인란을 순차 검토한다. 번들 발기설립 HWP는 `form-65-1-fill-map.json`의 셀 매핑을 사용한다.
+- `@rhwp/core`의 `getDocumentInfo`/`getSectionCount`로 구조를 확인한 뒤 표/셀은 `insertTextInCell`/`deleteTextInCell`, 본문 자리표시자는 `replaceAll`을 우선 사용한다. 다만 replaceAll에 의존하지 말고 각 양식의 앞부분·본문·하단 날짜·서명/날인란을 순차 검토한다. 번들 발기설립 HWP는 `form-65-1-fill-map.json`의 셀 매핑을 사용한다.
 - 공식 양식은 표와 칸이 많으므로 자동 치환 후 반드시 사람이 한컴오피스/호환 뷰어로 열어 누락 셀, 줄바꿈, 날인란, 첨부서류 목록을 확인한다.

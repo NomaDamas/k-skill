@@ -43,7 +43,7 @@
 - `pdfjs-dist`: https://www.npmjs.com/package/pdfjs-dist
 - `rhwp` upstream (Rust + WebAssembly HWP parser/renderer/editor, MIT, by Edward Kim): https://github.com/edwardkim/rhwp
 - `rhwp` CLI source (upstream subcommand truth table): https://github.com/edwardkim/rhwp/blob/main/src/main.rs
-- `@rhwp/core` npm (WASM bindings used by `k-skill-rhwp`): https://www.npmjs.com/package/@rhwp/core
+- `@rhwp/core` npm (WASM bindings used directly by the `rhwp-edit` skill): https://www.npmjs.com/package/@rhwp/core
 - `@rhwp/editor` npm (upstream iframe editor — not wrapped by this repo, documented for reference): https://www.npmjs.com/package/@rhwp/editor
 - rhwp HWPX-save-disabled issue #196 (data-safety gate until #197 ships): https://github.com/edwardkim/rhwp/issues/196
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp

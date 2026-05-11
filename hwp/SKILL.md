@@ -35,7 +35,7 @@ metadata:
 - OCR이 필수인데 OCR provider 연결이 전혀 없는 이미지 기반 PDF만 있는 경우
 - `.docx`, `.xlsx`, `.pdf` 만 다루더라도 문서 파싱 자체가 아니라 편집기 GUI 자동화가 필요한 경우
 - 원본 프로그램의 실시간 UI 제어가 반드시 필요한 경우
-- **본문 텍스트 직접 삽입·삭제·치환 또는 표 구조 변경** — `rhwp-edit` 스킬의 `k-skill-rhwp` CLI 를 사용한다.
+- **본문 텍스트 직접 삽입·삭제·치환 또는 표 구조 변경** — `rhwp-edit` 스킬(`@rhwp/core` 직접 사용)을 사용한다.
 - **페이지 SVG 렌더 디버깅·IR 덤프·ir-diff·썸네일 추출** — `rhwp-advanced` 스킬의 업스트림 `rhwp` CLI 를 사용한다.
 
 ## Prerequisites
