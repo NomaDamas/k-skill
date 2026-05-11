@@ -35,7 +35,7 @@ metadata:
 ## Prerequisites
 
 - Python 3.10+
-- `python3 -m pip install korail2 pycryptodome`
+- `python3 -m pip install korail2-ncard pycryptodome`
 
 ## Required environment variables
 

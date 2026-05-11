@@ -11,7 +11,7 @@
 ## 먼저 필요한 것
 
 - Python 3.10+
-- `python3 -m pip install korail2 pycryptodome`
+- `python3 -m pip install korail2-ncard pycryptodome`
 - [공통 설정 가이드](../setup.md) 완료
 - [보안/시크릿 정책](../security-and-secrets.md) 확인
 
