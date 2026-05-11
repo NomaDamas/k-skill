@@ -52,13 +52,31 @@ https://github.com/NomaDamas/k-skill/tree/main/real-estate-search
 
 GitHub URL 을 한 번에 하나씩 붙여 넣는 게 귀찮다면, 미리 빌드된 `.skill` 파일들을 한꺼번에 받아 두고 Manus 의 파일 업로드로 드래그-드롭하는 게 더 빠르다.
 
-### 빌드 방법
+### 빠른 경로 — 미리 빌드된 번들 다운로드 (권장)
 
-저장소를 클론하고 한 줄만 실행한다.
+`main` 에 변경이 들어올 때마다 GitHub Actions 가 자동으로 모든 스킬을 패키징해서 rolling pre-release `manus-bundle-latest` 에 올린다. 클론도 빌드도 필요 없다.
+
+- **합본 (권장)**: <https://github.com/NomaDamas/k-skill/releases/download/manus-bundle-latest/k-skill-manus-all.zip>
+- **스킬 목록 (어떤 게 들어 있는지 미리 확인)**: <https://github.com/NomaDamas/k-skill/releases/download/manus-bundle-latest/INDEX.md>
+- **릴리스 페이지**: <https://github.com/NomaDamas/k-skill/releases/tag/manus-bundle-latest>
+
+> 위 URL 은 매 `main` 푸시마다 같은 자리에서 새 번들로 교체된다. 항상 최신 상태가 보장된다.
+
+업로드 절차:
+
+1. `k-skill-manus-all.zip` 을 받아 압축을 푼다. 한 폴더에 `<skill-name>.skill` 파일들이 펼쳐진다.
+2. Manus 에서 **스킬 업로드 / 파일 추가** 화면을 연다.
+3. 원하는 `<skill-name>.skill` 파일을 드래그-드롭하거나 파일 선택으로 업로드한다. 파일 선택 다이얼로그에서 여러 파일을 한꺼번에 골라도 된다.
+4. Manus 가 파일 하나당 스킬 하나씩 등록한다.
+
+### 직접 빌드 (개발자용)
+
+저장소를 수정 중이거나 main 에 아직 머지되지 않은 변경을 테스트하고 싶다면 로컬에서 직접 빌드한다.
 
 ```bash
 git clone https://github.com/NomaDamas/k-skill.git
 cd k-skill
+npm install
 npm run build:manus-bundle
 ```
 
@@ -73,14 +91,7 @@ dist/manus/
 
 > `.skill` 파일은 사실상 ZIP 아카이브이며, 내부에는 단일 최상위 폴더 `<skill-name>/`(SKILL.md + 보조 리소스)가 들어 있다. 이 레이아웃은 Anthropic 의 공식 [skill-creator packager](https://github.com/anthropics/skills/blob/main/skills/skill-creator/scripts/package_skill.py) 와 동일하다.
 
-### 업로드 절차
-
-1. (선택) `dist/manus/k-skill-manus-all.zip` 을 받아 압축을 풀어 두면 한 폴더에 모든 `.skill` 파일이 모인다.
-2. Manus 에서 **스킬 업로드 / 파일 추가** 화면을 연다.
-3. 원하는 `<skill-name>.skill` 파일을 드래그-드롭하거나 파일 선택으로 업로드한다.
-4. 여러 파일을 동시에 선택하면 Manus 가 하나씩 등록한다. 한 번의 업로드는 정확히 하나의 스킬을 만든다.
-
-### 빌드에 필요한 것
+직접 빌드에 필요한 것:
 
 - Node.js 18+
 - 시스템 `zip` 명령 (macOS 와 대부분의 Linux 배포판은 기본 설치, Ubuntu 에서 누락 시 `sudo apt-get install -y zip`)

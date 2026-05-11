@@ -76,3 +76,29 @@ test("docs/install-manus.md documents both the GitHub URL path and the .skill bu
   assert.match(doc, /\.skill/, "must document the .skill file flow");
   assert.match(doc, /build:manus-bundle/, "must reference the npm build script");
 });
+
+test("docs/install-manus.md advertises the rolling release download URL", () => {
+  const doc = fs.readFileSync(path.join(repoRoot, "docs", "install-manus.md"), "utf8");
+  assert.match(
+    doc,
+    /releases\/download\/manus-bundle-latest\/k-skill-manus-all\.zip/,
+    "must link to the stable rolling-release download URL",
+  );
+  assert.match(
+    doc,
+    /releases\/tag\/manus-bundle-latest/,
+    "must link to the rolling-release page",
+  );
+});
+
+test("manus-bundle workflow exists, targets main, and publishes the expected assets", () => {
+  const wfPath = path.join(repoRoot, ".github", "workflows", "manus-bundle.yml");
+  assert.ok(fs.existsSync(wfPath), "manus-bundle.yml workflow must exist");
+  const wf = fs.readFileSync(wfPath, "utf8");
+  assert.match(wf, /branches:\s*\n\s*-\s*main/, "workflow must trigger on push to main");
+  assert.match(wf, /npm run build:manus-bundle/, "workflow must invoke the build script");
+  assert.match(wf, /manus-bundle-latest/, "workflow must use the stable rolling tag");
+  assert.match(wf, /k-skill-manus-all\.zip/, "workflow must upload the combined archive");
+  assert.match(wf, /--prerelease/, "rolling release must be marked as prerelease");
+  assert.match(wf, /contents:\s*write/, "workflow needs write permission to publish releases");
+});
