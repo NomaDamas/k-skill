@@ -1,0 +1,62 @@
+[
+  {
+    "insttId": "ID02030072",
+    "insttNm": "구재봉자연휴양림",
+    "useDt": "20260516",
+    "dywkDtTpcd": "토",
+    "goodsNm": "206호 쑥부쟁이방",
+    "goodsId": "GID-G1",
+    "insttArea": "37㎡",
+    "mxmmAccptCnt": "8",
+    "goodsClsscNm": "숲속휴양관",
+    "insttAreaNm": null,
+    "wtngPssblYn": "Y",
+    "rsrvtAvail": "Y",
+    "rsrvtCnt": 0
+  },
+  {
+    "insttId": "ID02030072",
+    "insttNm": "구재봉자연휴양림",
+    "useDt": "20260516",
+    "dywkDtTpcd": "토",
+    "goodsNm": "201호 배꽃방(예비용)",
+    "goodsId": "GID-G2",
+    "insttArea": "30㎡",
+    "mxmmAccptCnt": "6",
+    "goodsClsscNm": "숲속휴양관",
+    "insttAreaNm": null,
+    "wtngPssblYn": "Y",
+    "rsrvtAvail": "Y",
+    "rsrvtCnt": 0
+  },
+  {
+    "insttId": "ID02030072",
+    "insttNm": "구재봉자연휴양림",
+    "useDt": "20260516",
+    "dywkDtTpcd": "토",
+    "goodsNm": "편백나무2호(예비용)",
+    "goodsId": "GID-G3",
+    "insttArea": "28㎡",
+    "mxmmAccptCnt": "6",
+    "goodsClsscNm": "숲속의집",
+    "insttAreaNm": null,
+    "wtngPssblYn": "Y",
+    "rsrvtAvail": "Y",
+    "rsrvtCnt": 0
+  },
+  {
+    "insttId": "ID02030072",
+    "insttNm": "구재봉자연휴양림",
+    "useDt": "20260516",
+    "dywkDtTpcd": "토",
+    "goodsNm": "은행나무방(예비용)",
+    "goodsId": "GID-G4",
+    "insttArea": "22㎡",
+    "mxmmAccptCnt": "4",
+    "goodsClsscNm": "트리하우스",
+    "insttAreaNm": null,
+    "wtngPssblYn": "Y",
+    "rsrvtAvail": "Y",
+    "rsrvtCnt": 0
+  }
+]

@@ -30,6 +30,7 @@ DEFAULT_CONCURRENCY = 4
 MAX_CONCURRENCY = 5
 DEFAULT_WEEK_RANGE = 1
 CATEGORY_CODES = {"01", "02"}
+RESERVE_ROOM_MARKER = "예비"
 
 
 @dataclass
@@ -382,6 +383,10 @@ def is_available(row: dict[str, Any]) -> bool:
     return row.get("rsrvtAvail") == "Y" and row.get("rsrvtCnt") == 0
 
 
+def is_reserve_room(row: dict[str, Any]) -> bool:
+    return RESERVE_ROOM_MARKER in (row.get("goodsNm") or "")
+
+
 def normalize_row(row: dict[str, Any], forests: dict[str, str]) -> dict[str, Any]:
     instt_id = str(row.get("insttId") or "")
     return {
@@ -443,10 +448,25 @@ def collect_results(
             for row in data:
                 if not is_available(row):
                     continue
+                if is_reserve_room(row):
+                    continue
+                use_dt = row.get("useDt") or ""
+                if use_dt < today or use_dt > last_day:
+                    continue
                 normalized = normalize_row(row, session.forests)
                 if date_filter is not None and normalized["use_dt"] not in date_filter:
                     continue
                 rows.append(normalized)
+
+    seen: set[tuple[str, str, str]] = set()
+    deduped: list[dict[str, Any]] = []
+    for row in rows:
+        key = (row["forest_id"], row["use_dt"], row["name"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    rows = deduped
 
     grouped: dict[str, dict[str, list[dict[str, Any]]]] = {}
     for row in sorted(rows, key=lambda item: (item["forest"], item["use_dt"], item["name"])):

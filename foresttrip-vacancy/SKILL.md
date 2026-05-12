@@ -100,6 +100,8 @@ python3 -m playwright install chromium
 
 2026-04-29 확인 기준, 로그인 없이 월별예약조회 화면에 접근하면 `401 Unauthorized`가 반환되고, 조회 endpoint는 JSON 대신 안내 HTML을 반환한다. 따라서 현재 helper는 로그인 세션/CSRF 확보를 필수 전제로 둔다.
 
+API는 `srchDate` 단일 일자만 요청해도 응답에 5일 윈도우를 포함할 수 있다. helper는 요청 범위(`today`–`last_day`) 밖 `useDt` 행을 자동 제거하므로 사용자에게는 요청한 날짜의 빈자리만 노출된다.
+
 전체 자연휴양림에서 특정 날짜 조회:
 
 ```bash
@@ -138,6 +140,8 @@ python3 scripts/run_foresttrip_vacancy.py --forest-name 유명산 --text --dates
 
 결과가 없으면 "조회 시점 기준 예약 가능 객실 없음"이라고 말한다. 실제 예약 가능 여부는 숲나들e 화면에서 재확인될 수 있음을 덧붙인다.
 
+`goodsNm`에 "예비"가 포함된 객실은 운영자가 보유하는 내부용 자리로, 사용자 예약 화면에는 노출되지 않는다. helper는 이 객실들을 결과에서 자동 제외한다. 같은 `(휴양림, 날짜, 객실명)` 조합의 중복 행도 dedup된다.
+
 ## Done when
 
 - 요청 날짜와 조회 범위가 명확하다.
@@ -152,6 +156,8 @@ python3 scripts/run_foresttrip_vacancy.py --forest-name 유명산 --text --dates
 - Playwright browser 미설치: `python3 -m playwright install chromium`
 - fetch failure 일부 발생: 결과와 실패 개수를 함께 보고하고, 필요하면 `--refresh-session` 으로 1회 재조회
 - 숲나들e 표면 변경: helper의 login/session bootstrap 또는 parser 점검 필요
+- "(예비)" 객실이 결과에 안 나옴: 정상 동작이다. 사용자 예약 화면에 노출되지 않는 운영자 보유분이라 의도적으로 제외된다.
+- 사용자 화면 객실 수와 helper 결과가 다름: 같은 객실의 중복 행이 dedup되었거나, 요청 범위 밖 `useDt`가 제거됐을 가능성이 높다. raw API 응답을 확인하려면 helper 로직을 우회해서 직접 호출 필요.
 
 ## Maintainer review notes
 
