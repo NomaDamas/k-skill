@@ -126,6 +126,13 @@ def nonnegative_int(value: str) -> int:
     return parsed
 
 
+def nonnegative_float(value: str) -> float:
+    parsed = float(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("must be zero or a positive number")
+    return parsed
+
+
 def iter_dates(start: date, end: date, step_days: int) -> Iterable[date]:
     d = start
     while d <= end:
@@ -167,13 +174,14 @@ def build_query_url(flight_data: list[Any], trip: str, adults: int, seat: str) -
 
 
 def make_flight_data(from_airport: str, to_airport: str, outbound: str, return_date: str | None = None) -> tuple[list[Any], str]:
-    from fast_flights import FlightData
-
     origin = validate_airport(from_airport, "from")
     dest = validate_airport(to_airport, "to")
     if origin == dest:
         raise SystemExit("from and to airports must be different")
     outbound_date = parse_date(outbound)
+
+    from fast_flights import FlightData
+
     data = [FlightData(date=outbound_date.isoformat(), from_airport=origin, to_airport=dest)]
     if return_date:
         inbound_date = parse_date(return_date)
@@ -233,6 +241,56 @@ def summarize_result(res: Any, query_url: str, limit: int) -> dict[str, Any]:
         "flights": best_pool[:limit],
     }
 
+
+
+def validate_date_text(value: str, field: str) -> date:
+    try:
+        return parse_date(value)
+    except ValueError as exc:
+        raise SystemExit(f"{field} must be YYYY-MM-DD, got: {value!r}") from exc
+
+
+def validate_month_text(value: str) -> None:
+    try:
+        datetime.strptime(value + "-01", "%Y-%m-%d")
+    except ValueError as exc:
+        raise SystemExit(f"month must be YYYY-MM, got: {value!r}") from exc
+
+
+def validate_month_day_text(value: str) -> None:
+    try:
+        datetime.strptime("2000-" + value, "%Y-%m-%d")
+    except ValueError as exc:
+        raise SystemExit(f"month-day must be MM-DD, got: {value!r}") from exc
+
+
+def preflight_validate_args(args: argparse.Namespace) -> None:
+    validate_airport(args.from_airport, "from")
+    validate_airport(args.to_airport, "to")
+    if args.from_airport.strip().upper() == args.to_airport.strip().upper():
+        raise SystemExit("from and to airports must be different")
+
+    if args.command == "search":
+        outbound = validate_date_text(args.date, "date")
+        if args.return_date:
+            inbound = validate_date_text(args.return_date, "return-date")
+            if inbound < outbound:
+                raise SystemExit("return-date must be on or after date")
+    elif args.command == "compare-month":
+        validate_month_text(args.month)
+    elif args.command == "compare-range":
+        start = validate_date_text(args.start_date, "start-date")
+        end = validate_date_text(args.end_date, "end-date")
+        if end < start:
+            raise SystemExit("end-date must be on or after start-date")
+    elif args.command == "compare-years":
+        validate_month_day_text(args.month_day)
+        try:
+            years = [int(x) for x in re.split(r"[, ]+", args.years.strip()) if x]
+        except ValueError as exc:
+            raise SystemExit("years must be comma-separated numbers, e.g. 2026,2027") from exc
+        if not years:
+            raise SystemExit("years is required, e.g. 2026,2027")
 
 def command_search(args: argparse.Namespace) -> dict[str, Any]:
     data, trip = make_flight_data(args.from_airport, args.to_airport, args.date, args.return_date)
@@ -385,7 +443,7 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--adults", type=positive_int, default=1)
         sp.add_argument("--seat", choices=["economy", "premium-economy", "business", "first"], default="economy")
         sp.add_argument("--limit", type=positive_int, default=5)
-        sp.add_argument("--sleep", type=float, default=1.5, help="seconds between comparison queries")
+        sp.add_argument("--sleep", type=nonnegative_float, default=1.5, help="seconds between comparison queries")
         sp.add_argument("--format", choices=["json", "markdown"], default="markdown")
 
     s = sub.add_parser("search", help="single one-way or round-trip search")
@@ -421,6 +479,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
+    preflight_validate_args(args)
     ensure_runtime()
     if getattr(args, "max_dates", 0) == 0:
         args.max_dates = None
