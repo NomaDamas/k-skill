@@ -347,7 +347,8 @@ class KtxBookingTests(unittest.TestCase):
         result = json.loads(output.getvalue())
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["ncards"][0]["index"], 1)
-        self.assertEqual(result["ncards"][0]["card_no"], ncard.discount_card_no)
+        self.assertEqual(result["ncards"][0]["card_no"], "************3456")
+        self.assertTrue(result["ncards"][0]["card_no_masked"])
         self.assertEqual(result["ncards"][0]["dep_name"], ncard.dep_name)
 
     def test_command_ncard_search_returns_trains_with_discount_info(self):
@@ -374,7 +375,7 @@ class KtxBookingTests(unittest.TestCase):
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["trains"][0]["discount_name"], "15%할인")
         self.assertEqual(result["trains"][0]["price"], "9900")
-        self.assertEqual(result["ncard"]["card_no"], ncard.discount_card_no)
+        self.assertEqual(result["ncard"]["card_no"], "************3456")
 
     def test_command_ncard_search_fails_on_invalid_index(self):
         ncard = FakeNCard()
@@ -388,12 +389,20 @@ class KtxBookingTests(unittest.TestCase):
                 with self.assertRaises(SystemExit):
                     ktx_booking.command_ncard_search(args)
 
+    def test_reserve_parser_accepts_ncard_index(self):
+        args = ktx_booking.build_parser().parse_args([
+            "reserve", "대전", "서울", "20260512", "100000",
+            "--train-id", "ktx:v1:test", "--ncard-index", "1",
+        ])
+        self.assertEqual(args.ncard_index, 1)
+
     def test_command_reserve_with_ncard_no_uses_ncard_passenger(self):
         selected = FakeTrain(train_no="009", dep_time="100000", arr_time="105700",
                              dep_name="대전", arr_name="서울")
         train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
         client = FakeClient([selected])
         args = self.make_args(train_id, ncard_no="1234567890123456")
+        args.ncard_index = None
         with patch.object(ktx_booking, "_NCARD_AVAILABLE", True):
             with patch.object(ktx_booking, "build_client", return_value=client):
                 with redirect_stdout(io.StringIO()):
@@ -401,6 +410,25 @@ class KtxBookingTests(unittest.TestCase):
         self.assertIsNotNone(client.reserved_passengers)
         self.assertEqual(len(client.reserved_passengers), 1)
         self.assertIsInstance(client.reserved_passengers[0], ktx_booking.NCardPassenger)
+
+    def test_command_reserve_with_ncard_index_uses_owned_card_without_exposing_full_number(self):
+        selected = FakeTrain(train_no="009", dep_time="100000", arr_time="105700",
+                             dep_name="대전", arr_name="서울")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        client = FakeClient([selected], ncards=[FakeNCard()])
+        args = self.make_args(train_id)
+        args.ncard_index = 1
+        with patch.object(ktx_booking, "_NCARD_AVAILABLE", True):
+            with patch.object(ktx_booking, "build_client", return_value=client):
+                with redirect_stdout(io.StringIO()):
+                    ktx_booking.command_reserve(args)
+        self.assertEqual(client.reserved_passengers[0].card_no, "1234567890123456")
+
+    def test_ncard_unavailable_error_message_is_shared(self):
+        with patch.object(ktx_booking, "_NCARD_AVAILABLE", False):
+            with self.assertRaises(SystemExit) as exc:
+                ktx_booking.ensure_ncard_available()
+        self.assertIn("korail2-ncard", str(exc.exception))
 
 
 class FallbackImportTests(unittest.TestCase):

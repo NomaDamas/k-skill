@@ -118,6 +118,10 @@ except ImportError:
     class NCardPassenger(AdultPassenger):
         def __init__(self, count=1, card_no='', card='', card_pw='', discount_type='153'):
             AdultPassenger.__init__(self, count)
+            self.card_no = card_no
+            self.card = card
+            self.card_pw = card_pw
+            self.discount_type = discount_type
 
 DEFAULT_USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 13; SM-S928N Build/UP1A.231005.007)"
 DYNAPATH_PATHS = [
@@ -624,6 +628,15 @@ def normalize_train(train, index: int) -> dict[str, object]:
     }
 
 
+def mask_identifier(value: object, visible: int = 4) -> str:
+    text = str(value or "")
+    if not text:
+        return ""
+    if len(text) <= visible:
+        return "*" * len(text)
+    return f"{'*' * (len(text) - visible)}{text[-visible:]}"
+
+
 def normalize_reservation(reservation) -> dict[str, object]:
     return {
         "reservation_id": reservation.rsv_id,
@@ -686,12 +699,40 @@ def command_search(args: argparse.Namespace) -> None:
     })
 
 
+def ensure_ncard_available() -> None:
+    if not _NCARD_AVAILABLE:
+        raise SystemExit(
+            "N카드 기능을 사용하려면 korail2-ncard 패키지가 필요합니다: "
+            "pip install korail2-ncard pycryptodome"
+        )
+
+
+def resolve_ncard_no(client: PatchedKorail, ncard_index: int | None, ncard_no: str | None) -> str | None:
+    if ncard_index is None and not ncard_no:
+        return None
+    ensure_ncard_available()
+    if ncard_index is None:
+        return ncard_no
+    ncards = client.owned_ncards()
+    if not ncards:
+        raise SystemExit("보유한 N카드가 없습니다.")
+    if ncard_index < 1 or ncard_index > len(ncards):
+        raise SystemExit(f"ncard-index는 1~{len(ncards)} 사이여야 합니다.")
+    selected = ncards[ncard_index - 1]
+    selected_no = getattr(selected, "discount_card_no", None)
+    if not selected_no:
+        raise SystemExit("선택한 N카드에서 카드 번호를 확인할 수 없습니다.")
+    return selected_no
+
+
 def command_reserve(args: argparse.Namespace) -> None:
     client = build_client()
-    ncard_no = getattr(args, "ncard_no", None)
+    ncard_no = resolve_ncard_no(
+        client,
+        getattr(args, "ncard_index", None),
+        getattr(args, "ncard_no", None),
+    )
     if ncard_no:
-        if not _NCARD_AVAILABLE:
-            raise SystemExit("N카드 기능을 사용하려면 korail2-ncard 패키지가 필요합니다: pip install korail2-ncard pycryptodome")
         passengers = [NCardPassenger(card_no=ncard_no)]
     else:
         passengers = parse_passengers(args)
@@ -730,7 +771,8 @@ def command_reservations(_: argparse.Namespace) -> None:
 def normalize_ncard(ncard, index: int) -> dict[str, object]:
     return {
         "index": index,
-        "card_no": ncard.discount_card_no or "",
+        "card_no": mask_identifier(getattr(ncard, "discount_card_no", "")),
+        "card_no_masked": True,
         "ticket_kind": ncard.ticket_kind_name or "",
         "dep_name": ncard.dep_name or "",
         "arr_name": ncard.arr_name or "",
@@ -749,8 +791,7 @@ def normalize_ncard_train(train, index: int) -> dict[str, object]:
 
 
 def command_ncard_list(args: argparse.Namespace) -> None:
-    if not _NCARD_AVAILABLE:
-        raise SystemExit("N카드 기능을 사용하려면 korail2-ncard 패키지가 필요합니다: pip install korail2-ncard pycryptodome")
+    ensure_ncard_available()
     client = build_client()
     ncards = client.owned_ncards()
     print_json({
@@ -760,8 +801,7 @@ def command_ncard_list(args: argparse.Namespace) -> None:
 
 
 def command_ncard_search(args: argparse.Namespace) -> None:
-    if not _NCARD_AVAILABLE:
-        raise SystemExit("N카드 기능을 사용하려면 korail2-ncard 패키지가 필요합니다: pip install korail2-ncard pycryptodome")
+    ensure_ncard_available()
     client = build_client()
     ncards = client.owned_ncards()
     if not ncards:
@@ -841,10 +881,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="좌석이 없으면 예약대기를 시도 (reserve 재조회 시 예약대기 열차 자동 포함)",
     )
     reserve_parser.add_argument(
+        "--ncard-index",
+        type=int,
+        metavar="N",
+        default=None,
+        help="ncard-list 결과의 N카드 순번 (권장). 지정하면 N카드 할인 승객으로 예약",
+    )
+    reserve_parser.add_argument(
         "--ncard-no",
         metavar="CARD_NO",
         default=None,
-        help="N카드 번호 (ncard-list의 card_no). 지정하면 N카드 할인 승객으로 예약",
+        help="N카드 번호 직접 입력 (비권장: 셸 히스토리에 남을 수 있음)",
     )
     reserve_parser.set_defaults(func=command_reserve)
 
