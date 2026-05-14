@@ -18,6 +18,7 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/fine-dust/report`
 - `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
+- `GET /v1/seoul-density/citydata` (서울 실시간 도시데이터 핫스팟 혼잡도/추정 인구, `SEOUL_OPEN_API_KEY`)
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` (생활쓰레기 배출정보, `DATA_GO_KR_API_KEY`; 쿼리 `pageNo`·`numOfRows` 필수, 값 `1`·`100`)
 - `GET /v1/mfds/drug-safety/lookup` (식약처 의약품개요정보 + 안전상비의약품 정보, `DATA_GO_KR_API_KEY`)
@@ -118,6 +119,14 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/fine-dust/report' \
 BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
 curl -fsS --get "${BASE}/v1/seoul-subway/arrival" \
   --data-urlencode 'stationName=강남'
+```
+
+서울 실시간 혼잡도 endpoint:
+
+```bash
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/seoul-density/citydata" \
+  --data-urlencode 'area=강남역'
 ```
 
 한국 날씨 endpoint:

@@ -113,6 +113,8 @@
 - 다이소몰 매장 픽업 재고: https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck (2026-05-05 기준 Unauthorized 차단 가능)
 - 다이소몰 매장 픽업 가능 매장 목록: https://www.daisomall.co.kr/api/ms/msg/selPkupStr (특정 상품의 픽업 가능 매장 리스트, 매장 수량은 미제공)
 - 다이소몰 온라인 재고: https://www.daisomall.co.kr/api/pdo/selOnlStck
+- 강남언니 공개 검색: https://www.gangnamunni.com/search?q=<keyword>
+- 강남언니 공개 병원 페이지: https://www.gangnamunni.com/hospitals/<id>
 - 마켓컬리 검색 API(v4): https://api.kurly.com/search/v4/sites/market/normal-search
 - 마켓컬리 검색 개수 API(v3): https://api.kurly.com/search/v3/sites/market/normal-search/count
 - 마켓컬리 상품 상세 페이지 예시: https://www.kurly.com/goods/5063110
@@ -158,6 +160,7 @@
 - 공중화장실정보 전국 CSV: https://file.localdata.go.kr/file/download/public_restroom_info/info
 - 공중화장실정보 지역별 CSV: https://file.localdata.go.kr/file/download/public_restroom_info/info?orgCode=<시도코드>
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
+- 서울 실시간 도시데이터(`citydata_ppltn`): https://data.seoul.go.kr/dataList/OA-21778/A/1/datasetView.do
 - 경찰청 LOST112 습득물 목록: https://www.lost112.go.kr/find/findList.do
 - 서울교통공사 유실물센터: https://www.seoulmetro.co.kr/kr/page.do?menuIdx=541
 - GeekNews public RSS/Atom feed: https://feeds.feedburner.com/geeknews-feed

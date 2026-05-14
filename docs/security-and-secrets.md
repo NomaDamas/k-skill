@@ -36,7 +36,7 @@ KAKAO_REST_API_KEY=replace-me
 KSKILL_PROXY_BASE_URL=
 ```
 
-서울 지하철 도착정보와 한국 날씨 조회는 `KSKILL_PROXY_BASE_URL` 이 없거나 비어 있으면 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 쓰므로 사용자 쪽 키가 불필요하다. 미세먼지, 한강 수위, 주유소 가격, 한국 주식 정보 조회, KOSIS 일반 조회, Kakao Local geocoding, 의약품 안전 체크, 식품 안전 체크도 기본 hosted proxy를 쓴다. 생활쓰레기 배출정보는 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 거쳐 `serviceKey`만 proxy 서버에서 주입하므로 사용자 쪽 키가 불필요하다.
+서울 지하철 도착정보, 서울 실시간 혼잡도 조회, 한국 날씨 조회는 `KSKILL_PROXY_BASE_URL` 이 없거나 비어 있으면 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 쓰므로 사용자 쪽 키가 불필요하다. 미세먼지, 한강 수위, 주유소 가격, 한국 주식 정보 조회, KOSIS 일반 조회, Kakao Local geocoding, 의약품 안전 체크, 식품 안전 체크도 기본 hosted proxy를 쓴다. 생활쓰레기 배출정보는 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 거쳐 `serviceKey`만 proxy 서버에서 주입하므로 사용자 쪽 키가 불필요하다.
 
 ## Missing secret handling policy
 

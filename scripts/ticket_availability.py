@@ -26,7 +26,27 @@ import time
 from datetime import datetime
 from typing import Any
 
-import httpx
+try:
+    import httpx
+except ModuleNotFoundError:  # pragma: no cover - depends on user environment
+    httpx = None
+
+
+class MissingHttpxError(RuntimeError):
+    """Raised when the optional httpx runtime dependency is unavailable."""
+
+
+def _require_httpx():
+    if httpx is None:
+        raise MissingHttpxError(
+            "Python package 'httpx' is required. Install it with: python3 -m pip install httpx"
+        )
+    return httpx
+
+
+HTTPX_HTTP_ERROR = (
+    getattr(httpx, "HTTPError", MissingHttpxError) if httpx else MissingHttpxError
+)
 
 # ── URL Parsing ───────────────────────────────────────────────────────────────
 
@@ -98,7 +118,8 @@ INTERPARK_BASE = "https://api-ticketfront.interpark.com"
 
 class Yes24Client:
     def __init__(self) -> None:
-        self.http = httpx.Client(
+        http = _require_httpx()
+        self.http = http.Client(
             headers=HEADERS_YES24, timeout=20, follow_redirects=True
         )
 
@@ -227,7 +248,8 @@ class Yes24Client:
 
 class InterparkClient:
     def __init__(self) -> None:
-        self.http = httpx.Client(
+        http = _require_httpx()
+        self.http = http.Client(
             headers=HEADERS_INTERPARK, timeout=20, follow_redirects=True
         )
 
@@ -332,6 +354,7 @@ def cmd_seats(args: argparse.Namespace) -> int:
 
 
 def cmd_health(args: argparse.Namespace) -> int:
+    http = _require_httpx()
     results: dict = {}
     for name, url in [
         ("yes24",
@@ -341,12 +364,12 @@ def cmd_health(args: argparse.Namespace) -> int:
     ]:
         try:
             if name == "yes24":
-                r = httpx.post(url, headers=HEADERS_YES24,
+                r = http.post(url, headers=HEADERS_YES24,
                                data={"pGetMode": "days", "pIdPerf": "0",
                                      "pPerfMonth": "2000-01", "pIdCode": "",
                                      "pIsMania": "0"}, timeout=10)
             else:
-                r = httpx.get(url, headers=HEADERS_INTERPARK,
+                r = http.get(url, headers=HEADERS_INTERPARK,
                               params={"goodsCode": "00000000",
                                       "isBookableDate": "true",
                                       "page": "1", "pageSize": "1",
@@ -395,7 +418,10 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    except httpx.HTTPError as e:
+    except MissingHttpxError as e:
+        print(f"dependency error: {e}", file=sys.stderr)
+        return 4
+    except HTTPX_HTTP_ERROR as e:
         print(f"http error: {e}", file=sys.stderr)
         return 3
 

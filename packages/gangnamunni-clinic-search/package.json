@@ -1,0 +1,35 @@
+{
+  "name": "gangnamunni-clinic-search",
+  "version": "0.1.0",
+  "description": "Public Gangnam Unni clinic search client for k-skill",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "gangnamunni-clinic-search": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "gangnamunni",
+    "clinic",
+    "plastic-surgery",
+    "k-beauty"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/cli.js && node --check test/index.test.js",
+    "test": "node --test"
+  }
+}

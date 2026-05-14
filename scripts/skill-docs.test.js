@@ -1075,6 +1075,23 @@ test("daiso-product-search docs record the shipped feature and official sources"
   assert.match(sources, /https:\/\/www\.daisomall\.co\.kr\/api\/pd\/pdh\/selStrPkupStck/);
 });
 
+test("repository docs advertise the gangnamunni-clinic-search skill across install surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "gangnamunni-clinic-search.md");
+  const skillPath = path.join(repoRoot, "gangnamunni-clinic-search", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/gangnamunni-clinic-search.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected gangnamunni-clinic-search/SKILL.md to exist");
+  assert.match(readme, /\| 강남언니 병원 조회 \| `gangnamunni-clinic-search` \|/);
+  assert.match(readme, /\[강남언니 병원 조회 가이드\]\(docs\/features\/gangnamunni-clinic-search\.md\)/);
+  assert.match(install, /--skill gangnamunni-clinic-search/);
+  assert.match(install, /npm install -g .*gangnamunni-clinic-search/);
+  assert.match(sources, /강남언니 공개 검색: https:\/\/www\.gangnamunni\.com\/search\?q=<keyword>/);
+  assert.match(sources, /강남언니 공개 병원 페이지: https:\/\/www\.gangnamunni\.com\/hospitals\/<id>/);
+});
+
 test("repository docs advertise the market-kurly-search skill across the documented surfaces", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));

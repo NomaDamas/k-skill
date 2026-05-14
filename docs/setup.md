@@ -86,6 +86,7 @@ bash scripts/check-setup.sh
 | 한국 주식 정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KRX_API_KEY`) |
 | 근처 가장 싼 주유소 찾기 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
 | 서울 지하철 도착정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`) |
+| 서울 실시간 혼잡도 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`) |
 | 한국 날씨 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KMA_OPEN_API_KEY`) |
 | 사용자 위치 미세먼지 조회 | `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY` |
 | 한강 수위 정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
@@ -103,6 +104,7 @@ bash scripts/check-setup.sh
 - [시외버스 예매 가이드](features/intercity-bus-booking.md)
 - [자연휴양림 빈 객실 조회 가이드](features/foresttrip-vacancy.md)
 - [서울 지하철 도착정보 가이드](features/seoul-subway-arrival.md)
+- [서울 실시간 혼잡도 가이드](features/seoul-density.md)
 - [한국 날씨 조회 가이드](features/korea-weather.md)
 - [사용자 위치 미세먼지 조회 가이드](features/fine-dust-location.md)
 - [한강 수위 정보 가이드](features/han-river-water-level.md)

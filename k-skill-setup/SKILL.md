@@ -125,6 +125,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 - 식품 안전 체크: 사용자 시크릿 불필요 (`DATA_GO_KR_API_KEY`와 선택적 `FOODSAFETYKOREA_API_KEY`는 proxy 서버만)
 - 근처 가장 싼 주유소 찾기: 사용자 시크릿 불필요 (기본 hosted proxy 사용)
 - 서울 지하철: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`)
+- 서울 실시간 혼잡도: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`)
 - 한국 날씨: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KMA_OPEN_API_KEY`)
 - 사용자 위치 미세먼지 조회: `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY`
 

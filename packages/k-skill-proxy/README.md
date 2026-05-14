@@ -8,11 +8,14 @@
 - `GET /v1/fine-dust/report`
 - `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
+- `GET /v1/seoul-density/citydata` — 서울 실시간 도시데이터(`citydata_ppltn`) 핫스팟 혼잡도/추정 인구(`SEOUL_OPEN_API_KEY`)
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` — 생활쓰레기 배출정보(`DATA_GO_KR_API_KEY`; `pageNo=1`, `numOfRows=100` 필수)
 - `GET /v1/parking-lots/search` — 전국주차장정보표준데이터 기반 근처 공영주차장 검색(`DATA_GO_KR_API_KEY`)
 - `GET /v1/neis/school-search` — 나이스 학교기본정보(교육청명·학교명 검색)
 - `GET /v1/neis/school-meal` — 나이스 급식식단정보(일자별 메뉴)
+- `POST /v1/nts-business/status` — 국세청 사업자등록 상태조회(`DATA_GO_KR_API_KEY`)
+- `POST /v1/nts-business/validate` — 국세청 사업자등록정보 진위확인(`DATA_GO_KR_API_KEY`)
 - `GET /v1/mfds/drug-safety/lookup` — 식약처 의약품개요정보(e약은요) + 안전상비의약품 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/mfds/food-safety/search` — 식약처 부적합 식품 + 식품안전나라 회수 정보(`DATA_GO_KR_API_KEY`, 선택적 `FOODSAFETYKOREA_API_KEY`)
 - `GET /v1/korean-stock/search`
@@ -60,7 +63,7 @@
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`
 - `KSKILL_PROXY_RATE_LIMIT_WINDOW_MS` — 기본 `60000`
 - `KSKILL_PROXY_RATE_LIMIT_MAX` — 기본 `60`
-- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `parking-lots`, `real-estate`, `mfds-drug-safety`, `mfds-food-safety`, `lh-notice`). 각 서비스는 공공데이터포털에서 별도 "활용신청" 승인이 필요하다. 키를 발급받은 뒤에는 [LH 임대공고문 정보](https://www.data.go.kr/data/15058530/openapi.do) 페이지에서도 활용신청을 눌러 동일 키를 활성화해야 `lh-notice` 라우트가 성공한다. 미활성 상태에서는 upstream이 HTTP 403 Forbidden을 돌려주고 proxy는 `upstream_error`로 변환한다.
+- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `parking-lots`, `real-estate`, `nts-business`, `mfds-drug-safety`, `mfds-food-safety`, `lh-notice`). 각 서비스는 공공데이터포털에서 별도 "활용신청" 승인이 필요하다. 키를 발급받은 뒤에는 [LH 임대공고문 정보](https://www.data.go.kr/data/15058530/openapi.do) 페이지에서도 활용신청을 눌러 동일 키를 활성화해야 `lh-notice` 라우트가 성공한다. 미활성 상태에서는 upstream이 HTTP 403 Forbidden을 돌려주고 proxy는 `upstream_error`로 변환한다.
 
 기본 정책은 **무료 API 공개 프록시 = 무인증** 이다. 대신 endpoint scope 를 좁게 유지하고, cache + rate limit 으로 남용을 늦춘다.
 
@@ -72,11 +75,27 @@ node packages/k-skill-proxy/src/server.js
 
 환경변수(`AIR_KOREA_OPEN_API_KEY` 등)가 이미 설정되어 있거나 `~/.config/k-skill/secrets.env`를 source한 상태에서 실행한다.
 
+
+국세청 사업자등록 상태조회 예시:
+
+```bash
+curl -fsS -X POST 'http://127.0.0.1:4020/v1/nts-business/status' \
+  -H 'content-type: application/json' \
+  -d '{"b_no":["123-45-67890"]}'
+```
+
 서울 지하철 도착정보 예시:
 
 ```bash
 curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
   --data-urlencode 'stationName=강남'
+```
+
+서울 실시간 혼잡도 예시 (`SEOUL_OPEN_API_KEY` 필요):
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-density/citydata' \
+  --data-urlencode 'area=강남역'
 ```
 
 한국 날씨 예시:
