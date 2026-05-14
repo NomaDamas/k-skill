@@ -169,7 +169,7 @@ kakaocli send "채팅방 이름" "보낼 문장"
 
 ### 7. Delete a sent message only with explicit operator intent
 
-삭제는 카카오톡 Mac UI(우클릭 → 삭제)를 접근성으로 자동화한다. 먼저 `messages --json` 으로 로컬 메시지 ID를 확인하고, 항상 `--dry-run` 으로 대상 채팅방/메시지를 확인한 뒤 실행한다. `--everyone` 은 내가 보낸 메시지에만 허용된다.
+삭제는 카카오톡 Mac UI(우클릭 → 삭제)를 접근성으로 자동화한다. 먼저 `messages --json` 으로 로컬 메시지 ID와 보낸 메시지 여부를 확인하고, 항상 `--dry-run` 으로 대상 채팅방/메시지를 확인한 뒤 실행한다. `--everyone` 은 내가 보낸 메시지에만 허용된다.
 
 ```bash
 python3 scripts/kakaotalk_mac.py messages --chat "채팅방 이름" --limit 20 --json
@@ -182,8 +182,8 @@ python3 scripts/kakaotalk_mac.py delete-last "채팅방 이름" --everyone
 주의:
 
 - helper의 `chats`, `messages`, `search`, `schema` 는 read-only 경로다. `delete` / `delete-last` 는 UI side effect 이므로 Accessibility 권한과 명시적 실행 의도가 필요하다.
-- 메시지 ID는 로컬 DB의 `messages --json` 출력 기준이다. UI 삭제 단계는 활성 채팅방을 확인하고, 대화 transcript 영역에서 정규화된 텍스트가 정확히 하나의 visible message bubble 과 일치할 때만 진행한다.
-- 대상 메시지 텍스트가 보이지 않거나, 같은 텍스트가 여러 개 있거나, 활성 채팅방을 확인할 수 없으면 삭제 자동화는 실패한다.
+- 메시지 ID는 로컬 DB의 `messages --json` 출력 기준이며 UI에서 동일한 DB row를 직접 증명할 수 있다는 뜻은 아니다. 실행 계약은 선택된 outbound DB 메시지의 정규화된 텍스트가 현재 활성 채팅방 transcript 영역에서 정확히 하나의 visible targetable message bubble 과 일치할 때만 삭제하는 것이다.
+- 대상 메시지 텍스트가 비어 있거나 첨부/비텍스트 메시지이거나, 정규화 후 같은 텍스트가 여러 개 있거나, 대상 bubble 이 보이지 않거나, 활성 채팅방/삭제 범위/최종 확인 버튼을 확인할 수 없으면 삭제 자동화는 실패한다.
 
 ### 8. Use login storage only when the user explicitly wants auto-login
 

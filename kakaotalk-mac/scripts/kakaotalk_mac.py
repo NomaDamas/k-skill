@@ -628,14 +628,23 @@ def select_delete_target(
         )
 
     text = raw.get("text")
-    if not isinstance(text, str) or not text.strip():
-        text = f"[{raw.get('type', 'message')}]"
-    matching_text_ids = [_message_id(message) for message in messages if message.get("text") == text]
+    normalized_text = _normalize_delete_text(text)
+    if normalized_text is None:
+        raise AuthResolutionError(
+            "Delete automation requires a selected outbound message with non-empty text; "
+            "non-text, attachment, or empty-text messages are not safe UI delete targets."
+        )
+    matching_text_ids = [
+        _message_id(message)
+        for message in messages
+        if _normalize_delete_text(message.get("text")) == normalized_text
+    ]
     if len([item for item in matching_text_ids if item is not None]) > 1:
         raise AuthResolutionError(
-            "Refusing to automate deletion because multiple fetched messages have the same text. "
+            "Refusing to automate deletion because multiple fetched messages have the same normalized visible text. "
             "Open the chat with only the target visible or use delete-last for the latest outbound message."
         )
+    text = normalized_text
     timestamp = raw.get("timestamp")
     return DeleteTarget(
         message_id=selected_id,
@@ -643,6 +652,13 @@ def select_delete_target(
         timestamp=str(timestamp) if timestamp is not None else None,
         is_from_me=is_from_me,
     )
+
+
+def _normalize_delete_text(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = " ".join(value.split())
+    return normalized or None
 
 
 def _message_id(message: dict[str, Any]) -> int | None:
@@ -701,7 +717,6 @@ end normalizeText
 
 set chatName to {_applescript_string(chat)}
 set messageText to {_applescript_string(target.text)}
-set messageTimestamp to {_applescript_string(target.timestamp or "")}
 set normalizedChatName to normalizeText(chatName)
 set normalizedMessageText to normalizeText(messageText)
 set deleteLabels to {{{labels}}}
@@ -828,12 +843,18 @@ tell application "System Events"
     if didChooseDeleteScope is false then error "Could not choose the requested delete scope."
     delay 0.3
 
+    set didConfirmDelete to false
     try
       click button "삭제" of window 1
+      set didConfirmDelete to true
     end try
-    try
-      click button "Delete" of window 1
-    end try
+    if didConfirmDelete is false then
+      try
+        click button "Delete" of window 1
+        set didConfirmDelete to true
+      end try
+    end if
+    if didConfirmDelete is false then error "Could not confirm the KakaoTalk delete dialog."
   end tell
 end tell
 """.strip()

@@ -367,7 +367,7 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
         self.assertIn("AXShowMenu", script)
         self.assertIn("Target message text matched multiple visible targetable message bubbles", script)
         self.assertIn("Could not verify the active KakaoTalk chat", script)
-        self.assertIn("set messageTimestamp to", script)
+        self.assertNotIn("set messageTimestamp to", script)
 
     def test_run_delete_dry_run_validates_target_but_skips_ui_side_effect(self) -> None:
         stdout = io.StringIO()
@@ -412,7 +412,42 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
         with self.assertRaises(kakaotalk_mac.AuthResolutionError) as context:
             kakaotalk_mac.select_delete_target(messages, message_id=42, delete_last=False, everyone=True)
 
-        self.assertIn("same text", str(context.exception))
+        self.assertIn("same normalized visible text", str(context.exception))
+
+
+    def test_select_delete_target_rejects_duplicate_normalized_visible_text(self) -> None:
+        messages = [
+            {"id": 42, "text": "same   visible text", "is_from_me": True},
+            {"id": 41, "text": "same visible text", "is_from_me": True},
+        ]
+
+        with self.assertRaises(kakaotalk_mac.AuthResolutionError) as context:
+            kakaotalk_mac.select_delete_target(messages, message_id=42, delete_last=False, everyone=False)
+
+        self.assertIn("same normalized visible text", str(context.exception))
+
+    def test_select_delete_target_rejects_empty_or_non_text_delete_target(self) -> None:
+        messages = [{"id": 42, "text": "   ", "type": "photo", "is_from_me": True}]
+
+        with self.assertRaises(kakaotalk_mac.AuthResolutionError) as context:
+            kakaotalk_mac.select_delete_target(messages, message_id=42, delete_last=False, everyone=False)
+
+        self.assertIn("non-empty text", str(context.exception))
+
+    def test_build_delete_osascript_fails_when_final_confirmation_is_missing(self) -> None:
+        target = kakaotalk_mac.DeleteTarget(
+            message_id=42,
+            text="테스트 메시지",
+            timestamp="2026-05-14T00:00:00Z",
+            is_from_me=True,
+        )
+
+        script = kakaotalk_mac.build_delete_osascript("팀 공지방", target, everyone=True)
+
+        self.assertIn("set didConfirmDelete to false", script)
+        self.assertIn("set didConfirmDelete to true", script)
+        self.assertIn("if didConfirmDelete is false then error", script)
+        self.assertIn("Could not confirm the KakaoTalk delete dialog", script)
 
     def test_build_parser_rejects_negative_max_user_id(self) -> None:
         parser = kakaotalk_mac.build_parser()
