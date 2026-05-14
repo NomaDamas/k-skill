@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
@@ -608,7 +609,7 @@ def select_delete_target(
         candidates = [message for message in messages if bool(message.get("is_from_me"))]
         if not candidates:
             raise AuthResolutionError("No outbound messages were found for delete-last.")
-        raw = candidates[0]
+        raw = max(candidates, key=_delete_last_sort_key)
     else:
         if message_id is None:
             raise AuthResolutionError("message_id is required for delete.")
@@ -655,6 +656,35 @@ def _message_id(message: dict[str, Any]) -> int | None:
     return None
 
 
+def _delete_last_sort_key(message: dict[str, Any]) -> tuple[float, int]:
+    timestamp_score = _timestamp_sort_score(message.get("timestamp"))
+    message_id = _message_id(message) or 0
+    return (timestamp_score, message_id)
+
+
+def _timestamp_sort_score(value: Any) -> float:
+    if isinstance(value, bool) or value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not isinstance(value, str):
+        return 0.0
+    normalized = value.strip()
+    if not normalized:
+        return 0.0
+    if normalized.isdigit():
+        return float(normalized)
+    try:
+        if normalized.endswith("Z"):
+            normalized = f"{normalized[:-1]}+00:00"
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.timestamp()
+    except ValueError:
+        return 0.0
+
+
 def build_delete_osascript(chat: str, target: DeleteTarget, *, everyone: bool) -> str:
     scope_labels = (
         ["모두에게서 삭제", "Delete for Everyone", "Delete for everyone"]
@@ -663,8 +693,17 @@ def build_delete_osascript(chat: str, target: DeleteTarget, *, everyone: bool) -
     )
     labels = ", ".join(_applescript_string(label) for label in scope_labels)
     return f"""
+on normalizeText(rawText)
+  set normalizedText to rawText as text
+  set normalizedText to do shell script "python3 -c 'import sys; print(\\" \\".join(sys.stdin.read().split()))'" with input normalizedText
+  return normalizedText
+end normalizeText
+
 set chatName to {_applescript_string(chat)}
 set messageText to {_applescript_string(target.text)}
+set messageTimestamp to {_applescript_string(target.timestamp or "")}
+set normalizedChatName to normalizeText(chatName)
+set normalizedMessageText to normalizeText(messageText)
 set deleteLabels to {{{labels}}}
 
 tell application "KakaoTalk" to activate
@@ -682,24 +721,86 @@ tell application "System Events"
     key code 36
     delay 1.0
 
+    set activeChatMatches to {{}}
+    try
+      set frontWindowName to name of front window as text
+      if normalizeText(frontWindowName) is normalizedChatName then set end of activeChatMatches to front window
+    end try
+    try
+      repeat with chatCandidate in static texts of front window
+        try
+          set chatCandidateValue to value of chatCandidate as text
+          if normalizeText(chatCandidateValue) is normalizedChatName then set end of activeChatMatches to chatCandidate
+        end try
+      end repeat
+    end try
+    try
+      repeat with headerGroup in groups of front window
+        try
+          repeat with chatCandidate in static texts of headerGroup
+            try
+              set chatCandidateValue to value of chatCandidate as text
+              if normalizeText(chatCandidateValue) is normalizedChatName then set end of activeChatMatches to chatCandidate
+            end try
+          end repeat
+        end try
+      end repeat
+    end try
+    if (count of activeChatMatches) is 0 then error "Could not verify the active KakaoTalk chat."
+
+    set messageListCandidates to {{}}
+    try
+      repeat with scrollArea in scroll areas of front window
+        try
+          if (count of static texts of scrollArea) is greater than 0 then set end of messageListCandidates to scrollArea
+        end try
+        try
+          repeat with messageGroup in groups of scrollArea
+            try
+              if (count of static texts of messageGroup) is greater than 0 then set end of messageListCandidates to messageGroup
+            end try
+          end repeat
+        end try
+      end repeat
+    end try
+    if (count of messageListCandidates) is 0 then error "Could not find the KakaoTalk message transcript area."
+
     set matchingElements to {{}}
-    repeat with candidate in (entire contents of front window)
+    repeat with messageListCandidate in messageListCandidates
       try
-        set candidateValue to value of candidate as text
-        if candidateValue contains messageText then
-          set end of matchingElements to candidate
-        end if
+        repeat with candidate in static texts of messageListCandidate
+          try
+            set candidateValue to value of candidate as text
+            set candidateActionNames to name of actions of candidate
+            if normalizeText(candidateValue) is normalizedMessageText then
+              if candidateActionNames contains "AXShowMenu" then
+                if matchingElements does not contain candidate then set end of matchingElements to candidate
+              end if
+            end if
+          end try
+        end repeat
       end try
       try
-        set candidateDescription to description of candidate as text
-        if candidateDescription contains messageText then
-          if matchingElements does not contain candidate then set end of matchingElements to candidate
-        end if
+        repeat with messageGroup in groups of messageListCandidate
+          try
+            repeat with candidate in static texts of messageGroup
+              try
+                set candidateValue to value of candidate as text
+                set candidateActionNames to name of actions of candidate
+                if normalizeText(candidateValue) is normalizedMessageText then
+                  if candidateActionNames contains "AXShowMenu" then
+                    if matchingElements does not contain candidate then set end of matchingElements to candidate
+                  end if
+                end if
+              end try
+            end repeat
+          end try
+        end repeat
       end try
     end repeat
 
-    if (count of matchingElements) is 0 then error "Target message text was not visible in the open chat window."
-    if (count of matchingElements) is greater than 1 then error "Target message text matched multiple visible UI elements."
+    if (count of matchingElements) is 0 then error "Target message text was not visible as one exact targetable message bubble in the active chat."
+    if (count of matchingElements) is greater than 1 then error "Target message text matched multiple visible targetable message bubbles."
     set targetElement to item 1 of matchingElements
 
     perform action "AXShowMenu" of targetElement
@@ -736,7 +837,6 @@ tell application "System Events"
   end tell
 end tell
 """.strip()
-
 
 def _applescript_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)

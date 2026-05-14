@@ -92,7 +92,7 @@ python3 scripts/kakaotalk_mac.py delete-last "팀 공지방" --everyone
 ```
 
 - `--everyone` 은 내가 보낸 메시지에만 허용된다.
-- 메시지 텍스트가 현재 대화창에서 보이지 않거나 같은 텍스트가 여러 개면 UI 자동화가 실패하거나 잘못된 후보를 잡을 수 있으므로 `--dry-run` 으로 먼저 확인한다.
+- UI 삭제 단계는 활성 채팅방을 확인하고, 대화 transcript 영역에서 정규화된 텍스트가 정확히 하나의 visible message bubble 과 일치할 때만 진행한다. 메시지 텍스트가 보이지 않거나 같은 텍스트가 여러 개면 실패한다.
 - `chats`, `messages`, `search`, `schema` 는 read-only 이지만 `delete` / `delete-last` 는 side effect 이다.
 
 ## 주의할 점

@@ -298,6 +298,29 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
         self.assertEqual(target.message_id, 99)
         self.assertEqual(target.text, "latest outbound")
 
+    def test_select_delete_last_sorts_unordered_messages_by_timestamp_then_id(self) -> None:
+        messages = [
+            {"id": 40, "text": "older outbound", "is_from_me": True, "timestamp": "2026-05-14T00:00:00Z"},
+            {"id": 42, "text": "latest outbound", "is_from_me": True, "timestamp": "2026-05-14T00:02:00Z"},
+            {"id": 41, "text": "middle outbound", "is_from_me": True, "timestamp": "2026-05-14T00:01:00Z"},
+        ]
+
+        target = kakaotalk_mac.select_delete_target(messages, message_id=None, delete_last=True, everyone=False)
+
+        self.assertEqual(target.message_id, 42)
+        self.assertEqual(target.text, "latest outbound")
+
+    def test_select_delete_last_uses_id_as_tiebreaker_for_equal_timestamps(self) -> None:
+        messages = [
+            {"id": 40, "text": "same time older id", "is_from_me": True, "timestamp": "2026-05-14T00:00:00Z"},
+            {"id": 43, "text": "same time newer id", "is_from_me": True, "timestamp": "2026-05-14T00:00:00Z"},
+        ]
+
+        target = kakaotalk_mac.select_delete_target(messages, message_id=None, delete_last=True, everyone=False)
+
+        self.assertEqual(target.message_id, 43)
+        self.assertEqual(target.text, "same time newer id")
+
     def test_select_delete_target_rejects_everyone_for_non_outbound_message(self) -> None:
         messages = [{"id": 42, "text": "inbound", "is_from_me": False}]
 
@@ -322,6 +345,29 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
         self.assertIn("Delete for Everyone", script)
         self.assertIn("matchingElements", script)
         self.assertIn("Could not choose the requested delete scope", script)
+
+    def test_build_delete_osascript_uses_fail_closed_exact_transcript_resolver(self) -> None:
+        target = kakaotalk_mac.DeleteTarget(
+            message_id=42,
+            text="테스트 메시지",
+            timestamp="2026-05-14T00:00:00Z",
+            is_from_me=True,
+        )
+
+        script = kakaotalk_mac.build_delete_osascript("팀 공지방", target, everyone=True)
+
+        self.assertNotIn("entire contents of front window", script)
+        self.assertNotIn("contains messageText", script)
+        self.assertNotIn("contains chatName", script)
+        self.assertIn("set normalizedMessageText to normalizeText(messageText)", script)
+        self.assertIn("set normalizedChatName to normalizeText(chatName)", script)
+        self.assertIn("if normalizeText(candidateValue) is normalizedMessageText then", script)
+        self.assertIn("if normalizeText(chatCandidateValue) is normalizedChatName then", script)
+        self.assertIn("set messageListCandidates to", script)
+        self.assertIn("AXShowMenu", script)
+        self.assertIn("Target message text matched multiple visible targetable message bubbles", script)
+        self.assertIn("Could not verify the active KakaoTalk chat", script)
+        self.assertIn("set messageTimestamp to", script)
 
     def test_run_delete_dry_run_validates_target_but_skips_ui_side_effect(self) -> None:
         stdout = io.StringIO()
