@@ -620,8 +620,11 @@ def select_delete_target(
     if selected_id is None:
         raise AuthResolutionError("Selected message is missing an id.")
     is_from_me = bool(raw.get("is_from_me"))
-    if everyone and not is_from_me:
-        raise AuthResolutionError("--everyone can only be used for messages sent by this KakaoTalk account.")
+    if not is_from_me:
+        raise AuthResolutionError(
+            "Delete automation only supports messages sent by this KakaoTalk account; "
+            "--everyone also requires an outbound message."
+        )
 
     text = raw.get("text")
     if not isinstance(text, str) or not text.strip():

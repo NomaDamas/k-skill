@@ -263,20 +263,28 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
         self.assertTrue(parsed.everyone)
         self.assertTrue(parsed.dry_run)
 
-    def test_select_delete_target_by_message_id_requires_matching_message(self) -> None:
+    def test_select_delete_target_by_message_id_requires_matching_outbound_message(self) -> None:
         messages = [
             {"id": 41, "text": "older", "is_from_me": True, "timestamp": "2026-05-14T00:00:00Z"},
-            {"id": 42, "text": "wrong room", "is_from_me": False, "timestamp": "2026-05-14T00:01:00Z"},
+            {"id": 42, "text": "sent follow-up", "is_from_me": True, "timestamp": "2026-05-14T00:01:00Z"},
         ]
 
         target = kakaotalk_mac.select_delete_target(messages, message_id=42, delete_last=False, everyone=False)
 
         self.assertEqual(target.message_id, 42)
-        self.assertEqual(target.text, "wrong room")
-        self.assertFalse(target.is_from_me)
+        self.assertEqual(target.text, "sent follow-up")
+        self.assertTrue(target.is_from_me)
 
         with self.assertRaises(kakaotalk_mac.AuthResolutionError):
             kakaotalk_mac.select_delete_target(messages, message_id=404, delete_last=False, everyone=False)
+
+    def test_select_delete_target_rejects_non_outbound_message_before_delete_for_me(self) -> None:
+        messages = [{"id": 42, "text": "inbound", "is_from_me": False}]
+
+        with self.assertRaises(kakaotalk_mac.AuthResolutionError) as context:
+            kakaotalk_mac.select_delete_target(messages, message_id=42, delete_last=False, everyone=False)
+
+        self.assertIn("sent by this KakaoTalk account", str(context.exception))
 
     def test_select_delete_last_uses_most_recent_message_from_me(self) -> None:
         messages = [
