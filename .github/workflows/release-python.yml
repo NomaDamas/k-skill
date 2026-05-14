@@ -16,14 +16,31 @@ permissions:
   id-token: write
 
 jobs:
+  detect_python_packages:
+    runs-on: ubuntu-latest
+    outputs:
+      has_python_packages: ${{ steps.detect.outputs.has_python_packages }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        shell: bash
+        run: |
+          if find python-packages -mindepth 2 -maxdepth 2 -name pyproject.toml -print -quit | grep -q .; then
+            echo "has_python_packages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_python_packages=false" >> "$GITHUB_OUTPUT"
+          fi
+
   scaffold-only:
-    if: ${{ hashFiles('python-packages/**/pyproject.toml') == '' }}
+    needs: detect_python_packages
+    if: ${{ needs.detect_python_packages.outputs.has_python_packages != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - run: echo "No Python package exists yet. release-please remains scaffold-only."
 
   release:
-    if: ${{ hashFiles('python-packages/**/pyproject.toml') != '' }}
+    needs: detect_python_packages
+    if: ${{ needs.detect_python_packages.outputs.has_python_packages == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
