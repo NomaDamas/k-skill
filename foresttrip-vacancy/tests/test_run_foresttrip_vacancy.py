@@ -1,7 +1,9 @@
 import importlib.util
+import io
 import json
 import sys
 import unittest
+from contextlib import redirect_stdout
 from datetime import datetime
 from pathlib import Path
 from unittest import mock
@@ -51,7 +53,7 @@ def make_session(forests):
 
 
 def stub_fetch(rows):
-    def _stub(*, session, forest_id, category, today, last_day):
+    def _stub(*, forest_id, category, **_):
         matched = [r for r in rows if r.get("insttId") == forest_id]
         return forest_id, category, matched, None
     return _stub
@@ -190,6 +192,36 @@ class StrictUseDtGateTest(unittest.TestCase):
             week_range=1,
         )
         self.assertEqual(payload["filter_hits"], 0)
+
+
+class PrintTextTest(unittest.TestCase):
+    """print_text is the user-facing output path — guard against format regressions."""
+
+    def test_renders_forest_and_rooms(self):
+        session = make_session({GEOJE_FOREST_ID: GEOJE_FOREST_NAME})
+        payload = run_collect(
+            session, {GEOJE_FOREST_ID: GEOJE_FOREST_NAME}, GEOJE_ROWS,
+            dates=["20260513"],
+        )
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            helper.print_text(payload)
+        output = buffer.getvalue()
+        self.assertIn(GEOJE_FOREST_NAME, output)
+        self.assertIn("20260513", output)
+        self.assertIn("slot(s)", output)
+        self.assertIn("동백1", output)
+
+    def test_empty_results_message(self):
+        session = make_session({GEOJE_FOREST_ID: GEOJE_FOREST_NAME})
+        payload = run_collect(
+            session, {GEOJE_FOREST_ID: GEOJE_FOREST_NAME}, GEOJE_ROWS,
+            dates=["20260516"],
+        )
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            helper.print_text(payload)
+        self.assertIn("(no available rooms at lookup time)", buffer.getvalue())
 
 
 class GroundTruthTest(unittest.TestCase):
