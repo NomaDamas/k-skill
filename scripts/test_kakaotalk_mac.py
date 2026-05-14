@@ -242,12 +242,123 @@ class KakaoTalkMacHelperTests(unittest.TestCase):
         with self.assertRaises(kakaotalk_mac.AuthResolutionError):
             kakaotalk_mac.build_passthrough_command("query", auth, ["DELETE FROM chat_logs"])
 
-    def test_build_parser_only_exposes_read_only_commands(self) -> None:
+    def test_build_parser_exposes_safe_helper_commands_without_raw_query(self) -> None:
         parser = kakaotalk_mac.build_parser()
         subcommands = parser._subparsers._group_actions[0].choices
 
-        self.assertEqual(sorted(subcommands), ["auth", "chats", "messages", "schema", "search"])
+        self.assertEqual(sorted(subcommands), ["auth", "chats", "delete", "delete-last", "messages", "schema", "search"])
         self.assertNotIn("query", subcommands)
+
+
+    def test_build_parser_exposes_delete_commands_with_safe_dry_run(self) -> None:
+        parser = kakaotalk_mac.build_parser()
+        subcommands = parser._subparsers._group_actions[0].choices
+
+        self.assertIn("delete", subcommands)
+        self.assertIn("delete-last", subcommands)
+        parsed = parser.parse_args(["delete", "팀 공지방", "42", "--everyone", "--dry-run"])
+        self.assertEqual(parsed.command, "delete")
+        self.assertEqual(parsed.chat, "팀 공지방")
+        self.assertEqual(parsed.message_id, 42)
+        self.assertTrue(parsed.everyone)
+        self.assertTrue(parsed.dry_run)
+
+    def test_select_delete_target_by_message_id_requires_matching_message(self) -> None:
+        messages = [
+            {"id": 41, "text": "older", "is_from_me": True, "timestamp": "2026-05-14T00:00:00Z"},
+            {"id": 42, "text": "wrong room", "is_from_me": False, "timestamp": "2026-05-14T00:01:00Z"},
+        ]
+
+        target = kakaotalk_mac.select_delete_target(messages, message_id=42, delete_last=False, everyone=False)
+
+        self.assertEqual(target.message_id, 42)
+        self.assertEqual(target.text, "wrong room")
+        self.assertFalse(target.is_from_me)
+
+        with self.assertRaises(kakaotalk_mac.AuthResolutionError):
+            kakaotalk_mac.select_delete_target(messages, message_id=404, delete_last=False, everyone=False)
+
+    def test_select_delete_last_uses_most_recent_message_from_me(self) -> None:
+        messages = [
+            {"id": 100, "text": "latest inbound", "is_from_me": False, "timestamp": "2026-05-14T00:02:00Z"},
+            {"id": 99, "text": "latest outbound", "is_from_me": True, "timestamp": "2026-05-14T00:01:00Z"},
+            {"id": 98, "text": "older outbound", "is_from_me": True, "timestamp": "2026-05-14T00:00:00Z"},
+        ]
+
+        target = kakaotalk_mac.select_delete_target(messages, message_id=None, delete_last=True, everyone=True)
+
+        self.assertEqual(target.message_id, 99)
+        self.assertEqual(target.text, "latest outbound")
+
+    def test_select_delete_target_rejects_everyone_for_non_outbound_message(self) -> None:
+        messages = [{"id": 42, "text": "inbound", "is_from_me": False}]
+
+        with self.assertRaises(kakaotalk_mac.AuthResolutionError) as context:
+            kakaotalk_mac.select_delete_target(messages, message_id=42, delete_last=False, everyone=True)
+
+        self.assertIn("--everyone", str(context.exception))
+
+    def test_build_delete_osascript_mentions_chat_text_and_delete_scope(self) -> None:
+        target = kakaotalk_mac.DeleteTarget(
+            message_id=42,
+            text="테스트 메시지",
+            timestamp="2026-05-14T00:00:00Z",
+            is_from_me=True,
+        )
+
+        script = kakaotalk_mac.build_delete_osascript("팀 공지방", target, everyone=True)
+
+        self.assertIn("팀 공지방", script)
+        self.assertIn("테스트 메시지", script)
+        self.assertIn("모두에게서 삭제", script)
+        self.assertIn("Delete for Everyone", script)
+        self.assertIn("matchingElements", script)
+        self.assertIn("Could not choose the requested delete scope", script)
+
+    def test_run_delete_dry_run_validates_target_but_skips_ui_side_effect(self) -> None:
+        stdout = io.StringIO()
+        auth = make_resolved_auth()
+        messages = [{"id": 42, "text": "검증된 메시지", "is_from_me": True, "timestamp": "2026-05-14T00:00:00Z"}]
+
+        with (
+            mock.patch.object(kakaotalk_mac, "resolve_auth", return_value=auth) as resolve_auth,
+            mock.patch.object(kakaotalk_mac, "load_messages_for_delete", return_value=messages) as load_messages,
+            mock.patch.object(kakaotalk_mac, "run_delete_automation") as run_delete,
+            mock.patch("sys.stdout", stdout),
+        ):
+            exit_code = kakaotalk_mac.main(["delete", "팀 공지방", "42", "--everyone", "--dry-run"])
+
+        self.assertEqual(exit_code, 0)
+        resolve_auth.assert_called_once()
+        load_messages.assert_called_once_with("팀 공지방", auth, limit=200)
+        run_delete.assert_not_called()
+        self.assertIn("DRY RUN", stdout.getvalue())
+        self.assertIn("message_id=42", stdout.getvalue())
+        self.assertIn("검증된 메시지", stdout.getvalue())
+
+    def test_run_delete_dry_run_fails_when_message_id_is_missing(self) -> None:
+        stderr = io.StringIO()
+
+        with (
+            mock.patch.object(kakaotalk_mac, "resolve_auth", return_value=make_resolved_auth()),
+            mock.patch.object(kakaotalk_mac, "load_messages_for_delete", return_value=[]),
+            mock.patch("sys.stderr", stderr),
+        ):
+            exit_code = kakaotalk_mac.main(["delete", "팀 공지방", "404", "--dry-run"])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Message id 404", stderr.getvalue())
+
+    def test_select_delete_target_rejects_duplicate_visible_text(self) -> None:
+        messages = [
+            {"id": 42, "text": "same", "is_from_me": True},
+            {"id": 41, "text": "same", "is_from_me": True},
+        ]
+
+        with self.assertRaises(kakaotalk_mac.AuthResolutionError) as context:
+            kakaotalk_mac.select_delete_target(messages, message_id=42, delete_last=False, everyone=True)
+
+        self.assertIn("same text", str(context.exception))
 
     def test_build_parser_rejects_negative_max_user_id(self) -> None:
         parser = kakaotalk_mac.build_parser()

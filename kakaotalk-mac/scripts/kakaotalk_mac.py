@@ -49,6 +49,14 @@ class ResolvedAuth:
     source: str
 
 
+@dataclass
+class DeleteTarget:
+    message_id: int
+    text: str
+    timestamp: str | None
+    is_from_me: bool
+
+
 def parse_plist_xml(xml_text: str) -> Any:
     tokens = tokenize_plist_xml(xml_text)
     if not tokens:
@@ -575,6 +583,194 @@ def build_passthrough_command(command: str, auth: ResolvedAuth, forwarded_args: 
     ]
 
 
+def load_messages_for_delete(chat: str, auth: ResolvedAuth, *, limit: int) -> list[dict[str, Any]]:
+    result = run_command(
+        build_passthrough_command("messages", auth, ["--chat", chat, "--limit", str(limit), "--json"]),
+        check=True,
+    )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise AuthResolutionError(f"Could not parse kakaocli messages JSON: {exc}") from exc
+    if not isinstance(payload, list):
+        raise AuthResolutionError("kakaocli messages --json did not return a JSON array")
+    return [item for item in payload if isinstance(item, dict)]
+
+
+def select_delete_target(
+    messages: Sequence[dict[str, Any]],
+    *,
+    message_id: int | None,
+    delete_last: bool,
+    everyone: bool,
+) -> DeleteTarget:
+    if delete_last:
+        candidates = [message for message in messages if bool(message.get("is_from_me"))]
+        if not candidates:
+            raise AuthResolutionError("No outbound messages were found for delete-last.")
+        raw = candidates[0]
+    else:
+        if message_id is None:
+            raise AuthResolutionError("message_id is required for delete.")
+        raw = next((message for message in messages if _message_id(message) == message_id), None)
+        if raw is None:
+            raise AuthResolutionError(f"Message id {message_id} was not found in the fetched chat history.")
+
+    selected_id = _message_id(raw)
+    if selected_id is None:
+        raise AuthResolutionError("Selected message is missing an id.")
+    is_from_me = bool(raw.get("is_from_me"))
+    if everyone and not is_from_me:
+        raise AuthResolutionError("--everyone can only be used for messages sent by this KakaoTalk account.")
+
+    text = raw.get("text")
+    if not isinstance(text, str) or not text.strip():
+        text = f"[{raw.get('type', 'message')}]"
+    matching_text_ids = [_message_id(message) for message in messages if message.get("text") == text]
+    if len([item for item in matching_text_ids if item is not None]) > 1:
+        raise AuthResolutionError(
+            "Refusing to automate deletion because multiple fetched messages have the same text. "
+            "Open the chat with only the target visible or use delete-last for the latest outbound message."
+        )
+    timestamp = raw.get("timestamp")
+    return DeleteTarget(
+        message_id=selected_id,
+        text=text,
+        timestamp=str(timestamp) if timestamp is not None else None,
+        is_from_me=is_from_me,
+    )
+
+
+def _message_id(message: dict[str, Any]) -> int | None:
+    value = message.get("id")
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+
+def build_delete_osascript(chat: str, target: DeleteTarget, *, everyone: bool) -> str:
+    scope_labels = (
+        ["모두에게서 삭제", "Delete for Everyone", "Delete for everyone"]
+        if everyone
+        else ["나에게서만 삭제", "Delete for Me", "Delete for me", "삭제", "Delete"]
+    )
+    labels = ", ".join(_applescript_string(label) for label in scope_labels)
+    return f"""
+set chatName to {_applescript_string(chat)}
+set messageText to {_applescript_string(target.text)}
+set deleteLabels to {{{labels}}}
+
+tell application "KakaoTalk" to activate
+delay 0.5
+
+tell application "System Events"
+  tell process "KakaoTalk"
+    set frontmost to true
+    keystroke "f" using command down
+    delay 0.2
+    keystroke chatName
+    delay 0.2
+    key code 36
+    delay 0.8
+    key code 36
+    delay 1.0
+
+    set matchingElements to {{}}
+    repeat with candidate in (entire contents of front window)
+      try
+        set candidateValue to value of candidate as text
+        if candidateValue contains messageText then
+          set end of matchingElements to candidate
+        end if
+      end try
+      try
+        set candidateDescription to description of candidate as text
+        if candidateDescription contains messageText then
+          if matchingElements does not contain candidate then set end of matchingElements to candidate
+        end if
+      end try
+    end repeat
+
+    if (count of matchingElements) is 0 then error "Target message text was not visible in the open chat window."
+    if (count of matchingElements) is greater than 1 then error "Target message text matched multiple visible UI elements."
+    set targetElement to item 1 of matchingElements
+
+    perform action "AXShowMenu" of targetElement
+    delay 0.3
+    try
+      click menu item "삭제" of menu 1
+    on error
+      click menu item "Delete" of menu 1
+    end try
+    delay 0.5
+
+    set didChooseDeleteScope to false
+    repeat with labelText in deleteLabels
+      try
+        click button (labelText as text) of window 1
+        set didChooseDeleteScope to true
+        exit repeat
+      end try
+      try
+        click menu item (labelText as text) of menu 1
+        set didChooseDeleteScope to true
+        exit repeat
+      end try
+    end repeat
+    if didChooseDeleteScope is false then error "Could not choose the requested delete scope."
+    delay 0.3
+
+    try
+      click button "삭제" of window 1
+    end try
+    try
+      click button "Delete" of window 1
+    end try
+  end tell
+end tell
+""".strip()
+
+
+def _applescript_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def run_delete_automation(chat: str, target: DeleteTarget, *, everyone: bool) -> subprocess.CompletedProcess[str]:
+    script = build_delete_osascript(chat, target, everyone=everyone)
+    return run_command(["/usr/bin/osascript", "-e", script], check=True)
+
+
+def handle_delete_command(args: argparse.Namespace) -> int:
+    delete_last = args.command == "delete-last"
+    message_id = None if delete_last else args.message_id
+
+    resolved = resolve_auth(
+        refresh=args.refresh_auth,
+        cache_path=Path(args.cache_path).expanduser(),
+        user_id_override=args.user_id,
+        uuid_override=args.uuid,
+        max_user_id=args.max_user_id,
+        workers=args.workers,
+        chunk_size=args.chunk_size,
+    )
+    messages = load_messages_for_delete(args.chat, resolved, limit=args.limit)
+    target = select_delete_target(messages, message_id=message_id, delete_last=delete_last, everyone=args.everyone)
+    if args.dry_run:
+        scope = "everyone" if args.everyone else "me"
+        print(
+            f"DRY RUN: Would delete message_id={target.message_id} "
+            f"from chat '{args.chat}' for {scope}: {target.text}"
+        )
+        return 0
+    run_delete_automation(args.chat, target, everyone=args.everyone)
+    print(f"Deleted message_id={target.message_id} from chat '{args.chat}'.")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
 
@@ -595,6 +791,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             print(render_auth(resolved, output_format=args.format, cache_path=cache_path))
             return 0
+
+        if args.command in {"delete", "delete-last"}:
+            if forwarded_args:
+                raise AuthResolutionError(f"Unexpected delete arguments: {' '.join(forwarded_args)}")
+            return handle_delete_command(args)
 
         resolved = resolve_auth(
             refresh=args.refresh_auth,
@@ -628,6 +829,17 @@ def build_parser() -> argparse.ArgumentParser:
         add_auth_options(passthrough)
         passthrough.add_argument("--refresh-auth", action="store_true", help="Refresh cached auth before running.")
 
+    delete_parser = subparsers.add_parser("delete", help="Delete one KakaoTalk message by local message id via UI automation.")
+    add_auth_options(delete_parser)
+    add_delete_options(delete_parser)
+    delete_parser.add_argument("chat", help="Chat name to open (substring match).")
+    delete_parser.add_argument("message_id", type=positive_int, help="Local KakaoTalk message id from messages --json.")
+
+    delete_last_parser = subparsers.add_parser("delete-last", help="Delete the latest outbound message in a chat via UI automation.")
+    add_auth_options(delete_last_parser)
+    add_delete_options(delete_last_parser)
+    delete_last_parser.add_argument("chat", help="Chat name to open (substring match).")
+
     return parser
 
 
@@ -638,6 +850,13 @@ def add_auth_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-user-id", type=non_negative_int, default=DEFAULT_MAX_USER_ID)
     parser.add_argument("--workers", type=positive_int, default=None)
     parser.add_argument("--chunk-size", type=positive_int, default=DEFAULT_CHUNK_SIZE)
+
+
+def add_delete_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--everyone", action="store_true", help="Use KakaoTalk's delete-for-everyone UI option.")
+    parser.add_argument("--dry-run", action="store_true", help="Validate and print the deletion plan without touching the UI.")
+    parser.add_argument("--refresh-auth", action="store_true", help="Refresh cached auth before resolving message metadata.")
+    parser.add_argument("--limit", type=positive_int, default=200, help="Messages to inspect when resolving delete target metadata.")
 
 
 def non_negative_int(value: str) -> int:
