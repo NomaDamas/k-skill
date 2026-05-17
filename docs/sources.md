@@ -192,3 +192,7 @@
 - 도서관 정보나루 도서 상세 endpoint: https://data4library.kr/api/srchDtlList
 - 도서관 정보나루 도서 소장 도서관 endpoint: https://data4library.kr/api/libSrchByBook
 - 도서관 정보나루 도서관별 도서 소장여부 endpoint: https://data4library.kr/api/bookExist
+
+- 공공데이터포털 데이터셋(창업진흥원 K-Startup 조회서비스): https://www.data.go.kr/data/15125364/openapi.do
+- K-Startup Open API base URL: https://apis.data.go.kr/B552735/kisedKstartupService01 — `k-skill-proxy`의 `/v1/kstartup/business-info`, `/v1/kstartup/announcements`, `/v1/kstartup/contents`, `/v1/kstartup/statistics` 가 각각 `getBusinessInformation01`, `getAnnouncementInformation01`, `getContentInformation01`, `getStatisticalInformation01` 로 중계한다 (returnType=json 고정, ServiceKey 서버 측 주입)
+- K-Startup 공식 포털: https://www.k-startup.go.kr — 응답의 `detl_pg_url` 가 가리키는 사용자 진입점

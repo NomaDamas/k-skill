@@ -27,6 +27,11 @@ const {
   normalizeNtsBusinessValidateQuery,
   proxyNtsBusinessRequest
 } = require("./nts-business");
+const {
+  isKstartupErrorBody,
+  normalizeKstartupQuery,
+  proxyKstartupRequest
+} = require("./kstartup");
 const { fetchNearbyParkingLots } = require("./parking-lots");
 const { searchRegionCode } = require("./region-lookup");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
@@ -1607,7 +1612,8 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
         naverNewsApiConfigured: naverSearchKeysPresent,
-        ntsBusinessConfigured: Boolean(config.molitApiKey)
+        ntsBusinessConfigured: Boolean(config.molitApiKey),
+        kstartupConfigured: Boolean(config.molitApiKey)
       },
       auth: {
         tokenRequired: false
@@ -2939,6 +2945,155 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     reply
   }));
 
+  async function handleKstartupRoute({ operation, route, request, reply }) {
+    let normalized;
+    try {
+      normalized = normalizeKstartupQuery(operation, request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    normalized.returnType = "json";
+
+    const cacheKey = makeCacheKey({ route, ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let upstream;
+    try {
+      upstream = await proxyKstartupRequest({
+        operation,
+        query: normalized,
+        serviceKey: config.molitApiKey
+      });
+    } catch (error) {
+      reply.code(502);
+      return {
+        error: "proxy_error",
+        message: "K-Startup upstream request failed.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (upstream.statusCode === 503) {
+      reply.code(503);
+      let upstreamPayload = null;
+      try { upstreamPayload = JSON.parse(upstream.body); } catch { upstreamPayload = null; }
+      return {
+        error: upstreamPayload?.error || "upstream_not_configured",
+        message: upstreamPayload?.message || "DATA_GO_KR_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(upstream.body);
+    } catch {
+      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
+      return {
+        error: "upstream_invalid_response",
+        message: "K-Startup upstream did not return valid JSON.",
+        upstream_status: upstream.statusCode,
+        upstream_body: upstream.body.slice(0, 500),
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (upstream.statusCode < 200 || upstream.statusCode >= 300 || isKstartupErrorBody(upstream.body)) {
+      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
+      return {
+        ...parsed,
+        error: parsed?.error || "upstream_error",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          },
+          requested_at: new Date().toISOString()
+        }
+      };
+    }
+
+    const payload = {
+      ...parsed,
+      query: normalized,
+      proxy: {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  }
+
+  app.get("/v1/kstartup/business-info", async (request, reply) => handleKstartupRoute({
+    operation: "business-info",
+    route: "kstartup-business-info",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kstartup/announcements", async (request, reply) => handleKstartupRoute({
+    operation: "announcements",
+    route: "kstartup-announcements",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kstartup/contents", async (request, reply) => handleKstartupRoute({
+    operation: "contents",
+    route: "kstartup-contents",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kstartup/statistics", async (request, reply) => handleKstartupRoute({
+    operation: "statistics",
+    route: "kstartup-statistics",
+    request,
+    reply
+  }));
+
   app.get("/v1/mfds/drug-safety/lookup", async (request, reply) => {
     let normalized;
 
@@ -4145,6 +4300,7 @@ module.exports = {
   normalizeKosisDataQuery,
   normalizeKosisMetaQuery,
   normalizeKosisSearchQuery,
+  normalizeKstartupQuery,
   normalizeKoreanStockLookupQuery,
   normalizeKoreanStockSearchQuery,
   normalizeLhNoticeDetailQuery,
@@ -4169,6 +4325,7 @@ module.exports = {
   proxyNeisSchoolInfoRequest,
   proxyKmaWeatherRequest,
   proxyKosisRequest,
+  proxyKstartupRequest,
   fetchNaverShoppingSearch,
   proxyOpinetRequest,
   proxySeoulCityDataRequest,

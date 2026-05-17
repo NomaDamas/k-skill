@@ -15,6 +15,7 @@ const {
   normalizeKosisDataQuery,
   normalizeKosisMetaQuery,
   normalizeKosisSearchQuery,
+  normalizeKstartupQuery,
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
   proxyAirKoreaRequest,
@@ -4649,4 +4650,205 @@ test("health endpoint reports lhNoticeConfigured when DATA_GO_KR_API_KEY is set"
   const response = await app.inject({ method: "GET", url: "/health" });
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().upstreams.lhNoticeConfigured, true);
+});
+
+test("K-Startup normalizer enforces enums, ranges, and date order", () => {
+  const normalized = normalizeKstartupQuery("announcements", {
+    page: "2",
+    perPage: "20",
+    supt_regin: "서울특별시",
+    pbanc_rcpt_bgng_dt: "2024-01-01",
+    pbanc_rcpt_end_dt: "2024-12-31",
+    rcrt_prgs_yn: "y",
+    biz_yr: "2024"
+  });
+  assert.equal(normalized.page, 2);
+  assert.equal(normalized.perPage, 20);
+  assert.equal(normalized.supt_regin, "서울특별시");
+  assert.equal(normalized.pbanc_rcpt_bgng_dt, "20240101");
+  assert.equal(normalized.pbanc_rcpt_end_dt, "20241231");
+  assert.equal(normalized.rcrt_prgs_yn, "Y");
+  assert.equal(normalized.returnType, "json");
+  assert.equal(normalized.biz_yr, undefined, "biz_yr is not in announcements allowlist");
+
+  const businessInfo = normalizeKstartupQuery("business-info", { biz_yr: "2024", biz_category_cd: "cmrczn_Tab3" });
+  assert.equal(businessInfo.biz_yr, "2024");
+  assert.equal(businessInfo.biz_category_cd, "cmrczn_Tab3");
+
+  assert.throws(() => normalizeKstartupQuery("announcements", { rcrt_prgs_yn: "maybe" }), /rcrt_prgs_yn/);
+  assert.throws(() => normalizeKstartupQuery("announcements", { pbanc_rcpt_bgng_dt: "20241301" }), /pbanc_rcpt_bgng_dt/);
+  assert.throws(() => normalizeKstartupQuery("announcements", {
+    pbanc_rcpt_bgng_dt: "20240601", pbanc_rcpt_end_dt: "20240101"
+  }), /earlier than or equal/);
+  assert.throws(() => normalizeKstartupQuery("announcements", { perPage: "0" }), /perPage/);
+  assert.throws(() => normalizeKstartupQuery("announcements", { perPage: "101" }), /perPage/);
+  assert.throws(() => normalizeKstartupQuery("unknown-op", {}), /Unknown K-Startup operation/);
+  assert.throws(() => normalizeKstartupQuery("business-info", { biz_yr: "24" }), /biz_yr/);
+});
+
+test("K-Startup announcements route proxies GET with server-side ServiceKey", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return new Response(
+      JSON.stringify({
+        currentCount: 1,
+        matchCount: 1,
+        data: [{ biz_pbanc_nm: "테스트 공고", supt_regin: "서울특별시" }],
+        page: 1, perPage: 10, totalCount: 1
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") + "&rcrt_prgs_yn=Y"
+  });
+  const body = response.json();
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data[0].biz_pbanc_nm, "테스트 공고");
+  assert.equal(body.proxy.cache.hit, false);
+  assert.equal(body.query.rcrt_prgs_yn, "Y");
+  const upstreamUrl = new URL(calls[0].url);
+  assert.equal(upstreamUrl.origin + upstreamUrl.pathname,
+    "https://apis.data.go.kr/B552735/kisedKstartupService01/getAnnouncementInformation01");
+  assert.equal(upstreamUrl.searchParams.get("ServiceKey"), "data-go-key");
+  assert.equal(upstreamUrl.searchParams.get("rcrt_prgs_yn"), "Y");
+  assert.equal(upstreamUrl.searchParams.get("returnType"), "json");
+
+  const cached = await app.inject({
+    method: "GET",
+    url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") + "&rcrt_prgs_yn=Y"
+  });
+  assert.equal(cached.statusCode, 200);
+  assert.equal(cached.json().proxy.cache.hit, true);
+  assert.equal(calls.length, 1, "second call must come from cache, not upstream");
+});
+
+test("K-Startup route reports 503 when DATA_GO_KR_API_KEY is missing", async (t) => {
+  const app = buildServer({ env: {} });
+  t.after(async () => { await app.close(); });
+
+  const response = await app.inject({ method: "GET", url: "/v1/kstartup/business-info?page=1" });
+  assert.equal(response.statusCode, 503);
+  const body = response.json();
+  assert.equal(body.error, "upstream_not_configured");
+  assert.match(body.message, /DATA_GO_KR_API_KEY/);
+});
+
+test("K-Startup route returns 400 for invalid params before hitting upstream", async (t) => {
+  const originalFetch = global.fetch;
+  let called = false;
+  global.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kstartup/announcements?pbanc_rcpt_bgng_dt=2024-13-01"
+  });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "bad_request");
+  assert.equal(called, false, "must not call upstream on bad request");
+});
+
+test("K-Startup route surfaces data.go.kr error envelopes without caching", async (t) => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return new Response(
+      JSON.stringify({
+        response: { header: { resultCode: "30", resultMsg: "SERVICE_KEY_IS_NOT_REGISTERED_ERROR" } }
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const first = await app.inject({ method: "GET", url: "/v1/kstartup/contents?page=1" });
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_error");
+
+  const second = await app.inject({ method: "GET", url: "/v1/kstartup/contents?page=1" });
+  assert.equal(second.statusCode, 502);
+  assert.equal(calls, 2, "upstream error responses must not be cached");
+});
+
+test("K-Startup unknown operation returns 404 via proxyKstartupRequest", async () => {
+  const { proxyKstartupRequest } = require("../src/kstartup");
+  const result = await proxyKstartupRequest({ operation: "bogus", query: {}, serviceKey: "k" });
+  assert.equal(result.statusCode, 404);
+  assert.match(result.body, /not_found/);
+});
+
+test("health endpoint reports kstartupConfigured when DATA_GO_KR_API_KEY is set", async (t) => {
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { await app.close(); });
+
+  const response = await app.inject({ method: "GET", url: "/health" });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().upstreams.kstartupConfigured, true);
+});
+
+test("K-Startup cache keys partition by query so distinct filters trigger distinct upstream calls", async (t) => {
+  const originalFetch = global.fetch;
+  const upstreamCalls = [];
+  global.fetch = async (url) => {
+    upstreamCalls.push(String(url));
+    return new Response(JSON.stringify({ data: [] }), {
+      status: 200, headers: { "content-type": "application/json" }
+    });
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") });
+  await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("부산광역시") });
+  await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") + "&rcrt_prgs_yn=Y" });
+  await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") });
+
+  assert.equal(upstreamCalls.length, 3,
+    "3 distinct queries must call upstream 3 times; the 4th repeats query #1 and must hit the cache");
+});
+
+test("K-Startup proxy forces returnType=json even when caller asks for xml", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({ data: [] }), {
+      status: 200, headers: { "content-type": "application/json" }
+    });
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kstartup/contents?returnType=xml&clss_cd=notice_matr"
+  });
+  assert.equal(response.statusCode, 200);
+  const upstreamUrl = new URL(calls[0]);
+  assert.equal(upstreamUrl.searchParams.get("returnType"), "json",
+    "proxy must rewrite returnType to json regardless of client input");
+});
+
+test("K-Startup integer fields reject non-numeric input before upstream call", async (t) => {
+  const originalFetch = global.fetch;
+  let called = false;
+  global.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  for (const bad of ["abc", "0", "-1"]) {
+    const response = await app.inject({ method: "GET", url: "/v1/kstartup/announcements?page=" + bad });
+    assert.equal(response.statusCode, 400, `page=${bad} must 400`);
+  }
+  assert.equal(called, false, "upstream must not be called for any invalid integer input");
 });
