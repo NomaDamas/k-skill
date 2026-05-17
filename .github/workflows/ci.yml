@@ -17,8 +17,5 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install Python test dependencies
-        run: python3 -m pip install --user beautifulsoup4
-
       - run: npm ci
       - run: npm run ci
