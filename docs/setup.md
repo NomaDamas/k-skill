@@ -28,6 +28,8 @@ KSKILL_FORESTTRIP_ID=replace-me
 KSKILL_FORESTTRIP_PASSWORD=replace-me
 # KOSIS 일반 조회는 hosted proxy 사용. bigdata/--direct 때만 채운다.
 KSKILL_KOSIS_API_KEY=replace-me
+# 창업진흥원 K-Startup 일반 조회는 hosted proxy 사용. --direct 때만 채운다.
+KSKILL_KSTARTUP_API_KEY=replace-me
 LAW_OC=replace-me
 KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
@@ -95,6 +97,7 @@ bash scripts/check-setup.sh
 | 도서관 도서 조회 | 사용자 시크릿 불필요 (프록시에 `DATA4LIBRARY_AUTH_KEY`가 설정된 hosted/self-host 사용) |
 | 의약품 안전 체크 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`가 설정된 hosted/self-host 사용) |
 | 식품 안전 체크 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`와 선택적 `FOODSAFETYKOREA_API_KEY`가 설정된 hosted/self-host 사용) |
+| 창업진흥원 K-Startup 조회 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`가 설정된 hosted/self-host 사용; `--direct` 호출 때만 `KSKILL_KSTARTUP_API_KEY`) |
 
 ## 다음에 볼 문서
 
@@ -120,6 +123,7 @@ bash scripts/check-setup.sh
 - [도서관 도서 조회 가이드](features/library-book-search.md)
 - [의약품 안전 체크 가이드](features/mfds-drug-safety.md)
 - [식품 안전 체크 가이드](features/mfds-food-safety.md)
+- [창업진흥원 K-Startup 조회 가이드](features/kstartup-search.md)
 - [보안/시크릿 정책](security-and-secrets.md)
 
 설치 기본 흐름은 "전체 스킬 설치 → 개별 기능 사용" 이다.

@@ -36,6 +36,10 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/data4library/book-detail` (도서관 정보나루 도서 상세 조회, `DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/libraries-by-book` (도서 소장 도서관 조회, `DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/book-exists` (도서관별 도서 소장여부, `DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/kstartup/business-info` (창업진흥원 K-Startup 통합공고 지원사업 정보, `DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/announcements` (창업진흥원 K-Startup 지원사업 공고 정보, `DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/contents` (창업진흥원 K-Startup 창업 콘텐츠 정보, `DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/statistics` (창업진흥원 K-Startup 통계보고서 정보, `DATA_GO_KR_API_KEY`)
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
 
 ## 권장 환경변수

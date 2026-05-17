@@ -25,6 +25,10 @@
 - `GET /v1/kosis/search` — KOSIS 통계표 검색(`KOSIS_API_KEY`)
 - `GET /v1/kosis/meta` — KOSIS 통계표 메타데이터(`KOSIS_API_KEY`)
 - `GET /v1/kosis/data` — KOSIS 통계 데이터 셀 조회(`KOSIS_API_KEY`)
+- `GET /v1/kstartup/business-info` — 창업진흥원 K-Startup 통합공고 지원사업 정보(`DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/announcements` — 창업진흥원 K-Startup 지원사업 공고 정보(`DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/contents` — 창업진흥원 K-Startup 창업 콘텐츠 정보(`DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/statistics` — 창업진흥원 K-Startup 통계보고서 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/naver-shopping/search` — 네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 네이버 쇼핑 공개 BFF JSON 기반 상품/가격 후보 조회
 - `GET /v1/naver-news/search` — 네이버 검색 Open API 뉴스 검색(`news.json`) 기반 최신 뉴스 기사 제목/요약/링크/발행시각 조회(`NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` 필요)
 - `GET /v1/data4library/library-search` — 도서관 정보나루 정보공개 도서관 조회(`DATA4LIBRARY_AUTH_KEY`)
