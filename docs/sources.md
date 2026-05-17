@@ -125,6 +125,17 @@
 - olive-young products API: https://mcp.aka.page/api/oliveyoung/products
 - olive-young inventory API: https://mcp.aka.page/api/oliveyoung/inventory
 - daiso/olive-young public MCP endpoint: https://mcp.aka.page/mcp
+- korean-cinema upstream repo (`hmmhmmhm/daiso-mcp`): https://github.com/hmmhmmhm/daiso-mcp
+- korean-cinema CLI package (`daiso`): https://www.npmjs.com/package/daiso
+- CGV theaters API: https://mcp.aka.page/api/cgv/theaters
+- CGV movies API: https://mcp.aka.page/api/cgv/movies
+- CGV timetable API: https://mcp.aka.page/api/cgv/timetable
+- Megabox theaters API: https://mcp.aka.page/api/megabox/theaters
+- Megabox movies API: https://mcp.aka.page/api/megabox/movies
+- Megabox seats API: https://mcp.aka.page/api/megabox/seats
+- Lotte Cinema theaters API: https://mcp.aka.page/api/lottecinema/theaters
+- Lotte Cinema movies API: https://mcp.aka.page/api/lottecinema/movies
+- Lotte Cinema seats API: https://mcp.aka.page/api/lottecinema/seats
 - hola-poke-yeoksam reference repo: https://github.com/mnspkm/hola-poke-yeoksam-skill
 - hola-poke-yeoksam remote MCP endpoint: https://hola-poke-yeoksam-skill.onrender.com/mcp
 - retention-corp/coupang_partners (Coupang Partners client and local MCP-compatible layer): https://github.com/retention-corp/coupang_partners
