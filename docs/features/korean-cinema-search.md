@@ -14,17 +14,19 @@
 
 ## 빠른 확인
 
+날짜가 있는 요청은 Asia/Seoul 기준 `YYYYMMDD` 로 정규화하고 `--playDate <YYYYMMDD>` 를 항상 붙인다. 예를 들어 오늘을 물으면 KST 오늘 날짜를 계산해서 넣는다.
+
 ```bash
 npx --yes daiso health
 npx --yes daiso get /api/cgv/theaters --keyword 강남 --limit 5 --json
-npx --yes daiso get /api/cgv/movies --keyword 강남 --json
-npx --yes daiso get /api/cgv/timetable --keyword 강남 --json
+npx --yes daiso get /api/cgv/movies --keyword 강남 --playDate <YYYYMMDD> --json
+npx --yes daiso get /api/cgv/timetable --keyword 강남 --playDate <YYYYMMDD> --json
 npx --yes daiso get /api/megabox/theaters --keyword 코엑스 --limit 5 --json
-npx --yes daiso get /api/megabox/movies --keyword 코엑스 --json
-npx --yes daiso get /api/megabox/seats --keyword 코엑스 --limit 10 --json
+npx --yes daiso get /api/megabox/movies --keyword 코엑스 --playDate <YYYYMMDD> --json
+npx --yes daiso get /api/megabox/seats --keyword 코엑스 --playDate <YYYYMMDD> --limit 10 --json
 npx --yes daiso get /api/lottecinema/theaters --keyword 월드타워 --limit 5 --json
-npx --yes daiso get /api/lottecinema/movies --keyword 월드타워 --json
-npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --limit 10 --json
+npx --yes daiso get /api/lottecinema/movies --keyword 월드타워 --playDate <YYYYMMDD> --json
+npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json
 ```
 
 ## 원본 저장소 clone fallback
@@ -36,8 +38,9 @@ npm install
 npm run build
 node dist/bin.js health
 node dist/bin.js get /api/cgv/theaters --keyword 강남 --limit 5 --json
-node dist/bin.js get /api/megabox/theaters --keyword 코엑스 --limit 5 --json
-node dist/bin.js get /api/lottecinema/theaters --keyword 월드타워 --limit 5 --json
+node dist/bin.js get /api/cgv/timetable --keyword 강남 --playDate <YYYYMMDD> --json
+node dist/bin.js get /api/megabox/seats --keyword 코엑스 --playDate <YYYYMMDD> --limit 10 --json
+node dist/bin.js get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json
 ```
 
 ## 입력값
@@ -45,16 +48,23 @@ node dist/bin.js get /api/lottecinema/theaters --keyword 월드타워 --limit 5 
 - 체인: CGV, 메가박스, 롯데시네마
 - 지역 또는 지점: 강남, 코엑스, 월드타워 등
 - 영화명: 잔여석이나 시간표를 특정 영화로 좁힐 때 사용
-- 날짜: 사용자가 날짜를 말하면 그 날짜를 우선한다.
+- 날짜: 사용자가 날짜를 말하면 그 날짜를 우선하고, 없으면 Asia/Seoul 기준 오늘을 `YYYYMMDD` 로 계산한다.
+
+| 체인 | 후보 조회 | 상영작 | 시간표 또는 잔여석 | 날짜 |
+| --- | --- | --- | --- | --- |
+| CGV | `keyword`, 선택 `limit` | `keyword` 또는 `theaterId`, `playDate` | `keyword` 또는 `theaterId`, `movieId`, `playDate` | 필수로 명시 |
+| 메가박스 | `keyword`, 선택 `limit` | `keyword` 또는 `theaterId`, `playDate` | `keyword` 또는 `theaterId`, `movieId`, `playDate` | 필수로 명시 |
+| 롯데시네마 | `keyword`, 선택 `limit` | `keyword` 또는 `theaterId`, `playDate` | `keyword` 또는 `theaterId`, `movieId`, `playDate` | 필수로 명시 |
 
 ## 사용 흐름
 
 1. `npx --yes daiso health` 로 endpoint 상태를 확인한다.
 2. `/api/cgv/theaters`, `/api/megabox/theaters`, `/api/lottecinema/theaters` 로 영화관 후보를 찾는다.
-3. `/api/cgv/movies`, `/api/megabox/movies`, `/api/lottecinema/movies` 로 상영작을 확인한다.
-4. CGV는 `/api/cgv/timetable` 로 시간표를 본다.
-5. 메가박스와 롯데시네마는 `/api/megabox/seats`, `/api/lottecinema/seats` 로 잔여석을 본다.
-6. 예매와 결제는 자동화하지 않는다.
+3. 날짜 표현은 Asia/Seoul 기준 `YYYYMMDD` 로 바꾼다.
+4. `/api/cgv/movies`, `/api/megabox/movies`, `/api/lottecinema/movies` 로 상영작을 확인한다.
+5. CGV는 `/api/cgv/timetable` 로 시간표를 본다.
+6. 메가박스와 롯데시네마는 `/api/megabox/seats`, `/api/lottecinema/seats` 로 잔여석을 본다.
+7. 예매와 결제는 자동화하지 않는다.
 
 ## 응답 원칙
 

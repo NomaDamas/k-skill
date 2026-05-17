@@ -1223,6 +1223,10 @@ test("repository docs advertise the korean-cinema-search skill across the docume
   assert.match(readme, /\| 영화관 검색 \|/);
   assert.match(readme, /\[영화관 검색 가이드\]\(docs\/features\/korean-cinema-search\.md\)/);
   assert.match(install, /--skill korean-cinema-search/);
+  assert.match(install, /--playDate <YYYYMMDD>/);
+  assert.match(install, /5xx|retry|재시도/);
+  assert.match(install, /git clone https:\/\/github\.com\/hmmhmmhm\/daiso-mcp\.git && cd daiso-mcp && npm install && npm run build/);
+  assert.match(install, /node dist\/bin\.js get \/api\/cgv\/timetable --keyword 강남 --playDate <YYYYMMDD> --json/);
   assert.match(roadmap, /영화관 검색 스킬 출시/);
   assert.match(sources, /https:\/\/github\.com\/hmmhmmhm\/daiso-mcp/);
   assert.match(sources, /https:\/\/www\.npmjs\.com\/package\/daiso/);
@@ -1246,6 +1250,13 @@ test("korean-cinema-search skill documents the upstream daiso CLI flow for Korea
     assert.match(doc, /hmmhmmhm\/daiso-mcp/);
     assert.match(doc, /npm install -g daiso|npx --yes daiso|npx daiso/);
     assert.match(doc, /MCP 서버를 .*직접 설치.*않고.*CLI/u);
+    assert.match(doc, /Asia\/Seoul|KST/);
+    assert.match(doc, /YYYYMMDD/);
+    assert.match(doc, /--playDate <YYYYMMDD>/);
+    assert.match(doc, /\/api\/cgv\/movies --keyword 강남 --playDate <YYYYMMDD> --json/);
+    assert.match(doc, /\/api\/cgv\/timetable --keyword 강남 --playDate <YYYYMMDD> --json/);
+    assert.match(doc, /\/api\/megabox\/seats --keyword 코엑스 --playDate <YYYYMMDD> --limit 10 --json/);
+    assert.match(doc, /\/api\/lottecinema\/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json/);
     assert.match(doc, /CGV/);
     assert.match(doc, /메가박스/);
     assert.match(doc, /롯데시네마/);
