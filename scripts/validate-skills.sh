@@ -54,6 +54,7 @@ done < <(
     ! -name python-packages \
     ! -name scripts \
     ! -name examples \
+    ! -name tools \
     -print0
 )
 
