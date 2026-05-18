@@ -200,6 +200,8 @@
 
 - Naver Shopping public BFF JSON: `https://ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui` (네이버 쇼핑 가격비교 스킬의 no-key fallback)
 - Naver Developers Search API shopping docs: https://developers.naver.com/docs/serviceapi/search/shopping/shopping.md
+- Naver Cloud Platform Maps Directions 5 API: https://api.ncloud-docs.com/docs/en/ai-naver-mapsdirections-driving
+- Naver Cloud Platform Maps Geocoding API: https://api.ncloud-docs.com/docs/en/ai-naver-mapsgeocoding-geocode
 
 - 도서관 정보나루 Open API 활용방법: https://www.data4library.kr/apiUtilization
 - 도서관 정보나루 도서 검색 endpoint: https://data4library.kr/api/srchBooks
