@@ -210,6 +210,14 @@ function isUnexpectedHtml(html) {
   return !/resultDiv|class=["']result|검색결과|fn_firstView/.test(html) && /NetFunnel|로그인|점검|대기열|접근|차단|서비스/.test(text)
 }
 
+function hasUnparsedCandidateResults(html) {
+  if (!/resultDiv|검색결과|fn_firstView/.test(html)) return false
+  if (/<div\b[^>]*class=(['"])[^'"]*\bresult\b[^'"]*\1/i.test(html)) return false
+  const resultDiv = String(html || "").match(/<div\b[^>]*class=(['"])[^'"]*\bresultDiv\b[^'"]*\1[^>]*>([\s\S]*?)<\/div>/i)
+  if (!resultDiv) return false
+  return stripTags(resultDiv[2]).length > 0
+}
+
 function filterItem(item, options) {
   if (options.localOnly && !item.is_local_election) return false
   if (options.electionCode && item.election_code !== options.electionCode) return false
@@ -236,7 +244,9 @@ function parseSearchHtml(html, options = {}) {
   }
 
   const resultRegex = /<div\b([^>]*)class=(['"])[^'"]*\bresult\b[^'"]*\2([^>]*)>([\s\S]*?)(?=<div\b[^>]*class=(['"])[^'"]*\bresult\b|<div\b[^>]*class=(['"])[^'"]*\bpage\b|<\/body>|$)/gi
+  let parsedResultCards = 0
   for (const resultMatch of html.matchAll(resultRegex)) {
+    parsedResultCards += 1
     const resultAttrs = `${resultMatch[1] || ""} ${resultMatch[3] || ""}`
     const resultHtml = resultMatch[4]
     const nameMatch = resultHtml.match(/<p\b[^>]*class=(['"])[^'"]*\bname\b[^'"]*\1[^>]*>([\s\S]*?)<\/p>/i)
@@ -244,7 +254,15 @@ function parseSearchHtml(html, options = {}) {
     const strongMatch = nameHtml.match(/<strong[^>]*>([\s\S]*?)<\/strong>/i)
     const hanjaMatch = nameHtml.match(/<span\b[^>]*class=(['"])[^'"]*\bhanja\b[^'"]*\1[^>]*>\s*\((.*?)\)\s*<\/span>/i)
     const dateMatch = nameHtml.match(/<span\b[^>]*class=(['"])[^'"]*\bdate\b[^'"]*\1[^>]*>([\s\S]*?)<\/span>/i)
-    const personName = strongMatch ? stripTags(strongMatch[1]) : normalized.name
+    const personName = strongMatch ? stripTags(strongMatch[1]) : null
+    if (!personName) {
+      warnings.push("missing candidate name in NEC result card; skipped result because exact-name matching could not be verified")
+      continue
+    }
+    if (normalizeToken(personName) !== normalizeToken(normalized.name)) {
+      warnings.push(`candidate name mismatch in NEC result card; expected ${normalized.name} but found ${personName}; skipped result`)
+      continue
+    }
     const hanja = hanjaMatch ? stripTags(hanjaMatch[2]) : null
     const { birthDate, gender } = parseBirthDateAndGender(dateMatch ? stripTags(dateMatch[2]) : stripTags(nameHtml), resultAttrs)
 
@@ -280,6 +298,10 @@ function parseSearchHtml(html, options = {}) {
       })
       if (filterItem(item, normalized)) items.push(item)
     }
+  }
+
+  if (parsedResultCards === 0 && hasUnparsedCandidateResults(html)) {
+    warnings.push("parser drift suspected: NEC search result markers were present but no supported result cards could be parsed")
   }
 
   const limitedItems = items.slice(0, normalized.limit)

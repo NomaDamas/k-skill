@@ -96,7 +96,7 @@ test("buildSearchRequest posts to the official NEC integrated candidate search",
 test("parseSearchHtml returns local election candidate entries with profile fields", () => {
   const result = parseSearchHtml(SEARCH_HTML, { name: "오세훈" })
 
-  assert.equal(result.summary.returned_count, 2)
+  assert.equal(result.summary.returned_count, 1)
   assert.equal(result.items[0].name, "오세훈")
   assert.equal(result.items[0].hanja, "吳世勲")
   assert.equal(result.items[0].birth_date, "1961-01-04")
@@ -108,17 +108,40 @@ test("parseSearchHtml returns local election candidate entries with profile fiel
   assert.equal(result.items[0].district, "서울특별시")
   assert.equal(result.items[0].job, "서울특별시장")
   assert.match(result.items[0].career.join("\n"), /제39대 서울특별시장/)
-  assert.equal(result.items[1].votes, 2371)
-  assert.equal(result.items[1].vote_share, "9.55%")
+  assert.equal(result.warnings.some((warning) => /candidate name mismatch.*김동연/i.test(warning)), true)
+})
+
+test("parseSearchHtml enforces exact candidate-name matches on mixed result pages", () => {
+  const result = parseSearchHtml(SEARCH_HTML, { name: "오세훈", localOnly: false })
+
+  assert.deepEqual(result.items.map((item) => item.name), ["오세훈"])
+  assert.equal(result.summary.returned_count, 1)
+  assert.match(result.warnings.join("\n"), /candidate name mismatch.*김동연/i)
+})
+
+test("parseSearchHtml skips result cards without a parsed candidate name", () => {
+  const missingNameHtml = SEARCH_HTML.replace("<strong>오세훈</strong>", "")
+  const result = parseSearchHtml(missingNameHtml, { name: "오세훈" })
+
+  assert.equal(result.items.length, 0)
+  assert.match(result.warnings.join("\n"), /missing candidate name/i)
+})
+
+test("parseSearchHtml warns separately when result markers exist but no cards parse", () => {
+  const driftHtml = `<!doctype html><html><body><div class="resultDiv"><section class="candidate-card">오세훈</section></div></body></html>`
+  const result = parseSearchHtml(driftHtml, { name: "오세훈" })
+
+  assert.equal(result.items.length, 0)
+  assert.match(result.warnings.join("\n"), /parser drift/i)
 })
 
 test("parseSearchHtml filters non-local elections by default and can include all", () => {
   const local = parseSearchHtml(SEARCH_HTML, { name: "김동연" })
   const all = parseSearchHtml(SEARCH_HTML, { name: "김동연", localOnly: false })
 
-  assert.equal(local.items.length, 2)
+  assert.equal(local.items.length, 1)
   assert.equal(local.items.every((item) => item.is_local_election), true)
-  assert.equal(all.items.length, 3)
+  assert.equal(all.items.length, 2)
   assert.equal(all.items.at(-1).election_type, "국회의원선거")
 })
 
@@ -165,4 +188,15 @@ test("CLI prints JSON search results", () => {
   const data = JSON.parse(proc.stdout)
   assert.equal(data.items.length, 1)
   assert.equal(data.items[0].name, "오세훈")
+})
+
+test("CLI --help exits successfully and prints usage", () => {
+  const cli = require.resolve("../src/cli")
+  const proc = spawnSync(process.execPath, [cli, "--help"], {
+    cwd: require("node:path").join(__dirname, ".."),
+    encoding: "utf8"
+  })
+
+  assert.equal(proc.status, 0, proc.stderr)
+  assert.match(proc.stdout, /Usage: local-election-candidate-search/)
 })

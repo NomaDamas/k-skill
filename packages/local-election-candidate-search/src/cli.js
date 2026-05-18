@@ -2,6 +2,10 @@
 const { searchCandidates } = require("./index")
 
 async function main(options = parseArgs(process.argv.slice(2)), io = console) {
+  if (options.help) {
+    printHelp(io)
+    return
+  }
   const result = await searchCandidates(options)
   io.log(JSON.stringify(result, null, 2))
 }
@@ -19,10 +23,8 @@ function parseArgs(argv) {
     else if (arg === "--local-only") options.localOnly = true
     else if (arg === "--include-html") options.includeHtml = true
     else if (arg === "--fixture") options.fixture = argv[++i] || ""
-    else if (arg === "--help" || arg === "-h") {
-      printHelp(io)
-      process.exit(0)
-    } else if (!options.name) options.name = arg
+    else if (arg === "--help" || arg === "-h") options.help = true
+    else if (!options.name) options.name = arg
   }
   return options
 }
