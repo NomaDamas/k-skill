@@ -88,6 +88,7 @@ bash ~/.local/share/k-skill-qa-bot/uninstall.sh --yes --purge --purge-logs
 
 - Skill smoke tests use `--dangerously-bypass-approvals-and-sandbox` because the Codex sandbox can block legitimate DNS/network lookups for public skill endpoints exercised by smoke tests.
 - A dedicated LaunchAgent is scheduling isolation only; it is not a separate OS user, container, or filesystem sandbox.
+- The bot-managed clone is not write-protected from the unsandboxed smoke agent; treat it as mutable bot state and judge only against inputs whose provenance is understood.
 - The LLM judge stays on the safer `-s read-only` path with `approval_policy="never"`; read-only/no-approval limits writes and approval prompts, but does not make the judge a no-tools or file-isolated model call. Treat transcript and skill Markdown as untrusted input.
 - 10 destructive/login-required skills are force-skipped before any codex call is issued.
 - Deprecated skills (`~~name~~ ⚠️ 지원 중단` in README) are detected and skipped.

@@ -22,6 +22,7 @@ The k-skill repository itself is **never modified** by the bot — it is read-on
 
 - Smoke tests intentionally run unsandboxed and may contact public skill endpoints, plus git, Codex, GitHub, and k-skill-proxy health-check endpoints.
 - A dedicated LaunchAgent is scheduling isolation only; it is not a separate OS user, container, or filesystem sandbox.
+- The bot-managed clone is not write-protected from the unsandboxed smoke agent; treat it as mutable bot state rather than a write-protected filesystem boundary.
 - The judge uses read-only/no-approval Codex settings, but is still a tool-capable Codex agent over untrusted transcripts and skill Markdown. Do not describe it as a no-tools or file-isolated model call unless the implementation changes to enforce that boundary.
 
 ## Design rules
