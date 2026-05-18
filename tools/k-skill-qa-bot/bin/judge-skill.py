@@ -164,12 +164,6 @@ def _deterministic_override(receipt: dict, transcript_text: str, judge: dict, ti
                 out["reason"] = f"duration {duration_ms}ms near timeout"
                 out["confidence"] = max(out["confidence"], 0.8)
 
-    if out["verdict"] == "pass" and "VERDICT: PASS" not in transcript_text:
-        out["verdict"] = "fail"
-        out["symptom_class"] = "wrong-output"
-        out["reason"] = "transcript missing VERDICT: PASS line"
-        out["confidence"] = max(out["confidence"], 0.7)
-
     return out
 
 

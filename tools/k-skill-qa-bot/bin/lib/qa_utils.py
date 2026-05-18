@@ -68,6 +68,13 @@ def synthesize_test_prompt(name, when_to_use, description, category_flags, defau
     flags = category_flags or {}
     inputs = default_inputs or {}
 
+    override_prompt = inputs.get("test_prompt") if isinstance(inputs, dict) else None
+    if isinstance(override_prompt, str) and override_prompt.strip():
+        body = override_prompt.strip()
+        if VERDICT_INSTRUCTION in body or "VERDICT: PASS" in body:
+            return body
+        return f"{body} Use the `{name}` skill to answer this. {VERDICT_INSTRUCTION}"
+
     query = (
         _first_non_empty(when_to_use or [])
         or (description.strip() if isinstance(description, str) and description.strip() else None)
