@@ -38,17 +38,18 @@ metadata:
 별도 입력 없이 실행 가능. 선택적으로 아래를 지정할 수 있다:
 
 - `--query`: 상품명/브랜드 키워드
-- `--min-discount`: 최소 할인율 (정수)
+- `--min-discount`: 최소 할인율 (0~100 정수)
 - `--free-delivery`: 무료배송 상품만
 - `--sort`: 정렬 기준 (`discount`, `price`, `review`, `annual-sales`)
-- `--limit`: 결과 개수 (기본 10)
+- `--limit`: 결과 개수 (양의 정수, 기본 10)
 - `--html-file`: 오프라인 HTML/JSON fixture 경로
 
 ## Official/public surface
 
 - 오늘의집 오늘의딜 페이지: `https://ohou.se/commerces/today_deals`
 - 현재 웹 페이지는 canonical/OG URL로 `https://store.ohou.se/today_deals`를 노출하지만, 브라우저 접근용 공개 URL은 `ohou.se/commerces/today_deals`다.
-- 응답 HTML의 Next.js `__NEXT_DATA__` 안 `today-deal-feed` 데이터만 읽는다.
+- 응답 HTML의 Next.js `__NEXT_DATA__` 안 React Query `dehydratedState`에서 `today-deal-feed`, `special-today-deal-feed` queryKey 두 곳의 `todayDealFeed.slots`만 명시적으로 읽는다. 다른 페이지 모듈(navigation, banner 등)에 `type: DEAL` 노드가 있어도 무시한다.
+- HTTP 요청은 `User-Agent: k-skill-ohou-today-deal/1.0 (+https://github.com/NomaDamas/k-skill)`로 보낸다. ohou.se 앞단 Akamai bot manager는 익명/단축 UA를 차단하지만 봇 이름 + contact URL이 포함된 well-formed UA는 통과시키므로 우회/조작 없이 정직한 자기소개로 요청한다.
 
 ## Prerequisites
 
@@ -72,7 +73,7 @@ python3 ohou-today-deal/scripts/ohou_today_deal.py list --limit 10
     "name": "ohou-today-deal",
     "url": "https://ohou.se/commerces/today_deals",
     "fetched_at": "2026-05-18T01:44:16+00:00",
-    "surface": "__NEXT_DATA__ today-deal-feed"
+    "surface": "__NEXT_DATA__ today-deal-feed + special-today-deal-feed"
   },
   "filters": {"query": null, "min_discount": null, "free_delivery": false, "sort": "discount", "limit": 10},
   "count": 10,
@@ -177,7 +178,9 @@ python3 ohou-today-deal/scripts/ohou_today_deal.py list \
 ## Failure modes
 
 - **`__NEXT_DATA__` 미발견**: 오늘의집이 Next.js SSR 구조를 변경하거나, 서버 렌더링 대신 클라이언트 렌더링으로 전환하면 `ValueError` 발생. 스킬 파서 수정이 필요하다.
-- **HTTP 4xx/5xx**: 봇 차단 또는 일시 장애. 우회 시도하지 않고 에러 출력 후 종료.
+- **today-deal-feed queryKey 미발견**: React Query 키 이름이 바뀌면 `extract_deals()`는 빈 리스트를 반환한다 (`total_count: 0`). `TODAY_DEAL_FEED_KEYS` 상수를 새 키 이름으로 업데이트해야 한다.
+- **HTTP 403**: ohou.se 앞단 Akamai bot manager가 요청을 차단한 경우. `User-Agent` 헤더가 변경되어 봇 자기소개 + contact URL 시그니처를 잃었을 가능성이 높다. 우회 시도하지 않고 에러 출력 후 종료한다.
+- **HTTP 4xx/5xx (기타)**: 일시 장애. 우회 시도하지 않고 에러 출력 후 종료.
 - **빈 응답 (`total_count: 0`)**: 오늘의딜이 아직 업데이트되지 않았거나, 페이지 구조가 바뀐 경우. 브라우저에서 직접 확인을 안내한다.
 - **가격/쿠폰 변동**: `best_price`는 조회 시점 기준이며, 사용자별 쿠폰/결제수단에 따라 실제 결제가는 다를 수 있다.
 - **필드 누락**: 일부 상품에 `bestDiscountPrice`, `badgeProperties.isFreeDelivery`, `scrapInfo` 등이 없을 수 있다. null로 처리된다.

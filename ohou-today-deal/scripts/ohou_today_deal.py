@@ -26,6 +26,13 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_URL = "https://ohou.se/commerces/today_deals"
+DEFAULT_USER_AGENT = (
+    "k-skill-ohou-today-deal/1.0 (+https://github.com/NomaDamas/k-skill)"
+)
+TODAY_DEAL_FEED_KEYS: tuple[tuple[str, ...], ...] = (
+    ("today-deal-feed",),
+    ("special-today-deal-feed",),
+)
 
 
 @dataclass(frozen=True)
@@ -73,10 +80,12 @@ def _to_float(value: Any) -> float | None:
 
 
 def fetch_html(url: str = DEFAULT_URL, timeout: int = 20) -> str:
+    # ohou.se Akamai 정책: 익명 UA(`python-urllib`, `Mozilla/5.0` 단독)는 403,
+    # 봇 이름+contact URL이 포함된 well-formed UA는 허용. 우회가 아닌 자기소개.
     request = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "k-skill-ohou-today-deal/1.0",
+            "User-Agent": DEFAULT_USER_AGENT,
             "Accept": "text/html,application/json",
         },
     )
@@ -126,6 +135,38 @@ def _looks_like_deal_node(node: dict[str, Any]) -> bool:
     )
 
 
+def _iter_today_deal_feeds(payload: dict[str, Any]):
+    """__NEXT_DATA__에서 today-deal-feed / special-today-deal-feed 쿼리만 골라낸다.
+
+    React Query dehydrated state는 `props.pageProps.dehydratedState.queries`에
+    `[{queryKey, state: {data: {...}}}]` 형태로 저장된다. queryKey가 일치하는
+    엔트리의 `state.data.todayDealFeed.slots`만 today-deal 콘텐츠로 인정한다.
+    """
+    allowed = {tuple(key) for key in TODAY_DEAL_FEED_KEYS}
+    queries = (
+        payload.get("props", {})
+        .get("pageProps", {})
+        .get("dehydratedState", {})
+        .get("queries", [])
+    )
+    if not isinstance(queries, list):
+        return
+    for entry in queries:
+        if not isinstance(entry, dict):
+            continue
+        query_key = entry.get("queryKey")
+        if not isinstance(query_key, list):
+            continue
+        if tuple(query_key) not in allowed:
+            continue
+        state = entry.get("state") or {}
+        data = state.get("data") or {}
+        feed = data.get("todayDealFeed") or {}
+        slots = feed.get("slots")
+        if isinstance(slots, list):
+            yield tuple(query_key), slots
+
+
 def _normalize_deal(node: dict[str, Any]) -> OhouDeal:
     deal = node.get("deal", {})
     price = deal.get("price") or {}
@@ -163,14 +204,33 @@ def _normalize_deal(node: dict[str, Any]) -> OhouDeal:
 def extract_deals(payload: dict[str, Any]) -> list[OhouDeal]:
     seen: set[str] = set()
     deals: list[OhouDeal] = []
-    for node in _walk(payload):
-        if not _looks_like_deal_node(node):
-            continue
-        deal = _normalize_deal(node)
-        if deal.id in seen:
-            continue
-        seen.add(deal.id)
-        deals.append(deal)
+    found_feed = False
+
+    for _query_key, slots in _iter_today_deal_feeds(payload):
+        found_feed = True
+        for node in slots:
+            if not isinstance(node, dict) or not _looks_like_deal_node(node):
+                continue
+            deal = _normalize_deal(node)
+            if deal.id in seen:
+                continue
+            seen.add(deal.id)
+            deals.append(deal)
+
+    # Fixture/legacy fallback: payload에 React Query dehydratedState가 없거나
+    # queryKey 구조가 다른 경우(테스트 fixture, 단순화된 페이로드)에 한해서만
+    # 전체 트리를 DFS로 훑어 DEAL 노드를 수집한다. 라이브 페이지는 항상
+    # 위쪽 명시적 분기에서 잡히므로 이 fallback은 영향받지 않는다.
+    if not found_feed:
+        for node in _walk(payload):
+            if not _looks_like_deal_node(node):
+                continue
+            deal = _normalize_deal(node)
+            if deal.id in seen:
+                continue
+            seen.add(deal.id)
+            deals.append(deal)
+
     return deals
 
 
@@ -239,7 +299,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             "url": args.url,
             "fetched_at": now_utc.isoformat(),
             "fetched_at_kst": now_utc.astimezone(kst).strftime("%Y-%m-%d %H:%M:%S KST"),
-            "surface": "__NEXT_DATA__ today-deal-feed",
+            "surface": "__NEXT_DATA__ today-deal-feed + special-today-deal-feed",
         },
         "filters": {
             "query": args.query,
@@ -256,6 +316,28 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected integer, got {value!r}") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError(f"must be a positive integer, got {parsed}")
+    return parsed
+
+
+def _discount_rate(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected integer, got {value!r}") from exc
+    if not 0 <= parsed <= 100:
+        raise argparse.ArgumentTypeError(
+            f"discount rate must be between 0 and 100, got {parsed}"
+        )
+    return parsed
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Read Ohouse today deal products from public HTML.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -264,7 +346,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     list_parser.add_argument("--url", default=DEFAULT_URL)
     list_parser.add_argument("--html-file", help="테스트/오프라인 검증용 HTML 또는 JSON 파일")
     list_parser.add_argument("--query", help="상품명 또는 브랜드 키워드")
-    list_parser.add_argument("--min-discount", type=int, help="최소 할인율")
+    list_parser.add_argument("--min-discount", type=_discount_rate, help="최소 할인율 (0~100)")
     list_parser.add_argument("--free-delivery", action="store_true", help="무료배송 상품만")
     list_parser.add_argument("--include-sold-out", action="store_true", help="품절 상품 포함")
     list_parser.add_argument(
@@ -272,7 +354,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=["default", "discount", "price", "review", "annual-sales"],
         default="discount",
     )
-    list_parser.add_argument("--limit", type=int, default=10)
+    list_parser.add_argument("--limit", type=_positive_int, default=10, help="결과 개수 (양의 정수)")
 
     return parser.parse_args(argv)
 

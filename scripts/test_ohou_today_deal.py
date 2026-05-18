@@ -1,3 +1,4 @@
+import argparse
 import contextlib
 import importlib.util
 import io
@@ -142,6 +143,151 @@ class OhouTodayDealTest(unittest.TestCase):
 
         self.assertEqual(output["count"], 1)
         self.assertEqual(output["items"][0]["id"], "1215312")
+
+
+def react_query_payload():
+    """라이브 ohou.se 페이지와 동일한 React Query dehydratedState 구조.
+
+    - `today-deal-feed` queryKey: today-deal 슬롯 2개 (DEAL 1개, GOODS 1개)
+    - `special-today-deal-feed` queryKey: special-deal 슬롯 1개 (DEAL)
+    - `navigation` queryKey: 무관한 deal-like 노드 (필터로 걸러내야 함)
+    """
+    return {
+        "props": {
+            "pageProps": {
+                "dehydratedState": {
+                    "queries": [
+                        {
+                            "queryKey": ["navigation"],
+                            "state": {
+                                "data": {
+                                    "promo": {
+                                        "type": "DEAL",
+                                        "deal": {
+                                            "id": "9999999",
+                                            "name": "광고 배너 — 필터되어야 함",
+                                            "price": {
+                                                "representativeOriginalPrice": "100000",
+                                                "representativeSellingPrice": "50000",
+                                                "discountRate": "50",
+                                            },
+                                        },
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "queryKey": ["today-deal-feed"],
+                            "state": {
+                                "data": {
+                                    "todayDealFeed": {
+                                        "slots": [
+                                            {
+                                                "title": "오늘의딜 1",
+                                                "type": "DEAL",
+                                                "deal": {
+                                                    "id": "111",
+                                                    "name": "오늘의딜 상품 A",
+                                                    "price": {
+                                                        "representativeOriginalPrice": "10000",
+                                                        "representativeSellingPrice": "7000",
+                                                        "discountRate": "30",
+                                                    },
+                                                    "brand": {"name": "브랜드 A"},
+                                                    "badgeProperties": {"isFreeDelivery": True},
+                                                    "reviewStatistic": {"reviewCount": 10, "reviewAverage": 4.5},
+                                                },
+                                            },
+                                            {
+                                                "title": "오늘의딜 GOODS",
+                                                "type": "GOODS",
+                                                "goods": {"id": "GOODS-1"},
+                                            },
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                        {
+                            "queryKey": ["special-today-deal-feed"],
+                            "state": {
+                                "data": {
+                                    "todayDealFeed": {
+                                        "slots": [
+                                            {
+                                                "title": "스페셜 딜",
+                                                "type": "DEAL",
+                                                "deal": {
+                                                    "id": "222",
+                                                    "name": "스페셜 상품 B",
+                                                    "price": {
+                                                        "representativeOriginalPrice": "20000",
+                                                        "representativeSellingPrice": "12000",
+                                                        "discountRate": "40",
+                                                    },
+                                                },
+                                            }
+                                        ]
+                                    }
+                                }
+                            },
+                        },
+                    ]
+                }
+            }
+        }
+    }
+
+
+class OhouReactQueryShapeTest(unittest.TestCase):
+    def test_extract_deals_picks_only_today_deal_and_special_feeds(self):
+        deals = ohou_today_deal.extract_deals(react_query_payload())
+
+        ids = sorted(deal.id for deal in deals)
+        self.assertEqual(ids, ["111", "222"])
+
+    def test_navigation_deal_like_node_is_excluded(self):
+        deal_ids = {deal.id for deal in ohou_today_deal.extract_deals(react_query_payload())}
+
+        self.assertNotIn("9999999", deal_ids)
+
+    def test_non_deal_slot_types_are_excluded(self):
+        deal_ids = {deal.id for deal in ohou_today_deal.extract_deals(react_query_payload())}
+
+        self.assertNotIn("GOODS-1", deal_ids)
+
+    def test_fixture_payload_without_react_query_still_works(self):
+        deals = ohou_today_deal.extract_deals(sample_payload())
+
+        self.assertEqual(sorted(deal.id for deal in deals), ["1215312", "4070154"])
+
+
+class OhouArgvalidatorTest(unittest.TestCase):
+    def test_limit_rejects_zero_and_negative(self):
+        for bad in ["0", "-1", "-100"]:
+            with self.subTest(value=bad):
+                with self.assertRaises(SystemExit):
+                    ohou_today_deal.parse_args(["list", "--limit", bad])
+
+    def test_min_discount_rejects_out_of_range(self):
+        for bad in ["-1", "101", "200"]:
+            with self.subTest(value=bad):
+                with self.assertRaises(SystemExit):
+                    ohou_today_deal.parse_args(["list", "--min-discount", bad])
+
+    def test_min_discount_accepts_boundary_values(self):
+        for good in ["0", "50", "100"]:
+            with self.subTest(value=good):
+                args = ohou_today_deal.parse_args(["list", "--min-discount", good])
+                self.assertEqual(args.min_discount, int(good))
+
+    def test_positive_int_helper_rejects_non_integer(self):
+        with self.assertRaises(argparse.ArgumentTypeError):
+            ohou_today_deal._positive_int("abc")
+
+    def test_discount_rate_helper_rejects_non_integer(self):
+        with self.assertRaises(argparse.ArgumentTypeError):
+            ohou_today_deal._discount_rate("abc")
 
 
 if __name__ == "__main__":

@@ -1444,6 +1444,11 @@ test("ohou-today-deal docs lock the public Next data read-only workflow", () => 
   assert.match(helper, /DEFAULT_URL = "https:\/\/ohou\.se\/commerces\/today_deals"/);
   assert.match(helper, /__NEXT_DATA__/);
   assert.match(helper, /today-deal-feed/);
+  assert.match(helper, /special-today-deal-feed/);
+  assert.match(
+    helper,
+    /k-skill-ohou-today-deal\/1\.0 \(\+https:\/\/github\.com\/NomaDamas\/k-skill\)/,
+  );
   assert.match(sources, /ohou\.se\/commerces\/today_deals/);
   assert.match(sources, /store\.ohou\.se\/today_deals/);
 });

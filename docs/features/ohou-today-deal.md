@@ -19,7 +19,8 @@
 
 - 브라우저용 공개 URL: `https://ohou.se/commerces/today_deals`
 - 페이지가 노출하는 canonical/OG URL: `https://store.ohou.se/today_deals`
-- 데이터 표면: HTML 안의 Next.js `__NEXT_DATA__` 중 `today-deal-feed`
+- 데이터 표면: HTML 안의 Next.js `__NEXT_DATA__` 안 React Query `dehydratedState`에서 `today-deal-feed`, `special-today-deal-feed` queryKey 두 곳의 `todayDealFeed.slots`만 명시적으로 읽는다.
+- HTTP 요청은 `User-Agent: k-skill-ohou-today-deal/1.0 (+https://github.com/NomaDamas/k-skill)` 헤더로 보낸다 (ohou.se 앞단 Akamai bot manager가 익명/단축 UA를 차단하기 때문에 봇 이름 + contact URL이 들어간 well-formed UA로 정직하게 자기소개한다 — 우회/조작이 아님).
 
 이 기능은 화면 클릭, 로그인 세션, 장바구니, 결제 자동화를 하지 않는다.
 
