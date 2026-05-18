@@ -124,6 +124,7 @@ bash scripts/check-setup.sh
 - [의약품 안전 체크 가이드](features/mfds-drug-safety.md)
 - [식품 안전 체크 가이드](features/mfds-food-safety.md)
 - [창업진흥원 K-Startup 조회 가이드](features/kstartup-search.md)
+- [지방선거 후보자 조회 가이드](features/local-election-candidate-search.md)
 - [보안/시크릿 정책](security-and-secrets.md)
 
 설치 기본 흐름은 "전체 스킬 설치 → 개별 기능 사용" 이다.

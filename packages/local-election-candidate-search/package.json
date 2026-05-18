@@ -1,0 +1,35 @@
+{
+  "name": "local-election-candidate-search",
+  "version": "0.1.0",
+  "description": "Public NEC Korean local election candidate lookup client for k-skill",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "local-election-candidate-search": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "nec",
+    "korea",
+    "local-election",
+    "candidate"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/cli.js && node --check test/index.test.js",
+    "test": "node --test"
+  }
+}
