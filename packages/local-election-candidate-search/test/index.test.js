@@ -153,6 +153,23 @@ test("parseSearchHtml supports election/date/region filters", () => {
   assert.equal(result.items[0].district, "서울특별시(동작구가선거구)")
 })
 
+test("parseSearchHtml deduplicates repeated candidate election entries before applying limit", () => {
+  const duplicateList = SEARCH_HTML.match(/<div class="list" data-election-type="4"[\s\S]*?<\/div>\s*<\/div>\s*<div class="list" data-election-code="2"/)[0]
+    .replace(/\s*<div class="list" data-election-code="2"$/, "")
+  const duplicateHtml = SEARCH_HTML.replace(duplicateList, `${duplicateList}\n${duplicateList}`)
+  const result = parseSearchHtml(duplicateHtml, {
+    name: "김동연",
+    electionCode: "기초의원",
+    electionDate: "2014",
+    region: "동작",
+    limit: 1
+  })
+
+  assert.equal(result.summary.returned_count, 1)
+  assert.equal(result.summary.matched_before_limit, 1)
+  assert.deepEqual(result.items.map((item) => item.district), ["서울특별시(동작구가선거구)"])
+})
+
 test("parseSearchHtml reports empty and blocked pages as explicit failure modes", () => {
   const empty = parseSearchHtml(EMPTY_HTML, { name: "없는후보" })
   const blocked = parseSearchHtml(BLOCKED_HTML, { name: "오세훈" })
@@ -199,4 +216,17 @@ test("CLI --help exits successfully and prints usage", () => {
 
   assert.equal(proc.status, 0, proc.stderr)
   assert.match(proc.stdout, /Usage: local-election-candidate-search/)
+})
+
+test("CLI expected validation errors print concise messages without stack traces", () => {
+  const cli = require.resolve("../src/cli")
+  const proc = spawnSync(process.execPath, [cli], {
+    cwd: require("node:path").join(__dirname, ".."),
+    encoding: "utf8"
+  })
+
+  assert.equal(proc.status, 1)
+  assert.match(proc.stderr, /Provide a candidate name to search\./)
+  assert.doesNotMatch(proc.stderr, /\n\s+at /)
+  assert.equal(proc.stdout, "")
 })

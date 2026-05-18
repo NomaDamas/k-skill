@@ -52,7 +52,9 @@ Options:
 }
 
 function formatError(error) {
-  return error && error.stack ? error.stack : String(error)
+  if (process.env.LOCAL_ELECTION_CANDIDATE_SEARCH_DEBUG && error && error.stack) return error.stack
+  if (error && error.message) return `Error: ${error.message}`
+  return String(error)
 }
 
 function run(argv = process.argv.slice(2), io = console) {

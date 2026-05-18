@@ -234,10 +234,24 @@ function filterItem(item, options) {
   return true
 }
 
+function getCandidateElectionKey(item) {
+  return [
+    item.name,
+    item.birth_date,
+    item.election_name_code,
+    item.election_code,
+    item.party,
+    item.district,
+    item.votes,
+    item.vote_share
+  ].map((value) => cleanText(value)).join("|")
+}
+
 function parseSearchHtml(html, options = {}) {
   const normalized = normalizeSearchOptions(options)
   const warnings = []
   const items = []
+  const itemKeys = new Set()
   const source = { url: NEC_SEARCH_URL, method: "POST", surface: "NEC election statistics integrated candidate search" }
   if (isUnexpectedHtml(html)) {
     warnings.push(`unexpected NEC search HTML; possible NetFunnel 로그인 점검 block page: ${stripTags(html).slice(0, 160)}`)
@@ -296,7 +310,13 @@ function parseSearchHtml(html, options = {}) {
         town_code: getHtmlAttr(listAttrs, "data-town-code"),
         ...profile
       })
-      if (filterItem(item, normalized)) items.push(item)
+      if (filterItem(item, normalized)) {
+        const itemKey = getCandidateElectionKey(item)
+        if (!itemKeys.has(itemKey)) {
+          itemKeys.add(itemKey)
+          items.push(item)
+        }
+      }
     }
   }
 
