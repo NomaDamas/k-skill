@@ -100,7 +100,7 @@ function normalizeSearchOptions(options = {}) {
   const name = cleanText(options.name ?? options.keyword ?? options.q ?? options.query ?? options.searchKeyword)
   if (!name) throw new Error("Provide a candidate name to search.")
   if (name.length > 30) throw new Error("Candidate name must be 30 characters or fewer.")
-  return {
+  const normalized = {
     name,
     localOnly: normalizeBoolean(options.localOnly ?? options.local ?? options.onlyLocal, true),
     electionCode: normalizeElectionCode(options.electionCode ?? options.election ?? options.electionType ?? options.type),
@@ -109,6 +109,17 @@ function normalizeSearchOptions(options = {}) {
     limit: parsePositiveInteger(options.limit ?? options.pageSize, { defaultValue: DEFAULT_LIMIT, min: 1, max: MAX_LIMIT, label: "limit" }),
     includeHtml: Boolean(options.includeHtml)
   }
+  normalized.upstreamLimit = parsePositiveInteger(options.upstreamLimit ?? options.recordCountPerPage, {
+    defaultValue: hasClientSideFilters(normalized) ? MAX_LIMIT : normalized.limit,
+    min: normalized.limit,
+    max: MAX_LIMIT,
+    label: "upstream limit"
+  })
+  return normalized
+}
+
+function hasClientSideFilters(options) {
+  return Boolean(options.localOnly || options.electionCode || options.electionDate || options.region)
 }
 
 function buildSearchRequest(options = {}) {
@@ -117,7 +128,7 @@ function buildSearchRequest(options = {}) {
     searchKeyword: normalized.name,
     pageIndex: "1",
     firstIndex: "0",
-    recordCountPerPage: String(normalized.limit)
+    recordCountPerPage: String(normalized.upstreamLimit)
   }).toString()
   return {
     url: NEC_SEARCH_URL,
@@ -183,7 +194,7 @@ function parseTitle(titleHtml) {
   let voteShare = null
   let elected = /당선/.test(afterMark)
 
-  if (segments.length === 2 && /선거$/.test(segments[0])) {
+  if (segments[0] && /선거$/.test(segments[0])) {
     party = null
     electionType = segments[0]
     district = segments[1]
@@ -259,10 +270,14 @@ function parseSearchHtml(html, options = {}) {
 
   const resultRegex = /<div\b([^>]*)class=(['"])[^'"]*\bresult\b[^'"]*\2([^>]*)>([\s\S]*?)(?=<div\b[^>]*class=(['"])[^'"]*\bresult\b|<div\b[^>]*class=(['"])[^'"]*\bpage\b|<\/body>|$)/gi
   let parsedResultCards = 0
+  let parsedElectionEntries = 0
   for (const resultMatch of html.matchAll(resultRegex)) {
     parsedResultCards += 1
     const resultAttrs = `${resultMatch[1] || ""} ${resultMatch[3] || ""}`
     const resultHtml = resultMatch[4]
+    const listRegex = /<div\b([^>]*)class=(['"])[^'"]*\blist\b[^'"]*\2([^>]*)>([\s\S]*?)(?=<div\b[^>]*class=(['"])[^'"]*\blist\b|<\/div>\s*<\/div>\s*(?:<div\b[^>]*class=(['"])[^'"]*\bresult\b|<\/div>|$))/gi
+    const listMatches = [...resultHtml.matchAll(listRegex)]
+    parsedElectionEntries += listMatches.length
     const nameMatch = resultHtml.match(/<p\b[^>]*class=(['"])[^'"]*\bname\b[^'"]*\1[^>]*>([\s\S]*?)<\/p>/i)
     const nameHtml = nameMatch ? nameMatch[2] : ""
     const strongMatch = nameHtml.match(/<strong[^>]*>([\s\S]*?)<\/strong>/i)
@@ -280,8 +295,7 @@ function parseSearchHtml(html, options = {}) {
     const hanja = hanjaMatch ? stripTags(hanjaMatch[2]) : null
     const { birthDate, gender } = parseBirthDateAndGender(dateMatch ? stripTags(dateMatch[2]) : stripTags(nameHtml), resultAttrs)
 
-    const listRegex = /<div\b([^>]*)class=(['"])[^'"]*\blist\b[^'"]*\2([^>]*)>([\s\S]*?)(?=<div\b[^>]*class=(['"])[^'"]*\blist\b|<\/div>\s*<\/div>\s*(?:<div\b[^>]*class=(['"])[^'"]*\bresult\b|<\/div>|$))/gi
-    for (const listMatch of resultHtml.matchAll(listRegex)) {
+    for (const listMatch of listMatches) {
       const listAttrs = `${listMatch[1] || ""} ${listMatch[3] || ""}`
       const listHtml = listMatch[4]
       const titleMatch = listHtml.match(/<div\b[^>]*class=(['"])[^'"]*\bt\b[^'"]*\1[^>]*>([\s\S]*?)(?:<button\b[^>]*class=(['"])[^'"]*\bmore\b|<div\b[^>]*class=(['"])[^'"]*\bbox\b|$)/i)
@@ -323,6 +337,9 @@ function parseSearchHtml(html, options = {}) {
   if (parsedResultCards === 0 && hasUnparsedCandidateResults(html)) {
     warnings.push("parser drift suspected: NEC search result markers were present but no supported result cards could be parsed")
   }
+  if (hasClientSideFilters(normalized) && parsedElectionEntries >= normalized.upstreamLimit) {
+    warnings.push(`NEC search page was capped at ${normalized.upstreamLimit} upstream rows before client-side filters; additional matches may require pagination`)
+  }
 
   const limitedItems = items.slice(0, normalized.limit)
   if (limitedItems.length === 0 && warnings.length === 0) warnings.push("no candidate results matched the provided name/filters on the NEC search page")
@@ -338,6 +355,7 @@ function parseSearchHtml(html, options = {}) {
     summary: {
       returned_count: limitedItems.length,
       matched_before_limit: items.length,
+      upstream_result_limit: normalized.upstreamLimit,
       local_only: normalized.localOnly
     },
     items: limitedItems,

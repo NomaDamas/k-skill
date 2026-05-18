@@ -70,10 +70,13 @@ Return concise JSON. Each `items[]` row may include:
 - `job`, `education`, `career[]`
 - upstream code fields such as `city_code`, `sgg_city_code`, `town_code`
 
+`summary.upstream_result_limit` shows the NEC row count requested before local client-side filters. Filtered searches request up to 100 upstream rows first, then apply exact-name matching, local/election/date/region filters, deduplication, and the final `--limit`.
+
 ## Failure modes
 
 - `no candidate results`: NEC returned no matching card or filters removed all matches.
 - `unexpected NEC search HTML`: upstream may be in maintenance, NetFunnel queue, login/blocked state, or markup changed.
+- `NEC search page was capped`: filtered results are based on the maximum fetched page and may require upstream pagination for exhaustive coverage.
 - Homonyms: the same name can appear across many elections; always show election date/type/district and apply user-provided filters.
 - Future elections: candidate registration data may be incomplete until NEC publishes it.
 

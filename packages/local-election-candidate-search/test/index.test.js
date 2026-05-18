@@ -61,6 +61,19 @@ const SEARCH_HTML = `<!doctype html><html><body>
 
 const EMPTY_HTML = `<!doctype html><html><body><article class="content"><div class="resultDiv"></div><script>fn_firstView();</script></article></body></html>`
 const BLOCKED_HTML = `<!doctype html><html><body><h1>서비스 점검 안내</h1><p>NetFunnel 대기열 또는 로그인 확인 후 다시 이용해 주세요.</p></body></html>`
+const SUPERINTENDENT_HTML = `<!doctype html><html><body>
+<div class="resultDiv">
+  <div class="result" data-birthday="19561006">
+    <p class="name"><strong>조희연</strong><span class="hanja">(曺喜昖)</span> <span class="date">1956년 10월 06일(남)</span></p>
+    <div class="list" data-election-code="11" data-election-name="20140604" data-city-code="1100">
+      <div class="t">
+        <button type="button"><mark>[2014.06.04] 제6회 전국동시지방선거</mark></button>
+        교육감선거<span class="slash"> /</span> 서울특별시<span class="slash"> /</span> 1,614,564표 (38.10%)
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>`
 
 test("normalizeSearchOptions requires an exact candidate name and defaults to local elections", () => {
   const options = normalizeSearchOptions({ q: " 오세훈 ", limit: "200" })
@@ -91,6 +104,15 @@ test("buildSearchRequest posts to the official NEC integrated candidate search",
   assert.equal(request.method, "POST")
   assert.equal(request.headers["content-type"], "application/x-www-form-urlencoded;charset=UTF-8")
   assert.equal(new URLSearchParams(request.body).get("searchKeyword"), "오세훈")
+})
+
+test("buildSearchRequest fetches a full upstream page before client-side filters and output limit", () => {
+  const request = buildSearchRequest({ name: "조희연", election: "교육감", region: "서울", limit: 1 })
+  const body = new URLSearchParams(request.body)
+
+  assert.equal(body.get("recordCountPerPage"), "100")
+  assert.equal(request.options.limit, 1)
+  assert.equal(request.options.upstreamLimit, 100)
 })
 
 test("parseSearchHtml returns local election candidate entries with profile fields", () => {
@@ -151,6 +173,48 @@ test("parseSearchHtml supports election/date/region filters", () => {
   assert.equal(result.items.length, 1)
   assert.equal(result.items[0].election_code, "6")
   assert.equal(result.items[0].district, "서울특별시(동작구가선거구)")
+})
+
+test("parseSearchHtml parses no-party education superintendent vote rows for region filters", () => {
+  const result = parseSearchHtml(SUPERINTENDENT_HTML, { name: "조희연", election: "교육감", region: "서울", limit: 5 })
+
+  assert.equal(result.summary.returned_count, 1)
+  assert.equal(result.items[0].party, undefined)
+  assert.equal(result.items[0].election_type, "교육감선거")
+  assert.equal(result.items[0].district, "서울특별시")
+  assert.equal(result.items[0].votes, 1614564)
+  assert.equal(result.items[0].vote_share, "38.10%")
+  assert.equal(result.warnings.join("\n"), "")
+})
+
+test("searchCandidates applies output limit after fetching enough upstream rows for filters", async () => {
+  const calls = []
+  const result = await searchCandidates({ name: "조희연", election: "교육감", region: "서울", limit: 1 }, {
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init })
+      return { ok: true, status: 200, text: async () => SUPERINTENDENT_HTML }
+    }
+  })
+
+  assert.equal(new URLSearchParams(calls[0].init.body).get("recordCountPerPage"), "100")
+  assert.equal(result.summary.returned_count, 1)
+  assert.equal(result.summary.matched_before_limit, 1)
+  assert.equal(result.summary.upstream_result_limit, 100)
+  assert.equal(result.items[0].name, "조희연")
+})
+
+test("parseSearchHtml warns when a filtered upstream page reaches the fetched row cap", () => {
+  const cappedHtml = SEARCH_HTML.replace("오세훈", "다른후보").replace("김동연", "다른사람")
+  const result = parseSearchHtml(cappedHtml, {
+    name: "오세훈",
+    election: "시도지사",
+    region: "서울",
+    limit: 1,
+    upstreamLimit: 2
+  })
+
+  assert.equal(result.items.length, 0)
+  assert.match(result.warnings.join("\n"), /capped at 2 upstream rows/i)
 })
 
 test("parseSearchHtml deduplicates repeated candidate election entries before applying limit", () => {
