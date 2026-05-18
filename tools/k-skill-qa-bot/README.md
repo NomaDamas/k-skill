@@ -1,14 +1,14 @@
 # k-skill-qa-bot
 
-Automated QA daemon for the **k-skill** skill library. Runs every 3 days via macOS launchd, tests every skill via `codex exec --json --sandbox read-only`, has an LLM judge grade pass/fail/skip, and files dedup'd GitHub issues for skills that have broken.
+Automated QA daemon for the **k-skill** skill library. Runs every 3 days via macOS launchd, tests every skill via `codex exec --json --dangerously-bypass-approvals-and-sandbox`, has a read-only LLM judge grade pass/fail/skip, and files dedup'd GitHub issues for skills that have broken.
 
 ## What it does
 
 1. **Refreshes** a shallow clone of `NomaDamas/k-skill` `main` every 3 days.
 2. **Discovers** every `<skill>/SKILL.md`.
 3. **Classifies** each skill (read-only / location / login / destructive / api-key / proxy-dependent / deprecated).
-4. **Runs** each suitable skill through `codex exec --json --sandbox read-only` with a smoke-test prompt synthesized from the skill's `## When to use` bullets.
-5. **Judges** the result via a second `codex exec` call using a cheaper model and a strict JSON Schema.
+4. **Runs** each suitable skill through `codex exec --json --dangerously-bypass-approvals-and-sandbox` with a smoke-test prompt synthesized from the skill's `## When to use` bullets. The daemon runs as a dedicated LaunchAgent with non-interactive approvals; avoiding the Codex sandbox prevents false DNS/network failures during skill smoke tests.
+5. **Judges** the result via a second read-only `codex exec` call using the configured judge model and a strict JSON Schema.
 6. **Files** dedup'd issues on `NomaDamas/k-skill` for true failures (with `auto-qa` label). Skipped skills (deprecated, login-required, missing API key) never create issues.
 
 The k-skill repo itself is **never modified** by the bot — it is read-only SSOT. Test prompts are synthesized from each `SKILL.md`.
@@ -50,7 +50,8 @@ Overridable variables (see `config/defaults.sh`):
 |---|---|---|
 | `CREATE_ISSUES` | `false` | File GH issues for failures |
 | `CODEX_MODEL` | `gpt-5.5` | Model for skill exec |
-| `JUDGE_MODEL` | `gpt-5.4-mini` | Model for LLM judge |
+| `JUDGE_MODEL` | `gpt-5.5` | Model for LLM judge |
+| `CODEX_PROVIDER` | `openai` | Codex model provider for skill exec and judge calls |
 | `TIMEOUT_SECS` | `180` | Per-skill timeout |
 | `JUDGE_TIMEOUT_SECS` | `60` | Per-judge timeout |
 | `MAX_PARALLEL` | `4` | Concurrent skill tests |
@@ -85,7 +86,8 @@ bash ~/.local/share/k-skill-qa-bot/uninstall.sh --yes --purge --purge-logs
 
 ## Safety
 
-- `--sandbox read-only` pins the codex sandbox.
+- Skill smoke tests use `--dangerously-bypass-approvals-and-sandbox` because this bot runs unattended as a dedicated LaunchAgent and the Codex sandbox can block legitimate DNS/network lookups.
+- The LLM judge stays on the safer `-s read-only` path with `approval_policy="never"`; it only reads transcripts/prompts and emits JSON.
 - 10 destructive/login-required skills are force-skipped before any codex call is issued.
 - Deprecated skills (`~~name~~ ⚠️ 지원 중단` in README) are detected and skipped.
 - `update-clone.sh` refuses any `K_SKILL_CLONE` outside `K_QA_HOME/k-skill-clone` unless `ALLOW_EXTERNAL_CLONE_TARGET=1` (prevents the script from git-reset'ing the wrong directory).

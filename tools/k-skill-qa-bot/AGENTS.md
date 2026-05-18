@@ -8,7 +8,7 @@ Source tree for **k-skill-qa-bot**, an automated QA daemon for the k-skill repos
 - Every 3 days (launchd LaunchAgent), the daemon:
   1. Refreshes a shallow clone of `NomaDamas/k-skill` `main`.
   2. Discovers every `<skill>/SKILL.md`, classifies each skill (read-only / location / login / destructive / api-key / proxy-dependent / deprecated).
-  3. Runs each suitable skill through `codex exec` (read-only sandbox) with a smoke-test prompt synthesized from the skill's `## When to use`.
+  3. Runs each suitable skill through `codex exec --dangerously-bypass-approvals-and-sandbox` with a smoke-test prompt synthesized from the skill's `## When to use`, while keeping the separate LLM judge on a read-only/no-approval Codex path.
   4. An LLM judge (`codex exec --output-schema`) grades pass / fail / skip.
   5. Failed skills are filed as dedup'd issues on `NomaDamas/k-skill`. Skipped skills (login required, deprecated, missing API key) never create issues.
 
