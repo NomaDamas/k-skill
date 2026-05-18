@@ -49,6 +49,44 @@ OPERATIONS: Dict[str, Dict[str, Any]] = {
 YN_FIELDS = {"intg_pbanc_yn", "rcrt_prgs_yn"}
 DATE_FIELDS = {"pbanc_rcpt_bgng_dt", "pbanc_rcpt_end_dt"}
 
+# Fields where the K-Startup upstream is observed to ignore the server-side
+# filter and return non-matching rows. SKILL.md L121 promises that the helper
+# re-applies these filters on the client side after receiving the response.
+#
+# - supt_regin: upstream returns mixed regions even when supt_regin is set.
+# - aply_trgt:  upstream returns rows whose aply_trgt does not contain the
+#               requested target (e.g. asking for "예비창업자" returns rows
+#               with only "일반인,일반기업").
+# - biz_enyy:   upstream returns rows whose biz_enyy does not include the
+#               requested founding period bucket.
+#
+# Matching policy: substring match against the comma-separated list inside
+# each row's field. Multiple requested values (comma-separated by the user)
+# are AND-joined: every requested token must appear somewhere in the row.
+# This mirrors how the K-Startup web UI narrows results.
+CLIENT_FILTER_FIELDS = {"supt_regin", "aply_trgt", "biz_enyy"}
+
+REGION_SHORTNAME = {
+    "서울특별시": "서울", "서울시": "서울", "서울": "서울",
+    "부산광역시": "부산", "부산시": "부산", "부산": "부산",
+    "대구광역시": "대구", "대구시": "대구", "대구": "대구",
+    "인천광역시": "인천", "인천시": "인천", "인천": "인천",
+    "광주광역시": "광주", "광주시": "광주", "광주": "광주",
+    "대전광역시": "대전", "대전시": "대전", "대전": "대전",
+    "울산광역시": "울산", "울산시": "울산", "울산": "울산",
+    "세종특별자치시": "세종", "세종시": "세종", "세종": "세종",
+    "경기도": "경기", "경기": "경기",
+    "강원특별자치도": "강원", "강원도": "강원", "강원": "강원",
+    "충청북도": "충북", "충북": "충북",
+    "충청남도": "충남", "충남": "충남",
+    "전북특별자치도": "전북", "전라북도": "전북", "전북": "전북",
+    "전라남도": "전남", "전남": "전남",
+    "경상북도": "경북", "경북": "경북",
+    "경상남도": "경남", "경남": "경남",
+    "제주특별자치도": "제주", "제주도": "제주", "제주": "제주",
+    "전국": "전국",
+}
+
 
 class HelperError(RuntimeError):
     """User-facing CLI error."""
@@ -183,6 +221,65 @@ def http_get(url: str, *, timeout: int) -> Tuple[int, str, str]:
         raise HelperError(f"network error: {exc.reason}") from exc
 
 
+def _normalise_filter_token(field: str, token: str) -> str:
+    if field == "supt_regin":
+        return REGION_SHORTNAME.get(token, token)
+    return token
+
+
+def _row_matches_token(row: Dict[str, Any], field: str, token: str) -> bool:
+    raw = row.get(field)
+    if raw is None:
+        return False
+    haystack = str(raw)
+    needle = _normalise_filter_token(field, token)
+    return needle in haystack
+
+
+def _row_matches_field(row: Dict[str, Any], field: str, requested: str) -> bool:
+    tokens = [t.strip() for t in requested.split(",") if t.strip()]
+    if not tokens:
+        return True
+    return all(_row_matches_token(row, field, token) for token in tokens)
+
+
+def apply_client_filters(
+    payload: Dict[str, Any],
+    args: argparse.Namespace,
+    operation: str,
+) -> Dict[str, Any]:
+    if operation != "announcements":
+        return payload
+    requested: Dict[str, str] = {}
+    for field in CLIENT_FILTER_FIELDS:
+        value = getattr(args, field, None)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            requested[field] = text
+    if not requested:
+        return payload
+    data = payload.get("data")
+    if not isinstance(data, list):
+        return payload
+    upstream_count = len(data)
+    filtered = [
+        row for row in data
+        if isinstance(row, dict)
+        and all(_row_matches_field(row, field, value) for field, value in requested.items())
+    ]
+    payload["data"] = filtered
+    payload["currentCount"] = len(filtered)
+    payload["client_filter"] = {
+        "fields": requested,
+        "upstream_returned": upstream_count,
+        "after_filter": len(filtered),
+        "note": "Applied after upstream response because K-Startup ignores some server-side filters.",
+    }
+    return payload
+
+
 def summarise(operation: str, payload: Dict[str, Any]) -> str:
     items: Iterable[Dict[str, Any]] = []
     if isinstance(payload, dict):
@@ -296,6 +393,8 @@ def run(argv: Optional[List[str]] = None) -> int:
     if not isinstance(payload, dict):
         payload = {"raw": payload}
     payload.setdefault("query", query)
+
+    payload = apply_client_filters(payload, args, operation)
 
     if args.text:
         print(summarise(operation, payload))

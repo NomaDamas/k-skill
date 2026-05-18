@@ -118,7 +118,12 @@ python3 scripts/run_kstartup.py announcements \
 
 ### 4. Filter on the client side for richer questions
 
-API는 단순 필드 매칭만 지원하고, **그중 `supt_regin` 같은 일부 필터는 upstream이 서버 측에서 적용하지 않는 사례가 관측된다.** `--supt-regin 서울특별시`로 호출해도 타 지역 공고가 섞여 돌아오는 경우가 있어서, `supt_regin`·`aply_trgt`·`biz_enyy` 처럼 답변 정확도가 중요한 필드는 helper가 받은 응답 JSON을 client에서 한 번 더 거른다. `pbanc_rcpt_end_dt`는 `YYYY-MM-DD HH:MM:SS` 문자열이라 KST 기준으로 직접 비교한다. "이번 주 마감", "30대 대상", "특정 키워드 포함" 같은 복합 조건도 client에서 마저 처리한다.
+API는 단순 필드 매칭만 지원하고, **그중 `supt_regin` 같은 일부 필터는 upstream이 서버 측에서 적용하지 않는 사례가 관측된다.** `--supt-regin 서울특별시`로 호출해도 타 지역 공고가 섞여 돌아오는 경우가 있어서, `supt_regin`·`aply_trgt`·`biz_enyy` 필드는 helper가 받은 응답을 client에서 한 번 더 거른다.
+
+- 응답 `supt_regin`은 upstream이 축약형(`서울`, `경기`, `충북`)으로 돌려준다. helper는 사용자가 `--supt-regin 서울특별시` 같은 표준 광역지자체명을 줘도 17개 광역시·도(+ `전국`) 매핑 테이블로 자동 정규화해 매치한다.
+- client filter가 적용되면 응답 JSON에 `client_filter: {fields, upstream_returned, after_filter}` 블록이 함께 붙는다. `upstream_returned`는 같지만 `after_filter`가 작으면 첫 페이지로는 부족하니 `--page`를 늘려 추가 페이지를 받는다.
+- 쉼표로 여러 값을 주면 AND 매치다 (`--aply-trgt 예비창업자,1년미만` → 두 토큰 모두 row에 있어야 통과).
+- `pbanc_rcpt_end_dt`는 `YYYYMMDD` 문자열이라 KST 기준으로 직접 비교한다. "이번 주 마감", "30대 대상", "특정 키워드 포함" 같은 복합 조건은 helper가 안 거르므로 응답 JSON에서 agent가 직접 처리한다.
 
 ### 5. Cite the source
 

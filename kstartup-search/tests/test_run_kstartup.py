@@ -186,5 +186,134 @@ class DryRunIntegrationTests(unittest.TestCase):
         self.assertNotIn("super-secret", payload["url"])
 
 
+class ClientFilterTests(unittest.TestCase):
+    @staticmethod
+    def _payload(rows):
+        return {
+            "currentCount": len(rows),
+            "data": list(rows),
+            "totalCount": 999,
+            "page": 1,
+            "perPage": len(rows),
+        }
+
+    def test_supt_regin_drops_other_regions(self):
+        payload = self._payload([
+            {"biz_pbanc_nm": "서울 청년창업", "supt_regin": "서울"},
+            {"biz_pbanc_nm": "경북 모집", "supt_regin": "경북"},
+            {"biz_pbanc_nm": "충북 K-바이오", "supt_regin": "충북"},
+        ])
+        args = make_args("announcements", supt_regin="서울특별시")
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertEqual(result["currentCount"], 1)
+        self.assertEqual(result["data"][0]["biz_pbanc_nm"], "서울 청년창업")
+        self.assertEqual(result["client_filter"]["upstream_returned"], 3)
+        self.assertEqual(result["client_filter"]["after_filter"], 1)
+        self.assertEqual(result["client_filter"]["fields"]["supt_regin"], "서울특별시")
+
+    def test_supt_regin_normalises_long_official_names(self):
+        rows = [
+            ("서울특별시", "서울"),
+            ("부산광역시", "부산"),
+            ("경기도", "경기"),
+            ("강원특별자치도", "강원"),
+            ("전북특별자치도", "전북"),
+            ("제주특별자치도", "제주"),
+            ("세종특별자치시", "세종"),
+        ]
+        for long_name, short_name in rows:
+            payload = self._payload([
+                {"biz_pbanc_nm": "match", "supt_regin": short_name},
+                {"biz_pbanc_nm": "other", "supt_regin": "전국"},
+            ])
+            args = make_args("announcements", supt_regin=long_name)
+            result = run_kstartup.apply_client_filters(payload, args, "announcements")
+            self.assertEqual(
+                [row["biz_pbanc_nm"] for row in result["data"]],
+                ["match"],
+                f"long name {long_name!r} should match upstream short form {short_name!r}",
+            )
+
+    def test_supt_regin_short_form_also_works(self):
+        payload = self._payload([
+            {"biz_pbanc_nm": "match", "supt_regin": "서울"},
+            {"biz_pbanc_nm": "other", "supt_regin": "경기"},
+        ])
+        args = make_args("announcements", supt_regin="서울")
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertEqual([row["biz_pbanc_nm"] for row in result["data"]], ["match"])
+
+    def test_supt_regin_handles_nationwide_rows_explicitly(self):
+        payload = self._payload([
+            {"biz_pbanc_nm": "전국 공모", "supt_regin": "전국"},
+            {"biz_pbanc_nm": "서울 공모", "supt_regin": "서울특별시"},
+        ])
+        args = make_args("announcements", supt_regin="서울특별시")
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertEqual([row["biz_pbanc_nm"] for row in result["data"]], ["서울 공모"])
+
+    def test_aply_trgt_substring_match_in_comma_list(self):
+        payload = self._payload([
+            {"biz_pbanc_nm": "예비창업자 대상", "aply_trgt": "일반인,일반기업,예비창업자"},
+            {"biz_pbanc_nm": "일반 대상", "aply_trgt": "일반인,일반기업"},
+        ])
+        args = make_args("announcements", aply_trgt="예비창업자")
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertEqual(len(result["data"]), 1)
+        self.assertEqual(result["data"][0]["biz_pbanc_nm"], "예비창업자 대상")
+
+    def test_multiple_filters_are_anded(self):
+        payload = self._payload([
+            {"biz_pbanc_nm": "ok",     "supt_regin": "서울특별시", "aply_trgt": "예비창업자"},
+            {"biz_pbanc_nm": "wrong-region", "supt_regin": "경기도",   "aply_trgt": "예비창업자"},
+            {"biz_pbanc_nm": "wrong-target", "supt_regin": "서울특별시", "aply_trgt": "일반인"},
+        ])
+        args = make_args(
+            "announcements",
+            supt_regin="서울특별시",
+            aply_trgt="예비창업자",
+        )
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertEqual([row["biz_pbanc_nm"] for row in result["data"]], ["ok"])
+
+    def test_comma_separated_request_requires_all_tokens(self):
+        payload = self._payload([
+            {"biz_pbanc_nm": "match-all",   "biz_enyy": "예비창업자,1년미만,2년미만"},
+            {"biz_pbanc_nm": "missing-one", "biz_enyy": "예비창업자"},
+        ])
+        args = make_args("announcements", biz_enyy="예비창업자,1년미만")
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertEqual([row["biz_pbanc_nm"] for row in result["data"]], ["match-all"])
+
+    def test_no_client_filter_args_is_passthrough(self):
+        payload = self._payload([{"biz_pbanc_nm": "x", "supt_regin": "전국"}])
+        args = make_args("announcements")
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertEqual(result["currentCount"], 1)
+        self.assertNotIn("client_filter", result)
+
+    def test_non_announcements_operations_are_passthrough(self):
+        payload = self._payload([{"titl_nm": "공모전 공지"}])
+        args = make_args("contents")
+        result = run_kstartup.apply_client_filters(payload, args, "contents")
+        self.assertEqual(result["currentCount"], 1)
+        self.assertNotIn("client_filter", result)
+
+    def test_empty_filter_value_is_treated_as_unset(self):
+        payload = self._payload([{"supt_regin": "경기도"}])
+        args = make_args("announcements", supt_regin="   ")
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertNotIn("client_filter", result)
+
+    def test_missing_field_in_row_is_not_matched(self):
+        payload = self._payload([
+            {"biz_pbanc_nm": "has-field", "supt_regin": "서울특별시"},
+            {"biz_pbanc_nm": "no-field"},
+        ])
+        args = make_args("announcements", supt_regin="서울특별시")
+        result = run_kstartup.apply_client_filters(payload, args, "announcements")
+        self.assertEqual([row["biz_pbanc_nm"] for row in result["data"]], ["has-field"])
+
+
 if __name__ == "__main__":
     unittest.main()
