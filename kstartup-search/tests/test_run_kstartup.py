@@ -67,6 +67,25 @@ class BuildQueryTests(unittest.TestCase):
         with self.assertRaises(run_kstartup.HelperError):
             run_kstartup.build_query(args, "announcements")
 
+    def test_announcements_rejects_impossible_calendar_date(self):
+        # Calendar-impossible dates (Feb 30, Apr 31, month 13, day 0) must be
+        # rejected by the Python helper so `--direct` mode does not drift from
+        # the proxy-side Date.UTC() validation in kstartup.js.
+        impossible_values = ["20240230", "20240431", "20241301", "20240100"]
+        for value in impossible_values:
+            args = make_args("announcements", pbanc_rcpt_bgng_dt=value)
+            with self.assertRaises(run_kstartup.HelperError):
+                run_kstartup.build_query(args, "announcements")
+
+        # Leap-day boundary: 2024-02-29 is valid (leap), 2023-02-29 is not.
+        args_leap_ok = make_args("announcements", pbanc_rcpt_bgng_dt="20240229")
+        query = run_kstartup.build_query(args_leap_ok, "announcements")
+        self.assertEqual(query["pbanc_rcpt_bgng_dt"], "20240229")
+
+        args_leap_bad = make_args("announcements", pbanc_rcpt_bgng_dt="20230229")
+        with self.assertRaises(run_kstartup.HelperError):
+            run_kstartup.build_query(args_leap_bad, "announcements")
+
     def test_invalid_yn_raises(self):
         args = make_args("announcements", rcrt_prgs_yn="maybe")
         with self.assertRaises(run_kstartup.HelperError):

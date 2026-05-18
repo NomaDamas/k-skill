@@ -7,6 +7,7 @@ stdlib only (urllib, json, argparse, ssl).
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import ssl
@@ -96,8 +97,10 @@ def validate_yyyymmdd(value: str, field: str) -> str:
     year = int(digits[0:4])
     month = int(digits[4:6])
     day = int(digits[6:8])
-    if not (1 <= month <= 12 and 1 <= day <= 31):
-        raise HelperError(f"{field} must be a valid YYYYMMDD date (got: {value!r})")
+    try:
+        datetime.date(year, month, day)
+    except ValueError as exc:
+        raise HelperError(f"{field} must be a valid YYYYMMDD date (got: {value!r})") from exc
     return digits
 
 
