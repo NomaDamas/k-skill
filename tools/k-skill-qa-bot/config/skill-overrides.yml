@@ -32,3 +32,47 @@ iros-registry-automation:
 
 bunjang-search:
   test_path: "search-only"
+
+flight-ticket-search:
+  default_inputs:
+    test_prompt: "인천공항(ICN)에서 나리타공항(NRT)으로 2026-08-20 출발 편도 항공권 조회해줘."
+
+nts-business-registration:
+  default_inputs:
+    test_prompt: "사업자등록번호 124-81-00998 (삼성전자) 상태조회해줘 - 계속사업자인지 확인하고 결과를 정리해."
+
+korean-stock-search:
+  default_inputs:
+    test_prompt: "삼성전자(종목코드 005930) 기본정보와 최근 일별 시세 5일치 보여줘."
+
+joseon-sillok-search:
+  default_inputs:
+    test_prompt: "조선왕조실록에서 '훈민정음' 키워드로 검색해서 관련 기사 3개 정리해줘."
+
+korean-law-search:
+  default_inputs:
+    test_prompt: "산업안전보건법 제5조 조문 내용 찾아서 보여줘."
+
+library-book-search:
+  default_inputs:
+    test_prompt: "도서관 정보나루에서 '코스모스 칼 세이건' 책 검색해서 정보 보여줘."
+
+lotto-results:
+  default_inputs:
+    test_prompt: "최신 회차(latest) 로또 당첨번호와 등수별 당첨금 정리해줘."
+
+k-schoollunch-menu:
+  default_inputs:
+    test_prompt: "서울특별시교육청 소속 학교 중 아무 초등학교 한 곳 골라서 오늘 급식 식단 알려줘."
+
+delivery-tracking:
+  default_inputs:
+    test_prompt: "CJ대한통운(cj) 송장번호 595300312345 (가공된 더미 번호) 배송 조회. 송장이 존재하지 않으면 그 사실을 정확히 응답해."
+
+ticket-availability:
+  default_inputs:
+    test_prompt: "YES24 콘서트 ID 58026 또는 인터파크 공연 아무거나 하나 잔여석 조회 - 공연 URL이나 platform:id가 명확하지 않으면 현재 진행 중인 아무 공연 하나로 시연해줘."
+
+zipcode-search:
+  default_inputs:
+    test_prompt: "주소 '서울특별시 강남구 테헤란로 152' 우편번호와 공식 영문주소 찾아줘."

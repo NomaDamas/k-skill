@@ -1405,6 +1405,54 @@ test("coupang-product-search docs drop non-allowlisted coupang-mcp-fallback and 
   }
 });
 
+test("repository docs advertise the ohou-today-deal skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "ohou-today-deal.md");
+  const skillPath = path.join(repoRoot, "ohou-today-deal", "SKILL.md");
+  const helperPath = path.join(repoRoot, "ohou-today-deal", "scripts", "ohou_today_deal.py");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/ohou-today-deal.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected ohou-today-deal/SKILL.md to exist");
+  assert.ok(fs.existsSync(helperPath), "expected ohou-today-deal helper script to exist");
+  assert.match(readme, /\| 오늘의집 오늘의딜 조회 \| `ohou-today-deal` \|/);
+  assert.match(readme, /\[오늘의집 오늘의딜 조회 가이드\]\(docs\/features\/ohou-today-deal\.md\)/);
+  assert.match(install, /--skill ohou-today-deal/);
+  assert.match(roadmap, /오늘의집 오늘의딜 조회 스킬 출시/);
+  assert.match(sources, /ohou\.se\/commerces\/today_deals/);
+  assert.match(sources, /store\.ohou\.se\/today_deals/);
+});
+
+test("ohou-today-deal docs lock the public Next data read-only workflow", () => {
+  const skill = read(path.join("ohou-today-deal", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "ohou-today-deal.md"));
+  const helper = read(path.join("ohou-today-deal", "scripts", "ohou_today_deal.py"));
+  const sources = read(path.join("docs", "sources.md"));
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /https:\/\/ohou\.se\/commerces\/today_deals/);
+    assert.match(doc, /https:\/\/store\.ohou\.se\/today_deals/);
+    assert.match(doc, /__NEXT_DATA__/);
+    assert.match(doc, /today-deal-feed/);
+    assert.match(doc, /ohou_today_deal\.py list/);
+    assert.match(doc, /(로그인|API key|API 키).*(불필요|없음)|(불필요|없음).*(로그인|API key|API 키)/);
+    assert.match(doc, /(구매|장바구니|결제).*자동화.*(하지 않는다|하지 말고|제외)/);
+  }
+
+  assert.match(helper, /DEFAULT_URL = "https:\/\/ohou\.se\/commerces\/today_deals"/);
+  assert.match(helper, /__NEXT_DATA__/);
+  assert.match(helper, /today-deal-feed/);
+  assert.match(helper, /special-today-deal-feed/);
+  assert.match(
+    helper,
+    /k-skill-ohou-today-deal\/1\.0 \(\+https:\/\/github\.com\/NomaDamas\/k-skill\)/,
+  );
+  assert.match(sources, /ohou\.se\/commerces\/today_deals/);
+  assert.match(sources, /store\.ohou\.se\/today_deals/);
+});
+
 test("root pack:dry-run script covers all publishable workspaces", () => {
   const packageJson = readJson("package.json");
   const packScript = packageJson.scripts["pack:dry-run"];

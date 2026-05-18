@@ -8,7 +8,7 @@ Source tree for **k-skill-qa-bot**, an automated QA daemon for the k-skill repos
 - Every 3 days (launchd LaunchAgent), the daemon:
   1. Refreshes a shallow clone of `NomaDamas/k-skill` `main`.
   2. Discovers every `<skill>/SKILL.md`, classifies each skill (read-only / location / login / destructive / api-key / proxy-dependent / deprecated).
-  3. Runs each suitable skill through `codex exec` (read-only sandbox) with a smoke-test prompt synthesized from the skill's `## When to use`.
+  3. Runs each suitable skill through `codex exec --dangerously-bypass-approvals-and-sandbox` with a smoke-test prompt synthesized from the skill's `## When to use`, while keeping the separate LLM judge on a read-only/no-approval Codex path.
   4. An LLM judge (`codex exec --output-schema`) grades pass / fail / skip.
   5. Failed skills are filed as dedup'd issues on `NomaDamas/k-skill`. Skipped skills (login required, deprecated, missing API key) never create issues.
 
@@ -17,6 +17,13 @@ Source tree for **k-skill-qa-bot**, an automated QA daemon for the k-skill repos
 After running `install.sh`, the runtime lives at `~/.local/share/k-skill-qa-bot/`.
 
 The k-skill repository itself is **never modified** by the bot — it is read-only SSOT. Test prompts are synthesized from each `SKILL.md`.
+
+## Trust-boundary notes
+
+- Smoke tests intentionally run unsandboxed and may contact public skill endpoints, plus git, Codex, GitHub, and k-skill-proxy health-check endpoints.
+- A dedicated LaunchAgent is scheduling isolation only; it is not a separate OS user, container, or filesystem sandbox.
+- The bot-managed clone is not write-protected from the unsandboxed smoke agent; treat it as mutable bot state rather than a write-protected filesystem boundary.
+- The judge uses read-only/no-approval Codex settings, but is still a tool-capable Codex agent over untrusted transcripts and skill Markdown. Do not describe it as a no-tools or file-isolated model call unless the implementation changes to enforce that boundary.
 
 ## Design rules
 

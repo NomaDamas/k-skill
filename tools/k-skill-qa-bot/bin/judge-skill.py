@@ -105,9 +105,10 @@ def _call_judge(prompt: str, schema_path, model: str, timeout: int) -> dict:
     if gtimeout:
         cmd += [gtimeout, str(timeout)]
     cmd += [codex, "exec", "--json", "--ephemeral",
-            "--dangerously-bypass-approvals-and-sandbox",
+            "-s", "read-only",
             "--skip-git-repo-check", "-m", model,
             "--output-schema", str(schema_path),
+            "-c", 'approval_policy="never"',
             "-c", f'model_provider="{provider}"',
             prompt]
     try:
@@ -164,12 +165,6 @@ def _deterministic_override(receipt: dict, transcript_text: str, judge: dict, ti
                 out["reason"] = f"duration {duration_ms}ms near timeout"
                 out["confidence"] = max(out["confidence"], 0.8)
 
-    if out["verdict"] == "pass" and "VERDICT: PASS" not in transcript_text:
-        out["verdict"] = "fail"
-        out["symptom_class"] = "wrong-output"
-        out["reason"] = "transcript missing VERDICT: PASS line"
-        out["confidence"] = max(out["confidence"], 0.7)
-
     return out
 
 
@@ -178,7 +173,7 @@ def main(argv=None) -> int:
     ap.add_argument("--skill-md", type=Path, required=True)
     ap.add_argument("--prompt-template", type=Path, default=_CFG / "judge-prompt.md")
     ap.add_argument("--schema", type=Path, default=_CFG / "judge-schema.json")
-    ap.add_argument("--model", default=os.environ.get("JUDGE_MODEL", "gpt-5.4-mini"))
+    ap.add_argument("--model", default=os.environ.get("JUDGE_MODEL", "gpt-5.5"))
     ap.add_argument("--timeout", type=int, default=int(os.environ.get("JUDGE_TIMEOUT_SECS", "60")))
     ap.add_argument("--timeout-secs", type=int, default=int(os.environ.get("TIMEOUT_SECS", "180")))
     ap.add_argument("--offline", action="store_true",

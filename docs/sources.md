@@ -142,6 +142,9 @@
 - coupang_partners local MCP contract: local://coupang-mcp
 - coupang_partners hosted fallback (credentialless, allowlist-gated): https://a.retn.kr/v1/public/assist
 - coupang_partners hosted fallback PR (merged): https://github.com/retention-corp/coupang_partners/pull/1
+- 오늘의집 오늘의딜 공개 페이지: https://ohou.se/commerces/today_deals
+- 오늘의집 오늘의딜 canonical/OG URL: https://store.ohou.se/today_deals
+- 오늘의집 오늘의딜 데이터 표면: HTML `__NEXT_DATA__`의 `today-deal-feed`
 - bunjang-cli package: https://www.npmjs.com/package/bunjang-cli
 - bunjang-cli repo: https://github.com/pinion05/bunjangcli
 - 당근 메인: https://www.daangn.com/

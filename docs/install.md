@@ -91,6 +91,7 @@ npx --yes skills add <owner/repo> \
   --skill zipcode-search \
   --skill delivery-tracking \
   --skill coupang-product-search \
+  --skill ohou-today-deal \
   --skill bunjang-search \
   --skill used-car-price-search \
   --skill korean-spell-check \

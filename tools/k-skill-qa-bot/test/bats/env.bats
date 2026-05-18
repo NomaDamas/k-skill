@@ -8,7 +8,7 @@ setup() {
 @test "env.sh sets all default values when nothing else is set" {
     run env -i HOME="$HOME" PATH="$PATH" ENV_SH="$ENV_SH" bash -c '. "$ENV_SH" && echo "$CODEX_MODEL|$MAX_PARALLEL|$GH_REPO|$LAST_RUN_MIN_AGE|$CREATE_ISSUES|$JUDGE_MODEL"'
     [ "$status" -eq 0 ]
-    [ "$output" = "gpt-5.5|4|NomaDamas/k-skill|259200|false|gpt-5.4-mini" ]
+    [ "$output" = "gpt-5.5|4|NomaDamas/k-skill|259200|false|gpt-5.5" ]
 }
 
 @test "env.sh respects existing environment variables" {
