@@ -46,8 +46,14 @@ teardown() {
     grep -qx -- 'smoke-model' "$CAPTURE"
     grep -qx -- 'model_provider="smoke-provider"' "$CAPTURE"
     grep -qx -- 'run demo smoke' "$CAPTURE"
-    ! grep -qx -- '-s' "$CAPTURE"
-    ! grep -qx -- 'read-only' "$CAPTURE"
+    if grep -qx -- '-s' "$CAPTURE"; then
+        echo "unexpected sandbox flag in smoke argv"
+        return 1
+    fi
+    if grep -qx -- 'read-only' "$CAPTURE"; then
+        echo "unexpected read-only sandbox in smoke argv"
+        return 1
+    fi
     python3 - "$TMP/run/results/demo.exec.json" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as f:

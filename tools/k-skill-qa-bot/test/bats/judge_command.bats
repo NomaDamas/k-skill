@@ -47,5 +47,8 @@ teardown() {
     grep -qx -- '-c' "$CAPTURE"
     grep -qx -- 'approval_policy="never"' "$CAPTURE"
     grep -qx -- 'model_provider="example-provider"' "$CAPTURE"
-    ! grep -qx -- '--dangerously-bypass-approvals-and-sandbox' "$CAPTURE"
+    if grep -qx -- '--dangerously-bypass-approvals-and-sandbox' "$CAPTURE"; then
+        echo "unexpected sandbox-bypass flag in judge argv"
+        return 1
+    fi
 }
