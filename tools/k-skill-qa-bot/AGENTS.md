@@ -18,6 +18,12 @@ After running `install.sh`, the runtime lives at `~/.local/share/k-skill-qa-bot/
 
 The k-skill repository itself is **never modified** by the bot — it is read-only SSOT. Test prompts are synthesized from each `SKILL.md`.
 
+## Trust-boundary notes
+
+- Smoke tests intentionally run unsandboxed and may contact public skill endpoints, plus git, Codex, GitHub, and k-skill-proxy health-check endpoints.
+- A dedicated LaunchAgent is scheduling isolation only; it is not a separate OS user, container, or filesystem sandbox.
+- The judge uses read-only/no-approval Codex settings, but is still a tool-capable Codex agent over untrusted transcripts and skill Markdown. Do not describe it as a no-tools or file-isolated model call unless the implementation changes to enforce that boundary.
+
 ## Design rules
 
 - **SSOT**: All test prompts and skill metadata come from `SKILL.md` files in the bot's own shallow clone of `NomaDamas/k-skill` `main`. The k-skill repo gets no QA-bot-specific edits.
