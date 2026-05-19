@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jetbrains-mono@1/css/jetbrains-mono.min.css">
+<link rel="stylesheet" href="engine/engine.css">
+<style>
+/* AI may override ONLY reserved CSS variables here.
+   Do not add new custom properties. Do not modify engine.css. */
+:root {
+  --stage-w: 1920px;  /* Set from user input: resolution width */
+  --stage-h: 1080px;  /* Set from user input: resolution height */
+
+  /* Theme overrides — uncomment and adjust for dark theme:
+  --bg: #0f172a;
+  --fg: #f1f5f9;
+  --accent: #60a5fa;
+  */
+}
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="stage">
+    <div class="progress"></div>
+    <div class="counter"></div>
+    <button class="nav-toggle" aria-label="Toggle navigation">&#9776;</button>
+    <nav class="sidenav" aria-label="Slide navigation">
+      <ol class="sidenav-list"></ol>
+    </nav>
+    <div class="deck">
+      <!-- SLIDES:START -->
+      <!-- AI writes ONLY between these markers.
+           Each slide MUST have:
+             - data-layout: one of cover | section | bullets | two-col | statement | image | code | end
+             - data-title: label shown in side navigation
+
+           Layout DOM contracts — follow exactly:
+
+           [cover]
+           <section data-layout="cover" data-title="...">
+             <h1>Title</h1>
+             <p class="subtitle">Subtitle</p>
+           </section>
+
+           [section]
+           <section data-layout="section" data-title="...">
+             <span class="section-num">01</span>
+             <h1>Section Title</h1>
+           </section>
+
+           [bullets]
+           <section data-layout="bullets" data-title="...">
+             <header>
+               <h1>Title</h1>
+               <h2 class="subtitle">Optional subtitle</h2>
+             </header>
+             <ul>
+               <li>Bullet 1</li>
+               <li>Bullet 2</li>
+             </ul>
+           </section>
+
+           [two-col]
+           <section data-layout="two-col" data-title="...">
+             <header><h1>Title</h1></header>
+             <div class="col">
+               <h2>Left heading</h2>
+               <ul><li>...</li></ul>
+             </div>
+             <div class="col">
+               <h2>Right heading</h2>
+               <ul><li>...</li></ul>
+             </div>
+           </section>
+
+           [statement]
+           <section data-layout="statement" data-title="...">
+             <blockquote>Bold statement message</blockquote>
+             <cite>— Source (optional)</cite>
+           </section>
+
+           [image]
+           <section data-layout="image" data-title="...">
+             <header><h1>Title</h1></header>
+             <figure>
+               <img src="..." alt="...">
+               <figcaption>Caption</figcaption>
+             </figure>
+           </section>
+
+           [code]
+           <section data-layout="code" data-title="...">
+             <header><h1>Title</h1></header>
+             <pre><code class="language-typescript">// code here</code></pre>
+           </section>
+
+           [end]
+           <section data-layout="end" data-title="...">
+             <h1>Thank you</h1>
+             <dl class="meta">
+               <dt>Contact</dt><dd>email@example.com</dd>
+             </dl>
+           </section>
+      -->
+      <!-- SLIDES:END -->
+    </div>
+  </div>
+</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/core.min.js"></script>
+<script>if (window.hljs) { hljs.highlightAll(); }</script>
+<script src="engine/engine.js"></script>
+</body>
+</html>

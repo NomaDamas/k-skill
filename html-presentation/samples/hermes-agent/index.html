@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hermes Agent: 스스로 학습하는 AI 에이전트</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jetbrains-mono@1/css/jetbrains-mono.min.css">
+<link rel="stylesheet" href="engine/engine.css">
+<style>
+/* AI may override ONLY reserved CSS variables here.
+   Do not add new custom properties. Do not modify engine.css. */
+:root {
+  --stage-w: 1920px;
+  --stage-h: 1080px;
+
+  /* Hermes brand gold accent override */
+  --accent: #FFD700;
+}
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="stage">
+    <div class="progress"></div>
+    <div class="counter"></div>
+    <button class="nav-toggle" aria-label="Toggle navigation">&#9776;</button>
+    <nav class="sidenav" aria-label="Slide navigation">
+      <ol class="sidenav-list"></ol>
+    </nav>
+    <div class="deck">
+      <!-- SLIDES:START -->
+
+      <!-- Slide 1: Cover -->
+      <section data-layout="cover" data-title="표지">
+        <h1>Hermes Agent &#9764;</h1>
+        <p class="subtitle">스스로 학습하는 AI 에이전트 &nbsp;·&nbsp; Nous Research</p>
+      </section>
+
+      <!-- Slide 2: Statement -->
+      <section data-layout="statement" data-title="한 줄">
+        <blockquote>에이전트는 도구가 아니라, 사용할수록 똑똑해지는 동료다.</blockquote>
+        <cite>— Hermes Agent</cite>
+      </section>
+
+      <!-- Slide 3: Section -->
+      <section data-layout="section" data-title="01. 왜">
+        <span class="section-num">01</span>
+        <h1>왜 Hermes인가</h1>
+      </section>
+
+      <!-- Slide 4: Bullets — 7가지 핵심 차별점 -->
+      <section data-layout="bullets" data-title="차별점">
+        <header>
+          <h1>7가지 핵심 차별점</h1>
+          <h2 class="subtitle">기존 CLI 에이전트가 갖지 못한 것</h2>
+        </header>
+        <ul>
+          <li><strong>Real terminal interface</strong> — 멀티라인 편집·슬래시 자동완성·스트리밍 출력이 갖춰진 완전한 TUI</li>
+          <li><strong>Lives where you do</strong> — Telegram·Discord·Slack·WhatsApp·Signal·CLI, 단일 gateway 프로세스</li>
+          <li><strong>Closed learning loop</strong> — 사용 중 스킬 자가 개선, 세션 간 기억 영속화, 사용자 모델 심화</li>
+          <li><strong>Scheduled automations</strong> — 내장 cron으로 자연어 일정 자동화(리포트·백업·감사)</li>
+          <li><strong>Delegates &amp; parallelizes</strong> — 격리된 서브에이전트로 병렬 작업, zero-context-cost 파이프라인</li>
+          <li><strong>Runs anywhere</strong> — $5 VPS부터 GPU 클러스터까지, 7개 terminal backend 지원</li>
+        </ul>
+      </section>
+
+      <!-- Slide 5: Two-col — 기존 vs Hermes -->
+      <section data-layout="two-col" data-title="비교">
+        <header><h1>기존 에이전트 vs Hermes</h1></header>
+        <div class="col">
+          <h2>기존</h2>
+          <ul>
+            <li>노트북에 묶임</li>
+            <li>세션 종료 시 기억 소실</li>
+            <li>도구는 정적, 수동 업데이트</li>
+            <li>CLI 전용</li>
+            <li>매번 같은 실수를 반복</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h2>Hermes</h2>
+          <ul>
+            <li>어디서나 실행 ($5 VPS ~ GPU 클러스터)</li>
+            <li>세션 간 사용자 모델 심화</li>
+            <li>사용 중 스킬 자가 개선</li>
+            <li>6개 메시징 플랫폼 + CLI</li>
+            <li>자신의 과거 대화를 검색하고 회상</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Slide 6: Bullets — 닫힌 학습 루프 -->
+      <section data-layout="bullets" data-title="학습 루프">
+        <header>
+          <h1>닫힌 학습 루프</h1>
+          <h2 class="subtitle">Closed Learning Loop</h2>
+        </header>
+        <ul>
+          <li><strong>1. 경험 → 스킬</strong>: 복잡한 작업 후 에이전트가 자율적으로 스킬을 생성한다</li>
+          <li><strong>2. 사용 → 개선</strong>: 스킬은 호출될 때마다 스스로 다듬어진다</li>
+          <li><strong>3. 영속화 nudge</strong>: 에이전트가 직접 메모리 큐레이션을 자극한다</li>
+          <li><strong>4. 회상</strong>: FTS5 세션 검색 + LLM 요약으로 과거를 재해석한다</li>
+        </ul>
+      </section>
+
+      <!-- Slide 7: Code — 설치 -->
+      <section data-layout="code" data-title="설치">
+        <header><h1>60초 설치 (Linux &middot; macOS &middot; WSL2)</h1></header>
+        <pre><code class="language-bash"># 1. 설치 (curl 한 줄)
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+
+# 2. 쉘 리로드
+source ~/.bashrc
+
+# 3. 시작
+hermes</code></pre>
+      </section>
+
+      <!-- Slide 8: Bullets — 어디서나 실행 -->
+      <section data-layout="bullets" data-title="백엔드">
+        <header>
+          <h1>어디서나 실행</h1>
+          <h2 class="subtitle">7개 terminal backend, 1개 명령</h2>
+        </header>
+        <ul>
+          <li><strong>local</strong> — 로컬 머신</li>
+          <li><strong>Docker</strong> — 격리 컨테이너</li>
+          <li><strong>SSH</strong> — 원격 서버</li>
+          <li><strong>Modal / Daytona</strong> — 서버리스 (유휴 시 거의 0원)</li>
+          <li><strong>Singularity</strong> — HPC/GPU 클러스터</li>
+          <li><strong>Vercel Sandbox</strong> — 에지 실행</li>
+        </ul>
+      </section>
+
+      <!-- Slide 9: Two-col — CLI vs 메시징 -->
+      <section data-layout="two-col" data-title="CLI vs 메시징">
+        <header><h1>CLI vs 메시징 플랫폼</h1></header>
+        <div class="col">
+          <h2>터미널(CLI)</h2>
+          <ul>
+            <li><code>hermes</code> 즉시 시작</li>
+            <li>멀티라인 편집</li>
+            <li>슬래시 커맨드 자동완성</li>
+            <li>Ctrl+C로 인터럽트 및 방향 전환</li>
+            <li>스트리밍 도구 출력</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h2>메시징 게이트웨이</h2>
+          <ul>
+            <li>Telegram · Discord · Slack</li>
+            <li>WhatsApp · Signal</li>
+            <li>음성 메모 자동 전사</li>
+            <li>크로스 플랫폼 대화 연속성</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Slide 10: End -->
+      <section data-layout="end" data-title="끝">
+        <h1>지금 시작하기 &#9764;</h1>
+        <dl class="meta">
+          <dt>Docs</dt><dd>hermes-agent.nousresearch.com/docs</dd>
+          <dt>Discord</dt><dd>discord.gg/NousResearch</dd>
+          <dt>Skills Hub</dt><dd>agentskills.io</dd>
+          <dt>GitHub</dt><dd>github.com/NousResearch/hermes-agent</dd>
+          <dt>License</dt><dd>MIT</dd>
+        </dl>
+      </section>
+
+      <!-- SLIDES:END -->
+    </div>
+  </div>
+</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/core.min.js"></script>
+<script>
+if (window.hljs) {
+  hljs.highlightAll();
+}
+</script>
+<script src="engine/engine.js"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026 AI 에이전트 트렌드</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jetbrains-mono@1/css/jetbrains-mono.min.css">
+<link rel="stylesheet" href="engine/engine.css">
+<style>
+:root {
+  --stage-w: 1920px;
+  --stage-h: 1080px;
+}
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="stage">
+    <div class="progress"></div>
+    <div class="counter"></div>
+    <button class="nav-toggle" aria-label="Toggle navigation">&#9776;</button>
+    <nav class="sidenav" aria-label="Slide navigation">
+      <ol class="sidenav-list"></ol>
+    </nav>
+    <div class="deck">
+      <!-- SLIDES:START -->
+
+      <!-- Slide 1: Cover -->
+      <section data-layout="cover" data-title="표지">
+        <h1>2026 AI 에이전트 트렌드</h1>
+        <p class="subtitle">엔지니어링 리더를 위한 안내서 &nbsp;·&nbsp; 2026년 5월</p>
+      </section>
+
+      <!-- Slide 2: Section -->
+      <section data-layout="section" data-title="왜 지금인가">
+        <span class="section-num">01</span>
+        <h1>왜 지금인가</h1>
+      </section>
+
+      <!-- Slide 3: Bullets -->
+      <section data-layout="bullets" data-title="에이전트 채택 곡선">
+        <header>
+          <h1>에이전트 채택 곡선</h1>
+          <h2 class="subtitle">2025–2026: 실험에서 프로덕션으로</h2>
+        </header>
+        <ul>
+          <li><strong>2024 Q4</strong> — 단일 에이전트 PoC 급증, 성공률 40% 미만</li>
+          <li><strong>2025 H1</strong> — 멀티 에이전트 오케스트레이션 프레임워크 등장</li>
+          <li><strong>2025 H2</strong> — 엔터프라이즈 도입 3배 증가, 비용 10분의 1로 감소</li>
+          <li><strong>2026 현재</strong> — 에이전트가 소프트웨어 생산성의 핵심 레버로 정착</li>
+          <li><strong>2026 전망</strong> — 스타트업 30% 이상이 에이전트 팀을 프로덕션에 운영</li>
+        </ul>
+      </section>
+
+      <!-- Slide 4: Statement -->
+      <section data-layout="statement" data-title="핵심 메시지">
+        <blockquote>에이전트는 도구가 아니라 팀원이다.</blockquote>
+        <cite>— 2026 AI Engineering Summit, 서울</cite>
+      </section>
+
+      <!-- Slide 5: Two-col -->
+      <section data-layout="two-col" data-title="단일 vs 멀티 에이전트">
+        <header><h1>단일 에이전트 vs 멀티 에이전트</h1></header>
+        <div class="col">
+          <h2>단일 에이전트</h2>
+          <ul>
+            <li>간단한 태스크에 적합</li>
+            <li>낮은 구현 복잡도</li>
+            <li>컨텍스트 한계에 취약</li>
+            <li>병렬 처리 불가</li>
+            <li>실패 시 전체 중단</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h2>멀티 에이전트</h2>
+          <ul>
+            <li>복잡한 워크플로우 처리</li>
+            <li>병렬 실행으로 속도 향상</li>
+            <li>전문화된 역할 분리</li>
+            <li>부분 실패 격리 가능</li>
+            <li>확장성과 관찰 가능성</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Slide 6: Code -->
+      <section data-layout="code" data-title="Claude Agent SDK 예제">
+        <header><h1>Claude Agent SDK — 최소 예제 (TypeScript)</h1></header>
+        <pre><code class="language-typescript">import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+async function runAgent(task: string): Promise&lt;string&gt; {
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    tools: [searchTool, writeTool, reviewTool],
+    messages: [{ role: "user", content: task }],
+  });
+
+  // Handle tool_use blocks and recurse until stop_reason === "end_turn"
+  return processAgentLoop(client, response);
+}
+
+const result = await runAgent("분기 보고서를 분석하고 핵심 인사이트 3개를 추출하라");</code></pre>
+      </section>
+
+      <!-- Slide 7: Image -->
+      <section data-layout="image" data-title="멀티 에이전트 아키텍처">
+        <header><h1>멀티 에이전트 오케스트레이션 아키텍처</h1></header>
+        <figure>
+          <img src="https://placehold.co/1600x800/eff6ff/2563eb?text=Multi-Agent+Architecture+Diagram" alt="오케스트레이터가 여러 전문 에이전트를 조율하는 아키텍처 다이어그램">
+          <figcaption>오케스트레이터 → 라우팅 → 전문 에이전트(Research / Code / Review / Deploy) → 결과 집계</figcaption>
+        </figure>
+      </section>
+
+      <!-- Slide 8: End -->
+      <section data-layout="end" data-title="마무리">
+        <h1>감사합니다</h1>
+        <dl class="meta">
+          <dt>발표자</dt><dd>AI Engineering Team</dd>
+          <dt>연락처</dt><dd>baekenough@gmail.com</dd>
+          <dt>슬라이드</dt><dd>github.com/omcustom/k-skill</dd>
+          <dt>날짜</dt><dd>2026년 5월</dd>
+        </dl>
+      </section>
+
+      <!-- SLIDES:END -->
+    </div>
+  </div>
+</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/core.min.js"></script>
+<script>
+if (window.hljs) {
+  hljs.highlightAll();
+}
+</script>
+<script src="engine/engine.js"></script>
+</body>
+</html>

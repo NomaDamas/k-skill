@@ -1,0 +1,614 @@
+/* ============================================================
+   html-presentation engine.css — IMMUTABLE ENGINE STYLES
+   Do not modify. AI writes only inside template.html SLIDES markers.
+   ============================================================ */
+
+/* --- Reset & Base ----------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- CSS Custom Properties --------------------------------- */
+:root {
+  /* Canvas */
+  --stage-w: 1920px;
+  --stage-h: 1080px;
+
+  /* Colors */
+  --bg: #ffffff;
+  --fg: #0f172a;
+  --accent: #2563eb;
+  --muted: #64748b;
+  --code-bg: #0f172a;
+  --code-fg: #e2e8f0;
+  --border: #e2e8f0;
+
+  /* Fonts */
+  --font-sans: 'Pretendard', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Type scale */
+  --h1-size: 80px;
+  --h2-size: 48px;
+  --body-size: 32px;
+  --h1-lh: 1.15;
+  --body-lh: 1.5;
+
+  /* Layout */
+  --slide-pad: 96px;
+  --radius: 12px;
+  --shadow: 0 10px 40px rgba(0,0,0,0.08);
+
+  /* Navigation */
+  --nav-bg: #ffffff;
+  --nav-fg: #0f172a;
+  --nav-active-bg: #eff6ff;
+}
+
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --fg: #f1f5f9;
+  --accent: #60a5fa;
+  --muted: #94a3b8;
+  --code-bg: #020617;
+  --code-fg: #e2e8f0;
+  --border: #1e293b;
+  --nav-bg: #1e293b;
+  --nav-fg: #f1f5f9;
+  --nav-active-bg: #1e40af;
+}
+
+/* --- Viewport & Stage ------------------------------------- */
+.viewport {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg) 60%, #888 40%);
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--stage-w);
+  height: var(--stage-h);
+  transform-origin: center center;
+  transform: translate(-50%, -50%);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* --- Deck & Slides ---------------------------------------- */
+.deck {
+  position: absolute;
+  inset: 0;
+}
+
+.deck > section {
+  position: absolute;
+  inset: 0;
+  padding: var(--slide-pad);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.deck > section.active {
+  display: flex;
+}
+
+/* Debug mode: overflow detection */
+.deck > section[data-overflow] {
+  outline: 3px solid red;
+  outline-offset: -3px;
+}
+
+/* --- Layout: cover ---------------------------------------- */
+section[data-layout="cover"] {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 24px;
+  background: linear-gradient(135deg, var(--bg) 0%, color-mix(in srgb, var(--accent) 8%, var(--bg)) 100%);
+}
+
+section[data-layout="cover"] h1 {
+  font-size: var(--h1-size);
+  line-height: var(--h1-lh);
+  font-weight: 800;
+  color: var(--fg);
+  max-width: 1400px;
+}
+
+section[data-layout="cover"] .subtitle {
+  font-size: var(--h2-size);
+  color: var(--muted);
+  font-weight: 400;
+  max-width: 1200px;
+}
+
+/* --- Layout: section -------------------------------------- */
+section[data-layout="section"] {
+  align-items: flex-start;
+  justify-content: center;
+  gap: 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 6%, var(--bg)) 0%, var(--bg) 100%);
+}
+
+section[data-layout="section"] .section-num {
+  font-size: 140px;
+  font-weight: 900;
+  color: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  line-height: 1;
+  margin-bottom: -20px;
+  font-variant-numeric: tabular-nums;
+}
+
+section[data-layout="section"] h1 {
+  font-size: var(--h1-size);
+  line-height: var(--h1-lh);
+  font-weight: 800;
+  color: var(--fg);
+  border-left: 6px solid var(--accent);
+  padding-left: 32px;
+}
+
+/* --- Layout: bullets -------------------------------------- */
+section[data-layout="bullets"] {
+  gap: 0;
+}
+
+section[data-layout="bullets"] > header {
+  margin-bottom: 48px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 32px;
+}
+
+section[data-layout="bullets"] > header h1 {
+  font-size: var(--h1-size);
+  line-height: var(--h1-lh);
+  font-weight: 800;
+  color: var(--fg);
+}
+
+section[data-layout="bullets"] > header .subtitle {
+  font-size: var(--h2-size);
+  color: var(--muted);
+  font-weight: 400;
+  margin-top: 8px;
+}
+
+section[data-layout="bullets"] > ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  justify-content: center;
+}
+
+section[data-layout="bullets"] > ul li {
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+  padding-left: 36px;
+  position: relative;
+  color: var(--fg);
+}
+
+section[data-layout="bullets"] > ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 16px;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* --- Layout: two-col -------------------------------------- */
+section[data-layout="two-col"] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+section[data-layout="two-col"] > header {
+  width: 100%;
+  flex: none;
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 28px;
+}
+
+section[data-layout="two-col"] > header h1 {
+  font-size: var(--h1-size);
+  line-height: var(--h1-lh);
+  font-weight: 800;
+  color: var(--fg);
+}
+
+section[data-layout="two-col"] > .col {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 40px;
+  background: color-mix(in srgb, var(--border) 30%, var(--bg));
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+section[data-layout="two-col"] > .col:first-of-type {
+  margin-right: 24px;
+  border-right: 3px solid var(--accent);
+}
+
+section[data-layout="two-col"] > .col h2 {
+  font-size: var(--h2-size);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+section[data-layout="two-col"] > .col ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+section[data-layout="two-col"] > .col ul li {
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+  padding-left: 28px;
+  position: relative;
+  color: var(--fg);
+}
+
+section[data-layout="two-col"] > .col ul li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+/* --- Layout: statement ------------------------------------ */
+section[data-layout="statement"] {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 32px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 5%, var(--bg)) 0%, var(--bg) 100%);
+}
+
+section[data-layout="statement"] blockquote {
+  font-size: 68px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--fg);
+  max-width: 1400px;
+  position: relative;
+  padding: 0 80px;
+}
+
+section[data-layout="statement"] blockquote::before {
+  content: '\201C';
+  position: absolute;
+  left: 0;
+  top: -20px;
+  font-size: 160px;
+  color: var(--accent);
+  opacity: 0.3;
+  line-height: 1;
+  font-family: Georgia, serif;
+}
+
+section[data-layout="statement"] cite {
+  font-size: var(--body-size);
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* --- Layout: image ---------------------------------------- */
+section[data-layout="image"] {
+  gap: 0;
+}
+
+section[data-layout="image"] > header {
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 28px;
+  flex: none;
+}
+
+section[data-layout="image"] > header h1 {
+  font-size: var(--h1-size);
+  line-height: var(--h1-lh);
+  font-weight: 800;
+  color: var(--fg);
+}
+
+section[data-layout="image"] > figure {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  gap: 16px;
+}
+
+section[data-layout="image"] > figure img {
+  flex: 1;
+  min-height: 0;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+
+section[data-layout="image"] > figure figcaption {
+  font-size: 26px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* --- Layout: code ----------------------------------------- */
+section[data-layout="code"] {
+  gap: 0;
+}
+
+section[data-layout="code"] > header {
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 28px;
+  flex: none;
+}
+
+section[data-layout="code"] > header h1 {
+  font-size: var(--h1-size);
+  line-height: var(--h1-lh);
+  font-weight: 800;
+  color: var(--fg);
+}
+
+section[data-layout="code"] > pre {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--code-bg);
+  border-radius: var(--radius);
+  padding: 48px 56px;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  line-height: 1.7;
+  color: var(--code-fg);
+}
+
+section[data-layout="code"] > pre code {
+  font-family: inherit;
+  font-size: inherit;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* --- Layout: end ------------------------------------------ */
+section[data-layout="end"] {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 48px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--bg)) 0%, var(--bg) 100%);
+}
+
+section[data-layout="end"] h1 {
+  font-size: var(--h1-size);
+  font-weight: 800;
+  line-height: var(--h1-lh);
+  color: var(--fg);
+}
+
+section[data-layout="end"] .meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px 32px;
+  text-align: left;
+  font-size: var(--body-size);
+}
+
+section[data-layout="end"] .meta dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+section[data-layout="end"] .meta dd {
+  color: var(--fg);
+}
+
+/* --- Progress Bar ----------------------------------------- */
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: var(--accent);
+  z-index: 11;
+  transition: width 0.2s ease;
+  pointer-events: none;
+}
+
+/* --- Slide Counter ---------------------------------------- */
+.counter {
+  position: fixed;
+  top: 10px;
+  right: 16px;
+  font-size: 14px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  z-index: 11;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+/* --- Nav Toggle Button ------------------------------------ */
+.nav-toggle {
+  position: fixed;
+  top: 8px;
+  left: 12px;
+  z-index: 12;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.nav-toggle:hover {
+  background: var(--nav-active-bg);
+  color: var(--accent);
+}
+
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Side Navigation -------------------------------------- */
+.sidenav {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 320px;
+  background: var(--nav-bg);
+  border-right: 1px solid var(--border);
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+  z-index: 10;
+  overflow-y: auto;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+}
+
+.sidenav.open {
+  transform: translateX(0);
+}
+
+.sidenav-list {
+  list-style: none;
+  padding: 56px 0 24px;
+}
+
+.sidenav-list li {
+  display: flex;
+}
+
+.sidenav-list li a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 16px;
+  color: var(--nav-fg);
+  text-decoration: none;
+  transition: background 0.1s;
+  border-left: 3px solid transparent;
+}
+
+.sidenav-list li a:hover {
+  background: var(--nav-active-bg);
+}
+
+.sidenav-list li a.active {
+  background: var(--nav-active-bg);
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.sidenav-list li a .nav-num {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 24px;
+}
+
+/* --- Footer (auto-injected by engine.js) ------------------ */
+.footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  z-index: 5;
+  pointer-events: auto;
+  font-family: var(--font-sans);
+}
+
+.footer-credit {
+  letter-spacing: 0.02em;
+}
+
+.footer-links {
+  display: flex;
+  gap: 16px;
+}
+
+.footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: color 0.15s, background 0.15s;
+}
+
+.footer-links a:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.footer-links a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.footer-links svg {
+  display: block;
+}
+
+/* --- Utility: common inline elements ---------------------- */
+strong { font-weight: 700; }
+em { font-style: italic; }
+a { color: var(--accent); text-decoration: underline; }

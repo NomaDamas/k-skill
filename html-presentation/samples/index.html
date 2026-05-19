@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>html-presentation Demos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      max-width: 640px;
+      width: 100%;
+      padding: 48px 24px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 48px;
+    }
+    .demos {
+      display: grid;
+      gap: 16px;
+    }
+    .demo-card {
+      display: block;
+      background: #1a1a24;
+      border: 1px solid #2a2a38;
+      border-radius: 12px;
+      padding: 28px 32px;
+      text-decoration: none;
+      color: inherit;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .demo-card:hover {
+      border-color: #5a5af0;
+      background: #1e1e2e;
+    }
+    .demo-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .demo-desc {
+      font-size: 0.85rem;
+      color: #888;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: #2a2a3e;
+      color: #7878d0;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>html-presentation</h1>
+    <p class="subtitle">Static presentation engine demos</p>
+    <div class="demos">
+      <a class="demo-card" href="./ai-agent-trends-2026/">
+        <span class="badge">Deck 1</span>
+        <div class="demo-title">AI Agent Trends 2026</div>
+        <div class="demo-desc">AI 에이전트 기술 동향 및 전망 프레젠테이션</div>
+      </a>
+      <a class="demo-card" href="./hermes-agent/">
+        <span class="badge">Deck 2</span>
+        <div class="demo-title">Hermes Agent</div>
+        <div class="demo-desc">Hermes 에이전트 소개 프레젠테이션</div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
