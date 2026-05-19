@@ -131,13 +131,10 @@ const result = await runAgent("분기 보고서를 분석하고 핵심 인사이
     </div>
   </div>
 </div>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
-<script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/core.min.js"></script>
-<script>
-if (window.hljs) {
-  hljs.highlightAll();
-}
-</script>
+<link rel="stylesheet" href="engine/lib/github.min.css" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="engine/lib/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<script src="engine/lib/highlight.min.js"></script>
+<script>if (window.hljs) { hljs.highlightAll(); }</script>
 <script src="engine/engine.js"></script>
 </body>
 </html>

@@ -10,10 +10,10 @@
 
 ## 먼저 알아둘 점
 
-- **외부 JS/CSS 프레임워크 의존성 0**: 엔진은 바닐라 HTML+CSS+JS로 자급형 스캐폴드입니다. 단, 웹폰트(Pretendard, JetBrains Mono) 및 코드 하이라이터(highlight.js)는 CDN에서 로드합니다.
+- **외부 JS/CSS 프레임워크 의존성 0**: 엔진은 바닐라 HTML+CSS+JS로 자급형 스캐폴드입니다. 웹폰트(Pretendard, JetBrains Mono)만 CDN에서 로드하며, 코드 하이라이터(highlight.js v11)는 `engine/lib/`에 벤더링되어 완전 오프라인 동작합니다.
 - **`file://` 더블클릭으로 동작**: 슬라이드 콘텐츠는 `index.html`에 인라인으로 작성되므로 별도 fetch 없이 오프라인에서도 열립니다.
 - **엔진(불변) + 콘텐츠(AI 작성)의 엄격한 분리**: AI는 콘텐츠 영역(`<!-- SLIDES:START -->` ~ `<!-- SLIDES:END -->`)만 채웁니다. 엔진 파일(`engine.css`, `engine.js`)은 절대 수정하지 않습니다.
-- **footer는 엔진이 자동 주입**: "made by baekenough" 텍스트와 GitHub·LinkedIn 아이콘이 자동으로 삽입되며, AI는 별도로 작성하지 않습니다.
+- **footer는 기본 OFF**: `<body>` 태그에 `data-footer-credit`, `data-footer-github`, `data-footer-linkedin` 속성을 추가하면 우하단에 footer가 표시됩니다. AI는 별도로 footer를 작성하지 않습니다.
 
 ## 입력 계약
 
@@ -85,7 +85,7 @@ tone: "기술적"
 output_dir: "./hermes-deck/"
 ```
 
-결과: `./hermes-deck/index.html` 생성. 4:3 비율로 콘텐츠 예산이 자동 조정됩니다.
+결과: `./hermes-deck/index.html` 생성. 4:3 비율을 선택하면 슬라이드 영역이 좁아지므로, 각 레이아웃의 콘텐츠 예산(불릿 개수, 코드 줄 수 등)을 줄여 작성해 주세요. 엔진은 stage를 비율대로 축소할 뿐 콘텐츠 양을 자동 조정하지는 않습니다.
 
 ## 디버그 모드
 
@@ -100,7 +100,7 @@ file:///path/to/presentation/index.html?debug=1
 ## 실패 모드
 
 - **폰트 CDN 차단 환경**: Pretendard/JetBrains Mono 로드 실패 시 `system-ui` fallback으로 동작합니다. 폰트 품질만 저하되며 레이아웃은 유지됩니다.
-- **highlight.js CDN 차단**: 코드 슬라이드(`data-layout="code"`)가 plain text로 표시됩니다. 구문 강조만 없어지고 내용은 그대로입니다.
+- **highlight.js**: `engine/lib/`에 벤더링되어 있으므로 CDN 차단 환경에서도 구문 강조가 정상 동작합니다.
 - **콘텐츠 예산 초과**: 슬라이드 콘텐츠가 캔버스를 벗어나면 시각적으로는 잘릴 수 있습니다. `?debug=1` 모드에서 빨간 outline으로 식별하고, 해당 슬라이드의 항목 수를 줄이거나 슬라이드를 분할하세요.
 - **네트워크 없는 완전 오프라인 환경**: 폰트·하이라이터 CDN 모두 차단되더라도 슬라이드 구조와 네비게이션은 정상 동작합니다.
 

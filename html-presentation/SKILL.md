@@ -65,7 +65,11 @@ mkdir -p {output_dir}/engine
 ```bash
 cp engine/engine.css {output_dir}/engine/engine.css
 cp engine/engine.js  {output_dir}/engine/engine.js
+cp -r engine/lib     {output_dir}/engine/lib
 ```
+
+`engine/lib/`에는 highlight.js v11 벤더 파일이 포함되어 있습니다 (완전 오프라인 동작).
+샘플 engine drift 검사: `./scripts/check-sample-sync.sh` 수동 실행.
 
 ### Step 4. index.html 생성
 
@@ -184,7 +188,7 @@ const example = "hello";</code></pre>
 </section>
 ```
 
-highlight.js CDN이 자동으로 구문 강조를 적용합니다.
+highlight.js(벤더링)가 자동으로 구문 강조를 적용합니다.
 지원 언어: `language-typescript`, `language-javascript`, `language-python`, `language-go`, `language-rust`, `language-bash`, `language-json` 등.
 
 ### 8. end — 마무리 슬라이드
@@ -208,7 +212,6 @@ highlight.js CDN이 자동으로 구문 강조를 적용합니다.
 
 ### MUST (절대 준수)
 
-- 엔진이 모든 슬라이드 우하단에 footer를 자동 주입한다("made by baekenough" + GitHub/LinkedIn 아이콘). AI는 footer를 작성하지 않는다.
 - `engine/engine.css`, `engine/engine.js` **수정 금지**
 - 슬라이드는 `<!-- SLIDES:START -->` ~ `<!-- SLIDES:END -->` **사이에만** 작성
 - 각 슬라이드에 `data-layout`(8종 중 1) + `data-title`(네비 라벨) **필수**
@@ -229,6 +232,17 @@ highlight.js CDN이 자동으로 구문 강조를 적용합니다.
 
 - 슬라이드 내부에서 `<strong>`, `<em>`, `<a>` 등 인라인 마크업 사용
 - `data-theme="dark"` 를 `<html>` 태그에 설정하여 다크 테마 적용
+- 옵션 footer 추가: `<body>` 태그에 아래 속성을 추가하면 우하단에 footer가 표시됩니다 (기본 OFF).
+
+  ```html
+  <body
+    data-footer-credit="발표자 이름"
+    data-footer-github="https://github.com/username"
+    data-footer-linkedin="https://linkedin.com/in/username"
+  >
+  ```
+
+  세 속성 중 하나라도 있으면 footer가 활성화됩니다. 명시적으로 끄려면 `data-footer="off"` 사용.
 
 ---
 
@@ -267,8 +281,9 @@ file:///path/to/index.html?debug=1
 
 | 항목 | 값 |
 |------|-----|
-| 외부 의존성 | Pretendard CDN, JetBrains Mono CDN, highlight.js CDN |
-| 오프라인 동작 | 폰트/highlight.js 미로드 시 system-ui fallback으로 동작 |
+| 외부 의존성 | Pretendard CDN, JetBrains Mono CDN (폰트만) |
+| 코드 하이라이팅 | highlight.js v11 — `engine/lib/`에 벤더링 (완전 오프라인 동작) |
+| 오프라인 동작 | 폰트 CDN 미로드 시 system-ui fallback으로 동작. highlight.js는 항상 로컬 |
 | 브라우저 지원 | Chrome/Edge 88+, Firefox 85+, Safari 14+ |
 | 최소 해상도 | 제한 없음 (transform scale로 자동 적응) |
 | 파일 크기 | engine.css + engine.js ≈ 10KB (minify 전) |
