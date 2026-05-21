@@ -529,7 +529,10 @@ function parseNumberAlias(query, keys, { min, max, label }) {
       break;
     }
   }
-  const value = Number(raw);
+  if (typeof raw !== "string" || raw.trim() === "") {
+    throw new Error(`Provide valid ${label}.`);
+  }
+  const value = Number(raw.trim());
   if (!Number.isFinite(value) || value < min || value > max) {
     throw new Error(`Provide valid ${label}.`);
   }
@@ -682,6 +685,18 @@ function buildSeoulBikeSemanticErrorPayload(error, config) {
       code: error.code,
       message: error.message
     },
+    proxy: {
+      name: config.proxyName,
+      cache: { hit: false, ttl_ms: config.cacheTtlMs },
+      requested_at: new Date().toISOString()
+    }
+  };
+}
+
+function buildSeoulBikeUpstreamErrorPayload(config) {
+  return {
+    error: "upstream_error",
+    message: "Seoul Bike upstream request failed.",
     proxy: {
       name: config.proxyName,
       cache: { hit: false, ttl_ms: config.cacheTtlMs },
@@ -1998,10 +2013,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const upstream = await proxySeoulBikeRealtimeRequest({
-      ...normalized,
-      apiKey: config.seoulOpenApiKey
-    });
+    let upstream;
+    try {
+      upstream = await proxySeoulBikeRealtimeRequest({
+        ...normalized,
+        apiKey: config.seoulOpenApiKey
+      });
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
 
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);
@@ -2009,7 +2030,13 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       return upstream.body;
     }
 
-    const payload = JSON.parse(upstream.body);
+    let payload;
+    try {
+      payload = JSON.parse(upstream.body);
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
     const semanticError = getSeoulOpenApiSemanticError(payload);
     if (semanticError) {
       reply.code(502);
@@ -2051,10 +2078,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const upstream = await proxySeoulBikeStationsRequest({
-      ...normalized,
-      apiKey: config.seoulOpenApiKey
-    });
+    let upstream;
+    try {
+      upstream = await proxySeoulBikeStationsRequest({
+        ...normalized,
+        apiKey: config.seoulOpenApiKey
+      });
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
 
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);
@@ -2062,7 +2095,13 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       return upstream.body;
     }
 
-    const payload = JSON.parse(upstream.body);
+    let payload;
+    try {
+      payload = JSON.parse(upstream.body);
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
     const semanticError = getSeoulOpenApiSemanticError(payload);
     if (semanticError) {
       reply.code(502);
@@ -2104,9 +2143,17 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const { upstream, rows, semanticError } = await fetchAllSeoulBikeRealtimeRows({
-      apiKey: config.seoulOpenApiKey
-    });
+    let realtimeResult;
+    try {
+      realtimeResult = await fetchAllSeoulBikeRealtimeRows({
+        apiKey: config.seoulOpenApiKey
+      });
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
+
+    const { upstream, rows, semanticError } = realtimeResult;
 
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);

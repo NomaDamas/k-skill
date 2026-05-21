@@ -2073,6 +2073,48 @@ test("seoul bike realtime and stations endpoints do not cache upstream semantic 
   assert.equal(stations.json().upstream.code, "ERROR-336");
 });
 
+test("seoul bike routes sanitize upstream fetch failures without leaking API keys", async (t) => {
+  const originalFetch = global.fetch;
+  const secret = "SECRETSEOULKEY";
+  let fetchCalls = 0;
+  global.fetch = async (url) => {
+    fetchCalls += 1;
+    throw new Error(`network failure ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: secret,
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const url of [
+    "/v1/seoul-bike/realtime?startIndex=1&endIndex=1",
+    "/v1/seoul-bike/stations?startIndex=1&endIndex=1",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120&limit=5"
+  ]) {
+    const first = await app.inject({ method: "GET", url });
+    const second = await app.inject({ method: "GET", url });
+
+    assert.equal(first.statusCode, 502, url);
+    assert.equal(second.statusCode, 502, `${url} repeat`);
+    assert.equal(first.json().error, "upstream_error", url);
+    assert.equal(first.json().message, "Seoul Bike upstream request failed.", url);
+    assert.equal(first.json().proxy.cache.hit, false, url);
+    assert.doesNotMatch(first.body, new RegExp(secret), url);
+    assert.doesNotMatch(second.body, new RegExp(secret), `${url} repeat`);
+    assert.doesNotMatch(first.body, /openapi\.seoul\.go\.kr/i, url);
+  }
+
+  assert.equal(fetchCalls, 6, "sanitized upstream failures must not be cached");
+});
+
 test("seoul bike nearby endpoint validates coordinates", async (t) => {
   const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
   t.after(async () => {
@@ -2082,6 +2124,15 @@ test("seoul bike nearby endpoint validates coordinates", async (t) => {
   const response = await app.inject({ method: "GET", url: "/v1/seoul-bike/nearby?lat=not-a-number&lon=126.9763" });
   assert.equal(response.statusCode, 400);
   assert.equal(response.json().error, "bad_request");
+
+  for (const url of [
+    "/v1/seoul-bike/nearby?lat=&lon=126.9763",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon="
+  ]) {
+    const blankResponse = await app.inject({ method: "GET", url });
+    assert.equal(blankResponse.statusCode, 400, url);
+    assert.equal(blankResponse.json().error, "bad_request", url);
+  }
 });
 
 test("seoul bike endpoints reject partially numeric integer query params", async (t) => {
