@@ -508,7 +508,13 @@ function parseBoundedIntegerAlias(query, keys, { defaultValue, min, max, label }
       break;
     }
   }
-  const value = raw === undefined ? defaultValue : Number.parseInt(raw, 10);
+  let value = defaultValue;
+  if (raw !== undefined) {
+    if (typeof raw !== "string" || !/^[+-]?\d+$/.test(raw)) {
+      throw new Error(`Provide valid ${label}.`);
+    }
+    value = Number(raw);
+  }
   if (!Number.isInteger(value) || value < min || value > max) {
     throw new Error(`Provide valid ${label}.`);
   }

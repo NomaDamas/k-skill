@@ -2084,6 +2084,24 @@ test("seoul bike nearby endpoint validates coordinates", async (t) => {
   assert.equal(response.json().error, "bad_request");
 });
 
+test("seoul bike endpoints reject partially numeric integer query params", async (t) => {
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+  t.after(async () => {
+    await app.close();
+  });
+
+  for (const url of [
+    "/v1/seoul-bike/realtime?startIndex=10abc&endIndex=20",
+    "/v1/seoul-bike/stations?startIndex=1&endIndex=1.5",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120m",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&limit=5.5"
+  ]) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 400, url);
+    assert.equal(response.json().error, "bad_request", url);
+  }
+});
+
 test("korea weather endpoint caches successful upstream responses for normalized coordinate queries", async (t) => {
   const originalFetch = global.fetch;
   let fetchCalls = 0;
