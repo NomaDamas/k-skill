@@ -102,6 +102,29 @@ class SeoulBikePayloadTest(unittest.TestCase):
         self.assertEqual([row["stationId"] for row in rows], ["ST-001", "ST-999"])
         self.assertEqual(fetch_json.call_count, 2)
 
+    def test_cli_search_prints_realtime_lookup_timestamp(self):
+        payload = {
+            "rentBikeStatus": {
+                "list_total_count": 1,
+                "row": [
+                    {
+                        "stationId": "ST-101",
+                        "stationName": "101. 광화문역 1번출구 앞",
+                        "rackTotCnt": "15",
+                        "parkingBikeTotCnt": "4",
+                    }
+                ],
+            },
+            "proxy": {"requested_at": "2026-05-21T06:10:00.000Z"},
+        }
+        with mock.patch.object(seoul_bike, "fetch_json", return_value=payload):
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = seoul_bike.main(["search", "광화문"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("조회 시각: 2026-05-21T06:10:00.000Z", stdout.getvalue())
+
     def test_cli_nearby_prints_json_when_requested(self):
         with mock.patch.object(seoul_bike, "fetch_json", return_value=NEARBY_PAYLOAD):
             stdout = io.StringIO()

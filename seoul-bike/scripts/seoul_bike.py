@@ -127,10 +127,11 @@ def cmd_nearby(args: argparse.Namespace) -> int:
     return 0
 
 
-def fetch_realtime_pages(start_index: int = 1, end_index: int = 1000) -> list[dict[str, Any]]:
+def fetch_realtime_payload(start_index: int = 1, end_index: int = 1000) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     current_start = start_index
     page_size = max(1, end_index - start_index + 1)
+    requested_at = None
 
     while True:
         current_end = current_start + page_size - 1
@@ -138,6 +139,8 @@ def fetch_realtime_pages(start_index: int = 1, end_index: int = 1000) -> list[di
             "/v1/seoul-bike/realtime",
             {"startIndex": current_start, "endIndex": current_end},
         )
+        if requested_at is None:
+            requested_at = (payload.get("proxy") or {}).get("requested_at")
         page_rows = realtime_rows(payload)
         rows.extend(page_rows)
 
@@ -146,14 +149,18 @@ def fetch_realtime_pages(start_index: int = 1, end_index: int = 1000) -> list[di
             break
         current_start = current_end + 1
 
-    return rows
+    return {
+        "rentBikeStatus": {"row": rows},
+        "proxy": {"requested_at": requested_at},
+    }
+
+
+def fetch_realtime_pages(start_index: int = 1, end_index: int = 1000) -> list[dict[str, Any]]:
+    return realtime_rows(fetch_realtime_payload(start_index, end_index))
 
 
 def cmd_search(args: argparse.Namespace) -> int:
-    payload = {
-        "rentBikeStatus": {"row": fetch_realtime_pages(args.start_index, args.end_index)},
-        "proxy": {"requested_at": None},
-    }
+    payload = fetch_realtime_payload(args.start_index, args.end_index)
     matches = filter_realtime_rows(payload, args.keyword, args.limit)
     if args.json:
         json.dump({"keyword": args.keyword, "count": len(matches), "items": matches, "proxy": payload.get("proxy")}, sys.stdout, ensure_ascii=False, indent=2)

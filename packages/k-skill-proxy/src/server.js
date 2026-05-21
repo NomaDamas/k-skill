@@ -629,6 +629,61 @@ function extractSeoulBikeRows(payload) {
   return status.row;
 }
 
+function getSeoulOpenApiResultCode(result) {
+  return result?.CODE ?? result?.["RESULT.CODE"] ?? result?.code ?? null;
+}
+
+function getSeoulOpenApiResultMessage(result) {
+  return result?.MESSAGE ?? result?.["RESULT.MESSAGE"] ?? result?.message ?? null;
+}
+
+function findSeoulOpenApiResultEnvelope(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  if (payload.RESULT && typeof payload.RESULT === "object") {
+    return payload.RESULT;
+  }
+  for (const value of Object.values(payload)) {
+    if (value && typeof value === "object" && value.RESULT && typeof value.RESULT === "object") {
+      return value.RESULT;
+    }
+  }
+  return null;
+}
+
+function getSeoulOpenApiSemanticError(payload) {
+  const result = findSeoulOpenApiResultEnvelope(payload);
+  const code = getSeoulOpenApiResultCode(result);
+  if (!code) {
+    return null;
+  }
+  const normalizedCode = String(code).toUpperCase();
+  if (normalizedCode.startsWith("INFO-")) {
+    return null;
+  }
+  return {
+    code: String(code),
+    message: getSeoulOpenApiResultMessage(result) || "Seoul Open API returned an application-level error."
+  };
+}
+
+function buildSeoulBikeSemanticErrorPayload(error, config) {
+  return {
+    error: "upstream_semantic_error",
+    message: "Seoul Bike upstream returned an application-level error.",
+    upstream: {
+      code: error.code,
+      message: error.message
+    },
+    proxy: {
+      name: config.proxyName,
+      cache: { hit: false, ttl_ms: config.cacheTtlMs },
+      requested_at: new Date().toISOString()
+    }
+  };
+}
+
 function normalizeKosisSearchQuery(query) {
   const searchNm = trimOrNull(query.searchNm ?? query.search_nm ?? query.query ?? query.q);
   if (!searchNm) {
@@ -1288,6 +1343,10 @@ async function fetchAllSeoulBikeRealtimeRows({ apiKey, fetchImpl = global.fetch 
   }
 
   const payload = JSON.parse(first.body);
+  const semanticError = getSeoulOpenApiSemanticError(payload);
+  if (semanticError) {
+    return { upstream: first, rows: null, semanticError };
+  }
   const rows = extractSeoulBikeRows(payload);
   const totalCount = Number(payload.rentBikeStatus?.list_total_count ?? rows.length);
   const safeTotalCount = Number.isFinite(totalCount) ? Math.max(totalCount, rows.length) : rows.length;
@@ -1298,7 +1357,12 @@ async function fetchAllSeoulBikeRealtimeRows({ apiKey, fetchImpl = global.fetch 
     if (next.statusCode !== 200 || !next.contentType.includes("json")) {
       return { upstream: next, rows: null };
     }
-    rows.push(...extractSeoulBikeRows(JSON.parse(next.body)));
+    const nextPayload = JSON.parse(next.body);
+    const nextSemanticError = getSeoulOpenApiSemanticError(nextPayload);
+    if (nextSemanticError) {
+      return { upstream: next, rows: null, semanticError: nextSemanticError };
+    }
+    rows.push(...extractSeoulBikeRows(nextPayload));
   }
 
   return { upstream: first, rows };
@@ -1940,6 +2004,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     }
 
     const payload = JSON.parse(upstream.body);
+    const semanticError = getSeoulOpenApiSemanticError(payload);
+    if (semanticError) {
+      reply.code(502);
+      return buildSeoulBikeSemanticErrorPayload(semanticError, config);
+    }
     payload.proxy = {
       name: config.proxyName,
       cache: { hit: false, ttl_ms: config.cacheTtlMs },
@@ -1988,6 +2057,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     }
 
     const payload = JSON.parse(upstream.body);
+    const semanticError = getSeoulOpenApiSemanticError(payload);
+    if (semanticError) {
+      reply.code(502);
+      return buildSeoulBikeSemanticErrorPayload(semanticError, config);
+    }
     payload.proxy = {
       name: config.proxyName,
       cache: { hit: false, ttl_ms: config.cacheTtlMs },
@@ -2024,12 +2098,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const { upstream, rows } = await fetchAllSeoulBikeRealtimeRows({
+    const { upstream, rows, semanticError } = await fetchAllSeoulBikeRealtimeRows({
       apiKey: config.seoulOpenApiKey
     });
 
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);
+    if (semanticError) {
+      reply.code(502);
+      return buildSeoulBikeSemanticErrorPayload(semanticError, config);
+    }
     if (!upstream.contentType.includes("json") || rows === null) {
       return upstream.body;
     }

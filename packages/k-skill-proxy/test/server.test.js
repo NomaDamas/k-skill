@@ -1992,6 +1992,87 @@ test("seoul bike nearby endpoint filters and sorts realtime stations by distance
   assert.equal(second.json().proxy.cache.hit, true);
 });
 
+test("seoul bike nearby endpoint returns non-cacheable error for upstream semantic failures", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        RESULT: { CODE: "ERROR-336", MESSAGE: "limit exceeded" }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120&limit=5"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120&limit=5"
+  });
+
+  assert.equal(first.statusCode, 502);
+  assert.equal(second.statusCode, 502);
+  assert.equal(fetchCalls, 2, "semantic upstream errors must not be cached");
+  assert.equal(first.json().error, "upstream_semantic_error");
+  assert.equal(first.json().upstream.code, "ERROR-336");
+  assert.equal(first.json().proxy.cache.hit, false);
+});
+
+test("seoul bike realtime and stations endpoints do not cache upstream semantic failures", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        rentBikeStatus: {
+          RESULT: { CODE: "ERROR-336", MESSAGE: "limit exceeded" }
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const realtimeFirst = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime?startIndex=1&endIndex=10" });
+  const realtimeSecond = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime?startIndex=1&endIndex=10" });
+  const stations = await app.inject({ method: "GET", url: "/v1/seoul-bike/stations?startIndex=1&endIndex=10" });
+
+  assert.equal(realtimeFirst.statusCode, 502);
+  assert.equal(realtimeSecond.statusCode, 502);
+  assert.equal(stations.statusCode, 502);
+  assert.equal(fetchCalls, 3, "semantic upstream errors must not be cached across Seoul Bike passthrough routes");
+  assert.equal(realtimeFirst.json().error, "upstream_semantic_error");
+  assert.equal(stations.json().upstream.code, "ERROR-336");
+});
+
 test("seoul bike nearby endpoint validates coordinates", async (t) => {
   const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
   t.after(async () => {
