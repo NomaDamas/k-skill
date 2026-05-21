@@ -9,6 +9,9 @@
 - `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
 - `GET /v1/seoul-density/citydata` — 서울 실시간 도시데이터(`citydata_ppltn`) 핫스팟 혼잡도/추정 인구(`SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/nearest` — 좌표 기준 가까운 따릉이 대여소 top N, haversine 거리(`SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/search` — 대여소명/지명 키워드로 따릉이 대여소 검색(`SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/stations` — 따릉이 전체 대여소 페이지 단위 dump(`SEOUL_OPEN_API_KEY`)
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` — 생활쓰레기 배출정보(`DATA_GO_KR_API_KEY`; `pageNo=1`, `numOfRows=100` 필수)
 - `GET /v1/parking-lots/search` — 전국주차장정보표준데이터 기반 근처 공영주차장 검색(`DATA_GO_KR_API_KEY`)
@@ -262,6 +265,11 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/kakao-local/geocode' \
 ```
 
 
-## PM2 실행
+## 프로덕션 배포
 
-루트의 `ecosystem.config.cjs` + `scripts/run-k-skill-proxy.sh` 조합을 사용하면 재부팅 이후에도 같은 환경변수로 다시 올라옵니다.
+프로덕션 프록시는 **Google Cloud Run** (`asia-northeast1`, GCP project `k-skill-proxy`)에서 운영되며, `k-skill-proxy.nomadamas.org` 도메인에 매핑되어 있습니다.
+
+- 컨테이너 이미지: `packages/k-skill-proxy/Dockerfile`
+- 자동 배포: `main` 브랜치 머지 시 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증 후 Artifact Registry로 이미지 빌드/푸시 → Cloud Run 재배포 → `/health` smoke test까지 수행합니다.
+- 시크릿: GCP Secret Manager에서 Cloud Run runtime에 주입됩니다.
+- 운영자 1회 셋업(WIF, Secret Manager, GitHub secrets) 절차는 [`docs/deploy-k-skill-proxy.md`](../../docs/deploy-k-skill-proxy.md) 참고.

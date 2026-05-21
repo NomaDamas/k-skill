@@ -176,6 +176,7 @@
 - 공중화장실정보 지역별 CSV: https://file.localdata.go.kr/file/download/public_restroom_info/info?orgCode=<시도코드>
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
 - 서울 실시간 도시데이터(`citydata_ppltn`): https://data.seoul.go.kr/dataList/OA-21778/A/1/datasetView.do
+- 서울 공공자전거(따릉이) 실시간 대여정보: https://data.seoul.go.kr/dataList/OA-13252/A/1/datasetView.do
 - 경찰청 LOST112 습득물 목록: https://www.lost112.go.kr/find/findList.do
 - 서울교통공사 유실물센터: https://www.seoulmetro.co.kr/kr/page.do?menuIdx=541
 - GeekNews public RSS/Atom feed: https://feeds.feedburner.com/geeknews-feed
