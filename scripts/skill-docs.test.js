@@ -177,7 +177,7 @@ test("repository publishes Korean contribution guidance for external contributor
   assert.match(contributing, /릴리스나 패키징 관련 변경은 `npm run ci`/);
   assert.match(contributing, /`~\/\.claude\/skills\/<skill-name>`/);
   assert.match(contributing, /`~\/\.agents\/skills\/<skill-name>`/);
-  assert.match(contributing, /프로덕션 프록시는 `~\/\.local\/share\/k-skill-proxy`/);
+  assert.match(contributing, /프로덕션 프록시는 \*\*Google Cloud Run\*\*/);
 });
 
 test("README links to the contribution guide", () => {

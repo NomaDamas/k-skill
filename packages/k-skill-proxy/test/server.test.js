@@ -24,6 +24,8 @@ const {
   proxyKakaoLocalRequest,
   proxyKosisRequest,
   proxyKmaWeatherRequest,
+  proxySeoulBikeRealtimeRequest,
+  proxySeoulBikeStationsRequest,
   proxySeoulCityDataRequest,
   proxySeoulSubwayRequest
 } = require("../src/server");
@@ -1785,6 +1787,220 @@ test("proxySeoulCityDataRequest injects API key and encodes area name", async ()
 
   assert.equal(result.statusCode, 200);
   assert.match(calledUrl, /\/test-seoul-key\/json\/citydata_ppltn\/1\/1\/%EA%B0%95%EB%82%A8%EC%97%AD$/);
+});
+
+
+
+test("seoul bike realtime endpoint caches successful upstream responses for normalized page queries", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        rentBikeStatus: {
+          list_total_count: 1,
+          RESULT: { CODE: "INFO-000", MESSAGE: "정상 처리되었습니다." },
+          row: [
+            {
+              stationId: "ST-10",
+              stationName: "101. 광화문역 1번출구 앞",
+              rackTotCnt: "15",
+              parkingBikeTotCnt: "4",
+              shared: "27",
+              stationLatitude: "37.5717",
+              stationLongitude: "126.9763"
+            }
+          ]
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime?start_index=1&end_index=10" });
+  const second = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime?startIndex=1&endIndex=10" });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(fetchCalls, 1);
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(first.json().rentBikeStatus.row[0].parkingBikeTotCnt, "4");
+});
+
+test("seoul bike routes stay publicly callable without proxy auth", async (t) => {
+  const originalFetch = global.fetch;
+  const calledUrls = [];
+  global.fetch = async (url) => {
+    calledUrls.push(String(url));
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const realtime = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime" });
+  const stations = await app.inject({ method: "GET", url: "/v1/seoul-bike/stations?startIndex=2&endIndex=5" });
+
+  assert.equal(realtime.statusCode, 200);
+  assert.equal(stations.statusCode, 200);
+  assert.match(calledUrls[0], /\/seoul-key\/json\/bikeList\/1\/1000\/?$/);
+  assert.match(calledUrls[1], /\/seoul-key\/json\/tbCycleStationInfo\/2\/5\/?$/);
+});
+
+test("seoul bike routes return 503 when proxy server lacks Seoul API key", async (t) => {
+  const app = buildServer();
+  t.after(async () => {
+    await app.close();
+  });
+
+  for (const url of [
+    "/v1/seoul-bike/realtime",
+    "/v1/seoul-bike/stations",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763"
+  ]) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 503, url);
+    assert.equal(response.json().error, "upstream_not_configured");
+  }
+});
+
+test("proxySeoulBikeRealtimeRequest and stations request inject API key and preserve paging", async () => {
+  const calledUrls = [];
+  const fetchImpl = async (url) => {
+    calledUrls.push(String(url));
+    return new Response('{"ok":true}', {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const realtime = await proxySeoulBikeRealtimeRequest({
+    startIndex: 2,
+    endIndex: 5,
+    apiKey: "test-seoul-key",
+    fetchImpl
+  });
+  const stations = await proxySeoulBikeStationsRequest({
+    startIndex: 3,
+    endIndex: 7,
+    apiKey: "test-seoul-key",
+    fetchImpl
+  });
+
+  assert.equal(realtime.statusCode, 200);
+  assert.equal(stations.statusCode, 200);
+  assert.match(calledUrls[0], /\/test-seoul-key\/json\/bikeList\/2\/5\/?$/);
+  assert.match(calledUrls[1], /\/test-seoul-key\/json\/tbCycleStationInfo\/3\/7\/?$/);
+});
+
+test("seoul bike nearby endpoint filters and sorts realtime stations by distance", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        rentBikeStatus: {
+          list_total_count: 3,
+          RESULT: { CODE: "INFO-000", MESSAGE: "정상 처리되었습니다." },
+          row: [
+            {
+              stationId: "ST-FAR",
+              stationName: "999. 먼 대여소",
+              rackTotCnt: "20",
+              parkingBikeTotCnt: "10",
+              shared: "50",
+              stationLatitude: "37.5900",
+              stationLongitude: "126.9900"
+            },
+            {
+              stationId: "ST-NEAR",
+              stationName: "101. 광화문역 1번출구 앞",
+              rackTotCnt: "15",
+              parkingBikeTotCnt: "4",
+              shared: "27",
+              stationLatitude: "37.5717",
+              stationLongitude: "126.9763"
+            },
+            {
+              stationId: "ST-EMPTY",
+              stationName: "102. 세종대로 앞",
+              rackTotCnt: "12",
+              parkingBikeTotCnt: "0",
+              shared: "0",
+              stationLatitude: "37.5720",
+              stationLongitude: "126.9770"
+            }
+          ]
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120&limit=5"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-bike/nearby?latitude=37.5717&longitude=126.9763&radiusMeters=120&limit=5"
+  });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(fetchCalls, 1);
+  const body = first.json();
+  assert.equal(body.count, 2);
+  assert.deepEqual(body.items.map((item) => item.station_id), ["ST-NEAR", "ST-EMPTY"]);
+  assert.equal(body.items[0].available_bikes, 4);
+  assert.equal(body.items[0].empty_docks, 11);
+  assert.equal(body.items[1].available_bikes, 0);
+  assert.equal(second.json().proxy.cache.hit, true);
+});
+
+test("seoul bike nearby endpoint validates coordinates", async (t) => {
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: "/v1/seoul-bike/nearby?lat=not-a-number&lon=126.9763" });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "bad_request");
 });
 
 test("korea weather endpoint caches successful upstream responses for normalized coordinate queries", async (t) => {

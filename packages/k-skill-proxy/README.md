@@ -9,6 +9,9 @@
 - `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
 - `GET /v1/seoul-density/citydata` — 서울 실시간 도시데이터(`citydata_ppltn`) 핫스팟 혼잡도/추정 인구(`SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/realtime` — 서울 따릉이 실시간 대여정보(`bikeList`, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/stations` — 서울 따릉이 대여소 마스터(`tbCycleStationInfo`, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/nearby` — 좌표 주변 따릉이 실시간 대여소 필터링(`SEOUL_OPEN_API_KEY`)
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` — 생활쓰레기 배출정보(`DATA_GO_KR_API_KEY`; `pageNo=1`, `numOfRows=100` 필수)
 - `GET /v1/parking-lots/search` — 전국주차장정보표준데이터 기반 근처 공영주차장 검색(`DATA_GO_KR_API_KEY`)
@@ -100,6 +103,12 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
 ```bash
 curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-density/citydata' \
   --data-urlencode 'area=강남역'
+
+# Seoul Bike nearby stations
+curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-bike/nearby' \
+  --data-urlencode 'lat=37.5717' \
+  --data-urlencode 'lon=126.9763' \
+  --data-urlencode 'radius_m=500'
 ```
 
 한국 날씨 예시:

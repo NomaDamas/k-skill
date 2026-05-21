@@ -123,6 +123,7 @@ npx --yes skills add <owner/repo> \
   --skill hipass-receipt \
   --skill seoul-subway-arrival \
   --skill seoul-density \
+  --skill seoul-bike \
   --skill subway-lost-property \
   --skill geeknews-search \
   --skill korea-weather \
@@ -401,6 +402,7 @@ node scripts/korean_character_count.js --text $'첫 줄\n둘째 줄🙂' --profi
 - `ktx-booking`
 - `seoul-subway-arrival`
 - `seoul-density`
+- `seoul-bike`
 - `korea-weather`
 - `fine-dust-location`
 - `korean-law-search`

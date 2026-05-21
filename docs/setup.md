@@ -42,7 +42,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 실제 값을 채운다.
 
-서울 지하철 도착정보, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. KOSIS 일반 조회와 Kakao Local geocoding도 같은 기본 hosted path를 쓴다. 별도 self-host proxy를 쓸 때만 `KSKILL_PROXY_BASE_URL` 을 채운다.
+서울 지하철 도착정보, 서울 실시간 혼잡도 조회, 서울 따릉이 실시간 대여소 조회, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. KOSIS 일반 조회와 Kakao Local geocoding도 같은 기본 hosted path를 쓴다. 별도 self-host proxy를 쓸 때만 `KSKILL_PROXY_BASE_URL` 을 채운다.
 
 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC` 는 `korean-law-mcp` 로컬 실행에 쓴다. 로컬 CLI/MCP 경로는 `LAW_OC` 를 채운 뒤 `npm install -g korean-law-mcp` 와 `korean-law list` 로 설치 상태를 확인한다.
 
@@ -89,6 +89,7 @@ bash scripts/check-setup.sh
 | 근처 가장 싼 주유소 찾기 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
 | 서울 지하철 도착정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`) |
 | 서울 실시간 혼잡도 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`) |
+| 서울 따릉이 실시간 대여소 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`) |
 | 한국 날씨 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KMA_OPEN_API_KEY`) |
 | 사용자 위치 미세먼지 조회 | `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY` |
 | 한강 수위 정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |

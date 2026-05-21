@@ -19,6 +19,9 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
 - `GET /v1/seoul-density/citydata` (서울 실시간 도시데이터 핫스팟 혼잡도/추정 인구, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/realtime` (서울 따릉이 실시간 대여정보 `bikeList`, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/stations` (서울 따릉이 대여소 마스터 `tbCycleStationInfo`, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/nearby` (좌표 주변 따릉이 실시간 대여소 필터링, `SEOUL_OPEN_API_KEY`)
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` (생활쓰레기 배출정보, `DATA_GO_KR_API_KEY`; 쿼리 `pageNo`·`numOfRows` 필수, 값 `1`·`100`)
 - `GET /v1/mfds/drug-safety/lookup` (식약처 의약품개요정보 + 안전상비의약품 정보, `DATA_GO_KR_API_KEY`)
@@ -125,6 +128,12 @@ curl -fsS --get "${BASE}/v1/seoul-subway/arrival" \
 BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
 curl -fsS --get "${BASE}/v1/seoul-density/citydata" \
   --data-urlencode 'area=강남역'
+
+# 서울 따릉이 주변 대여소
+curl -fsS --get "${BASE}/v1/seoul-bike/nearby" \
+  --data-urlencode 'lat=37.5717' \
+  --data-urlencode 'lon=126.9763' \
+  --data-urlencode 'radius_m=500'
 ```
 
 한국 날씨 endpoint:
