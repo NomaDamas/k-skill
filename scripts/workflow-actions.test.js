@@ -8,6 +8,26 @@ const path = require("node:path");
 const repoRoot = path.resolve(__dirname, "..");
 const workflowDir = path.join(repoRoot, ".github", "workflows");
 
+// Reviewed action runtime coverage is intentionally curated, not exhaustive:
+// these pins are the Node 20 deprecation migration set verified from each
+// listed action ref's GitHub `action.yml` metadata on the review date below.
+const actionRuntimeGuardScope = {
+  coverage: "curated migration set; not exhaustive for every external workflow action",
+  reviewedAt: "2026-05-22",
+  sourceUrls: new Map([
+    ["actions/checkout", "https://github.com/actions/checkout/blob/v5/action.yml"],
+    ["actions/setup-node", "https://github.com/actions/setup-node/blob/v5/action.yml"],
+    [
+      "google-github-actions/setup-gcloud",
+      "https://github.com/google-github-actions/setup-gcloud/blob/v3/action.yml",
+    ],
+    [
+      "googleapis/release-please-action",
+      "https://github.com/googleapis/release-please-action/blob/v5/action.yml",
+    ],
+  ]),
+};
+
 const expectedNode24ActionPins = new Map([
   ["actions/checkout", "v5"],
   ["actions/setup-node", "v5"],
@@ -68,6 +88,16 @@ test("workflow action extractor includes uses lines with inline comments", () =>
     uses.map((use) => use.spec),
     ["actions/checkout@v4", "actions/setup-node@v5", "google-github-actions/setup-gcloud@v3"],
   );
+});
+
+test("workflow action runtime guard documents its reviewed coverage scope", () => {
+  assert.match(actionRuntimeGuardScope.coverage, /curated/i);
+  assert.match(actionRuntimeGuardScope.coverage, /not exhaustive/i);
+  assert.match(actionRuntimeGuardScope.reviewedAt, /^\d{4}-\d{2}-\d{2}$/);
+
+  for (const action of expectedNode24ActionPins.keys()) {
+    assert.match(actionRuntimeGuardScope.sourceUrls.get(action), /^https:\/\/github\.com\/.+\/action\.yml$/);
+  }
 });
 
 test("workflow action pins avoid reviewed Node 20 action majors", () => {
