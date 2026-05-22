@@ -1,6 +1,6 @@
 {
   "name": "local-election-candidate-search",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Public NEC Korean local election candidate lookup client for k-skill",
   "license": "MIT",
   "main": "src/index.js",

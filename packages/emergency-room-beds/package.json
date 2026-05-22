@@ -1,6 +1,6 @@
 {
   "name": "emergency-room-beds",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Public E-Gen nearby emergency room status lookup for Korean location queries",
   "license": "MIT",
   "main": "src/index.js",
