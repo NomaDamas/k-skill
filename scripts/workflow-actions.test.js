@@ -22,6 +22,8 @@ const knownNode20ActionPins = new Map([
   ["googleapis/release-please-action", new Set(["v4"])],
 ]);
 
+const usesLinePattern = /^\s*(?:-\s*)?uses:\s*['"]?([^'"\s#]+)['"]?(?:\s*#.*)?\s*$/gm;
+
 function readWorkflow(name) {
   return fs.readFileSync(path.join(workflowDir, name), "utf8");
 }
@@ -33,17 +35,40 @@ function listWorkflowFiles() {
     .sort();
 }
 
+function usesFromWorkflowBody(name, body) {
+  return [...body.matchAll(usesLinePattern)].map((match) => {
+    const spec = match[1];
+    const at = spec.lastIndexOf("@");
+    assert.notEqual(at, -1, `${name} action use must be pinned with @ref: ${spec}`);
+    return { file: name, action: spec.slice(0, at), ref: spec.slice(at + 1), spec };
+  });
+}
+
 function workflowUses() {
   return listWorkflowFiles().flatMap((name) => {
     const body = readWorkflow(name);
-    return [...body.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)\s*$/gm)].map((match) => {
-      const spec = match[1];
-      const at = spec.lastIndexOf("@");
-      assert.notEqual(at, -1, `${name} action use must be pinned with @ref: ${spec}`);
-      return { file: name, action: spec.slice(0, at), ref: spec.slice(at + 1), spec };
-    });
+    return usesFromWorkflowBody(name, body);
   });
 }
+
+test("workflow action extractor includes uses lines with inline comments", () => {
+  const uses = usesFromWorkflowBody(
+    "inline-comment.yml",
+    [
+      "jobs:",
+      "  validate:",
+      "    steps:",
+      "      - uses: actions/checkout@v4 # intentionally stale fixture",
+      "      - uses: 'actions/setup-node@v5' # quoted fixture",
+      '      - uses: "google-github-actions/setup-gcloud@v3"',
+    ].join("\n"),
+  );
+
+  assert.deepEqual(
+    uses.map((use) => use.spec),
+    ["actions/checkout@v4", "actions/setup-node@v5", "google-github-actions/setup-gcloud@v3"],
+  );
+});
 
 test("workflow action pins avoid reviewed Node 20 action majors", () => {
   for (const use of workflowUses()) {
