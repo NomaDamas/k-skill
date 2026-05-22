@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           config-file: .github/release-please/python-config.json
           manifest-file: .github/release-please/python-manifest.json
