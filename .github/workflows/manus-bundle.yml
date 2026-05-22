@@ -28,9 +28,9 @@ jobs:
       RELEASE_TAG: manus-bundle-latest
       RELEASE_TITLE: "Manus bundle (rolling)"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm

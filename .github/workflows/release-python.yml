@@ -21,7 +21,7 @@ jobs:
     outputs:
       has_python_packages: ${{ steps.detect.outputs.has_python_packages }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: detect
         shell: bash
         run: |
@@ -43,7 +43,7 @@ jobs:
     if: ${{ needs.detect_python_packages.outputs.has_python_packages == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - id: release
         uses: googleapis/release-please-action@v4
