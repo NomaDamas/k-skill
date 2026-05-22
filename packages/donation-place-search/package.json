@@ -1,6 +1,6 @@
 {
   "name": "donation-place-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Recommend Korean donation recipients by location and category with best-effort 1365 Give Korea search-assist links and curated fallback data",
   "license": "MIT",
   "main": "src/index.js",

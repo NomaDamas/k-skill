@@ -1,6 +1,6 @@
 {
   "name": "daishin-report-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Public Daishin Securities report lookup client for GitHub Pages mirrored HTML reports",
   "license": "MIT",
   "main": "src/index.js",

@@ -177,7 +177,14 @@ test("repository publishes Korean contribution guidance for external contributor
   assert.match(contributing, /릴리스나 패키징 관련 변경은 `npm run ci`/);
   assert.match(contributing, /`~\/\.claude\/skills\/<skill-name>`/);
   assert.match(contributing, /`~\/\.agents\/skills\/<skill-name>`/);
-  assert.match(contributing, /프로덕션 프록시는 \*\*Google Cloud Run\*\*/);
+  assert.match(
+    contributing,
+    /프로덕션 프록시는 \*\*Google Cloud Run\*\* \(project `k-skill-proxy`, region `asia-northeast1`\)에서 운영하며 `k-skill-proxy\.nomadamas\.org` 도메인에 매핑/,
+  );
+  assert.match(
+    contributing,
+    /프로덕션 시크릿은 GCP Secret Manager에 보관되고 Cloud Run 런타임에 주입됩니다\. 프록시 운영자\(maintainer\)가 한 번 수행해야 하는 WIF\/Secret Manager 셋업과 운영 점검 절차는 \[`docs\/deploy-k-skill-proxy\.md`\]\(docs\/deploy-k-skill-proxy\.md\)에 정리/,
+  );
 });
 
 test("README links to the contribution guide", () => {

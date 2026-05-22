@@ -1,6 +1,6 @@
 {
   "name": "korean-marathon-schedule",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Public Korean marathon and triathlon schedule lookup client",
   "license": "MIT",
   "main": "src/index.js",

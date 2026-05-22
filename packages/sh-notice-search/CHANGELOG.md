@@ -1,0 +1,7 @@
+# sh-notice-search
+
+## 0.2.0
+
+### Minor Changes
+
+- 271ea18: Add a policy-compliant SH public notice search skill and direct HTML lookup client.
