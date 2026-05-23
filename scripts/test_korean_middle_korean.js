@@ -49,6 +49,21 @@ test("createReport exposes deterministic metadata and replacement evidence", () 
   assert.match(report.contract, /deterministic/i);
 });
 
+test("documentation records the v1 rule order and compatibility policy", () => {
+  const docs = fs.readFileSync(path.join(__dirname, "..", "docs", "features", "korean-middle-korean.md"), "utf8");
+
+  assert.match(docs, /날짜 단위 정규화를 먼저 적용한다/);
+  assert.match(docs, /그다음 결정론적 lexicon 치환을 적용한다/);
+  assert.match(docs, /`middle-korean-style-v1`의 출력 변경/);
+
+  const report = createReport("2015년 7월 21일 배우가 말했다.");
+  const firstLexiconIndex = report.replacements.findIndex((replacement) => replacement.kind === "lexicon");
+  const lastDateIndex = report.replacements.findLastIndex((replacement) => replacement.kind === "date");
+
+  assert.ok(lastDateIndex >= 0);
+  assert.ok(firstLexiconIndex > lastDateIndex);
+});
+
 test("parseArgs enforces a single input source", () => {
   assert.deepEqual(parseArgs(["--text", "가나다"]), {
     format: "json",
