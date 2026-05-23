@@ -760,10 +760,18 @@ test("Kakao Map keyword search injects KakaoAK header, forwards x/y/radius/sort,
 });
 
 test("Kakao Map keyword search validates coordinate pairing and radius bounds", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), headers: options.headers ?? {} });
+    return jsonResponse({ documents: [], meta: { total_count: 0 } });
+  };
+
   const app = buildServer({
     env: { KAKAO_REST_API_KEY: "server-kakao-key" }
   });
   t.after(async () => {
+    global.fetch = originalFetch;
     await app.close();
   });
 
@@ -785,12 +793,20 @@ test("Kakao Map keyword search validates coordinate pairing and radius bounds", 
   });
   assert.equal(badRadius.statusCode, 400);
 
+  const radiusWithoutCoords = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/keyword?q=hi&radius=500"
+  });
+  assert.equal(radiusWithoutCoords.statusCode, 400);
+  assert.match(radiusWithoutCoords.json().message, /radius/i);
+
   const distanceSortWithoutCoords = await app.inject({
     method: "GET",
     url: "/v1/kakao-map/search/keyword?q=hi&sort=distance"
   });
   assert.equal(distanceSortWithoutCoords.statusCode, 400);
   assert.match(distanceSortWithoutCoords.json().message, /sort=distance/i);
+  assert.equal(calls.length, 0, "validation failures should not call Kakao upstream");
 });
 
 test("Kakao Map category search rejects unsupported category group codes", async (t) => {

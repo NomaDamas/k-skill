@@ -105,6 +105,9 @@ function normalizeKakaoKeywordSearchQuery(query) {
 
   const radius = query.radius;
   if (radius !== undefined && radius !== null && radius !== "") {
+    if (!result.x || !result.y) {
+      throw new Error("Provide both x (lng) and y (lat) when using radius.");
+    }
     result.radius = parseBoundedPositiveInteger(radius, {
       defaultValue: undefined,
       min: 0,
