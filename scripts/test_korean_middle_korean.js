@@ -44,10 +44,32 @@ test("documentation and skill describe proper-noun preservation as best effort",
 
   assert.match(docs, /인명·숫자·고유명사는 완전 보존이 아니라/i);
   assert.match(docs, /넓은 전역 치환/i);
+  assert.match(docs, /URL, 이메일, Markdown 링크, inline\/fenced code span은 구조 토큰/i);
   assert.match(skill, /인명·숫자·고유명사는 완전 보존이 아니라/i);
   assert.match(skill, /넓은 전역 치환/i);
+  assert.match(skill, /URL, 이메일, Markdown 링크, inline\/fenced code span은 구조 토큰/i);
 
   assert.match(convertToMiddleKoreanStyle("배우자는 학교에서 일했다."), /俳優자/);
+});
+
+
+test("converter preserves URLs, emails, Markdown links, and code spans unchanged", () => {
+  const input = [
+    "https://example.com에서 확인했다.",
+    "contact@example.com은 말했다.",
+    "[학교에서 보기](https://example.com/학교에서)은 유지했다.",
+    "`학교에서` 테스트했다.",
+    "```\n학교에서 공부했다.\n```\n밖에서 공부했다.",
+  ].join("\n");
+
+  const output = convertToMiddleKoreanStyle(input);
+
+  assert.match(output, /https:\/\/example[.]com에서 확인ᄒᆞ엿다〮[.]/);
+  assert.match(output, /contact@example[.]com은 말ᄒᆞ엿다〮[.]/);
+  assert.match(output, /\[학교에서 보기\]\(https:\/\/example[.]com\/학교에서\)은 유지ᄒᆞ엿다〮[.]/);
+  assert.match(output, /`학교에서` 테스트ᄒᆞ엿다〮[.]/);
+  assert.match(output, /```\n학교에서 공부했다[.]\n```/);
+  assert.match(output, /밖애 공부ᄒᆞ엿다〮[.]/);
 });
 
 test("createReport exposes deterministic metadata and replacement evidence", () => {

@@ -5,7 +5,7 @@ const fs = require("node:fs");
 
 const PROFILE = "middle-korean-style-v1";
 const CONTRACT =
-  "Deterministic Korean Middle Korean-style rewrite: public-domain orthographic flavor rules, fixed broad lexicon replacements, archaic particles/endings, Sino-Korean Hanja hints, and best-effort preservation for names/numbers when no rule matches.";
+  "Deterministic Korean Middle Korean-style rewrite: public-domain orthographic flavor rules, fixed broad lexicon replacements, archaic particles/endings, Sino-Korean Hanja hints, protected URL/email/Markdown-code spans, and best-effort preservation for names/numbers when no rule matches.";
 
 const LEXICON = [
   ["야 이", "이"],
@@ -53,6 +53,35 @@ function replaceRegex(text, pattern, to, replacements, kind, label) {
   return next;
 }
 
+function protectSpans(input) {
+  const protectedSpans = [];
+  let text = input;
+
+  function protect(pattern) {
+    text = text.replace(pattern, (match) => {
+      const token = `\uE000${protectedSpans.length}\uE001`;
+      protectedSpans.push(match);
+      return token;
+    });
+  }
+
+  protect(/```[\s\S]*?```/g);
+  protect(/`[^`\n]*`/g);
+  protect(/\[[^\]\n]*\]\([^\s)]+(?:\s+"[^"]*")?\)/g);
+  protect(/\bhttps?:\/\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]+/g);
+  protect(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g);
+
+  return { text, protectedSpans };
+}
+
+function restoreSpans(text, protectedSpans) {
+  let output = text;
+  protectedSpans.forEach((span, index) => {
+    output = output.replaceAll(`\uE000${index}\uE001`, span);
+  });
+  return output;
+}
+
 function convertToMiddleKoreanStyle(input) {
   return createReport(input).output;
 }
@@ -63,7 +92,8 @@ function createReport(input) {
   }
 
   const replacements = [];
-  let output = input;
+  const protectedInput = protectSpans(input);
+  let output = protectedInput.text;
 
   output = replaceRegex(output, /(\d+)년/g, "$1年", replacements, "date", "년→年");
   output = replaceRegex(output, /(\d+)월/g, "$1月", replacements, "date", "월→月");
@@ -86,6 +116,7 @@ function createReport(input) {
   output = replaceRegex(output, /([가-힣ᄀ-ᇿA-Za-z0-9一-龥]+)와(?=\s|[",.?!]|$)/g, "$1와", replacements, "particle", "와 보존");
 
   output = output.replace(/\s+([,.;:?!])/g, "$1");
+  output = restoreSpans(output, protectedInput.protectedSpans);
 
   return {
     profile: PROFILE,
