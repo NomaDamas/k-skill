@@ -5,7 +5,7 @@ const fs = require("node:fs");
 
 const PROFILE = "middle-korean-style-v1";
 const CONTRACT =
-  "Deterministic Korean Middle Korean-style rewrite: public-domain orthographic flavor rules, fixed lexicon replacements, archaic particles/endings, Sino-Korean Hanja hints, and preserved names/numbers.";
+  "Deterministic Korean Middle Korean-style rewrite: public-domain orthographic flavor rules, fixed broad lexicon replacements, archaic particles/endings, Sino-Korean Hanja hints, and best-effort preservation for names/numbers when no rule matches.";
 
 const LEXICON = [
   ["야 이", "이"],

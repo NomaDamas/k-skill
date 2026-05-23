@@ -27,7 +27,7 @@ test("convertToMiddleKoreanStyle applies the issue #270 medieval Korean style ma
   assert.match(output, /ᄆᆞᆯᄒᆞᄂᆞᆫ 것이냐〮[.]?$/);
 });
 
-test("converter preserves names and numbers while archaising particles and endings", () => {
+test("converter leaves unrecognized names and numbers unchanged while archaising particles and endings", () => {
   const output = convertToMiddleKoreanStyle("민수는 3월 5일 학교에서 공부했다.");
 
   assert.match(output, /민수ᄋᆞᆫ/);
@@ -36,6 +36,18 @@ test("converter preserves names and numbers while archaising particles and endin
   assert.match(output, /공부ᄒᆞ/);
   assert.match(output, /ᄒᆞ엿다〮[.]?$/);
   assert.match(convertToMiddleKoreanStyle("전설이 된 이야기."), /ᄃᆞᆫ 이야기/);
+});
+
+test("documentation and skill describe proper-noun preservation as best effort", () => {
+  const docs = fs.readFileSync(path.join(__dirname, "..", "docs", "features", "korean-middle-korean.md"), "utf8");
+  const skill = fs.readFileSync(path.join(__dirname, "..", "korean-middle-korean", "SKILL.md"), "utf8");
+
+  assert.match(docs, /인명·숫자·고유명사는 완전 보존이 아니라/i);
+  assert.match(docs, /넓은 전역 치환/i);
+  assert.match(skill, /인명·숫자·고유명사는 완전 보존이 아니라/i);
+  assert.match(skill, /넓은 전역 치환/i);
+
+  assert.match(convertToMiddleKoreanStyle("배우자는 학교에서 일했다."), /俳優자/);
 });
 
 test("createReport exposes deterministic metadata and replacement evidence", () => {
