@@ -251,8 +251,16 @@ function normalizeKakaoMobilityDirectionsQuery(query) {
     }
     for (const [index, entry] of entries.entries()) {
       const parts = entry.split(",").map((p) => p.trim());
-      if (parts.length !== 2 || !Number.isFinite(parseFloatOrNaN(parts[0])) || !Number.isFinite(parseFloatOrNaN(parts[1]))) {
+      if (parts.length !== 2) {
         throw new Error(`Provide waypoint[${index}] as numeric 'x,y'.`);
+      }
+      const x = parseFloatOrNaN(parts[0]);
+      const y = parseFloatOrNaN(parts[1]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        throw new Error(`Provide waypoint[${index}] as numeric 'x,y'.`);
+      }
+      if (x < -180 || x > 180 || y < -90 || y > 90) {
+        throw new Error(`Provide valid waypoint[${index}] coordinates.`);
       }
     }
     waypoints = entries.join("|");

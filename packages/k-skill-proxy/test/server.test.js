@@ -1064,6 +1064,29 @@ test("Kakao Mobility directions endpoint validates coordinate, priority, and way
   assert.equal(tooManyWaypoints.statusCode, 400);
 });
 
+test("Kakao Mobility directions rejects out-of-range waypoints before upstream", async (t) => {
+  const originalFetch = global.fetch;
+  let upstreamCalls = 0;
+  global.fetch = async () => {
+    upstreamCalls += 1;
+    throw new Error("Unexpected upstream call for invalid waypoint.");
+  };
+
+  const app = buildServer({ env: { KAKAO_REST_API_KEY: "k" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-mobility/directions?origin=127.0,37.5&destination=127.1,37.6&waypoints=181,37.55"
+  });
+  assert.equal(response.statusCode, 400);
+  assert.match(response.json().message, /waypoint\[0\]/);
+  assert.equal(upstreamCalls, 0);
+});
+
 test("Kakao Mobility directions surfaces routes[0].result_code != 0 as 502 and does not cache", async (t) => {
   const originalFetch = global.fetch;
   let upstreamCalls = 0;
