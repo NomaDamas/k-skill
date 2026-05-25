@@ -10,6 +10,7 @@
 - KOSIS Open API endpoint host: https://kosis.kr/openapi/ — 일반 helper 호출은 `k-skill-proxy`의 `/v1/kosis/search`, `/v1/kosis/meta`, `/v1/kosis/data`가 이 host의 `/statisticsSearch.do`, `/statisticsData.do`, `/Param/statisticsParameterData.do` 로 중계한다. `bigdata`/`--direct`는 `/statisticsBigData.do` 등을 직접 호출한다 (HTTPS 전용, 2026-03-05 시행)
 - Kakao Local API endpoint host: https://dapi.kakao.com/v2/local/ — `k-skill-proxy`의 `/v1/kakao-local/geocode`가 `/search/address.json` → empty result 시 `/search/keyword.json` 순서로 중계한다. 같은 host의 `/search/keyword.json`, `/search/category.json`, `/geo/coord2address.json`, `/geo/coord2regioncode.json` 은 `kakao-map` 스킬용 `/v1/kakao-map/*` 라우트가 직접 중계한다.
 - Kakao Mobility Directions endpoint: https://apis-navi.kakaomobility.com/v1/directions — `k-skill-proxy`의 `/v1/kakao-mobility/directions`가 운영자 `KAKAO_REST_API_KEY`를 `Authorization: KakaoAK ...` 헤더로 주입해 자동차 길찾기를 중계한다.
+- NAVER Cloud Platform Maps Console: https://www.ncloud.com/product/applicationService/maps — `k-skill-proxy`의 `/v1/naver-map/directions`, `/v1/naver-map/geocode`, `/v1/naver-map/reverse-geocode`가 각각 `https://maps.apigw.ntruss.com/map-direction/v1/driving`, `/map-geocode/v2/geocode`, `/map-reversegeocode/v2/gc` 로 중계한다. 운영자 `NAVER_MAP_CLIENT_ID`/`NAVER_MAP_CLIENT_SECRET` 가 필요하다.
 - 숲나들e 공식 사이트: https://foresttrip.go.kr/index.jsp
 - 숲나들e 로그인: https://www.foresttrip.go.kr/com/login.do
 - 숲나들e 월별예약조회 화면: https://www.foresttrip.go.kr/rep/or/sssn/monthRsrvtSmplStatus.do

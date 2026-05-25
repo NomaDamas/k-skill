@@ -28,6 +28,14 @@ const {
   normalizeKakaoKeywordSearchQuery,
   normalizeKakaoMobilityDirectionsQuery
 } = require("./kakao-map");
+const {
+  fetchNaverMapDirections,
+  fetchNaverMapGeocode,
+  fetchNaverMapReverseGeocode,
+  normalizeNaverMapDirectionsQuery,
+  normalizeNaverMapGeocodeQuery,
+  normalizeNaverMapReverseGeocodeQuery
+} = require("./naver-map");
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const {
@@ -186,6 +194,8 @@ function buildConfig(env = process.env) {
     kosisApiKey: trimOrNull(env.KOSIS_API_KEY ?? env.KSKILL_KOSIS_API_KEY),
     naverSearchClientId: trimOrNull(env.NAVER_SEARCH_CLIENT_ID ?? env.NAVER_CLIENT_ID),
     naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
+    naverMapClientId: trimOrNull(env.NAVER_MAP_CLIENT_ID),
+    naverMapClientSecret: trimOrNull(env.NAVER_MAP_CLIENT_SECRET),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -1887,6 +1897,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
   app.get("/health", async () => {
     const naverSearchKeysPresent = Boolean(config.naverSearchClientId && config.naverSearchClientSecret);
+    const naverMapKeysPresent = Boolean(config.naverMapClientId && config.naverMapClientSecret);
     return {
       ok: true,
       service: config.proxyName,
@@ -1911,6 +1922,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
         naverNewsApiConfigured: naverSearchKeysPresent,
+        naverMapConfigured: naverMapKeysPresent,
         ntsBusinessConfigured: Boolean(config.molitApiKey),
         kstartupConfigured: Boolean(config.molitApiKey)
       },
@@ -4188,7 +4200,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
-
   async function handleKakaoLocalEndpointRoute({
     request,
     reply,
@@ -4241,6 +4252,79 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
           status_code: error.upstreamStatusCode,
           body_snippet: error.upstreamBodySnippet || null
         };
+      }
+      return payload;
+    }
+
+    const payload = {
+      ...result.body,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    reply.code(result.statusCode);
+    reply.header("content-type", "application/json; charset=utf-8");
+    return payload;
+  }
+
+  async function handleNaverMapRoute({
+    request,
+    reply,
+    route,
+    normalize,
+    fetcher,
+    cacheKeyExtra = {}
+  }) {
+    let normalized;
+    try {
+      normalized = normalize(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+    const cacheKey = makeCacheKey({ route, ...normalized, ...cacheKeyExtra });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetcher({
+        ...normalized,
+        clientId: config.naverMapClientId,
+        clientSecret: config.naverMapClientSecret
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      const payload = {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+      if (error.upstreamStatusCode) {
+        payload.upstream = {
+          status_code: error.upstreamStatusCode
+        };
+        if (error.upstreamBodySnippet) {
+          payload.upstream.body_snippet = error.upstreamBodySnippet;
+        }
       }
       return payload;
     }
@@ -4355,6 +4439,30 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     reply.header("content-type", "application/json; charset=utf-8");
     return payload;
   });
+
+  app.get("/v1/naver-map/directions", async (request, reply) => handleNaverMapRoute({
+    request,
+    reply,
+    route: "naver-map-directions",
+    normalize: normalizeNaverMapDirectionsQuery,
+    fetcher: fetchNaverMapDirections
+  }));
+
+  app.get("/v1/naver-map/geocode", async (request, reply) => handleNaverMapRoute({
+    request,
+    reply,
+    route: "naver-map-geocode",
+    normalize: normalizeNaverMapGeocodeQuery,
+    fetcher: fetchNaverMapGeocode
+  }));
+
+  app.get("/v1/naver-map/reverse-geocode", async (request, reply) => handleNaverMapRoute({
+    request,
+    reply,
+    route: "naver-map-reverse-geocode",
+    normalize: normalizeNaverMapReverseGeocodeQuery,
+    fetcher: fetchNaverMapReverseGeocode
+  }));
 
 
   async function handleData4LibraryRoute({
@@ -4975,6 +5083,9 @@ module.exports = {
   normalizeKakaoCategorySearchQuery,
   normalizeKakaoCoordToAddressQuery,
   normalizeKakaoMobilityDirectionsQuery,
+  normalizeNaverMapDirectionsQuery,
+  normalizeNaverMapGeocodeQuery,
+  normalizeNaverMapReverseGeocodeQuery,
   normalizeKmaForecastQuery,
   normalizeKosisDataQuery,
   normalizeKosisMetaQuery,
@@ -5009,6 +5120,9 @@ module.exports = {
   proxyKstartupRequest,
   fetchKakaoLocalEndpoint,
   fetchKakaoMobilityDirections,
+  fetchNaverMapDirections,
+  fetchNaverMapGeocode,
+  fetchNaverMapReverseGeocode,
   fetchNaverShoppingSearch,
   proxyOpinetRequest,
   proxySeoulBikeRealtimeRequest,
