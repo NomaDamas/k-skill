@@ -91,6 +91,24 @@ node packages/k-skill-proxy/src/server.js
 
 환경변수(`AIR_KOREA_OPEN_API_KEY` 등)가 이미 설정되어 있거나 `~/.config/k-skill/secrets.env`를 source한 상태에서 실행한다.
 
+## Docker 빌드
+
+Dockerfile은 `packages/k-skill-proxy/Dockerfile`에 있지만, 빌드 컨텍스트는 반드시 repository root로 둔다. 프록시는 `packages/parking-lot-search`와 root-level `scripts/ktx_booking.py`를 함께 복사하므로, `packages/k-skill-proxy`를 컨텍스트로 잡으면 Docker가 필요한 파일을 읽을 수 없다.
+
+```bash
+docker build -f packages/k-skill-proxy/Dockerfile -t k-skill-proxy .
+```
+
+Docker Compose에서는 다음처럼 `context`를 root로, `dockerfile`을 proxy Dockerfile로 지정한다.
+
+```yaml
+services:
+  k-skill-proxy:
+    build:
+      context: .
+      dockerfile: packages/k-skill-proxy/Dockerfile
+```
+
 
 국세청 사업자등록 상태조회 예시:
 

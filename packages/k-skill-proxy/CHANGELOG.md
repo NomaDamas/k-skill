@@ -4,6 +4,7 @@
 
 ### Minor Changes
 
+- Add `/v1/ktx/*` proxy routes backed by the existing `scripts/ktx_booking.py` helper. The routes support train search, reservation creation, reservation listing, cancellation, N-card listing, and N-card discounted train search. They inject server-side `KSKILL_KTX_ID`/`KSKILL_KTX_PASSWORD`, expose `ktxConfigured` on `/health`, and update the Docker image with the Python runtime dependencies required by the helper.
 - 6d49a28: Add Kakao Map proxy routes (keyword search, category search, coord2address, coord2region, Kakao Mobility car directions) used by the new kakao-map skill (issue #267). All routes inject server-side KAKAO_REST_API_KEY and never forward caller-supplied apiKey query params.
 - ff2aa91: Add NAVER Cloud Platform Maps directions, geocoding, and reverse-geocoding proxy routes used by the new naver-map-route skill (issue #268). Routes inject server-side NAVER_MAP_CLIENT_ID/SECRET and return 503 when the upstream key is missing.
 - 540e80b: Add `/v1/kstartup/{business-info,announcements,contents,statistics}` routes that wrap the data.go.kr `15125364` (창업진흥원\_K-Startup) Open API. The routes inject `DATA_GO_KR_API_KEY` server-side, return 503 when the key (or the per-dataset 활용신청) is missing, and cache successful JSON responses while bypassing the cache for upstream error envelopes (`resultCode != "00"`).

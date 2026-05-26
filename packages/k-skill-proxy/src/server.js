@@ -39,6 +39,18 @@ const {
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const {
+  normalizeKtxCancelBody,
+  normalizeKtxNcardSearchQuery,
+  normalizeKtxReserveBody,
+  normalizeKtxSearchQuery,
+  proxyKtxCancel,
+  proxyKtxNcardSearch,
+  proxyKtxNcards,
+  proxyKtxReservations,
+  proxyKtxReserve,
+  proxyKtxSearch
+} = require("./ktx");
+const {
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
   proxyNtsBusinessRequest
@@ -196,6 +208,8 @@ function buildConfig(env = process.env) {
     naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
     naverMapClientId: trimOrNull(env.NAVER_MAP_CLIENT_ID),
     naverMapClientSecret: trimOrNull(env.NAVER_MAP_CLIENT_SECRET),
+    ktxId: trimOrNull(env.KSKILL_KTX_ID),
+    ktxPassword: trimOrNull(env.KSKILL_KTX_PASSWORD),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -1920,6 +1934,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         kakaoMobilityConfigured: Boolean(config.kakaoRestApiKey),
         kosisConfigured: Boolean(config.kosisApiKey),
         naverShoppingConfigured: true,
+        ktxConfigured: Boolean(config.ktxId && config.ktxPassword),
         naverSearchApiConfigured: naverSearchKeysPresent,
         naverNewsApiConfigured: naverSearchKeysPresent,
         naverMapConfigured: naverMapKeysPresent,
@@ -4024,6 +4039,113 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
+
+
+  app.get("/v1/ktx/search", async (request, reply) => {
+    if (!rateLimit(request, reply)) {
+      return reply;
+    }
+
+    try {
+      const query = normalizeKtxSearchQuery(request.query);
+      const result = await proxyKtxSearch(query, config);
+      return reply.send(result);
+    } catch (error) {
+      const statusCode = error.statusCode || 400;
+      return reply.code(statusCode).send({
+        error: error.code || "bad_request",
+        message: error.message
+      });
+    }
+  });
+
+  app.post("/v1/ktx/reserve", async (request, reply) => {
+    if (!rateLimit(request, reply)) {
+      return reply;
+    }
+
+    try {
+      const query = normalizeKtxReserveBody(request.body);
+      const result = await proxyKtxReserve(query, config);
+      return reply.send(result);
+    } catch (error) {
+      const statusCode = error.statusCode || 400;
+      return reply.code(statusCode).send({
+        error: error.code || "bad_request",
+        message: error.message
+      });
+    }
+  });
+
+  app.get("/v1/ktx/reservations", async (request, reply) => {
+    if (!rateLimit(request, reply)) {
+      return reply;
+    }
+
+    try {
+      const result = await proxyKtxReservations(config);
+      return reply.send(result);
+    } catch (error) {
+      const statusCode = error.statusCode || 400;
+      return reply.code(statusCode).send({
+        error: error.code || "bad_request",
+        message: error.message
+      });
+    }
+  });
+
+  app.post("/v1/ktx/cancel", async (request, reply) => {
+    if (!rateLimit(request, reply)) {
+      return reply;
+    }
+
+    try {
+      const query = normalizeKtxCancelBody(request.body);
+      const result = await proxyKtxCancel(query, config);
+      return reply.send(result);
+    } catch (error) {
+      const statusCode = error.statusCode || 400;
+      return reply.code(statusCode).send({
+        error: error.code || "bad_request",
+        message: error.message
+      });
+    }
+  });
+
+  app.get("/v1/ktx/ncards", async (request, reply) => {
+    if (!rateLimit(request, reply)) {
+      return reply;
+    }
+
+    try {
+      const result = await proxyKtxNcards(config);
+      return reply.send(result);
+    } catch (error) {
+      const statusCode = error.statusCode || 400;
+      return reply.code(statusCode).send({
+        error: error.code || "bad_request",
+        message: error.message
+      });
+    }
+  });
+
+  app.get("/v1/ktx/ncard-search", async (request, reply) => {
+    if (!rateLimit(request, reply)) {
+      return reply;
+    }
+
+    try {
+      const query = normalizeKtxNcardSearchQuery(request.query);
+      const result = await proxyKtxNcardSearch(query, config);
+      return reply.send(result);
+    } catch (error) {
+      const statusCode = error.statusCode || 400;
+      return reply.code(statusCode).send({
+        error: error.code || "bad_request",
+        message: error.message
+      });
+    }
+  });
 
   app.get("/v1/naver-shopping/search", async (request, reply) => {
     let normalized;
