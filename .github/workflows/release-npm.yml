@@ -24,11 +24,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -36,6 +36,41 @@ jobs:
 
       - run: npm ci
       - run: npm run ci
+
+      - name: Preflight – verify npm auth
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "::group::npm whoami"
+          NPM_USER=$(npm whoami 2>&1) || {
+            echo "::error::npm whoami failed – NPM_TOKEN is invalid or expired. Rotate the token and update the repository secret."
+            exit 1
+          }
+          echo "Authenticated as: ${NPM_USER}"
+          echo "::endgroup::"
+
+      - name: Preflight – list unpublished packages (diagnostic)
+        run: |
+          set -euo pipefail
+          echo "Packages that will be published:"
+          FOUND=0
+          for pkg_json in packages/*/package.json; do
+            PRIVATE=$(node -e "console.log(require('./${pkg_json}').private || false)")
+            [ "$PRIVATE" = "true" ] && continue
+
+            PKG=$(node -e "console.log(require('./${pkg_json}').name)")
+            LOCAL_VER=$(node -e "console.log(require('./${pkg_json}').version)")
+            REMOTE_VER=$(npm view "${PKG}" version 2>/dev/null || echo "")
+
+            if [ "${LOCAL_VER}" != "${REMOTE_VER}" ]; then
+              echo "  → ${PKG}@${LOCAL_VER} (npm: ${REMOTE_VER:-not yet published})"
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 0 ]; then
+            echo "  (none – all versions are already on npm)"
+          fi
 
       - name: Create npm release PR or publish changed packages
         uses: changesets/action@v1

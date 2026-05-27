@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -u
+
+if [ "${1:-}" = "--version" ]; then
+    echo "codex-cli 0.130.0-stub"
+    exit 0
+fi
+
+mode="${CODEX_STUB_MODE:-success}"
+
+emit_success_jsonl() {
+    cat <<'EOF'
+{"type":"thread.started","thread_id":"stub-thread-1"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"2026-05-15 KBO 경기 결과:\n- 한화 이글스 5 : 3 LG 트윈스 (종료)\n- 삼성 라이온즈 2 : 7 KIA 타이거즈 (종료)\n\nVERDICT: PASS"}}
+{"type":"turn.completed","usage":{"input_tokens":100,"output_tokens":50}}
+EOF
+}
+
+emit_fail_jsonl() {
+    cat <<'EOF'
+{"type":"thread.started","thread_id":"stub-thread-2"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"네트워크 오류로 데이터 조회 실패 - DNS error.\n\nVERDICT: FAIL"}}
+{"type":"turn.completed","usage":{"input_tokens":100,"output_tokens":20}}
+EOF
+}
+
+emit_judge_pass_jsonl() {
+    cat <<'EOF'
+{"type":"thread.started","thread_id":"stub-thread-judge"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"{\"verdict\":\"pass\",\"reason\":\"ok\",\"symptom_class\":\"success\",\"confidence\":0.95,\"evidence_quote\":\"VERDICT: PASS\"}"}}
+{"type":"turn.completed","usage":{"input_tokens":200,"output_tokens":30}}
+EOF
+}
+
+case "$mode" in
+    success)    emit_success_jsonl; exit 0 ;;
+    fail)       emit_fail_jsonl; exit 0 ;;
+    crash)      exit 2 ;;
+    hang)       sleep 3600 ;;
+    judge-pass) emit_judge_pass_jsonl; exit 0 ;;
+    *)          emit_success_jsonl; exit 0 ;;
+esac

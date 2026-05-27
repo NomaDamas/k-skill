@@ -11,10 +11,22 @@ const {
   normalizeData4LibraryBookSearchQuery,
   normalizeData4LibraryLibrariesByBookQuery,
   normalizeData4LibraryLibrarySearchQuery,
+  normalizeKakaoLocalGeocodeQuery,
+  normalizeKosisDataQuery,
+  normalizeKosisMetaQuery,
+  normalizeKosisSearchQuery,
+  normalizeKstartupQuery,
+  normalizeNtsBusinessStatusQuery,
+  normalizeNtsBusinessValidateQuery,
   proxyAirKoreaRequest,
   proxyData4LibraryRequest,
   proxyHrfcoWaterLevelRequest,
+  proxyKakaoLocalRequest,
+  proxyKosisRequest,
   proxyKmaWeatherRequest,
+  proxySeoulBikeRealtimeRequest,
+  proxySeoulBikeStationsRequest,
+  proxySeoulCityDataRequest,
   proxySeoulSubwayRequest
 } = require("../src/server");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
@@ -145,6 +157,327 @@ test("food-safety search does not cache upstream failures so transient errors se
   assert.equal(recallCalls.length, 2, "upstream hit on first (fail) and second (recovered) - third served from cache");
 });
 
+test("NTS business normalizers validate status and authenticity payloads", () => {
+  const tooManyBusinessNumbers = Array.from({ length: 101 }, (_, index) => String(index).padStart(10, "0"));
+
+  assert.deepEqual(normalizeNtsBusinessStatusQuery({ b_no: "123-45-67890, 9876543210" }), {
+    b_no: ["1234567890", "9876543210"]
+  });
+
+  assert.deepEqual(
+    normalizeNtsBusinessValidateQuery({
+      businesses: [
+        {
+          b_no: "123-45-67890",
+          start_dt: "2020-01-31",
+          p_nm: "홍길동",
+          b_nm: "테스트상사",
+          corp_no: "110111-1234567"
+        }
+      ]
+    }),
+    {
+      businesses: [
+        {
+          b_no: "1234567890",
+          start_dt: "20200131",
+          p_nm: "홍길동",
+          b_nm: "테스트상사",
+          corp_no: "1101111234567"
+        }
+      ]
+    }
+  );
+
+  assert.throws(() => normalizeNtsBusinessStatusQuery({ b_no: "123" }), /business registration number/);
+  assert.throws(
+    () => normalizeNtsBusinessValidateQuery({ businesses: [{ b_no: "1234567890", p_nm: "홍길동" }] }),
+    /start_dt/
+  );
+  assert.throws(
+    () => normalizeNtsBusinessStatusQuery({ b_no: tooManyBusinessNumbers }),
+    /up to 100/
+  );
+  assert.throws(
+    () => normalizeNtsBusinessValidateQuery({
+      businesses: [{ b_no: "1234567890", start_dt: "20200101", p_nm: "홍길동", corp_no: "123" }]
+    }),
+    /corp_no/
+  );
+  assert.throws(
+    () => normalizeNtsBusinessValidateQuery({
+      businesses: [{ b_no: "1234567890", start_dt: "20200101", p_nm: "홍".repeat(31) }]
+    }),
+    /p_nm/
+  );
+  assert.throws(
+    () => normalizeNtsBusinessValidateQuery({
+      businesses: [{ b_no: "1234567890", start_dt: "20200101", p_nm: "홍길동", b_adr: "가".repeat(501) }]
+    }),
+    /b_adr/
+  );
+});
+
+test("NTS business status route proxies POST body with service key server-side", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return new Response(
+      JSON.stringify({ status_code: "OK", request_cnt: 1, data: [{ b_no: "1234567890", b_stt: "계속사업자" }] }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/status",
+    payload: { b_no: ["123-45-67890"] }
+  });
+
+  const body = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data[0].b_stt, "계속사업자");
+  assert.equal(body.proxy.cache.hit, false);
+  assert.match(calls[0].url, /\/nts-businessman\/v1\/status\?serviceKey=data-go-key$/);
+  assert.deepEqual(JSON.parse(calls[0].options.body), { b_no: ["1234567890"] });
+  assert.equal(calls[0].options.method, "POST");
+  assert.equal(calls[0].options.headers["content-type"], "application/json");
+
+  const cached = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/status",
+    payload: { b_no: ["1234567890"] }
+  });
+  const cachedBody = cached.json();
+
+  assert.equal(cached.statusCode, 200);
+  assert.equal(cachedBody.proxy.cache.hit, true);
+  assert.equal(calls.length, 1);
+});
+
+test("NTS business validate route normalizes businesses and reports missing key", async (t) => {
+  const missingKeyApp = buildServer();
+  t.after(async () => {
+    await missingKeyApp.close();
+  });
+
+  const unavailable = await missingKeyApp.inject({
+    method: "POST",
+    url: "/v1/nts-business/validate",
+    payload: { businesses: [{ b_no: "1234567890", start_dt: "20200101", p_nm: "홍길동" }] }
+  });
+  const unavailableBody = unavailable.json();
+
+  assert.equal(unavailable.statusCode, 503);
+  assert.equal(unavailableBody.error, "upstream_not_configured");
+
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return new Response(
+      JSON.stringify({ status_code: "OK", valid_cnt: 1, data: [{ b_no: "1234567890", valid: "01", valid_msg: "확인할 수 있습니다." }] }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/validate",
+    payload: { businesses: [{ b_no: "123-45-67890", start_dt: "2020.01.01", p_nm: "홍길동", p_nm2: "", b_adr: "서울" }] }
+  });
+
+  const body = response.json();
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data[0].valid, "01");
+  assert.match(calls[0].url, /\/nts-businessman\/v1\/validate\?serviceKey=data-go-key$/);
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    businesses: [{ b_no: "1234567890", start_dt: "20200101", p_nm: "홍길동", b_adr: "서울" }]
+  });
+});
+
+test("NTS business validate route does not cache or echo sensitive query fields", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return new Response(
+      JSON.stringify({
+        status_code: "OK",
+        valid_cnt: 1,
+        data: [{
+          b_no: "1234567890",
+          valid: "01",
+          request_param: {
+            b_no: "1234567890",
+            start_dt: "20200101",
+            p_nm: "홍길동",
+            b_adr: "서울시 중구"
+          }
+        }]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const payload = {
+    businesses: [{
+      b_no: "123-45-67890",
+      start_dt: "2020.01.01",
+      p_nm: "홍길동",
+      b_adr: "서울시 중구"
+    }]
+  };
+
+  const first = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/validate",
+    payload
+  });
+  const firstBody = first.json();
+  const firstBodyText = JSON.stringify(firstBody);
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(firstBody.proxy.cache.hit, false);
+  assert.equal(firstBody.query, undefined, "validate responses must not echo representative/date/address inputs");
+  assert.equal(firstBodyText.includes("홍길동"), false);
+  assert.equal(firstBodyText.includes("20200101"), false);
+  assert.equal(firstBodyText.includes("서울시 중구"), false);
+  assert.deepEqual(firstBody.data[0].request_param, { b_no: "1234567890" });
+
+  const second = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/validate",
+    payload
+  });
+  const secondBody = second.json();
+
+  assert.equal(second.statusCode, 200);
+  assert.equal(secondBody.proxy.cache.hit, false);
+  assert.equal(calls.length, 2, "validate successes must not be cached because they contain sensitive inputs");
+});
+
+test("NTS business semantic upstream failures are non-cacheable errors", async (t) => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return new Response(
+      JSON.stringify({ status_code: "SERVICE_ERROR", message: "upstream service failure" }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/status",
+    payload: { b_no: ["1234567890"] }
+  });
+  const firstBody = first.json();
+
+  assert.equal(first.statusCode, 502);
+  assert.equal(firstBody.error, "upstream_error");
+  assert.equal(firstBody.upstream_status_code, "SERVICE_ERROR");
+  assert.equal(firstBody.proxy.cache.hit, false);
+
+  const second = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/status",
+    payload: { b_no: ["1234567890"] }
+  });
+
+  assert.equal(second.statusCode, 502);
+  assert.equal(calls, 2, "semantic upstream failures must not be cached");
+});
+
+test("NTS business route maps upstream fetch failures to 502 without caching", async (t) => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    throw new Error("network down");
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/status",
+    payload: { b_no: ["1234567890"] }
+  });
+  const firstBody = first.json();
+
+  assert.equal(first.statusCode, 502);
+  assert.equal(firstBody.error, "proxy_error");
+  assert.equal(firstBody.message, "NTS business upstream request failed.");
+
+  const second = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/status",
+    payload: { b_no: ["1234567890"] }
+  });
+  assert.equal(second.statusCode, 502);
+  assert.equal(calls, 2, "fetch failures must not be cached");
+});
+
+test("NTS business route does not leak service keys from upstream fetch exception messages", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    throw new Error(`proxy tunnel failed for ${url}`);
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "super-secret-data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/nts-business/status",
+    payload: { b_no: ["1234567890"] }
+  });
+  const body = response.json();
+  const bodyText = JSON.stringify(body);
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(body.error, "proxy_error");
+  assert.equal(body.message, "NTS business upstream request failed.");
+  assert.equal(bodyText.includes("super-secret-data-go-key"), false);
+  assert.equal(bodyText.includes("serviceKey"), false);
+});
+
 test("health endpoint stays public and reports auth/upstream status", async (t) => {
   const app = buildServer({
     provider: async () => {
@@ -191,6 +524,987 @@ test("health endpoint reports KRX upstream status when configured", async (t) =>
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().upstreams.krxConfigured, true);
+});
+
+test("KOSIS normalizers map public query aliases to upstream params", () => {
+  assert.deepEqual(normalizeKosisSearchQuery({ q: "인구", limit: "3" }), {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    searchNm: "인구",
+    resultCount: 3,
+    startCount: 1
+  });
+
+  assert.deepEqual(normalizeKosisMetaQuery({ table_id: "DT_1IN0001", meta_type: "itm" }), {
+    method: "getMeta",
+    type: "ITM",
+    format: "json",
+    jsonVD: "Y",
+    orgId: "101",
+    tblId: "DT_1IN0001"
+  });
+
+  assert.deepEqual(normalizeKosisDataQuery({
+    tableId: "DT_1JC1501",
+    prd_se: "y",
+    start: "2023",
+    end: "2024",
+    objL2: "00"
+  }), {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    orgId: "101",
+    tblId: "DT_1JC1501",
+    itmId: "ALL",
+    prdSe: "Y",
+    startPrdDe: "2023",
+    endPrdDe: "2024",
+    objL2: "00"
+  });
+});
+
+test("KOSIS proxy injects the server-side key without accepting client apiKey", async () => {
+  const calls = [];
+  const upstream = await proxyKosisRequest({
+    operation: "search",
+    apiKey: "server-kosis-key",
+    params: {
+      method: "getList",
+      format: "json",
+      jsonVD: "Y",
+      searchNm: "인구",
+      resultCount: 1,
+      startCount: 1,
+      apiKey: "client-supplied-key"
+    },
+    fetchImpl: async (url) => {
+      calls.push(String(url));
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      });
+    }
+  });
+
+  assert.equal(upstream.statusCode, 200);
+  assert.equal(calls.length, 1);
+  const url = new URL(calls[0]);
+  assert.equal(url.origin + url.pathname, "https://kosis.kr/openapi/statisticsSearch.do");
+  assert.equal(url.searchParams.get("apiKey"), "server-kosis-key");
+  assert.equal(url.searchParams.get("searchNm"), "인구");
+});
+
+test("KOSIS search endpoint stays public and caches successful upstream responses", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify([{ TBL_ID: "DT_1JC1501", TBL_NM: "1인 가구 비율" }]), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = `/v1/kosis/search?q=${encodeURIComponent("1인 가구")}&limit=1&apiKey=client-key`;
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.json()[0].TBL_ID, "DT_1JC1501");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json()[0].TBL_NM, "1인 가구 비율");
+
+  assert.equal(calls.length, 1, "second request should be served from proxy cache");
+  assert.equal(new URL(calls[0]).searchParams.get("apiKey"), "server-kosis-key");
+});
+
+test("Kakao Local geocode normalizer maps public aliases to upstream params", () => {
+  assert.deepEqual(normalizeKakaoLocalGeocodeQuery({ q: "서울역", limit: "3" }), {
+    query: "서울역",
+    size: 3,
+    page: 1
+  });
+});
+
+test("Kakao Local proxy injects the server-side REST API key", async () => {
+  const calls = [];
+  const upstream = await proxyKakaoLocalRequest({
+    endpoint: "address",
+    apiKey: "server-kakao-key",
+    params: {
+      query: "서울역",
+      size: 1,
+      apiKey: "client-supplied-key"
+    },
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), headers: options.headers });
+      return new Response(JSON.stringify({ documents: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      });
+    }
+  });
+
+  assert.equal(upstream.statusCode, 200);
+  assert.equal(calls.length, 1);
+  const url = new URL(calls[0].url);
+  assert.equal(url.origin + url.pathname, "https://dapi.kakao.com/v2/local/search/address.json");
+  assert.equal(url.searchParams.get("query"), "서울역");
+  assert.equal(url.searchParams.get("apiKey"), null);
+  assert.equal(calls[0].headers.authorization, "KakaoAK server-kakao-key");
+});
+
+test("Kakao Local geocode endpoint falls back from address to keyword and caches", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    const path = new URL(url).pathname;
+    if (path.endsWith("/search/address.json")) {
+      return new Response(JSON.stringify({ documents: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      });
+    }
+    return new Response(JSON.stringify({ documents: [{ place_name: "서울역", x: "126.9706", y: "37.5559" }] }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      KAKAO_REST_API_KEY: "server-kakao-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = `/v1/kakao-local/geocode?q=${encodeURIComponent("서울역")}&limit=1&apiKey=client-key`;
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.json().documents[0].place_name, "서울역");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json().documents[0].x, "126.9706");
+
+  assert.equal(calls.length, 2, "second request should be served from proxy cache");
+  assert.equal(new URL(calls[0]).searchParams.get("apiKey"), null);
+});
+
+test("Kakao Map keyword search injects KakaoAK header, forwards x/y/radius/sort, and caches", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), headers: options.headers });
+    return new Response(
+      JSON.stringify({
+        meta: { total_count: 1, pageable_count: 1, is_end: true },
+        documents: [
+          { place_name: "스타벅스 강남R점", x: "127.027619", y: "37.497946", distance: "120" }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      KAKAO_REST_API_KEY: "server-kakao-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kakao-map/search/keyword?q=" + encodeURIComponent("스타벅스") + "&x=127.0276&y=37.4979&radius=500&sort=distance&apiKey=client-key";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.json().documents[0].place_name, "스타벅스 강남R점");
+  assert.equal(first.json().proxy.cache.hit, false);
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.json().proxy.cache.hit, true);
+
+  assert.equal(calls.length, 1, "second request should be served from proxy cache");
+  const parsed = new URL(calls[0].url);
+  assert.equal(parsed.origin + parsed.pathname, "https://dapi.kakao.com/v2/local/search/keyword.json");
+  assert.equal(parsed.searchParams.get("query"), "스타벅스");
+  assert.equal(parsed.searchParams.get("x"), "127.0276");
+  assert.equal(parsed.searchParams.get("y"), "37.4979");
+  assert.equal(parsed.searchParams.get("radius"), "500");
+  assert.equal(parsed.searchParams.get("sort"), "distance");
+  assert.equal(parsed.searchParams.get("apiKey"), null);
+  assert.equal(calls[0].headers.authorization, "KakaoAK server-kakao-key");
+});
+
+test("Kakao Map keyword search validates coordinate pairing and radius bounds", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), headers: options.headers ?? {} });
+    return jsonResponse({ documents: [], meta: { total_count: 0 } });
+  };
+
+  const app = buildServer({
+    env: { KAKAO_REST_API_KEY: "server-kakao-key" }
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const missingY = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/keyword?q=hi&x=127.0"
+  });
+  assert.equal(missingY.statusCode, 400);
+
+  const badSort = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/keyword?q=hi&sort=newest"
+  });
+  assert.equal(badSort.statusCode, 400);
+
+  const badRadius = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/keyword?q=hi&x=127.0&y=37.5&radius=99999"
+  });
+  assert.equal(badRadius.statusCode, 400);
+
+  const radiusWithoutCoords = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/keyword?q=hi&radius=500"
+  });
+  assert.equal(radiusWithoutCoords.statusCode, 400);
+  assert.match(radiusWithoutCoords.json().message, /radius/i);
+
+  const distanceSortWithoutCoords = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/keyword?q=hi&sort=distance"
+  });
+  assert.equal(distanceSortWithoutCoords.statusCode, 400);
+  assert.match(distanceSortWithoutCoords.json().message, /sort=distance/i);
+  assert.equal(calls.length, 0, "validation failures should not call Kakao upstream");
+});
+
+test("Kakao Map category search rejects unsupported category group codes", async (t) => {
+  const app = buildServer({
+    env: { KAKAO_REST_API_KEY: "server-kakao-key" }
+  });
+  t.after(async () => {
+    await app.close();
+  });
+
+  const bad = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/category?category_group_code=XX9&x=127.0&y=37.5"
+  });
+  assert.equal(bad.statusCode, 400);
+
+  const missing = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/category?category_group_code=FD6"
+  });
+  assert.equal(missing.statusCode, 400);
+});
+
+test("Kakao Map category search routes to /search/category.json with FD6 and coords", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), headers: options.headers });
+    return new Response(
+      JSON.stringify({
+        meta: { total_count: 0, pageable_count: 0, is_end: true },
+        documents: []
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: { KAKAO_REST_API_KEY: "k" }
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/search/category?category_group_code=FD6&x=127.0276&y=37.4979&radius=300"
+  });
+  assert.equal(response.statusCode, 200);
+  const parsed = new URL(calls[0].url);
+  assert.equal(parsed.origin + parsed.pathname, "https://dapi.kakao.com/v2/local/search/category.json");
+  assert.equal(parsed.searchParams.get("category_group_code"), "FD6");
+});
+
+test("Kakao Map coord2region routes to /geo/coord2regioncode.json with input_coord", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(
+      JSON.stringify({
+        meta: { total_count: 1 },
+        documents: [{ region_type: "B", address_name: "서울특별시 강남구 역삼동" }]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: { KAKAO_REST_API_KEY: "k" }
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/coord2region?x=127.0276&y=37.4979&input_coord=WGS84"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.match(response.json().documents[0].address_name, /강남구/);
+  const parsed = new URL(calls[0]);
+  assert.equal(parsed.origin + parsed.pathname, "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json");
+  assert.equal(parsed.searchParams.get("input_coord"), "WGS84");
+});
+
+test("Kakao Map coord2address routes to /geo/coord2address.json with x/y", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(
+      JSON.stringify({
+        meta: { total_count: 1 },
+        documents: [
+          {
+            road_address: { address_name: "서울 강남구 테헤란로 521" },
+            address: { address_name: "서울 강남구 역삼동" }
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: { KAKAO_REST_API_KEY: "k" }
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-map/coord2address?x=127.0276&y=37.4979"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.match(response.json().documents[0].road_address.address_name, /테헤란로/);
+  const parsed = new URL(calls[0]);
+  assert.equal(parsed.origin + parsed.pathname, "https://dapi.kakao.com/v2/local/geo/coord2address.json");
+});
+
+test("Kakao Map endpoints return 503 when KAKAO_REST_API_KEY is missing", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("upstream should not be called without API key");
+  };
+
+  const app = buildServer({ env: {} });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const urls = [
+    "/v1/kakao-map/search/keyword?q=hi",
+    "/v1/kakao-map/search/category?category_group_code=FD6&x=127&y=37.5",
+    "/v1/kakao-map/coord2address?x=127&y=37.5",
+    "/v1/kakao-map/coord2region?x=127&y=37.5",
+    "/v1/kakao-mobility/directions?origin=127.0,37.5&destination=127.1,37.6"
+  ];
+  for (const url of urls) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 503, `${url} should report 503 when key is missing`);
+    assert.equal(response.json().error, "upstream_not_configured");
+  }
+});
+
+test("Kakao Mobility directions endpoint injects KakaoAK, forwards priority/options, and caches", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), headers: options.headers });
+    return new Response(
+      JSON.stringify({
+        trans_id: "abc",
+        routes: [
+          {
+            result_code: 0,
+            result_msg: "성공",
+            summary: { distance: 12345, duration: 1200, fare: { taxi: 12000, toll: 1000 } }
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({ env: { KAKAO_REST_API_KEY: "mob-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kakao-mobility/directions?origin=126.9706,37.5559&destination=127.0276,37.4979&priority=TIME&car_fuel=GASOLINE&alternatives=true";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.json().routes[0].result_code, 0);
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(calls.length, 1);
+
+  const parsed = new URL(calls[0].url);
+  assert.equal(parsed.origin + parsed.pathname, "https://apis-navi.kakaomobility.com/v1/directions");
+  assert.equal(parsed.searchParams.get("origin"), "126.9706,37.5559");
+  assert.equal(parsed.searchParams.get("destination"), "127.0276,37.4979");
+  assert.equal(parsed.searchParams.get("priority"), "TIME");
+  assert.equal(parsed.searchParams.get("car_fuel"), "GASOLINE");
+  assert.equal(parsed.searchParams.get("alternatives"), "true");
+  assert.equal(calls[0].headers.authorization, "KakaoAK mob-key");
+});
+
+test("Kakao Mobility directions forwards whitelisted avoid options", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), headers: options.headers });
+    return new Response(
+      JSON.stringify({
+        trans_id: "avoid",
+        routes: [{ result_code: 0, result_msg: "성공", summary: { distance: 1000, duration: 300 } }]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({ env: { KAKAO_REST_API_KEY: "mob-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-mobility/directions?origin=126.9706,37.5559&destination=127.0276,37.4979&avoid=toll%7Cmotorway"
+  });
+  assert.equal(response.statusCode, 200);
+  const parsed = new URL(calls[0].url);
+  assert.equal(parsed.searchParams.get("avoid"), "toll|motorway");
+});
+
+test("Kakao Mobility directions endpoint validates coordinate, priority, and waypoint count", async (t) => {
+  const app = buildServer({ env: { KAKAO_REST_API_KEY: "k" } });
+  t.after(async () => {
+    await app.close();
+  });
+
+  const missing = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-mobility/directions"
+  });
+  assert.equal(missing.statusCode, 400);
+
+  const badPriority = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-mobility/directions?origin=127.0,37.5&destination=127.1,37.6&priority=CHEAP"
+  });
+  assert.equal(badPriority.statusCode, 400);
+
+  const badAvoid = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-mobility/directions?origin=127.0,37.5&destination=127.1,37.6&avoid=unpaved"
+  });
+  assert.equal(badAvoid.statusCode, 400);
+
+  const tooManyWaypoints = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-mobility/directions?origin=127.0,37.5&destination=127.1,37.6&waypoints="
+      + encodeURIComponent("127.0,37.5|127.0,37.5|127.0,37.5|127.0,37.5|127.0,37.5|127.0,37.5")
+  });
+  assert.equal(tooManyWaypoints.statusCode, 400);
+});
+
+test("Kakao Mobility directions rejects out-of-range waypoints before upstream", async (t) => {
+  const originalFetch = global.fetch;
+  let upstreamCalls = 0;
+  global.fetch = async () => {
+    upstreamCalls += 1;
+    throw new Error("Unexpected upstream call for invalid waypoint.");
+  };
+
+  const app = buildServer({ env: { KAKAO_REST_API_KEY: "k" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kakao-mobility/directions?origin=127.0,37.5&destination=127.1,37.6&waypoints=181,37.55"
+  });
+  assert.equal(response.statusCode, 400);
+  assert.match(response.json().message, /waypoint\[0\]/);
+  assert.equal(upstreamCalls, 0);
+});
+
+test("Kakao Mobility directions surfaces routes[0].result_code != 0 as 502 and does not cache", async (t) => {
+  const originalFetch = global.fetch;
+  let upstreamCalls = 0;
+  global.fetch = async () => {
+    upstreamCalls += 1;
+    return new Response(
+      JSON.stringify({
+        routes: [{ result_code: 104, result_msg: "출발지와 도착지가 너무 가깝습니다." }]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+  const app = buildServer({ env: { KAKAO_REST_API_KEY: "k" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kakao-mobility/directions?origin=127.0,37.5&destination=127.0001,37.5001";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_semantic_error");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 502);
+  assert.equal(upstreamCalls, 2, "semantic failures must not be cached");
+});
+
+test("Kakao Map health endpoint reflects kakaoMapConfigured and kakaoMobilityConfigured", async (t) => {
+  const appOff = buildServer({ env: {} });
+  t.after(async () => {
+    await appOff.close();
+  });
+  const off = await appOff.inject({ method: "GET", url: "/health" });
+  assert.equal(off.json().upstreams.kakaoMapConfigured, false);
+  assert.equal(off.json().upstreams.kakaoMobilityConfigured, false);
+
+  const appOn = buildServer({ env: { KAKAO_REST_API_KEY: "k" } });
+  t.after(async () => {
+    await appOn.close();
+  });
+  const on = await appOn.inject({ method: "GET", url: "/health" });
+  assert.equal(on.json().upstreams.kakaoMapConfigured, true);
+  assert.equal(on.json().upstreams.kakaoMobilityConfigured, true);
+});
+
+test("Naver Map directions endpoint returns 503 when proxy lacks Naver Map keys", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("upstream should not be called when keys are missing");
+  };
+
+  const app = buildServer({ env: {} });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/directions?start=126.9706,37.5559&goal=127.0276,37.4979"
+  });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_not_configured");
+  assert.match(response.json().message, /NAVER_MAP_CLIENT_ID/);
+});
+
+test("Naver Map directions endpoint injects server-side Naver keys and caches successful responses", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), headers: options.headers });
+    return new Response(
+      JSON.stringify({
+        code: 0,
+        message: "found_route",
+        route: {
+          trafast: [
+            { summary: { distance: 12345, duration: 600000, tollFare: 1000, taxiFare: 0, fuelPrice: 1500 } }
+          ]
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "server-naver-id",
+      NAVER_MAP_CLIENT_SECRET: "server-naver-secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/naver-map/directions?start=126.9706,37.5559&goal=127.0276,37.4979&option=trafast";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.json().code, 0);
+  assert.equal(first.json().proxy.cache.hit, false);
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json().proxy.cache.hit, true);
+
+  assert.equal(calls.length, 1, "second request should be served from proxy cache");
+  const parsed = new URL(calls[0].url);
+  assert.equal(parsed.origin + parsed.pathname, "https://maps.apigw.ntruss.com/map-direction/v1/driving");
+  assert.equal(parsed.searchParams.get("start"), "126.9706,37.5559");
+  assert.equal(parsed.searchParams.get("goal"), "127.0276,37.4979");
+  assert.equal(parsed.searchParams.get("option"), "trafast");
+  assert.equal(calls[0].headers["x-ncp-apigw-api-key-id"], "server-naver-id");
+  assert.equal(calls[0].headers["x-ncp-apigw-api-key"], "server-naver-secret");
+});
+
+test("Naver Map directions endpoint validates coordinate input shape", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("upstream should not be called for invalid input");
+  };
+
+  const app = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "id",
+      NAVER_MAP_CLIENT_SECRET: "secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const bad = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/directions?start=not-coords&goal=127.0,37.5"
+  });
+  assert.equal(bad.statusCode, 400);
+  assert.equal(bad.json().error, "bad_request");
+
+  const missing = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/directions?start=126.9,37.5"
+  });
+  assert.equal(missing.statusCode, 400);
+  assert.equal(missing.json().error, "bad_request");
+
+  const outOfRange = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/directions?start=999,37.5&goal=127,37.5"
+  });
+  assert.equal(outOfRange.statusCode, 400);
+
+  const badOption = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/directions?start=126.9,37.5&goal=127.0,37.5&option=fastest"
+  });
+  assert.equal(badOption.statusCode, 400);
+});
+
+test("Naver Map directions endpoint surfaces upstream semantic failures as 502 without caching", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(
+      JSON.stringify({ code: 5, message: "no_route_found" }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "id",
+      NAVER_MAP_CLIENT_SECRET: "secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/naver-map/directions?start=126.9,37.5&goal=127.0,37.5";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_semantic_error");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 502);
+  assert.equal(calls.length, 2, "semantic failures must not be cached");
+});
+
+test("Naver Map endpoints sanitize upstream auth errors as 503 without leaking the body", async (t) => {
+  const originalFetch = global.fetch;
+  let upstreamStatus = 401;
+  global.fetch = async () => new Response(`Authentication Failed: ${upstreamStatus} secret diagnostic`, {
+    status: upstreamStatus,
+    headers: { "content-type": "text/plain" }
+  });
+
+  const app = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "id",
+      NAVER_MAP_CLIENT_SECRET: "secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const cases = [
+    {
+      upstreamStatus: 401,
+      url: "/v1/naver-map/directions?start=126.9,37.5&goal=127.0,37.5"
+    },
+    {
+      upstreamStatus: 403,
+      url: "/v1/naver-map/geocode?q=%EC%84%9C%EC%9A%B8%EC%97%AD"
+    },
+    {
+      upstreamStatus: 401,
+      url: "/v1/naver-map/reverse-geocode?coords=126.9,37.5"
+    }
+  ];
+
+  for (const testCase of cases) {
+    upstreamStatus = testCase.upstreamStatus;
+    const response = await app.inject({ method: "GET", url: testCase.url });
+    assert.equal(response.statusCode, 503);
+    const body = response.json();
+    assert.equal(body.error, "upstream_error");
+    assert.equal(body.upstream.status_code, testCase.upstreamStatus);
+    const serialized = JSON.stringify(body);
+    assert.ok(!serialized.includes("Authentication Failed"));
+    assert.ok(!serialized.includes("secret diagnostic"));
+    assert.equal(body.upstream.body_snippet, undefined);
+  }
+});
+
+test("Naver Map endpoints preserve upstream 429 for caller backoff", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("quota exceeded diagnostic", {
+    status: 429,
+    headers: { "content-type": "text/plain" }
+  });
+
+  const app = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "id",
+      NAVER_MAP_CLIENT_SECRET: "secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const cases = [
+    "/v1/naver-map/directions?start=126.9,37.5&goal=127.0,37.5",
+    "/v1/naver-map/geocode?q=%EC%84%9C%EC%9A%B8%EC%97%AD",
+    "/v1/naver-map/reverse-geocode?coords=126.9,37.5"
+  ];
+
+  for (const url of cases) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 429);
+    const body = response.json();
+    assert.equal(body.error, "upstream_error");
+    assert.equal(body.upstream.status_code, 429);
+    assert.equal(body.upstream.body_snippet, "quota exceeded diagnostic");
+  }
+});
+
+test("Naver Map directions endpoint keeps non-auth upstream snippets for diagnostics", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("Transient upstream diagnostic", {
+    status: 500,
+    headers: { "content-type": "text/plain" }
+  });
+
+  const app = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "id",
+      NAVER_MAP_CLIENT_SECRET: "secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/directions?start=126.9,37.5&goal=127.0,37.5"
+  });
+
+  assert.equal(response.statusCode, 502);
+  const body = response.json();
+  assert.equal(body.upstream.status_code, 500);
+  assert.equal(body.upstream.body_snippet, "Transient upstream diagnostic");
+});
+
+test("Naver Map geocode endpoint injects Naver keys and forwards query, count, and language", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), headers: options.headers });
+    return new Response(
+      JSON.stringify({
+        status: "OK",
+        meta: { totalCount: 1, page: 1, count: 1 },
+        addresses: [
+          {
+            roadAddress: "서울특별시 중구 한강대로 405",
+            jibunAddress: "서울특별시 중구 봉래동2가 122",
+            x: "126.9706",
+            y: "37.5559"
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "geo-id",
+      NAVER_MAP_CLIENT_SECRET: "geo-secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/geocode?q=" + encodeURIComponent("서울역") + "&count=5"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().status, "OK");
+  assert.equal(response.json().addresses[0].x, "126.9706");
+
+  const parsed = new URL(calls[0].url);
+  assert.equal(parsed.origin + parsed.pathname, "https://maps.apigw.ntruss.com/map-geocode/v2/geocode");
+  assert.equal(parsed.searchParams.get("query"), "서울역");
+  assert.equal(parsed.searchParams.get("count"), "5");
+  assert.equal(parsed.searchParams.get("language"), "kor");
+  assert.equal(calls[0].headers["x-ncp-apigw-api-key-id"], "geo-id");
+  assert.equal(calls[0].headers["x-ncp-apigw-api-key"], "geo-secret");
+});
+
+test("Naver Map reverse-geocode endpoint validates coords and orders", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("upstream should not be called");
+  };
+
+  const app = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "id",
+      NAVER_MAP_CLIENT_SECRET: "secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const missing = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/reverse-geocode"
+  });
+  assert.equal(missing.statusCode, 400);
+
+  const badOrder = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/reverse-geocode?coords=127.0,37.5&orders=banana"
+  });
+  assert.equal(badOrder.statusCode, 400);
+
+  const xmlOutput = await app.inject({
+    method: "GET",
+    url: "/v1/naver-map/reverse-geocode?coords=127.0,37.5&output=xml"
+  });
+  assert.equal(xmlOutput.statusCode, 400);
+  assert.equal(xmlOutput.json().error, "bad_request");
+  assert.match(xmlOutput.json().message, /output as json/);
+});
+
+test("Naver Map health endpoint reflects naverMapConfigured flag", async (t) => {
+  const appOff = buildServer({ env: {} });
+  t.after(async () => {
+    await appOff.close();
+  });
+  const offResponse = await appOff.inject({ method: "GET", url: "/health" });
+  assert.equal(offResponse.json().upstreams.naverMapConfigured, false);
+
+  const appOn = buildServer({
+    env: {
+      NAVER_MAP_CLIENT_ID: "id",
+      NAVER_MAP_CLIENT_SECRET: "secret"
+    }
+  });
+  t.after(async () => {
+    await appOn.close();
+  });
+  const onResponse = await appOn.inject({ method: "GET", url: "/health" });
+  assert.equal(onResponse.json().upstreams.naverMapConfigured, true);
 });
 
 test("korean stock search endpoint stays public and caches normalized search queries", async (t) => {
@@ -1132,6 +2446,509 @@ test("proxySeoulSubwayRequest injects API key and preserves index/station params
 
   assert.equal(result.statusCode, 200);
   assert.match(calledUrl, /\/api\/subway\/test-seoul-key\/json\/realtimeStationArrival\/2\/5\/%EA%B0%95%EB%82%A8$/);
+});
+
+test("seoul density endpoint caches successful upstream responses for normalized area queries", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        "SeoulRtd.citydata_ppltn": [
+          {
+            AREA_NM: "강남역",
+            AREA_CONGEST_LVL: "약간 붐빔",
+            AREA_PPLTN_MIN: "24000",
+            AREA_PPLTN_MAX: "26000",
+            PPLTN_TIME: "2026-05-14 09:30",
+            AREA_CONGEST_MSG: "사람이 몰려있을 수 있어요"
+          }
+        ],
+        RESULT: { "RESULT.CODE": "INFO-000", "RESULT.MESSAGE": "정상 처리되었습니다." }
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-density/citydata?area=%EA%B0%95%EB%82%A8%EC%97%AD"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-density/citydata?area=%EA%B0%95%EB%82%A8%EC%97%AD"
+  });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(fetchCalls, 1);
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+});
+
+test("seoul density endpoint stays publicly callable without proxy auth", async (t) => {
+  const originalFetch = global.fetch;
+  let calledUrl;
+  global.fetch = async (url) => {
+    calledUrl = String(url);
+    return new Response(
+      JSON.stringify({
+        "SeoulRtd.citydata_ppltn": [{ AREA_NM: "강남역" }],
+        RESULT: { "RESULT.CODE": "INFO-000" }
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      }
+    );
+  };
+
+  const app = buildServer({
+    env: { SEOUL_OPEN_API_KEY: "seoul-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-density/citydata?area=%EA%B0%95%EB%82%A8%EC%97%AD"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(calledUrl, /\/seoul-key\/json\/citydata_ppltn\/1\/1\/%EA%B0%95%EB%82%A8%EC%97%AD$/);
+});
+
+test("seoul density endpoint returns 503 when proxy server lacks Seoul API key", async (t) => {
+  const app = buildServer();
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-density/citydata?area=%EA%B0%95%EB%82%A8%EC%97%AD"
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_not_configured");
+});
+
+test("seoul density endpoint returns 400 when area is missing", async (t) => {
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-density/citydata"
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "bad_request");
+});
+
+test("proxySeoulCityDataRequest injects API key and encodes area name", async () => {
+  let calledUrl;
+  const result = await proxySeoulCityDataRequest({
+    area: "강남역",
+    apiKey: "test-seoul-key",
+    fetchImpl: async (url) => {
+      calledUrl = String(url);
+      return new Response('{"ok":true}', {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      });
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.match(calledUrl, /\/test-seoul-key\/json\/citydata_ppltn\/1\/1\/%EA%B0%95%EB%82%A8%EC%97%AD$/);
+});
+
+
+
+test("seoul bike realtime endpoint caches successful upstream responses for normalized page queries", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        rentBikeStatus: {
+          list_total_count: 1,
+          RESULT: { CODE: "INFO-000", MESSAGE: "정상 처리되었습니다." },
+          row: [
+            {
+              stationId: "ST-10",
+              stationName: "101. 광화문역 1번출구 앞",
+              rackTotCnt: "15",
+              parkingBikeTotCnt: "4",
+              shared: "27",
+              stationLatitude: "37.5717",
+              stationLongitude: "126.9763"
+            }
+          ]
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime?start_index=1&end_index=10" });
+  const second = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime?startIndex=1&endIndex=10" });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(fetchCalls, 1);
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(first.json().rentBikeStatus.row[0].parkingBikeTotCnt, "4");
+});
+
+test("seoul bike routes stay publicly callable without proxy auth", async (t) => {
+  const originalFetch = global.fetch;
+  const calledUrls = [];
+  global.fetch = async (url) => {
+    calledUrls.push(String(url));
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const realtime = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime" });
+  const stations = await app.inject({ method: "GET", url: "/v1/seoul-bike/stations?startIndex=2&endIndex=5" });
+
+  assert.equal(realtime.statusCode, 200);
+  assert.equal(stations.statusCode, 200);
+  assert.match(calledUrls[0], /\/seoul-key\/json\/bikeList\/1\/1000\/?$/);
+  assert.match(calledUrls[1], /\/seoul-key\/json\/tbCycleStationInfo\/2\/5\/?$/);
+});
+
+test("seoul bike routes return 503 when proxy server lacks Seoul API key", async (t) => {
+  const app = buildServer();
+  t.after(async () => {
+    await app.close();
+  });
+
+  for (const url of [
+    "/v1/seoul-bike/realtime",
+    "/v1/seoul-bike/stations",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763"
+  ]) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 503, url);
+    assert.equal(response.json().error, "upstream_not_configured");
+  }
+});
+
+test("proxySeoulBikeRealtimeRequest and stations request inject API key and preserve paging", async () => {
+  const calledUrls = [];
+  const fetchImpl = async (url) => {
+    calledUrls.push(String(url));
+    return new Response('{"ok":true}', {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const realtime = await proxySeoulBikeRealtimeRequest({
+    startIndex: 2,
+    endIndex: 5,
+    apiKey: "test-seoul-key",
+    fetchImpl
+  });
+  const stations = await proxySeoulBikeStationsRequest({
+    startIndex: 3,
+    endIndex: 7,
+    apiKey: "test-seoul-key",
+    fetchImpl
+  });
+
+  assert.equal(realtime.statusCode, 200);
+  assert.equal(stations.statusCode, 200);
+  assert.match(calledUrls[0], /\/test-seoul-key\/json\/bikeList\/2\/5\/?$/);
+  assert.match(calledUrls[1], /\/test-seoul-key\/json\/tbCycleStationInfo\/3\/7\/?$/);
+});
+
+test("seoul bike nearby endpoint filters and sorts realtime stations by distance", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        rentBikeStatus: {
+          list_total_count: 3,
+          RESULT: { CODE: "INFO-000", MESSAGE: "정상 처리되었습니다." },
+          row: [
+            {
+              stationId: "ST-FAR",
+              stationName: "999. 먼 대여소",
+              rackTotCnt: "20",
+              parkingBikeTotCnt: "10",
+              shared: "50",
+              stationLatitude: "37.5900",
+              stationLongitude: "126.9900"
+            },
+            {
+              stationId: "ST-NEAR",
+              stationName: "101. 광화문역 1번출구 앞",
+              rackTotCnt: "15",
+              parkingBikeTotCnt: "4",
+              shared: "27",
+              stationLatitude: "37.5717",
+              stationLongitude: "126.9763"
+            },
+            {
+              stationId: "ST-EMPTY",
+              stationName: "102. 세종대로 앞",
+              rackTotCnt: "12",
+              parkingBikeTotCnt: "0",
+              shared: "0",
+              stationLatitude: "37.5720",
+              stationLongitude: "126.9770"
+            }
+          ]
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120&limit=5"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-bike/nearby?latitude=37.5717&longitude=126.9763&radiusMeters=120&limit=5"
+  });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(fetchCalls, 1);
+  const body = first.json();
+  assert.equal(body.count, 2);
+  assert.deepEqual(body.items.map((item) => item.station_id), ["ST-NEAR", "ST-EMPTY"]);
+  assert.equal(body.items[0].available_bikes, 4);
+  assert.equal(body.items[0].empty_docks, 11);
+  assert.equal(body.items[1].available_bikes, 0);
+  assert.equal(second.json().proxy.cache.hit, true);
+});
+
+test("seoul bike nearby endpoint returns non-cacheable error for upstream semantic failures", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        RESULT: { CODE: "ERROR-336", MESSAGE: "limit exceeded" }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120&limit=5"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120&limit=5"
+  });
+
+  assert.equal(first.statusCode, 502);
+  assert.equal(second.statusCode, 502);
+  assert.equal(fetchCalls, 2, "semantic upstream errors must not be cached");
+  assert.equal(first.json().error, "upstream_semantic_error");
+  assert.equal(first.json().upstream.code, "ERROR-336");
+  assert.equal(first.json().proxy.cache.hit, false);
+});
+
+test("seoul bike realtime and stations endpoints do not cache upstream semantic failures", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        rentBikeStatus: {
+          RESULT: { CODE: "ERROR-336", MESSAGE: "limit exceeded" }
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: "seoul-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const realtimeFirst = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime?startIndex=1&endIndex=10" });
+  const realtimeSecond = await app.inject({ method: "GET", url: "/v1/seoul-bike/realtime?startIndex=1&endIndex=10" });
+  const stations = await app.inject({ method: "GET", url: "/v1/seoul-bike/stations?startIndex=1&endIndex=10" });
+
+  assert.equal(realtimeFirst.statusCode, 502);
+  assert.equal(realtimeSecond.statusCode, 502);
+  assert.equal(stations.statusCode, 502);
+  assert.equal(fetchCalls, 3, "semantic upstream errors must not be cached across Seoul Bike passthrough routes");
+  assert.equal(realtimeFirst.json().error, "upstream_semantic_error");
+  assert.equal(stations.json().upstream.code, "ERROR-336");
+});
+
+test("seoul bike routes sanitize upstream fetch failures without leaking API keys", async (t) => {
+  const originalFetch = global.fetch;
+  const secret = "SECRETSEOULKEY";
+  let fetchCalls = 0;
+  global.fetch = async (url) => {
+    fetchCalls += 1;
+    throw new Error(`network failure ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      SEOUL_OPEN_API_KEY: secret,
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const url of [
+    "/v1/seoul-bike/realtime?startIndex=1&endIndex=1",
+    "/v1/seoul-bike/stations?startIndex=1&endIndex=1",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120&limit=5"
+  ]) {
+    const first = await app.inject({ method: "GET", url });
+    const second = await app.inject({ method: "GET", url });
+
+    assert.equal(first.statusCode, 502, url);
+    assert.equal(second.statusCode, 502, `${url} repeat`);
+    assert.equal(first.json().error, "upstream_error", url);
+    assert.equal(first.json().message, "Seoul Bike upstream request failed.", url);
+    assert.equal(first.json().proxy.cache.hit, false, url);
+    assert.doesNotMatch(first.body, new RegExp(secret), url);
+    assert.doesNotMatch(second.body, new RegExp(secret), `${url} repeat`);
+    assert.doesNotMatch(first.body, /openapi\.seoul\.go\.kr/i, url);
+  }
+
+  assert.equal(fetchCalls, 6, "sanitized upstream failures must not be cached");
+});
+
+test("seoul bike nearby endpoint validates coordinates", async (t) => {
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: "/v1/seoul-bike/nearby?lat=not-a-number&lon=126.9763" });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "bad_request");
+
+  for (const url of [
+    "/v1/seoul-bike/nearby?lat=&lon=126.9763",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon="
+  ]) {
+    const blankResponse = await app.inject({ method: "GET", url });
+    assert.equal(blankResponse.statusCode, 400, url);
+    assert.equal(blankResponse.json().error, "bad_request", url);
+  }
+});
+
+test("seoul bike endpoints reject partially numeric integer query params", async (t) => {
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+  t.after(async () => {
+    await app.close();
+  });
+
+  for (const url of [
+    "/v1/seoul-bike/realtime?startIndex=10abc&endIndex=20",
+    "/v1/seoul-bike/stations?startIndex=1&endIndex=1.5",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&radius_m=120m",
+    "/v1/seoul-bike/nearby?lat=37.5717&lon=126.9763&limit=5.5"
+  ]) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 400, url);
+    assert.equal(response.json().error, "bad_request", url);
+  }
 });
 
 test("korea weather endpoint caches successful upstream responses for normalized coordinate queries", async (t) => {
@@ -3997,4 +5814,205 @@ test("health endpoint reports lhNoticeConfigured when DATA_GO_KR_API_KEY is set"
   const response = await app.inject({ method: "GET", url: "/health" });
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().upstreams.lhNoticeConfigured, true);
+});
+
+test("K-Startup normalizer enforces enums, ranges, and date order", () => {
+  const normalized = normalizeKstartupQuery("announcements", {
+    page: "2",
+    perPage: "20",
+    supt_regin: "서울특별시",
+    pbanc_rcpt_bgng_dt: "2024-01-01",
+    pbanc_rcpt_end_dt: "2024-12-31",
+    rcrt_prgs_yn: "y",
+    biz_yr: "2024"
+  });
+  assert.equal(normalized.page, 2);
+  assert.equal(normalized.perPage, 20);
+  assert.equal(normalized.supt_regin, "서울특별시");
+  assert.equal(normalized.pbanc_rcpt_bgng_dt, "20240101");
+  assert.equal(normalized.pbanc_rcpt_end_dt, "20241231");
+  assert.equal(normalized.rcrt_prgs_yn, "Y");
+  assert.equal(normalized.returnType, "json");
+  assert.equal(normalized.biz_yr, undefined, "biz_yr is not in announcements allowlist");
+
+  const businessInfo = normalizeKstartupQuery("business-info", { biz_yr: "2024", biz_category_cd: "cmrczn_Tab3" });
+  assert.equal(businessInfo.biz_yr, "2024");
+  assert.equal(businessInfo.biz_category_cd, "cmrczn_Tab3");
+
+  assert.throws(() => normalizeKstartupQuery("announcements", { rcrt_prgs_yn: "maybe" }), /rcrt_prgs_yn/);
+  assert.throws(() => normalizeKstartupQuery("announcements", { pbanc_rcpt_bgng_dt: "20241301" }), /pbanc_rcpt_bgng_dt/);
+  assert.throws(() => normalizeKstartupQuery("announcements", {
+    pbanc_rcpt_bgng_dt: "20240601", pbanc_rcpt_end_dt: "20240101"
+  }), /earlier than or equal/);
+  assert.throws(() => normalizeKstartupQuery("announcements", { perPage: "0" }), /perPage/);
+  assert.throws(() => normalizeKstartupQuery("announcements", { perPage: "101" }), /perPage/);
+  assert.throws(() => normalizeKstartupQuery("unknown-op", {}), /Unknown K-Startup operation/);
+  assert.throws(() => normalizeKstartupQuery("business-info", { biz_yr: "24" }), /biz_yr/);
+});
+
+test("K-Startup announcements route proxies GET with server-side ServiceKey", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return new Response(
+      JSON.stringify({
+        currentCount: 1,
+        matchCount: 1,
+        data: [{ biz_pbanc_nm: "테스트 공고", supt_regin: "서울특별시" }],
+        page: 1, perPage: 10, totalCount: 1
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") + "&rcrt_prgs_yn=Y"
+  });
+  const body = response.json();
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data[0].biz_pbanc_nm, "테스트 공고");
+  assert.equal(body.proxy.cache.hit, false);
+  assert.equal(body.query.rcrt_prgs_yn, "Y");
+  const upstreamUrl = new URL(calls[0].url);
+  assert.equal(upstreamUrl.origin + upstreamUrl.pathname,
+    "https://apis.data.go.kr/B552735/kisedKstartupService01/getAnnouncementInformation01");
+  assert.equal(upstreamUrl.searchParams.get("ServiceKey"), "data-go-key");
+  assert.equal(upstreamUrl.searchParams.get("rcrt_prgs_yn"), "Y");
+  assert.equal(upstreamUrl.searchParams.get("returnType"), "json");
+
+  const cached = await app.inject({
+    method: "GET",
+    url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") + "&rcrt_prgs_yn=Y"
+  });
+  assert.equal(cached.statusCode, 200);
+  assert.equal(cached.json().proxy.cache.hit, true);
+  assert.equal(calls.length, 1, "second call must come from cache, not upstream");
+});
+
+test("K-Startup route reports 503 when DATA_GO_KR_API_KEY is missing", async (t) => {
+  const app = buildServer({ env: {} });
+  t.after(async () => { await app.close(); });
+
+  const response = await app.inject({ method: "GET", url: "/v1/kstartup/business-info?page=1" });
+  assert.equal(response.statusCode, 503);
+  const body = response.json();
+  assert.equal(body.error, "upstream_not_configured");
+  assert.match(body.message, /DATA_GO_KR_API_KEY/);
+});
+
+test("K-Startup route returns 400 for invalid params before hitting upstream", async (t) => {
+  const originalFetch = global.fetch;
+  let called = false;
+  global.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kstartup/announcements?pbanc_rcpt_bgng_dt=2024-13-01"
+  });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "bad_request");
+  assert.equal(called, false, "must not call upstream on bad request");
+});
+
+test("K-Startup route surfaces data.go.kr error envelopes without caching", async (t) => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return new Response(
+      JSON.stringify({
+        response: { header: { resultCode: "30", resultMsg: "SERVICE_KEY_IS_NOT_REGISTERED_ERROR" } }
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const first = await app.inject({ method: "GET", url: "/v1/kstartup/contents?page=1" });
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_error");
+
+  const second = await app.inject({ method: "GET", url: "/v1/kstartup/contents?page=1" });
+  assert.equal(second.statusCode, 502);
+  assert.equal(calls, 2, "upstream error responses must not be cached");
+});
+
+test("K-Startup unknown operation returns 404 via proxyKstartupRequest", async () => {
+  const { proxyKstartupRequest } = require("../src/kstartup");
+  const result = await proxyKstartupRequest({ operation: "bogus", query: {}, serviceKey: "k" });
+  assert.equal(result.statusCode, 404);
+  assert.match(result.body, /not_found/);
+});
+
+test("health endpoint reports kstartupConfigured when DATA_GO_KR_API_KEY is set", async (t) => {
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { await app.close(); });
+
+  const response = await app.inject({ method: "GET", url: "/health" });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().upstreams.kstartupConfigured, true);
+});
+
+test("K-Startup cache keys partition by query so distinct filters trigger distinct upstream calls", async (t) => {
+  const originalFetch = global.fetch;
+  const upstreamCalls = [];
+  global.fetch = async (url) => {
+    upstreamCalls.push(String(url));
+    return new Response(JSON.stringify({ data: [] }), {
+      status: 200, headers: { "content-type": "application/json" }
+    });
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") });
+  await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("부산광역시") });
+  await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") + "&rcrt_prgs_yn=Y" });
+  await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") });
+
+  assert.equal(upstreamCalls.length, 3,
+    "3 distinct queries must call upstream 3 times; the 4th repeats query #1 and must hit the cache");
+});
+
+test("K-Startup proxy forces returnType=json even when caller asks for xml", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({ data: [] }), {
+      status: 200, headers: { "content-type": "application/json" }
+    });
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kstartup/contents?returnType=xml&clss_cd=notice_matr"
+  });
+  assert.equal(response.statusCode, 200);
+  const upstreamUrl = new URL(calls[0]);
+  assert.equal(upstreamUrl.searchParams.get("returnType"), "json",
+    "proxy must rewrite returnType to json regardless of client input");
+});
+
+test("K-Startup integer fields reject non-numeric input before upstream call", async (t) => {
+  const originalFetch = global.fetch;
+  let called = false;
+  global.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  for (const bad of ["abc", "0", "-1"]) {
+    const response = await app.inject({ method: "GET", url: "/v1/kstartup/announcements?page=" + bad });
+    assert.equal(response.statusCode, 400, `page=${bad} must 400`);
+  }
+  assert.equal(called, false, "upstream must not be called for any invalid integer input");
 });

@@ -1,3 +1,4 @@
+const crypto = require("node:crypto")
 const {
   BASE_API_URL,
   BASE_SEARCH_URL,
@@ -26,8 +27,35 @@ const DEFAULT_BROWSER_HEADERS = {
   "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
 }
 
+const PRE_AUTH_ENC_KEY = Buffer.from("PRE_AUTH_ENC_KEY", "utf8")
+
 function selectPickupPreferredProduct(products) {
   return products.find((product) => product.pickupAvailable) || products[0]
+}
+
+async function requestText(url, options = {}) {
+  const fetchImpl = options.fetchImpl || global.fetch
+
+  if (typeof fetchImpl !== "function") {
+    throw new Error("A fetch implementation is required.")
+  }
+
+  const response = await fetchImpl(url, {
+    method: options.method || "GET",
+    headers: { ...DEFAULT_BROWSER_HEADERS, ...(options.headers || {}) },
+    signal: options.signal
+  })
+
+  const text = await response.text()
+
+  if (!response.ok) {
+    throw new DaisoRequestError(`Daiso request failed with ${response.status} for ${url}`, {
+      status: response.status,
+      url
+    })
+  }
+
+  return { text, response }
 }
 
 async function requestJson(url, options = {}) {
@@ -67,11 +95,29 @@ async function requestJson(url, options = {}) {
   return payload
 }
 
-function isPickupStockUnauthorizedError(error) {
-  return (
-    error instanceof DaisoRequestError &&
-    (error.status === 401 || error.status === 403) &&
-    (!error.payload || /unauthorized/i.test(String(error.payload.message || "")))
+async function buildBearerToken(options = {}) {
+  const { text: jwt, response } = await requestText(`${BASE_API_URL}/auth/request`, options)
+  const uid = response.headers.get("x-dm-uid") || ""
+  const iv = crypto.randomBytes(16)
+  const cipher = crypto.createCipheriv("aes-128-cbc", PRE_AUTH_ENC_KEY, iv)
+  const encrypted = Buffer.concat([cipher.update(jwt.trim(), "utf8"), cipher.final()])
+  const bearer = Buffer.from(iv).toString("base64") + Buffer.from(encrypted).toString("base64")
+  return { bearer, uid }
+}
+
+function isAuthBlockedError(error) {
+  return error instanceof DaisoRequestError && (error.status === 401 || error.status === 403)
+}
+
+function normalizeAuthBlockedStock(request, error) {
+  return normalizeStorePickupStockResponse(
+    {
+      success: false,
+      message: "Unauthorized",
+      status: error && error.status,
+      upstreamPayload: error && error.payload ? error.payload : null
+    },
+    request
   )
 }
 
@@ -115,25 +161,37 @@ async function searchProducts(query, options = {}) {
 }
 
 async function getStorePickupStock(request, options = {}) {
-  try {
+  const body = [{ pdNo: String(request.pdNo), strCd: String(request.strCd) }]
+
+  async function requestStockWithFreshToken() {
+    const { bearer, uid } = await buildBearerToken(options)
     const payload = await requestJson(`${BASE_API_URL}/pd/pdh/selStrPkupStck`, {
       ...options,
       method: "POST",
-      body: [
-        {
-          pdNo: String(request.pdNo),
-          strCd: String(request.strCd)
-        }
-      ]
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${bearer}`,
+        "X-DM-UID": uid
+      },
+      body
     })
 
     return normalizeStorePickupStockResponse(payload, request)
+  }
+
+  try {
+    return await requestStockWithFreshToken()
   } catch (error) {
-    if (isPickupStockUnauthorizedError(error)) {
-      return normalizeStorePickupStockResponse(
-        error.payload || { success: false, message: "Unauthorized", status: error.status },
-        request
-      )
+    if (!isAuthBlockedError(error)) {
+      throw error
+    }
+  }
+
+  try {
+    return await requestStockWithFreshToken()
+  } catch (error) {
+    if (isAuthBlockedError(error)) {
+      return normalizeAuthBlockedStock(request, error)
     }
 
     throw error
@@ -279,6 +337,7 @@ async function lookupStoreProductAvailability(options = {}) {
       options
     )
   }
+
   const onlineStock = await onlineStockPromise
 
   return {

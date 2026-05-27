@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"fixture-kbo-success"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"2026-05-15 KBO 경기 결과:\n- 한화 이글스 5 : 3 LG 트윈스 (종료)\n- 삼성 라이온즈 2 : 7 KIA 타이거즈 (종료)\n\nVERDICT: PASS"}}
+{"type":"turn.completed","usage":{"input_tokens":120,"output_tokens":40}}

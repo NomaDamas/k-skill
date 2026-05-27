@@ -15,7 +15,8 @@
 ## 먼저 필요한 것
 
 - Python 3.9+ (stdlib only, 외부 패키지 없음)
-- KOSIS Open API 인증키 (무료, https://kosis.kr/openapi/ 에서 회원가입 후 활용신청)
+- 일반 `search`/`meta`/`data`: 기본 hosted `k-skill-proxy` 접근
+- `bigdata` 또는 `--direct`: KOSIS Open API 인증키 (무료, https://kosis.kr/openapi/ 에서 회원가입 후 활용신청)
 - [공통 설정 가이드](../setup.md) 완료
 - [보안/시크릿 정책](../security-and-secrets.md) 확인
 
@@ -25,28 +26,24 @@ python3 kosis-stats/scripts/run_kosis_stats.py --help
 
 ## 필요한 환경변수
 
-- `KSKILL_KOSIS_API_KEY`
+- 일반 `search`/`meta`/`data`: 없음
+- `KSKILL_PROXY_BASE_URL` — self-host·별도 프록시를 쓸 때만 설정. 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 사용
+- `KSKILL_KOSIS_API_KEY` — `bigdata` 또는 `--direct` 전용
 
-선택:
-
-- 없음
-
-### Credential resolution order
+### Credential resolution order (`bigdata` 또는 `--direct` 전용)
 
 1. **이미 환경변수에 있으면** 그대로 사용한다.
 2. **에이전트가 자체 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)를 사용 중이면** 거기서 꺼내 환경변수로 주입해도 된다.
 3. **`~/.config/k-skill/secrets.env`** (기본 fallback) — plain dotenv 파일, 퍼미션 `0600`.
 4. **아무것도 없으면** 유저에게 물어서 2 또는 3에 저장한다.
 
-helper는 `KSKILL_KOSIS_API_KEY` 환경변수와 위 secrets 파일만 읽는다.
+일반 조회 helper는 proxy URL만 읽고, KOSIS 인증키는 proxy 서버에서만 주입한다. `bigdata`/`--direct` 호출만 `KSKILL_KOSIS_API_KEY` 환경변수와 위 secrets 파일을 읽는다.
 
 ## 처음 실행 순서
 
-처음 쓰는 사용자는 키 발급 후 검색 → 메타 → 작은 슬라이스 순으로 점검한다.
+처음 쓰는 사용자는 proxy 기반 검색 → 메타 → 작은 슬라이스 순으로 점검한다. 사용자 KOSIS 키는 일반 조회에 필요 없다.
 
 ```bash
-export KSKILL_KOSIS_API_KEY="your-kosis-api-key"
-
 python3 kosis-stats/scripts/run_kosis_stats.py search --query "1인 가구" --text
 python3 kosis-stats/scripts/run_kosis_stats.py meta --table-id DT_1JC1501 --text
 python3 kosis-stats/scripts/run_kosis_stats.py data \
@@ -84,10 +81,12 @@ python3 kosis-stats/scripts/run_kosis_stats.py data \
 - `--text` / `--json` (기본 JSON)
 - `--dry-run` (인증키 없이 URL/파라미터만 출력)
 - `--timeout N` (기본 30)
+- `--proxy-base-url URL` (기본 hosted proxy 대신 self-host/alternate proxy 사용)
+- `--direct` (proxy를 우회하고 `KSKILL_KOSIS_API_KEY` 로 KOSIS 직접 호출)
 
 ## 기본 흐름
 
-1. `KSKILL_KOSIS_API_KEY` 를 확보한다.
+1. 일반 조회는 기본 hosted proxy를 사용한다. self-host를 쓰면 `KSKILL_PROXY_BASE_URL`을 설정한다.
 2. `search` 로 후보 통계표를 본다.
 3. `meta` 로 분류·단위·주기를 확인한다.
 4. `data` 로 작은 슬라이스를 먼저 받는다.
@@ -96,10 +95,10 @@ python3 kosis-stats/scripts/run_kosis_stats.py data \
 
 ## 검증 방식
 
-메인테이너가 별도 KOSIS 인증키를 새로 발급받을 필요는 없다.
+메인테이너가 일반 조회를 검토하기 위해 별도 KOSIS 인증키를 새로 발급받을 필요는 없다.
 
 - CI/리뷰 검증: `./scripts/validate-skills.sh`, `python3 -m py_compile ...`, `--help`, `--dry-run`, 단위 테스트(`python3 -m unittest discover -s kosis-stats/tests`).
-- 실제 조회 검증: 기여자 또는 이미 KOSIS 키를 가진 사용자가 개인 키로 선택 실행한다.
+- 실제 direct 조회 검증: 기여자 또는 이미 KOSIS 키를 가진 사용자가 `--direct`로 선택 실행한다. Proxy live smoke는 배포 proxy에 `KOSIS_API_KEY`가 설정된 뒤 수행한다.
 - PR에는 호출 endpoint, 파라미터, 응답 행 수 같은 비민감 요약만 남긴다. 인증키와 개인 조회 세부 내역은 공유하지 않는다.
 
 ## 예시
@@ -168,7 +167,7 @@ python3 kosis-stats/scripts/run_kosis_stats.py search --query "인구" --dry-run
 
 ## 흔한 문제 해결
 
-- `missing required environment variable: KSKILL_KOSIS_API_KEY`: 환경변수가 현재 shell에 주입됐는지 확인한다. 없다면 https://kosis.kr/openapi/ 에서 발급한다.
+- `missing required environment variable: KSKILL_KOSIS_API_KEY`: `bigdata` 또는 `--direct` 호출에서만 발생한다. 환경변수가 현재 shell에 주입됐는지 확인한다. 없다면 https://kosis.kr/openapi/ 에서 발급한다.
 - `KOSIS error 10` (인증키 누락) / `11` (만료): 키를 재확인하거나 갱신한다. `bigdata` 호출에서 `11` 이 뜨면 해당 `userStatsId` 가 본인 KOSIS 계정에 등록되어 있지 않을 가능성이 높다.
 - `KOSIS error 20` (필수 분류 누락): 표마다 필수 차원 수가 다르다. `meta --table-id <ID> --meta-type OBJ` 로 차원 수를 확인하고(OBJ가 비어 있으면 `--meta-type ITM`), `--obj-l 1=<코드> --obj-l 2=<코드>` 형태로 모두 지정한 뒤 재호출한다. 예: `data --table-id DT_1J22001 --prd-se M --start 202401 --end 202401 --obj-l 1=ALL` → 코드 20 → meta 확인 → `--obj-l 1=T10 --obj-l 2=0` 추가 → 성공.
 - `KOSIS error 21` (잘못된 요청 변수): `org_id`/`tbl_id`/`prdSe`/`startPrdDe` 형식과 분류 인덱스를 재확인한다. 표에 존재하지 않는 `objL3=ALL` 같은 인덱스는 거부된다. tblId 의심 시 `search --query <키워드>` 로 정확한 ID를 다시 찾는다.

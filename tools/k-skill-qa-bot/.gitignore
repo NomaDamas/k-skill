@@ -1,0 +1,3 @@
+test/pytest/__pycache__/
+test/pytest/.pytest_cache/
+test/stubs/gh.log

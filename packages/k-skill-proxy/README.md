@@ -8,16 +8,38 @@
 - `GET /v1/fine-dust/report`
 - `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
+- `GET /v1/seoul-density/citydata` — 서울 실시간 도시데이터(`citydata_ppltn`) 핫스팟 혼잡도/추정 인구(`SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/realtime` — 서울 따릉이 실시간 대여정보(`bikeList`, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/stations` — 서울 따릉이 대여소 마스터(`tbCycleStationInfo`, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/nearby` — 좌표 주변 따릉이 실시간 대여소 필터링(`SEOUL_OPEN_API_KEY`)
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` — 생활쓰레기 배출정보(`DATA_GO_KR_API_KEY`; `pageNo=1`, `numOfRows=100` 필수)
 - `GET /v1/parking-lots/search` — 전국주차장정보표준데이터 기반 근처 공영주차장 검색(`DATA_GO_KR_API_KEY`)
 - `GET /v1/neis/school-search` — 나이스 학교기본정보(교육청명·학교명 검색)
 - `GET /v1/neis/school-meal` — 나이스 급식식단정보(일자별 메뉴)
+- `POST /v1/nts-business/status` — 국세청 사업자등록 상태조회(`DATA_GO_KR_API_KEY`)
+- `POST /v1/nts-business/validate` — 국세청 사업자등록정보 진위확인(`DATA_GO_KR_API_KEY`)
 - `GET /v1/mfds/drug-safety/lookup` — 식약처 의약품개요정보(e약은요) + 안전상비의약품 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/mfds/food-safety/search` — 식약처 부적합 식품 + 식품안전나라 회수 정보(`DATA_GO_KR_API_KEY`, 선택적 `FOODSAFETYKOREA_API_KEY`)
 - `GET /v1/korean-stock/search`
 - `GET /v1/korean-stock/base-info`
 - `GET /v1/korean-stock/trade-info`
+- `GET /v1/kakao-local/geocode` — Kakao Local 주소/장소명 지오코딩(`KAKAO_REST_API_KEY`; caller `apiKey` 무시)
+- `GET /v1/kakao-map/search/keyword` — Kakao Local 키워드 장소 검색(좌표 중심·반경·카테고리 필터 지원, `KAKAO_REST_API_KEY`)
+- `GET /v1/kakao-map/search/category` — Kakao Local 카테고리 장소 검색(좌표 중심 필수, `KAKAO_REST_API_KEY`)
+- `GET /v1/kakao-map/coord2address` — Kakao Local 좌표→도로명/지번 주소(`KAKAO_REST_API_KEY`)
+- `GET /v1/kakao-map/coord2region` — Kakao Local 좌표→행정구역(`KAKAO_REST_API_KEY`)
+- `GET /v1/kakao-mobility/directions` — Kakao Mobility 자동차 길찾기(`KAKAO_REST_API_KEY`; `avoid=toll|motorway` 등 회피 옵션 지원)
+- `GET /v1/naver-map/directions` — NCP Maps Directions 5 자동차 길찾기(`NAVER_MAP_CLIENT_ID`, `NAVER_MAP_CLIENT_SECRET`)
+- `GET /v1/naver-map/geocode` — NCP Maps 주소→좌표 지오코딩(`NAVER_MAP_CLIENT_ID`, `NAVER_MAP_CLIENT_SECRET`)
+- `GET /v1/naver-map/reverse-geocode` — NCP Maps 좌표→주소 역지오코딩(`NAVER_MAP_CLIENT_ID`, `NAVER_MAP_CLIENT_SECRET`)
+- `GET /v1/kosis/search` — KOSIS 통계표 검색(`KOSIS_API_KEY`)
+- `GET /v1/kosis/meta` — KOSIS 통계표 메타데이터(`KOSIS_API_KEY`)
+- `GET /v1/kosis/data` — KOSIS 통계 데이터 셀 조회(`KOSIS_API_KEY`)
+- `GET /v1/kstartup/business-info` — 창업진흥원 K-Startup 통합공고 지원사업 정보(`DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/announcements` — 창업진흥원 K-Startup 지원사업 공고 정보(`DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/contents` — 창업진흥원 K-Startup 창업 콘텐츠 정보(`DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/statistics` — 창업진흥원 K-Startup 통계보고서 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/naver-shopping/search` — 네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 네이버 쇼핑 공개 BFF JSON 기반 상품/가격 후보 조회
 - `GET /v1/naver-news/search` — 네이버 검색 Open API 뉴스 검색(`news.json`) 기반 최신 뉴스 기사 제목/요약/링크/발행시각 조회(`NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` 필요)
 - `GET /v1/data4library/library-search` — 도서관 정보나루 정보공개 도서관 조회(`DATA4LIBRARY_AUTH_KEY`)
@@ -27,8 +49,6 @@
 - `GET /v1/data4library/book-exists` — 도서관별 도서 소장여부(`DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/lh-notice/search` — LH 청약 공고 목록(`DATA_GO_KR_API_KEY`)
 - `GET /v1/lh-notice/detail` — LH 청약 공고 상세(`DATA_GO_KR_API_KEY`)
-- `GET /v1/sh-notice/search` — SH 서울주택도시개발공사 공고/공지 목록(공식 i-sh.co.kr HTML 게시판; 무인증)
-- `GET /v1/sh-notice/detail` — SH 공고/공지 상세 본문 및 첨부 미리보기 링크(무인증)
 
 ## `/health` 업스트림 플래그 의미
 
@@ -49,14 +69,17 @@
 - `KEDU_INFO_KEY` — 프록시 서버 쪽 나이스(NEIS) 교육정보 개방 포털 Open API 인증키 (`school-search`, `school-meal`)
 - `DATA4LIBRARY_AUTH_KEY` — 프록시 서버 쪽 도서관 정보나루 Open API 인증키 (`data4library/*`)
 - `FOODSAFETYKOREA_API_KEY` — 프록시 서버 쪽 식품안전나라 회수정보 live key (`mfds/food-safety/search`; 없으면 sample feed fallback)
+- `KAKAO_REST_API_KEY` — 프록시 서버 쪽 Kakao REST API 키 (`kakao-local/geocode`, `kakao-map/*`, `kakao-mobility/directions`)
 - `KRX_API_KEY` — 프록시 서버 쪽 KRX Open API upstream key
+- `KOSIS_API_KEY` 또는 `KSKILL_KOSIS_API_KEY` — 프록시 서버 쪽 KOSIS Open API upstream key (`kosis/search`, `kosis/meta`, `kosis/data`)
 - `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 네이버 검색 Open API 키(`shop.json`, `news.json` 공통). 네이버 뉴스 route(`naver-news/search`)는 이 키가 **필수**이며 없으면 `503 upstream_not_configured` 를 돌려준다. 네이버 쇼핑 route(`naver-shopping/search`)는 **선택**이며 설정되면 공식 API 를 우선 사용하고, 없으면 공개 BFF JSON 파서로 fallback 한다. 공식 쇼핑 API 는 `review` 정렬을 지원하지 않아 `meta.sort_applied: "unsupported"`로 표시한다. no-key 쇼핑 fallback 은 `page`를 BFF에 전달해 해당 페이지를 고르고, `price_asc`/`price_dsc`/`review`는 선택 페이지 안에서 로컬 정렬하며, `date`는 `meta.sort_applied: "unsupported"`로 표시
+- `NAVER_MAP_CLIENT_ID`, `NAVER_MAP_CLIENT_SECRET` — NAVER Cloud Platform Maps subaccount 키. `naver-map/*` 라우트의 **운영 가능 여부**를 결정한다. 키가 없으면 라우트는 `503 upstream_not_configured` 를 돌려준다.
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — 기본 `4020`
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`
 - `KSKILL_PROXY_RATE_LIMIT_WINDOW_MS` — 기본 `60000`
 - `KSKILL_PROXY_RATE_LIMIT_MAX` — 기본 `60`
-- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `parking-lots`, `real-estate`, `mfds-drug-safety`, `mfds-food-safety`, `lh-notice`). 각 서비스는 공공데이터포털에서 별도 "활용신청" 승인이 필요하다. 키를 발급받은 뒤에는 [LH 임대공고문 정보](https://www.data.go.kr/data/15058530/openapi.do) 페이지에서도 활용신청을 눌러 동일 키를 활성화해야 `lh-notice` 라우트가 성공한다. 미활성 상태에서는 upstream이 HTTP 403 Forbidden을 돌려주고 proxy는 `upstream_error`로 변환한다.
+- `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `parking-lots`, `real-estate`, `nts-business`, `mfds-drug-safety`, `mfds-food-safety`, `lh-notice`). 각 서비스는 공공데이터포털에서 별도 "활용신청" 승인이 필요하다. 키를 발급받은 뒤에는 [LH 임대공고문 정보](https://www.data.go.kr/data/15058530/openapi.do) 페이지에서도 활용신청을 눌러 동일 키를 활성화해야 `lh-notice` 라우트가 성공한다. 미활성 상태에서는 upstream이 HTTP 403 Forbidden을 돌려주고 proxy는 `upstream_error`로 변환한다.
 
 기본 정책은 **무료 API 공개 프록시 = 무인증** 이다. 대신 endpoint scope 를 좁게 유지하고, cache + rate limit 으로 남용을 늦춘다.
 
@@ -68,11 +91,33 @@ node packages/k-skill-proxy/src/server.js
 
 환경변수(`AIR_KOREA_OPEN_API_KEY` 등)가 이미 설정되어 있거나 `~/.config/k-skill/secrets.env`를 source한 상태에서 실행한다.
 
+
+국세청 사업자등록 상태조회 예시:
+
+```bash
+curl -fsS -X POST 'http://127.0.0.1:4020/v1/nts-business/status' \
+  -H 'content-type: application/json' \
+  -d '{"b_no":["123-45-67890"]}'
+```
+
 서울 지하철 도착정보 예시:
 
 ```bash
 curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
   --data-urlencode 'stationName=강남'
+```
+
+서울 실시간 혼잡도 예시 (`SEOUL_OPEN_API_KEY` 필요):
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-density/citydata' \
+  --data-urlencode 'area=강남역'
+
+# Seoul Bike nearby stations
+curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-bike/nearby' \
+  --data-urlencode 'lat=37.5717' \
+  --data-urlencode 'lon=126.9763' \
+  --data-urlencode 'radius_m=500'
 ```
 
 한국 날씨 예시:
@@ -205,24 +250,41 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/detail' \
   --data-urlencode 'splInfTpCd=051'
 ```
 
-SH 공고/공지 검색 예시 (공식 `i-sh.co.kr` HTML 게시판, 무인증). 키워드만 보내면 자동으로 제목 검색으로 처리되고, `pageSize` 는 SH 게시판 응답 한 페이지 분량인 10건으로 캡됩니다:
-
-```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/sh-notice/search' \
-  --data-urlencode 'q=행복주택' \
-  --data-urlencode 'pageSize=10'
-```
-
-SH 공고/공지 상세:
-
-```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/sh-notice/detail' \
-  --data-urlencode 'seq=303994'
-```
-
 프록시는 내부적으로 `waterlevel/info.json` 으로 관측소를 해석하고, `waterlevel/list/10M/{WLOBSCD}.json` 으로 최신 수위/유량을 조회합니다. 한국 주식 route는 KRX Open API에 `AUTH_KEY` 헤더를 서버 쪽에서만 주입합니다.
 
+KOSIS 통계 조회 예시 (`KOSIS_API_KEY` 필요):
 
-## PM2 실행
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/kosis/search' \
+  --data-urlencode 'q=1인 가구' \
+  --data-urlencode 'limit=3'
 
-루트의 `ecosystem.config.cjs` + `scripts/run-k-skill-proxy.sh` 조합을 사용하면 재부팅 이후에도 같은 환경변수로 다시 올라옵니다.
+curl -fsS --get 'http://127.0.0.1:4020/v1/kosis/meta' \
+  --data-urlencode 'tableId=DT_1JC1501' \
+  --data-urlencode 'metaType=ITM'
+
+curl -fsS --get 'http://127.0.0.1:4020/v1/kosis/data' \
+  --data-urlencode 'tableId=DT_1JC1501' \
+  --data-urlencode 'prdSe=Y' \
+  --data-urlencode 'start=2020' \
+  --data-urlencode 'end=2023' \
+  --data-urlencode 'objL1=ALL'
+```
+
+Kakao Local geocoding 예시 (`KAKAO_REST_API_KEY` 필요, caller `apiKey`는 무시하고 서버 쪽 키를 주입):
+
+```bash
+curl -fsS --get 'http://127.0.0.1:4020/v1/kakao-local/geocode' \
+  --data-urlencode 'q=서울역' \
+  --data-urlencode 'limit=1'
+```
+
+
+## 프로덕션 배포
+
+프로덕션 프록시는 **Google Cloud Run** (`asia-northeast1`, GCP project `k-skill-proxy`)에서 운영되며, `k-skill-proxy.nomadamas.org` 도메인에 매핑되어 있습니다.
+
+- 컨테이너 이미지: `packages/k-skill-proxy/Dockerfile`
+- 자동 배포: `main` 브랜치 머지 시 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증 후 Artifact Registry로 이미지 빌드/푸시 → Cloud Run 재배포 → `/health` smoke test까지 수행합니다.
+- 시크릿: GCP Secret Manager에서 Cloud Run runtime에 주입됩니다.
+- 운영자 1회 셋업(WIF, Secret Manager, GitHub secrets) 절차는 [`docs/deploy-k-skill-proxy.md`](../../docs/deploy-k-skill-proxy.md) 참고.

@@ -45,12 +45,16 @@ done < <(
     ! -name .changeset \
     ! -name .cursor \
     ! -name .vscode \
+    ! -name .sisyphus \
+    ! -name .idea \
+    ! -name dist \
     ! -name docs \
     ! -name node_modules \
     ! -name packages \
     ! -name python-packages \
     ! -name scripts \
     ! -name examples \
+    ! -name tools \
     -print0
 )
 

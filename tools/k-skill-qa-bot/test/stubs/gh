@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -u
+
+LOG="$(dirname "$0")/gh.log"
+echo "gh $*" >> "$LOG"
+
+case "$1" in
+    auth)
+        case "${2:-}" in
+            status) exit 0 ;;
+        esac
+        exit 0
+        ;;
+    issue)
+        case "${2:-}" in
+            list)
+                case "${GH_STUB_MODE:-empty}" in
+                    empty) echo '[]' ;;
+                    existing-*)
+                        h="${GH_STUB_MODE#existing-}"
+                        printf '[{"number":42,"title":"old","body":"<!-- symptom_hash:%s -->"}]\n' "$h"
+                        ;;
+                    *) echo '[]' ;;
+                esac
+                exit 0
+                ;;
+            create|comment)
+                echo "https://github.com/NomaDamas/k-skill/issues/42"
+                exit 0
+                ;;
+        esac
+        ;;
+    --version)
+        echo "gh version 2.92.0-stub"
+        exit 0
+        ;;
+esac
+exit 0

@@ -19,22 +19,45 @@ const {
   normalizeLhNoticeDetailQuery,
   normalizeLhNoticeSearchQuery
 } = require("./lh-notice");
-const {
-  fetchShNoticeDetail,
-  fetchShNoticeList,
-  normalizeShNoticeDetailQuery,
-  normalizeShNoticeSearchQuery
-} = require("./sh-notice");
 const { fetchTransactions, VALID_ASSET_TYPES, VALID_DEAL_TYPES } = require("./molit");
+const {
+  fetchKakaoLocalEndpoint,
+  fetchKakaoMobilityDirections,
+  normalizeKakaoCategorySearchQuery,
+  normalizeKakaoCoordToAddressQuery,
+  normalizeKakaoKeywordSearchQuery,
+  normalizeKakaoMobilityDirectionsQuery
+} = require("./kakao-map");
+const {
+  fetchNaverMapDirections,
+  fetchNaverMapGeocode,
+  fetchNaverMapReverseGeocode,
+  normalizeNaverMapDirectionsQuery,
+  normalizeNaverMapGeocodeQuery,
+  normalizeNaverMapReverseGeocodeQuery
+} = require("./naver-map");
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
+const {
+  normalizeNtsBusinessStatusQuery,
+  normalizeNtsBusinessValidateQuery,
+  proxyNtsBusinessRequest
+} = require("./nts-business");
+const {
+  isKstartupErrorBody,
+  normalizeKstartupQuery,
+  proxyKstartupRequest
+} = require("./kstartup");
 const { fetchNearbyParkingLots } = require("./parking-lots");
 const { searchRegionCode } = require("./region-lookup");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
 const AIR_KOREA_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
 const DATA_GO_KR_UPSTREAM_BASE_URL = "https://apis.data.go.kr";
 const DATA4LIBRARY_UPSTREAM_BASE_URL = "https://data4library.kr/api";
+const KAKAO_LOCAL_API_BASE_URL = "https://dapi.kakao.com/v2/local";
+const KOSIS_OPEN_API_BASE_URL = "https://kosis.kr/openapi";
 const SEOUL_OPEN_API_BASE_URL = "http://swopenapi.seoul.go.kr";
+const SEOUL_CITYDATA_BASE_URL = "http://openapi.seoul.go.kr:8088";
 const KMA_FORECAST_BASE_TIMES = ["0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300"];
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const KMA_FORECAST_READY_MINUTE = 10;
@@ -165,10 +188,14 @@ function buildConfig(env = process.env) {
     molitApiKey: trimOrNull(env.DATA_GO_KR_API_KEY),
     data4libraryAuthKey: trimOrNull(env.DATA4LIBRARY_AUTH_KEY),
     foodsafetyKoreaApiKey: trimOrNull(env.FOODSAFETYKOREA_API_KEY),
+    kakaoRestApiKey: trimOrNull(env.KAKAO_REST_API_KEY),
     keduInfoKey: trimOrNull(env.KEDU_INFO_KEY),
     krxApiKey: trimOrNull(env.KRX_API_KEY),
+    kosisApiKey: trimOrNull(env.KOSIS_API_KEY ?? env.KSKILL_KOSIS_API_KEY),
     naverSearchClientId: trimOrNull(env.NAVER_SEARCH_CLIENT_ID ?? env.NAVER_CLIENT_ID),
     naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
+    naverMapClientId: trimOrNull(env.NAVER_MAP_CLIENT_ID),
+    naverMapClientSecret: trimOrNull(env.NAVER_MAP_CLIENT_SECRET),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -479,6 +506,340 @@ function normalizeSeoulSubwayQuery(query) {
     stationName,
     startIndex,
     endIndex
+  };
+}
+
+function normalizeSeoulCityDataQuery(query) {
+  const area = trimOrNull(query.area ?? query.areaNm ?? query.area_nm);
+  if (!area) {
+    throw new Error("Provide area.");
+  }
+  return { area };
+}
+
+
+function parseBoundedIntegerAlias(query, keys, { defaultValue, min, max, label }) {
+  let raw;
+  for (const key of keys) {
+    if (query[key] !== undefined) {
+      raw = query[key];
+      break;
+    }
+  }
+  let value = defaultValue;
+  if (raw !== undefined) {
+    if (typeof raw !== "string" || !/^[+-]?\d+$/.test(raw)) {
+      throw new Error(`Provide valid ${label}.`);
+    }
+    value = Number(raw);
+  }
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`Provide valid ${label}.`);
+  }
+  return value;
+}
+
+function parseNumberAlias(query, keys, { min, max, label }) {
+  let raw;
+  for (const key of keys) {
+    if (query[key] !== undefined) {
+      raw = query[key];
+      break;
+    }
+  }
+  if (typeof raw !== "string" || raw.trim() === "") {
+    throw new Error(`Provide valid ${label}.`);
+  }
+  const value = Number(raw.trim());
+  if (!Number.isFinite(value) || value < min || value > max) {
+    throw new Error(`Provide valid ${label}.`);
+  }
+  return value;
+}
+
+function normalizeSeoulBikePageQuery(query = {}) {
+  const startIndex = parseBoundedIntegerAlias(query, ["startIndex", "start_index", "start"], {
+    defaultValue: 1,
+    min: 1,
+    max: 100000,
+    label: "startIndex"
+  });
+  const endIndex = parseBoundedIntegerAlias(query, ["endIndex", "end_index", "end"], {
+    defaultValue: 1000,
+    min: 1,
+    max: 100000,
+    label: "endIndex"
+  });
+  if (endIndex < startIndex || endIndex - startIndex > 999) {
+    throw new Error("Provide valid startIndex and endIndex.");
+  }
+  return { startIndex, endIndex };
+}
+
+function normalizeSeoulBikeNearbyQuery(query = {}) {
+  const latitude = parseNumberAlias(query, ["latitude", "lat", "y"], {
+    min: -90,
+    max: 90,
+    label: "latitude"
+  });
+  const longitude = parseNumberAlias(query, ["longitude", "lon", "lng", "x"], {
+    min: -180,
+    max: 180,
+    label: "longitude"
+  });
+  const radiusMeters = parseBoundedIntegerAlias(query, ["radiusMeters", "radius_m", "radius"], {
+    defaultValue: 500,
+    min: 1,
+    max: 5000,
+    label: "radiusMeters"
+  });
+  const limit = parseBoundedIntegerAlias(query, ["limit"], {
+    defaultValue: 10,
+    min: 1,
+    max: 50,
+    label: "limit"
+  });
+  return { latitude, longitude, radiusMeters, limit };
+}
+
+function parseNullableNumber(value) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function haversineDistanceMeters(aLat, aLon, bLat, bLon) {
+  const earthRadiusMeters = 6371008.8;
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLon = toRad(bLon - aLon);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const a = Math.sin(dLat / 2) ** 2
+    + (Math.cos(lat1) * Math.cos(lat2) * (Math.sin(dLon / 2) ** 2));
+  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function normalizeSeoulBikeRealtimeRow(row, origin = null) {
+  const latitude = parseNullableNumber(row.stationLatitude ?? row.latitude ?? row.lat);
+  const longitude = parseNullableNumber(row.stationLongitude ?? row.longitude ?? row.lon ?? row.lng);
+  const rackTotalCount = parseNullableNumber(row.rackTotCnt ?? row.rack_total_count);
+  const availableBikes = parseNullableNumber(row.parkingBikeTotCnt ?? row.available_bikes);
+  const sharedPercent = parseNullableNumber(row.shared ?? row.shared_percent);
+  const emptyDocks = rackTotalCount === null || availableBikes === null
+    ? null
+    : Math.max(0, rackTotalCount - availableBikes);
+  const distanceMeters = origin && latitude !== null && longitude !== null
+    ? Math.round(haversineDistanceMeters(origin.latitude, origin.longitude, latitude, longitude))
+    : null;
+
+  return {
+    station_id: row.stationId ?? row.station_id ?? null,
+    station_name: row.stationName ?? row.station_name ?? null,
+    rack_total_count: rackTotalCount,
+    available_bikes: availableBikes,
+    empty_docks: emptyDocks,
+    shared_percent: sharedPercent,
+    latitude,
+    longitude,
+    distance_m: distanceMeters
+  };
+}
+
+function extractSeoulBikeRows(payload) {
+  const status = payload && payload.rentBikeStatus;
+  if (!status || !Array.isArray(status.row)) {
+    return [];
+  }
+  return status.row;
+}
+
+function getSeoulOpenApiResultCode(result) {
+  return result?.CODE ?? result?.["RESULT.CODE"] ?? result?.code ?? null;
+}
+
+function getSeoulOpenApiResultMessage(result) {
+  return result?.MESSAGE ?? result?.["RESULT.MESSAGE"] ?? result?.message ?? null;
+}
+
+function findSeoulOpenApiResultEnvelope(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  if (payload.RESULT && typeof payload.RESULT === "object") {
+    return payload.RESULT;
+  }
+  for (const value of Object.values(payload)) {
+    if (value && typeof value === "object" && value.RESULT && typeof value.RESULT === "object") {
+      return value.RESULT;
+    }
+  }
+  return null;
+}
+
+function getSeoulOpenApiSemanticError(payload) {
+  const result = findSeoulOpenApiResultEnvelope(payload);
+  const code = getSeoulOpenApiResultCode(result);
+  if (!code) {
+    return null;
+  }
+  const normalizedCode = String(code).toUpperCase();
+  if (normalizedCode.startsWith("INFO-")) {
+    return null;
+  }
+  return {
+    code: String(code),
+    message: getSeoulOpenApiResultMessage(result) || "Seoul Open API returned an application-level error."
+  };
+}
+
+function buildSeoulBikeSemanticErrorPayload(error, config) {
+  return {
+    error: "upstream_semantic_error",
+    message: "Seoul Bike upstream returned an application-level error.",
+    upstream: {
+      code: error.code,
+      message: error.message
+    },
+    proxy: {
+      name: config.proxyName,
+      cache: { hit: false, ttl_ms: config.cacheTtlMs },
+      requested_at: new Date().toISOString()
+    }
+  };
+}
+
+function buildSeoulBikeUpstreamErrorPayload(config) {
+  return {
+    error: "upstream_error",
+    message: "Seoul Bike upstream request failed.",
+    proxy: {
+      name: config.proxyName,
+      cache: { hit: false, ttl_ms: config.cacheTtlMs },
+      requested_at: new Date().toISOString()
+    }
+  };
+}
+
+function normalizeKosisSearchQuery(query) {
+  const searchNm = trimOrNull(query.searchNm ?? query.search_nm ?? query.query ?? query.q);
+  if (!searchNm) {
+    throw new Error("Provide query.");
+  }
+
+  return {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    searchNm,
+    resultCount: parseBoundedPositiveInteger(query.resultCount ?? query.result_count ?? query.limit, {
+      defaultValue: 20,
+      min: 1,
+      max: 5000,
+      label: "resultCount"
+    }),
+    startCount: parseBoundedPositiveInteger(query.startCount ?? query.start_count ?? query.start, {
+      defaultValue: 1,
+      min: 1,
+      max: 1000000,
+      label: "startCount"
+    })
+  };
+}
+
+function normalizeKosisMetaQuery(query) {
+  const orgId = trimOrNull(query.orgId ?? query.org_id) || "101";
+  const tblId = trimOrNull(query.tblId ?? query.tableId ?? query.table_id ?? query.tbl_id);
+  const type = (trimOrNull(query.type ?? query.metaType ?? query.meta_type) || "TBL").toUpperCase();
+
+  if (!/^\d+$/.test(orgId)) {
+    throw new Error("Provide valid orgId.");
+  }
+  if (!tblId) {
+    throw new Error("Provide tableId.");
+  }
+  if (!["TBL", "ITM", "OBJ"].includes(type)) {
+    throw new Error("metaType must be TBL, ITM, or OBJ.");
+  }
+
+  return {
+    method: "getMeta",
+    type,
+    format: "json",
+    jsonVD: "Y",
+    orgId,
+    tblId
+  };
+}
+
+function normalizeKosisDataQuery(query) {
+  const orgId = trimOrNull(query.orgId ?? query.org_id) || "101";
+  const tblId = trimOrNull(query.tblId ?? query.tableId ?? query.table_id ?? query.tbl_id);
+  const itmId = trimOrNull(query.itmId ?? query.itemId ?? query.item_id ?? query.itm_id) || "ALL";
+  const prdSe = (trimOrNull(query.prdSe ?? query.prd_se) || "").toUpperCase();
+  const startPrdDe = trimOrNull(query.startPrdDe ?? query.start_prd_de ?? query.start);
+  const endPrdDe = trimOrNull(query.endPrdDe ?? query.end_prd_de ?? query.end);
+
+  if (!/^\d+$/.test(orgId)) {
+    throw new Error("Provide valid orgId.");
+  }
+  if (!tblId) {
+    throw new Error("Provide tableId.");
+  }
+  if (!["M", "Q", "S", "Y", "F", "IR"].includes(prdSe)) {
+    throw new Error("prdSe must be one of M, Q, S, Y, F, IR.");
+  }
+  if (!startPrdDe || !endPrdDe) {
+    throw new Error("Provide start and end periods.");
+  }
+
+  const normalized = {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    orgId,
+    tblId,
+    itmId,
+    prdSe,
+    startPrdDe,
+    endPrdDe
+  };
+
+  for (let index = 1; index <= 8; index += 1) {
+    const value = trimOrNull(query[`objL${index}`] ?? query[`obj_l${index}`]);
+    if (value) {
+      normalized[`objL${index}`] = value;
+    }
+  }
+  if (!Object.keys(normalized).some((key) => /^objL\d+$/.test(key))) {
+    normalized.objL1 = "ALL";
+  }
+
+  return normalized;
+}
+
+function normalizeKakaoLocalGeocodeQuery(query) {
+  const q = trimOrNull(query.q ?? query.query);
+  if (!q) {
+    throw new Error("Provide query.");
+  }
+
+  return {
+    query: q,
+    size: parseBoundedPositiveInteger(query.size ?? query.limit, {
+      defaultValue: 5,
+      min: 1,
+      max: 15,
+      label: "size"
+    }),
+    page: parseBoundedPositiveInteger(query.page, {
+      defaultValue: 1,
+      min: 1,
+      max: 45,
+      label: "page"
+    })
   };
 }
 
@@ -931,6 +1292,121 @@ async function proxySeoulSubwayRequest({
   };
 }
 
+async function proxySeoulCityDataRequest({
+  area,
+  apiKey,
+  fetchImpl = global.fetch
+}) {
+  if (!apiKey) {
+    return {
+      statusCode: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "upstream_not_configured",
+        message: "SEOUL_OPEN_API_KEY is not configured on the proxy server."
+      })
+    };
+  }
+
+  const encodedArea = encodeURIComponent(area);
+  const url = new URL(
+    `${SEOUL_CITYDATA_BASE_URL}/${apiKey}/json/citydata_ppltn/1/1/${encodedArea}`
+  );
+
+  const response = await fetchImpl(url, {
+    signal: AbortSignal.timeout(20000)
+  });
+
+  return {
+    statusCode: response.status,
+    contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
+    body: await response.text()
+  };
+}
+
+
+function seoulOpenApiNotConfiguredResponse() {
+  return {
+    statusCode: 503,
+    contentType: "application/json; charset=utf-8",
+    body: JSON.stringify({
+      error: "upstream_not_configured",
+      message: "SEOUL_OPEN_API_KEY is not configured on the proxy server."
+    })
+  };
+}
+
+async function proxySeoulBikeDatasetRequest({
+  dataset,
+  startIndex = 1,
+  endIndex = 1000,
+  apiKey,
+  fetchImpl = global.fetch
+}) {
+  if (!apiKey) {
+    return seoulOpenApiNotConfiguredResponse();
+  }
+
+  const url = new URL(
+    `${SEOUL_CITYDATA_BASE_URL}/${apiKey}/json/${dataset}/${startIndex}/${endIndex}/`
+  );
+
+  const response = await fetchImpl(url, {
+    signal: AbortSignal.timeout(20000)
+  });
+
+  return {
+    statusCode: response.status,
+    contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
+    body: await response.text()
+  };
+}
+
+async function proxySeoulBikeRealtimeRequest(options) {
+  return proxySeoulBikeDatasetRequest({ ...options, dataset: "bikeList" });
+}
+
+async function proxySeoulBikeStationsRequest(options) {
+  return proxySeoulBikeDatasetRequest({ ...options, dataset: "tbCycleStationInfo" });
+}
+
+async function fetchAllSeoulBikeRealtimeRows({ apiKey, fetchImpl = global.fetch }) {
+  const first = await proxySeoulBikeRealtimeRequest({
+    startIndex: 1,
+    endIndex: 1000,
+    apiKey,
+    fetchImpl
+  });
+  if (first.statusCode !== 200 || !first.contentType.includes("json")) {
+    return { upstream: first, rows: null };
+  }
+
+  const payload = JSON.parse(first.body);
+  const semanticError = getSeoulOpenApiSemanticError(payload);
+  if (semanticError) {
+    return { upstream: first, rows: null, semanticError };
+  }
+  const rows = extractSeoulBikeRows(payload);
+  const totalCount = Number(payload.rentBikeStatus?.list_total_count ?? rows.length);
+  const safeTotalCount = Number.isFinite(totalCount) ? Math.max(totalCount, rows.length) : rows.length;
+
+  for (let startIndex = 1001; startIndex <= safeTotalCount; startIndex += 1000) {
+    const endIndex = Math.min(startIndex + 999, safeTotalCount);
+    const next = await proxySeoulBikeRealtimeRequest({ startIndex, endIndex, apiKey, fetchImpl });
+    if (next.statusCode !== 200 || !next.contentType.includes("json")) {
+      return { upstream: next, rows: null };
+    }
+    const nextPayload = JSON.parse(next.body);
+    const nextSemanticError = getSeoulOpenApiSemanticError(nextPayload);
+    if (nextSemanticError) {
+      return { upstream: next, rows: null, semanticError: nextSemanticError };
+    }
+    rows.push(...extractSeoulBikeRows(nextPayload));
+  }
+
+  return { upstream: first, rows };
+}
+
 async function proxyKmaWeatherRequest({
   baseDate,
   baseTime,
@@ -1037,6 +1513,154 @@ async function proxyData4LibraryRequest({
     contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
     body: await response.text()
   };
+}
+
+async function proxyKosisRequest({
+  operation,
+  params = {},
+  apiKey,
+  fetchImpl = global.fetch
+}) {
+  const paths = {
+    search: "statisticsSearch.do",
+    meta: "statisticsData.do",
+    data: "Param/statisticsParameterData.do"
+  };
+  const path = paths[operation];
+
+  if (!path) {
+    return {
+      statusCode: 404,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "not_found",
+        message: "That KOSIS route is not exposed by this proxy."
+      })
+    };
+  }
+
+  if (!apiKey) {
+    return {
+      statusCode: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "upstream_not_configured",
+        message: "KOSIS_API_KEY is not configured on the proxy server."
+      })
+    };
+  }
+
+  const url = new URL(`${KOSIS_OPEN_API_BASE_URL}/${path}`);
+  for (const [key, value] of Object.entries(params || {})) {
+    if (value === undefined || value === null || value === "" || key === "apiKey") {
+      continue;
+    }
+    url.searchParams.set(key, String(value));
+  }
+  url.searchParams.set("apiKey", apiKey);
+
+  const response = await fetchImpl(url, {
+    headers: {
+      "user-agent": "k-skill-proxy/kosis"
+    },
+    signal: AbortSignal.timeout(20000)
+  });
+
+  return {
+    statusCode: response.status,
+    contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
+    body: await response.text()
+  };
+}
+
+async function proxyKakaoLocalRequest({
+  endpoint,
+  params = {},
+  apiKey,
+  fetchImpl = global.fetch
+}) {
+  const paths = {
+    address: "search/address.json",
+    keyword: "search/keyword.json"
+  };
+  const path = paths[endpoint];
+
+  if (!path) {
+    return {
+      statusCode: 404,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "not_found",
+        message: "That Kakao Local route is not exposed by this proxy."
+      })
+    };
+  }
+
+  if (!apiKey) {
+    return {
+      statusCode: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "upstream_not_configured",
+        message: "KAKAO_REST_API_KEY is not configured on the proxy server."
+      })
+    };
+  }
+
+  const url = new URL(`${KAKAO_LOCAL_API_BASE_URL}/${path}`);
+  for (const [key, value] of Object.entries(params || {})) {
+    if (value === undefined || value === null || value === "" || key === "apiKey") {
+      continue;
+    }
+    url.searchParams.set(key, String(value));
+  }
+
+  const response = await fetchImpl(url, {
+    headers: {
+      authorization: `KakaoAK ${apiKey}`,
+      "user-agent": "k-skill-proxy/kakao-local"
+    },
+    signal: AbortSignal.timeout(20000)
+  });
+
+  return {
+    statusCode: response.status,
+    contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
+    body: await response.text()
+  };
+}
+
+function hasKakaoLocalDocuments(body) {
+  try {
+    const payload = JSON.parse(String(body || ""));
+    return Array.isArray(payload.documents) && payload.documents.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function isSuccessfulJsonResponse(upstream) {
+  return upstream.statusCode >= 200 && upstream.statusCode < 300 && upstream.contentType.includes("json");
+}
+
+function isKosisErrorBody(body) {
+  const text = String(body || "").trim();
+  if (!text) {
+    return true;
+  }
+  if (/<error>\s*<err>/i.test(text)) {
+    return true;
+  }
+  if (!(text.startsWith("{") || text.startsWith("["))) {
+    return false;
+  }
+
+  try {
+    const payload = JSON.parse(text.replace(/([{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":'));
+    return Boolean(payload && !Array.isArray(payload) && typeof payload === "object" && (payload.err || payload.errCode || payload.error));
+  } catch {
+    return false;
+  }
 }
 
 async function proxyOpinetRequest({ path, params, apiKey, fetchImpl = global.fetch }) {
@@ -1273,6 +1897,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
   app.get("/health", async () => {
     const naverSearchKeysPresent = Boolean(config.naverSearchClientId && config.naverSearchClientSecret);
+    const naverMapKeysPresent = Boolean(config.naverMapClientId && config.naverMapClientSecret);
     return {
       ok: true,
       service: config.proxyName,
@@ -1290,9 +1915,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaConfigured: Boolean(config.foodsafetyKoreaApiKey),
         neisSchoolMealConfigured: Boolean(config.keduInfoKey),
         krxConfigured: Boolean(config.krxApiKey),
+        kakaoLocalConfigured: Boolean(config.kakaoRestApiKey),
+        kakaoMapConfigured: Boolean(config.kakaoRestApiKey),
+        kakaoMobilityConfigured: Boolean(config.kakaoRestApiKey),
+        kosisConfigured: Boolean(config.kosisApiKey),
         naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
-        naverNewsApiConfigured: naverSearchKeysPresent
+        naverNewsApiConfigured: naverSearchKeysPresent,
+        naverMapConfigured: naverMapKeysPresent,
+        ntsBusinessConfigured: Boolean(config.molitApiKey),
+        kstartupConfigured: Boolean(config.molitApiKey)
       },
       auth: {
         tokenRequired: false
@@ -1378,6 +2010,213 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
+  app.get("/v1/seoul-bike/realtime", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeSeoulBikePageQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({ route: "seoul-bike-realtime", ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let upstream;
+    try {
+      upstream = await proxySeoulBikeRealtimeRequest({
+        ...normalized,
+        apiKey: config.seoulOpenApiKey
+      });
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+    if (!upstream.contentType.includes("json")) {
+      return upstream.body;
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(upstream.body);
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
+    const semanticError = getSeoulOpenApiSemanticError(payload);
+    if (semanticError) {
+      reply.code(502);
+      return buildSeoulBikeSemanticErrorPayload(semanticError, config);
+    }
+    payload.proxy = {
+      name: config.proxyName,
+      cache: { hit: false, ttl_ms: config.cacheTtlMs },
+      requested_at: new Date().toISOString()
+    };
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+    return payload;
+  });
+
+  app.get("/v1/seoul-bike/stations", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeSeoulBikePageQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({ route: "seoul-bike-stations", ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let upstream;
+    try {
+      upstream = await proxySeoulBikeStationsRequest({
+        ...normalized,
+        apiKey: config.seoulOpenApiKey
+      });
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+    if (!upstream.contentType.includes("json")) {
+      return upstream.body;
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(upstream.body);
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
+    const semanticError = getSeoulOpenApiSemanticError(payload);
+    if (semanticError) {
+      reply.code(502);
+      return buildSeoulBikeSemanticErrorPayload(semanticError, config);
+    }
+    payload.proxy = {
+      name: config.proxyName,
+      cache: { hit: false, ttl_ms: config.cacheTtlMs },
+      requested_at: new Date().toISOString()
+    };
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+    return payload;
+  });
+
+  app.get("/v1/seoul-bike/nearby", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeSeoulBikeNearbyQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({ route: "seoul-bike-nearby", ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let realtimeResult;
+    try {
+      realtimeResult = await fetchAllSeoulBikeRealtimeRows({
+        apiKey: config.seoulOpenApiKey
+      });
+    } catch {
+      reply.code(502);
+      return buildSeoulBikeUpstreamErrorPayload(config);
+    }
+
+    const { upstream, rows, semanticError } = realtimeResult;
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+    if (semanticError) {
+      reply.code(502);
+      return buildSeoulBikeSemanticErrorPayload(semanticError, config);
+    }
+    if (!upstream.contentType.includes("json") || rows === null) {
+      return upstream.body;
+    }
+
+    const origin = { latitude: normalized.latitude, longitude: normalized.longitude };
+    const items = rows
+      .map((row) => normalizeSeoulBikeRealtimeRow(row, origin))
+      .filter((row) => row.latitude !== null && row.longitude !== null && row.distance_m !== null)
+      .filter((row) => row.distance_m <= normalized.radiusMeters)
+      .sort((a, b) => a.distance_m - b.distance_m)
+      .slice(0, normalized.limit);
+
+    const payload = {
+      query: {
+        latitude: normalized.latitude,
+        longitude: normalized.longitude,
+        radius_m: normalized.radiusMeters,
+        limit: normalized.limit
+      },
+      count: items.length,
+      items,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+    return payload;
+  });
+
   app.get("/v1/seoul-subway/arrival", async (request, reply) => {
     let normalized;
 
@@ -1436,6 +2275,175 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     }
 
     return payload;
+  });
+
+  app.get("/v1/seoul-density/citydata", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeSeoulCityDataQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "seoul-density-citydata",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const upstream = await proxySeoulCityDataRequest({
+      ...normalized,
+      apiKey: config.seoulOpenApiKey
+    });
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+
+    if (!upstream.contentType.includes("json")) {
+      return upstream.body;
+    }
+
+    const payload = JSON.parse(upstream.body);
+    payload.proxy = {
+      name: config.proxyName,
+      cache: {
+        hit: false,
+        ttl_ms: config.cacheTtlMs
+      },
+      requested_at: new Date().toISOString()
+    };
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+
+    return payload;
+  });
+
+  async function handleKosisRoute({ operation, normalize, cacheRoute, request, reply }) {
+    let normalized;
+
+    try {
+      normalized = normalize(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: cacheRoute,
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      reply.code(cached.statusCode);
+      reply.header("content-type", cached.contentType);
+      return cached.body;
+    }
+
+    const upstream = await proxyKosisRequest({
+      operation,
+      params: normalized,
+      apiKey: config.kosisApiKey
+    });
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300 && !isKosisErrorBody(upstream.body)) {
+      cache.set(cacheKey, upstream, config.cacheTtlMs);
+    }
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+    return upstream.body;
+  }
+
+  app.get("/v1/kosis/search", async (request, reply) => handleKosisRoute({
+    operation: "search",
+    normalize: normalizeKosisSearchQuery,
+    cacheRoute: "kosis-search",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kosis/meta", async (request, reply) => handleKosisRoute({
+    operation: "meta",
+    normalize: normalizeKosisMetaQuery,
+    cacheRoute: "kosis-meta",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kosis/data", async (request, reply) => handleKosisRoute({
+    operation: "data",
+    normalize: normalizeKosisDataQuery,
+    cacheRoute: "kosis-data",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kakao-local/geocode", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeKakaoLocalGeocodeQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "kakao-local-geocode",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      reply.code(cached.statusCode);
+      reply.header("content-type", cached.contentType);
+      return cached.body;
+    }
+
+    const address = await proxyKakaoLocalRequest({
+      endpoint: "address",
+      params: normalized,
+      apiKey: config.kakaoRestApiKey
+    });
+    const upstream = isSuccessfulJsonResponse(address) && !hasKakaoLocalDocuments(address.body)
+      ? await proxyKakaoLocalRequest({
+          endpoint: "keyword",
+          params: normalized,
+          apiKey: config.kakaoRestApiKey
+        })
+      : address;
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, upstream, config.cacheTtlMs);
+    }
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+    return upstream.body;
   });
 
   app.get("/v1/korea-weather/forecast", async (request, reply) => {
@@ -2258,11 +3266,68 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
-  app.get("/v1/sh-notice/search", async (request, reply) => {
+
+  function getNtsUpstreamStatusCode(parsed) {
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    return parsed.status_code
+      ?? parsed.statusCode
+      ?? parsed.resultCode
+      ?? parsed.response?.header?.resultCode
+      ?? null;
+  }
+
+  function isNtsUpstreamSemanticFailure(parsed) {
+    const statusCode = getNtsUpstreamStatusCode(parsed);
+    if (statusCode === null || statusCode === undefined) {
+      return false;
+    }
+
+    return !["OK", "00", "0", "SUCCESS"].includes(String(statusCode).toUpperCase());
+  }
+
+  const ntsValidateSensitiveResponseKeys = new Set([
+    "b_adr",
+    "b_nm",
+    "b_sector",
+    "b_type",
+    "corp_no",
+    "p_nm",
+    "p_nm2",
+    "start_dt"
+  ]);
+
+  function redactNtsBusinessValidateResponse(value) {
+    if (Array.isArray(value)) {
+      return value.map(redactNtsBusinessValidateResponse);
+    }
+    if (!value || typeof value !== "object") {
+      return value;
+    }
+
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !ntsValidateSensitiveResponseKeys.has(key))
+        .map(([key, entryValue]) => [key, redactNtsBusinessValidateResponse(entryValue)])
+    );
+  }
+
+  async function handleNtsBusinessRoute({
+    operation,
+    route,
+    normalizer,
+    request,
+    reply,
+    cacheSuccess = true,
+    includeQuery = true,
+    responseMapper = (body) => body
+  }) {
     let normalized;
 
     try {
-      normalized = normalizeShNoticeSearchQuery(request.query || {});
+      normalized = normalizer(request.body || {});
     } catch (error) {
       reply.code(400);
       return {
@@ -2271,54 +3336,137 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const cacheKey = makeCacheKey({
-      route: "sh-notice-search",
-      ...normalized
-    });
-    const cached = cache.get(cacheKey);
-    if (cached) {
+    const cacheKey = cacheSuccess
+      ? makeCacheKey({
+        route,
+        ...normalized
+      })
+      : null;
+    if (cacheKey) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        return {
+          ...cached,
+          proxy: {
+            ...cached.proxy,
+            cache: {
+              hit: true,
+              ttl_ms: config.cacheTtlMs
+            }
+          }
+        };
+      }
+    }
+
+    let upstream;
+    try {
+      upstream = await proxyNtsBusinessRequest({
+        operation,
+        payload: normalized,
+        serviceKey: config.molitApiKey
+      });
+    } catch (error) {
+      reply.code(502);
       return {
-        ...cached,
+        error: "proxy_error",
+        message: "NTS business upstream request failed.",
         proxy: {
-          ...cached.proxy,
-          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
         }
       };
     }
 
-    let body;
+    let parsed;
     try {
-      body = await fetchShNoticeList({ filters: normalized });
-    } catch (error) {
-      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      parsed = JSON.parse(upstream.body);
+    } catch {
+      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
       return {
-        error: error.code || "proxy_error",
-        message: error.message,
+        error: "upstream_invalid_response",
+        message: "NTS business upstream did not return valid JSON.",
+        upstream_status: upstream.statusCode,
         proxy: {
           name: config.proxyName,
-          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    const responseBody = responseMapper(parsed);
+
+    if (
+      upstream.statusCode < 200
+      || upstream.statusCode >= 300
+      || parsed.error
+      || isNtsUpstreamSemanticFailure(parsed)
+    ) {
+      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
+      return {
+        ...responseBody,
+        error: parsed.error || "upstream_error",
+        upstream_status_code: getNtsUpstreamStatusCode(parsed) || undefined,
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          },
+          requested_at: new Date().toISOString()
         }
       };
     }
 
     const payload = {
-      ...body,
+      ...responseBody,
       proxy: {
         name: config.proxyName,
-        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
         requested_at: new Date().toISOString()
       }
     };
+    if (includeQuery) {
+      payload.query = normalized;
+    }
 
-    cache.set(cacheKey, payload, config.cacheTtlMs);
+    if (cacheKey) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
     return payload;
-  });
+  }
 
-  app.get("/v1/sh-notice/detail", async (request, reply) => {
+  app.post("/v1/nts-business/status", async (request, reply) => handleNtsBusinessRoute({
+    operation: "status",
+    route: "nts-business-status",
+    normalizer: normalizeNtsBusinessStatusQuery,
+    request,
+    reply
+  }));
+
+  app.post("/v1/nts-business/validate", async (request, reply) => handleNtsBusinessRoute({
+    operation: "validate",
+    route: "nts-business-validate",
+    normalizer: normalizeNtsBusinessValidateQuery,
+    cacheSuccess: false,
+    includeQuery: false,
+    responseMapper: redactNtsBusinessValidateResponse,
+    request,
+    reply
+  }));
+
+  async function handleKstartupRoute({ operation, route, request, reply }) {
     let normalized;
-
     try {
-      normalized = normalizeShNoticeDetailQuery(request.query || {});
+      normalized = normalizeKstartupQuery(operation, request.query || {});
     } catch (error) {
       reply.code(400);
       return {
@@ -2327,48 +3475,142 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const cacheKey = makeCacheKey({
-      route: "sh-notice-detail",
-      ...normalized
-    });
+    normalized.returnType = "json";
+
+    const cacheKey = makeCacheKey({ route, ...normalized });
     const cached = cache.get(cacheKey);
     if (cached) {
       return {
         ...cached,
         proxy: {
           ...cached.proxy,
-          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
         }
       };
     }
 
-    let body;
+    let upstream;
     try {
-      body = await fetchShNoticeDetail({ filters: normalized });
+      upstream = await proxyKstartupRequest({
+        operation,
+        query: normalized,
+        serviceKey: config.molitApiKey
+      });
     } catch (error) {
-      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      reply.code(502);
       return {
-        error: error.code || "proxy_error",
-        message: error.message,
+        error: "proxy_error",
+        message: "K-Startup upstream request failed.",
         proxy: {
           name: config.proxyName,
-          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (upstream.statusCode === 503) {
+      reply.code(503);
+      let upstreamPayload = null;
+      try { upstreamPayload = JSON.parse(upstream.body); } catch { upstreamPayload = null; }
+      return {
+        error: upstreamPayload?.error || "upstream_not_configured",
+        message: upstreamPayload?.message || "DATA_GO_KR_API_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(upstream.body);
+    } catch {
+      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
+      return {
+        error: "upstream_invalid_response",
+        message: "K-Startup upstream did not return valid JSON.",
+        upstream_status: upstream.statusCode,
+        upstream_body: upstream.body.slice(0, 500),
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (upstream.statusCode < 200 || upstream.statusCode >= 300 || isKstartupErrorBody(upstream.body)) {
+      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
+      return {
+        ...parsed,
+        error: parsed?.error || "upstream_error",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          },
+          requested_at: new Date().toISOString()
         }
       };
     }
 
     const payload = {
-      ...body,
+      ...parsed,
+      query: normalized,
       proxy: {
         name: config.proxyName,
-        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
         requested_at: new Date().toISOString()
       }
     };
 
     cache.set(cacheKey, payload, config.cacheTtlMs);
     return payload;
-  });
+  }
+
+  app.get("/v1/kstartup/business-info", async (request, reply) => handleKstartupRoute({
+    operation: "business-info",
+    route: "kstartup-business-info",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kstartup/announcements", async (request, reply) => handleKstartupRoute({
+    operation: "announcements",
+    route: "kstartup-announcements",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kstartup/contents", async (request, reply) => handleKstartupRoute({
+    operation: "contents",
+    route: "kstartup-contents",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kstartup/statistics", async (request, reply) => handleKstartupRoute({
+    operation: "statistics",
+    route: "kstartup-statistics",
+    request,
+    reply
+  }));
 
   app.get("/v1/mfds/drug-safety/lookup", async (request, reply) => {
     let normalized;
@@ -2957,6 +4199,271 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     cache.set(cacheKey, payload, config.cacheTtlMs);
     return payload;
   });
+
+  async function handleKakaoLocalEndpointRoute({
+    request,
+    reply,
+    route,
+    endpoint,
+    normalize
+  }) {
+    let normalized;
+    try {
+      normalized = normalize(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({ route, ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetchKakaoLocalEndpoint({
+        endpoint,
+        params: normalized,
+        apiKey: config.kakaoRestApiKey
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      const payload = {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+      if (error.upstreamStatusCode) {
+        payload.upstream = {
+          status_code: error.upstreamStatusCode,
+          body_snippet: error.upstreamBodySnippet || null
+        };
+      }
+      return payload;
+    }
+
+    const payload = {
+      ...result.body,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    reply.code(result.statusCode);
+    reply.header("content-type", "application/json; charset=utf-8");
+    return payload;
+  }
+
+  async function handleNaverMapRoute({
+    request,
+    reply,
+    route,
+    normalize,
+    fetcher,
+    cacheKeyExtra = {}
+  }) {
+    let normalized;
+    try {
+      normalized = normalize(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+    const cacheKey = makeCacheKey({ route, ...normalized, ...cacheKeyExtra });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetcher({
+        ...normalized,
+        clientId: config.naverMapClientId,
+        clientSecret: config.naverMapClientSecret
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      const payload = {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+      if (error.upstreamStatusCode) {
+        payload.upstream = {
+          status_code: error.upstreamStatusCode
+        };
+        if (error.upstreamBodySnippet) {
+          payload.upstream.body_snippet = error.upstreamBodySnippet;
+        }
+      }
+      return payload;
+    }
+
+    const payload = {
+      ...result.body,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    reply.code(result.statusCode);
+    reply.header("content-type", "application/json; charset=utf-8");
+    return payload;
+  }
+
+  app.get("/v1/kakao-map/search/keyword", async (request, reply) => handleKakaoLocalEndpointRoute({
+    request,
+    reply,
+    route: "kakao-map-search-keyword",
+    endpoint: "keyword",
+    normalize: normalizeKakaoKeywordSearchQuery
+  }));
+
+  app.get("/v1/kakao-map/search/category", async (request, reply) => handleKakaoLocalEndpointRoute({
+    request,
+    reply,
+    route: "kakao-map-search-category",
+    endpoint: "category",
+    normalize: normalizeKakaoCategorySearchQuery
+  }));
+
+  app.get("/v1/kakao-map/coord2address", async (request, reply) => handleKakaoLocalEndpointRoute({
+    request,
+    reply,
+    route: "kakao-map-coord2address",
+    endpoint: "coord2address",
+    normalize: normalizeKakaoCoordToAddressQuery
+  }));
+
+  app.get("/v1/kakao-map/coord2region", async (request, reply) => handleKakaoLocalEndpointRoute({
+    request,
+    reply,
+    route: "kakao-map-coord2region",
+    endpoint: "coord2region",
+    normalize: normalizeKakaoCoordToAddressQuery
+  }));
+
+  app.get("/v1/kakao-mobility/directions", async (request, reply) => {
+    let normalized;
+    try {
+      normalized = normalizeKakaoMobilityDirectionsQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({ route: "kakao-mobility-directions", ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetchKakaoMobilityDirections({
+        ...normalized,
+        apiKey: config.kakaoRestApiKey
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      const payload = {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+      if (error.upstreamStatusCode) {
+        payload.upstream = {
+          status_code: error.upstreamStatusCode,
+          body_snippet: error.upstreamBodySnippet || null
+        };
+      }
+      return payload;
+    }
+
+    const payload = {
+      ...result.body,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    reply.code(result.statusCode);
+    reply.header("content-type", "application/json; charset=utf-8");
+    return payload;
+  });
+
+  app.get("/v1/naver-map/directions", async (request, reply) => handleNaverMapRoute({
+    request,
+    reply,
+    route: "naver-map-directions",
+    normalize: normalizeNaverMapDirectionsQuery,
+    fetcher: fetchNaverMapDirections
+  }));
+
+  app.get("/v1/naver-map/geocode", async (request, reply) => handleNaverMapRoute({
+    request,
+    reply,
+    route: "naver-map-geocode",
+    normalize: normalizeNaverMapGeocodeQuery,
+    fetcher: fetchNaverMapGeocode
+  }));
+
+  app.get("/v1/naver-map/reverse-geocode", async (request, reply) => handleNaverMapRoute({
+    request,
+    reply,
+    route: "naver-map-reverse-geocode",
+    normalize: normalizeNaverMapReverseGeocodeQuery,
+    fetcher: fetchNaverMapReverseGeocode
+  }));
+
 
   async function handleData4LibraryRoute({
     request,
@@ -3571,7 +5078,19 @@ module.exports = {
   normalizeData4LibraryLibrarySearchQuery,
   normalizeFineDustQuery,
   normalizeHanRiverWaterLevelQuery,
+  normalizeKakaoLocalGeocodeQuery,
+  normalizeKakaoKeywordSearchQuery,
+  normalizeKakaoCategorySearchQuery,
+  normalizeKakaoCoordToAddressQuery,
+  normalizeKakaoMobilityDirectionsQuery,
+  normalizeNaverMapDirectionsQuery,
+  normalizeNaverMapGeocodeQuery,
+  normalizeNaverMapReverseGeocodeQuery,
   normalizeKmaForecastQuery,
+  normalizeKosisDataQuery,
+  normalizeKosisMetaQuery,
+  normalizeKosisSearchQuery,
+  normalizeKstartupQuery,
   normalizeKoreanStockLookupQuery,
   normalizeKoreanStockSearchQuery,
   normalizeLhNoticeDetailQuery,
@@ -3581,18 +5100,34 @@ module.exports = {
   normalizeNeisSchoolMealQuery,
   normalizeNeisSchoolSearchQuery,
   normalizeNaverShoppingSearchQuery,
+  normalizeNtsBusinessStatusQuery,
+  normalizeNtsBusinessValidateQuery,
   normalizeParkingLotSearchQuery,
   normalizeRealEstateQuery,
   normalizeRegionCodeQuery,
+  normalizeSeoulBikeNearbyQuery,
+  normalizeSeoulBikePageQuery,
+  normalizeSeoulCityDataQuery,
   normalizeSeoulSubwayQuery,
   proxyAirKoreaRequest,
   proxyData4LibraryRequest,
   proxyHrfcoWaterLevelRequest,
+  proxyKakaoLocalRequest,
   proxyNeisSchoolMealRequest,
   proxyNeisSchoolInfoRequest,
   proxyKmaWeatherRequest,
+  proxyKosisRequest,
+  proxyKstartupRequest,
+  fetchKakaoLocalEndpoint,
+  fetchKakaoMobilityDirections,
+  fetchNaverMapDirections,
+  fetchNaverMapGeocode,
+  fetchNaverMapReverseGeocode,
   fetchNaverShoppingSearch,
   proxyOpinetRequest,
+  proxySeoulBikeRealtimeRequest,
+  proxySeoulBikeStationsRequest,
+  proxySeoulCityDataRequest,
   proxySeoulSubwayRequest,
   resolveLatestKmaForecastBase,
   startServer

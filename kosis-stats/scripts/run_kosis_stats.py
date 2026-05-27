@@ -30,6 +30,8 @@ SEARCH_URL = "https://kosis.kr/openapi/statisticsSearch.do"
 META_URL = "https://kosis.kr/openapi/statisticsData.do"
 DATA_URL = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
 BIGDATA_URL = "https://kosis.kr/openapi/statisticsBigData.do"
+PROXY_BASE_URL_ENV_VAR = "KSKILL_PROXY_BASE_URL"
+DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
 
 DEFAULT_TIMEOUT = 30
 PRD_SE_VALUES = {"M", "Q", "S", "Y", "F", "IR"}
@@ -103,6 +105,18 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
         "--dry-run",
         action="store_true",
         help="Print the request URL and parameters without calling KOSIS.",
+    )
+    parser.add_argument(
+        "--proxy-base-url",
+        help=(
+            "k-skill-proxy base URL for search/meta/data "
+            f"(default {DEFAULT_PROXY_BASE_URL}; override with {PROXY_BASE_URL_ENV_VAR})."
+        ),
+    )
+    parser.add_argument(
+        "--direct",
+        action="store_true",
+        help="Call KOSIS directly with KSKILL_KOSIS_API_KEY instead of k-skill-proxy.",
     )
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--json", action="store_true", help="Print JSON output.")
@@ -233,6 +247,19 @@ def resolve_api_key(
         "발급: https://kosis.kr/openapi/ (무료, KOSIS 회원가입 후 활용신청)\n"
         "참조: kosis-stats/references/kosis-openapi-guide.md"
     )
+
+
+def resolve_proxy_base_url(
+    explicit_base_url: str | None = None,
+    env: dict[str, str] | None = None,
+) -> str:
+    env_map = env if env is not None else os.environ
+    candidate = (explicit_base_url or env_map.get(PROXY_BASE_URL_ENV_VAR) or "").strip()
+    if candidate.casefold() in {"off", "false", "0", "disable", "disabled", "none"}:
+        raise SystemExit(f"{PROXY_BASE_URL_ENV_VAR} is disabled; pass --direct to use KSKILL_KOSIS_API_KEY.")
+    if candidate and candidate != "replace-me":
+        return candidate.rstrip("/")
+    return DEFAULT_PROXY_BASE_URL
 
 
 def parse_obj_l(values: list[str]) -> dict[str, str]:
@@ -492,11 +519,30 @@ def cite_endpoint(command: str) -> str:
     }[command]
 
 
+def should_use_proxy(args: argparse.Namespace) -> bool:
+    return args.command in {"search", "meta", "data"} and not args.direct
+
+
+def proxy_endpoint(command: str, base_url: str) -> str:
+    path = {
+        "search": "/v1/kosis/search",
+        "meta": "/v1/kosis/meta",
+        "data": "/v1/kosis/data",
+    }[command]
+    return f"{base_url.rstrip('/')}{path}"
+
+
+def params_without_api_key(params: dict[str, str]) -> dict[str, str]:
+    return {key: value for key, value in params.items() if key != "apiKey"}
+
+
 def run(args: argparse.Namespace) -> int:
     use_json = args.json or not args.text
 
-    if args.dry_run:
-        api_key = "<DRY-RUN>"
+    use_proxy = should_use_proxy(args)
+
+    if use_proxy or args.dry_run:
+        api_key = "<PROXY>" if use_proxy else "<DRY-RUN>"
     else:
         api_key = resolve_api_key()
 
@@ -508,16 +554,31 @@ def run(args: argparse.Namespace) -> int:
     }[args.command]
     base = cite_endpoint(args.command)
     params = builder(api_key, args)
-    url = build_url(base, params)
+    if use_proxy:
+        call_base = proxy_endpoint(args.command, resolve_proxy_base_url(args.proxy_base_url))
+        call_params = params_without_api_key(params)
+    else:
+        call_base = base
+        call_params = params
+    url = build_url(call_base, call_params)
 
     if args.dry_run:
-        redacted = dict(params)
-        redacted["apiKey"] = "<DRY-RUN>"
+        redacted = dict(call_params)
+        if not use_proxy and "apiKey" in redacted:
+            redacted["apiKey"] = "<DRY-RUN>"
         if use_json:
-            print(json.dumps({"endpoint": base, "params": redacted, "url": build_url(base, redacted)}, ensure_ascii=False, indent=2))
+            print(json.dumps({
+                "endpoint": call_base,
+                "upstream_endpoint": base,
+                "via_proxy": use_proxy,
+                "params": redacted,
+                "url": build_url(call_base, redacted)
+            }, ensure_ascii=False, indent=2))
         else:
-            print(f"endpoint: {base}")
-            print(f"url: {build_url(base, redacted)}")
+            print(f"endpoint: {call_base}")
+            print(f"upstream_endpoint: {base}")
+            print(f"via_proxy: {str(use_proxy).lower()}")
+            print(f"url: {build_url(call_base, redacted)}")
             for key, value in redacted.items():
                 print(f"  {key}={value}")
         return 0
@@ -539,6 +600,8 @@ def run(args: argparse.Namespace) -> int:
     else:
         print(render_text(args.command, payload))
         print(f"\nsource: {base}")
+        if use_proxy:
+            print(f"via: {call_base}")
 
     return 0
 

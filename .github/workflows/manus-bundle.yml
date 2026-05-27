@@ -1,0 +1,91 @@
+name: Publish Manus bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "*/SKILL.md"
+      - "*/scripts/**"
+      - "*/references/**"
+      - "*/templates/**"
+      - "scripts/build-manus-bundle.js"
+      - "scripts/validate-skills.sh"
+      - ".github/workflows/manus-bundle.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: manus-bundle-latest
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: manus-bundle-latest
+      RELEASE_TITLE: "Manus bundle (rolling)"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build .skill bundle
+        run: npm run build:manus-bundle
+
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+          test -f dist/manus/k-skill-manus-all.zip
+          test -f dist/manus/INDEX.md
+          count=$(ls dist/manus/*.skill | wc -l)
+          if [ "$count" -lt 1 ]; then
+            echo "no .skill files produced" >&2
+            exit 1
+          fi
+          echo "built $count .skill files"
+
+      - name: Publish rolling release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          notes=$(cat <<EOF
+          Auto-built Manus.ai-compatible \`.skill\` bundle for every skill in k-skill.
+
+          - **\`k-skill-manus-all.zip\`** — combined download containing every \`.skill\` file plus \`INDEX.md\`. Unzip, then drag-drop individual \`.skill\` files into Manus.
+          - **\`INDEX.md\`** — human-readable listing of every bundled skill.
+
+          Manus accepts one skill per upload (\`.skill\`/\`.zip\`/folder). See [\`docs/install-manus.md\`](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/install-manus.md) for the full flow.
+
+          This is a rolling pre-release that is overwritten on every push to \`main\`. Built from commit \`${GITHUB_SHA}\`.
+          EOF
+          )
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TITLE" \
+              --notes "$notes" \
+              --prerelease
+          else
+            gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TITLE" \
+              --notes "$notes" \
+              --prerelease \
+              --target "$GITHUB_SHA"
+          fi
+
+          gh release upload "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            dist/manus/k-skill-manus-all.zip \
+            dist/manus/INDEX.md

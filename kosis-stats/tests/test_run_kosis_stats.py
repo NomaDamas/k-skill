@@ -96,6 +96,22 @@ class CredentialResolutionTest(unittest.TestCase):
         self.assertIn("KSKILL_KOSIS_API_KEY", message)
         self.assertIn("kosis.kr/openapi", message)
 
+    def test_proxy_base_url_defaults_to_hosted_proxy(self):
+        self.assertEqual(
+            helper.resolve_proxy_base_url(env={}),
+            "https://k-skill-proxy.nomadamas.org"
+        )
+
+    def test_proxy_base_url_env_override_is_trimmed(self):
+        self.assertEqual(
+            helper.resolve_proxy_base_url(env={"KSKILL_PROXY_BASE_URL": "https://proxy.example/"}),
+            "https://proxy.example"
+        )
+
+    def test_proxy_base_url_can_be_disabled_for_direct_mode(self):
+        with self.assertRaises(SystemExit):
+            helper.resolve_proxy_base_url(env={"KSKILL_PROXY_BASE_URL": "off"})
+
 
 class UrlBuilderTest(unittest.TestCase):
     def test_search_params_include_required_fields(self):
@@ -334,15 +350,29 @@ class DryRunTest(unittest.TestCase):
         self.assertEqual(rc, 0)
         fetch_mock.assert_not_called()
         out = buf.getvalue()
-        self.assertIn("<DRY-RUN>", out)
+        self.assertIn('"via_proxy": true', out)
+        self.assertNotIn("apiKey", json.dumps(json.loads(out)["params"]))
+        self.assertIn("/v1/kosis/search", out)
         self.assertIn("statisticsSearch.do", out)
+
+    def test_direct_dry_run_redacts_api_key(self):
+        args = helper.parse_args(["search", "--query", "인구", "--dry-run", "--direct", "--json"])
+        with mock.patch.object(helper, "fetch_text") as fetch_mock:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = helper.run(args)
+        self.assertEqual(rc, 0)
+        fetch_mock.assert_not_called()
+        out = buf.getvalue()
+        self.assertIn("<DRY-RUN>", out)
+        self.assertIn('"via_proxy": false', out)
+        self.assertIn("apiKey", out)
 
 
 class RunIntegrationTest(unittest.TestCase):
     def test_run_search_text_renders_fixture_payload(self):
         args = helper.parse_args(["search", "--query", "1인 가구", "--text"])
-        with mock.patch.object(helper, "resolve_api_key", return_value="KEY"), \
-             mock.patch.object(helper, "fetch_text", return_value=read_fixture("search_response.json")):
+        with mock.patch.object(helper, "fetch_text", return_value=read_fixture("search_response.json")) as fetch_mock:
             buf = io.StringIO()
             with redirect_stdout(buf):
                 rc = helper.run(args)
@@ -350,6 +380,8 @@ class RunIntegrationTest(unittest.TestCase):
         out = buf.getvalue()
         self.assertIn("DT_1JC1501", out)
         self.assertIn("statisticsSearch.do", out)
+        self.assertIn("/v1/kosis/search", fetch_mock.call_args.args[0])
+        self.assertNotIn("apiKey=", fetch_mock.call_args.args[0])
 
     def test_run_returns_2_on_kosis_error(self):
         args = helper.parse_args(["data", "--table-id", "DT_X",
@@ -364,7 +396,7 @@ class RunIntegrationTest(unittest.TestCase):
 @unittest.skipUnless(os.getenv("KSKILL_KOSIS_API_KEY"), "live KOSIS test skipped without KSKILL_KOSIS_API_KEY")
 class LiveKosisSmokeTest(unittest.TestCase):
     def test_live_search_returns_list(self):
-        args = helper.parse_args(["search", "--query", "인구", "--result-count", "1", "--json"])
+        args = helper.parse_args(["search", "--query", "인구", "--result-count", "1", "--json", "--direct"])
         buf = io.StringIO()
         with redirect_stdout(buf):
             rc = helper.run(args)

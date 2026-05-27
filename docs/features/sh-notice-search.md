@@ -1,93 +1,96 @@
 # SH 청약·주택 공고문 조회 가이드
 
-서울주택도시개발공사(SH, `i-sh.co.kr`)가 운영하는 **공고 및 공지** 게시판을 검색·상세 조회한다. SH는 LH 처럼 공공데이터포털에 안정적인 공고 Open API 가 열려 있지 않기 때문에, 프록시 서버가 공식 SH HTML 게시판을 직접 읽고 정규화한다. 본 스킬은 read-only 조회만 다룬다.
+`sh-notice-search`는 서울주택도시개발공사(SH, `www.i-sh.co.kr`)의 공개 **공고 및 공지** HTML 게시판을 직접 조회하는 read-only 스킬이다. upstream이 인증/키 없이 열려 있는 공개 표면이므로 `k-skill-proxy`를 사용하지 않는다.
 
 ## 이 기능으로 할 수 있는 일
 
-- SH 공고/공지 게시판의 최신 목록 조회 (장기전세·행복주택·매입임대·공공원룸 등 SH 가 직접 게시하는 공고)
-- 공고 제목 키워드 검색 (예: `행복주택`, `장기전세`, `미리내집`, `당첨자`)
-- 본문 키워드 검색 (`srchTp=content`)
-- 공고 상세: 본문 텍스트, 등록일, 조회수, 첨부파일명, 미리보기 링크
+- SH 최신 공고/공지 목록 조회
+- 키워드 검색: `행복주택`, `매입임대`, `신혼희망타운` 등
+- 공고 종류 필터: 주택임대, 주택분양, 주택매입(주거복지 alias), 토지, 상가/공장 등
+- 페이지네이션: SH 고정 10건 페이지에서 `page`로 이동
+- 상세 조회: 본문 텍스트, 담당부서, 등록일, 조회수, 공식 상세 URL
+- 첨부 메타데이터: 실제 `existFile()` 첨부 앵커와 `downList` 기반 파일명/미리보기 URL
 
-## 가장 중요한 규칙
+## 가장 중요한 정책 경계
 
-기본 경로는 `https://k-skill-proxy.nomadamas.org/v1/sh-notice/...` 이며, 사용자는 별도 인증 키를 준비할 필요가 없다. SH 사이트는 인증 없이 공개되어 있다.
+- SH 게시판은 공개 HTML이라 proxy에 넣지 않는다.
+- 별도 API key가 필요한 공식 무료 API가 발견되는 경우에만 해당 경로를 좁은 allowlist proxy route로 검토한다.
+- 본 구현은 청약 신청, 로그인, 서류 제출, 결제, 마이페이지 자동화를 하지 않는다.
 
-본 스킬은 **SH 게시판 전용**이다. LH(한국토지주택공사) 공고는 `lh-notice-search` 스킬을, GH(경기)·iH(인천) 등 다른 지방 주택공사 공고는 본 스킬에서 다루지 않는다. SH `seq` 는 SH 게시글 번호이며 LH `pan_id` 와 다른 ID 체계다.
+## 공개 접근 경로
 
-## 먼저 필요한 것
+기본 임대 게시판:
 
-- 인터넷 연결
-- `curl` 또는 HTTP 호출이 가능한 도구
-
-## 지원 엔드포인트
-
-| Route | 설명 |
-| --- | --- |
-| `GET /v1/sh-notice/search` | 공고 목록 조회. 모든 파라미터 선택사항. |
-| `GET /v1/sh-notice/detail` | 공고 상세 + 본문 + 첨부 미리보기 링크. `seq` 필수. |
-
-### `/v1/sh-notice/search` 파라미터
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-| --- | --- | --- | --- |
-| `q` / `keyword` / `srchWord` | string | (없음) | 검색어. 최대 100자 |
-| `srchTp` / `searchType` | string | 키워드가 있으면 `title` | `title`/`제목` 또는 `content`/`내용`. 검색어가 있고 비우면 자동으로 제목 검색이 적용된다 |
-| `page` | int | 1 | 페이지 (최대 1000) |
-| `pageSize` / `limit` | int | 10 | 페이지당 건수. **SH 게시판이 한 페이지에 최대 10건만 응답하므로 값은 10으로 캡된다.** 더 많은 결과는 `page` 를 증가시켜 조회한다 |
-| `multiItmSeq` | digits | 2 | SH 게시판 분류. `2` = 공고 및 공지 |
-
-### `/v1/sh-notice/detail` 파라미터
-
-| 파라미터 | 타입 | 필수 | 설명 |
-| --- | --- | --- | --- |
-| `seq` / `noticeSeq` / `id` | digits | ✅ | SH 게시글 번호. 목록 응답의 `seq` |
-| `multiItmSeq` | digits | (선택) | 기본 `2` |
-
-## 기본 흐름
-
-1. 사용자 요청에서 키워드와 게시판 분류 의도를 추출한다.
-2. 키워드만 있으면 `srchTp` 가 자동으로 `title` 로 처리된다는 점을 활용해 `/v1/sh-notice/search` 를 호출한다.
-3. 결과 상위 3~5건만 간결히 보여주고, 제목·담당부서·등록일·조회수·공식 상세 링크를 포함한다.
-4. 사용자가 더 깊이 알고 싶어하면 `seq` 로 `/v1/sh-notice/detail` 을 호출해 본문 요약과 첨부 미리보기 링크를 제시한다.
-5. 공식 사이트(`detail_url`)와 미리보기 링크(`preview_url`)는 항상 함께 제시한다.
-
-## 예시
-
-```bash
-BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
-
-# 행복주택 공고 최근 3건 (제목 검색이 자동 적용됨)
-curl -fsS --get "${BASE%/}/v1/sh-notice/search" \
-  --data-urlencode 'q=행복주택' \
-  --data-urlencode 'pageSize=3'
-
-# 본문에서 '당첨자' 가 들어간 공고 검색
-curl -fsS --get "${BASE%/}/v1/sh-notice/search" \
-  --data-urlencode 'q=당첨자' \
-  --data-urlencode 'srchTp=content'
-
-# 특정 공고 상세 보기
-curl -fsS --get "${BASE%/}/v1/sh-notice/detail" \
-  --data-urlencode 'seq=303994'
+```text
+https://www.i-sh.co.kr/app/lay2/program/S1T294C297/www/brd/m_247/list.do?multi_itm_seq=2
 ```
 
-## 응답 정책
+상세:
 
-- 공식 SH 사이트(`www.i-sh.co.kr`) 정보만 사용한다.
-- 마감일이 별도 필드로 제공되지 않는 게시판 구조다. 본문/첨부 공고문에 있는 접수기간은 상세 본문을 읽고 별도 추출·요약해야 한다.
-- 첨부 원문 확인에는 `preview_url` (공식 SH 미리보기 변환 URL) 을 우선 사용한다. 직접 다운로드 URL 은 SH 사이트 흐름이 바뀔 수 있어 제공하지 않는다.
+```text
+https://www.i-sh.co.kr/app/lay2/program/S1T294C297/www/brd/m_247/view.do?multi_itm_seq=2&seq=<seq>
+```
+
+검색 파라미터:
+
+| 목적 | 파라미터 |
+| --- | --- |
+| 제목 검색 | `srchWord=<검색어>&srchTp=0` |
+| 내용 검색 | `srchWord=<검색어>&srchTp=1` |
+| 페이지 | `page=<번호>` |
+| 분류 | 공식 탭별 `multi_itm_seq` 및 board path |
+
+SH 게시판은 `srchWord`만 보내면 검색어를 무시하고 전체 목록을 반환할 수 있으므로, 패키지는 키워드가 있을 때 `srchTp`를 반드시 보낸다.
+
+## 사용 예시
+
+```bash
+node packages/sh-notice-search/src/cli.js 행복주택 --category 임대 --limit 5
+node packages/sh-notice-search/src/cli.js 매입임대 --category 주거복지 --page 2
+node packages/sh-notice-search/src/cli.js --seq 304371 --category 임대
+```
+
+```js
+const { searchNotices, getNoticeDetail } = require("sh-notice-search")
+
+const list = await searchNotices({ keyword: "행복주택", category: "임대", page: 1 })
+const detail = await getNoticeDetail({ seq: list.items[0].seq, category: "임대" })
+```
+
+## 출력 필드
+
+목록:
+
+- `seq`, `title`, `department`, `registered_date`, `views`
+- `category`, `category_name`
+- `status` / `status_basis` (제목 기반 보수적 분류)
+- `detail_url`
+
+상세:
+
+- `content_text`
+- `attachments[]`: `filename`, `file_seq`, `file_size`, `file_type`, `preview_url`
+- `detail_url`
+
+직접 다운로드 URL은 노출하지 않고, 공식 상세/미리보기 URL을 사용자 브라우저로 handoff한다.
+
+## 상태와 공고 종류 필터
+
+공고 종류는 SH 공식 탭과 일치하는 board path를 사용한다. `주거복지`는 공개 탭명이 아니므로 사용자 alias로만 받고 현재 SH의 `주택매입` 탭에 매핑한다.
+
+상태(`진행`, `마감`, `당첨자`)는 공개 목록에 별도 컬럼이 없어 제목 텍스트 기반으로만 보수적으로 분류한다. 정확한 접수기간/마감일은 상세 본문이나 첨부 공고문을 확인해야 한다.
 
 ## 실패 모드
 
-- `seq` 또는 `multiItmSeq` 가 숫자가 아니면 `400 bad_request`.
-- 검색어가 100자를 초과하면 `400 bad_request`.
-- SH 사이트가 일시 장애이거나 HTML 구조가 바뀌면 `502 upstream_error` 또는 빈 결과가 내려올 수 있다.
-- SH 게시판은 `srchTp` 없이 `srchWord` 만 보내면 키워드를 무시하고 전체 목록을 돌려주는 특성이 있어, 프록시가 자동으로 `srchTp=1` (제목 검색) 으로 폴백한다.
+- SH HTML 구조, board path, `getDetailView()`, `existFile()`, `downList` 구조 변경
+- IP rate limit, NetFunnel queue/throttle, 점검 페이지, CAPTCHA/login wall
+- 첨부 미리보기/다운로드 direct-link 정책 변경
+- `pageSize`를 10보다 크게 지정해도 SH는 한 페이지 10건만 제공
+- 상태 분류는 제목 추론이라 상세 공고문 날짜와 다를 수 있음
 
-## 사용하지 않는 경우
+## Done when
 
-- LH(한국토지주택공사) 전용 공고 → `lh-notice-search` 사용
-- GH(경기)·iH(인천) 등 다른 지방공사 공고
-- 청약 신청 자동화/제출, 로그인 필요한 마이페이지 업무
-- 개별 자격 심사, 당첨 예측, 가점 계산
+- 직접 공개 SH URL에서 목록/상세를 조회했다.
+- 키워드 검색에 `srchTp`가 포함되어 의도된 hit count로 좁혀졌다.
+- 페이지가 필요한 경우 `page`를 사용했다.
+- 첨부가 아이콘 템플릿이 아니라 실제 `existFile()` 기준으로 추출되었다.

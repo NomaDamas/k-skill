@@ -1,6 +1,6 @@
 {
   "name": "gongsijiga-search",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Client-side query helpers for Korean individual official land prices (개별공시지가) from realtyprice.kr",
   "license": "MIT",
   "main": "src/index.js",

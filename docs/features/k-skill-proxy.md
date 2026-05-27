@@ -18,6 +18,10 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/fine-dust/report`
 - `GET /v1/korea-weather/forecast`
 - `GET /v1/seoul-subway/arrival`
+- `GET /v1/seoul-density/citydata` (서울 실시간 도시데이터 핫스팟 혼잡도/추정 인구, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/realtime` (서울 따릉이 실시간 대여정보 `bikeList`, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/stations` (서울 따릉이 대여소 마스터 `tbCycleStationInfo`, `SEOUL_OPEN_API_KEY`)
+- `GET /v1/seoul-bike/nearby` (좌표 주변 따릉이 실시간 대여소 필터링, `SEOUL_OPEN_API_KEY`)
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` (생활쓰레기 배출정보, `DATA_GO_KR_API_KEY`; 쿼리 `pageNo`·`numOfRows` 필수, 값 `1`·`100`)
 - `GET /v1/mfds/drug-safety/lookup` (식약처 의약품개요정보 + 안전상비의약품 정보, `DATA_GO_KR_API_KEY`)
@@ -35,6 +39,10 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/data4library/book-detail` (도서관 정보나루 도서 상세 조회, `DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/libraries-by-book` (도서 소장 도서관 조회, `DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/book-exists` (도서관별 도서 소장여부, `DATA4LIBRARY_AUTH_KEY`)
+- `GET /v1/kstartup/business-info` (창업진흥원 K-Startup 통합공고 지원사업 정보, `DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/announcements` (창업진흥원 K-Startup 지원사업 공고 정보, `DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/contents` (창업진흥원 K-Startup 창업 콘텐츠 정보, `DATA_GO_KR_API_KEY`)
+- `GET /v1/kstartup/statistics` (창업진흥원 K-Startup 통계보고서 정보, `DATA_GO_KR_API_KEY`)
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
 
 ## 권장 환경변수
@@ -61,38 +69,32 @@ client/skill -> k-skill-proxy -> upstream public API
 
 ## 프로덕션 배포 구조
 
-프로덕션 proxy 서버는 개발 repo와 분리된 별도 clone으로 운영한다.
+프로덕션 proxy 서버는 **Google Cloud Run**에서 운영한다.
 
-- 배포 디렉토리: `~/.local/share/k-skill-proxy` (main 브랜치 단독 clone)
-- PM2 프로세스: `k-skill-proxy`
-- Cloudflare Tunnel ingress: `k-skill-proxy.nomadamas.org -> http://localhost:4020`
+- GCP project: `k-skill-proxy`
+- Region: `asia-northeast1` (도쿄)
+- Cloud Run service: `k-skill-proxy`
+- 공개 도메인: `k-skill-proxy.nomadamas.org` (Cloud Run domain mapping)
+- 컨테이너 이미지 정의: `packages/k-skill-proxy/Dockerfile`
+- 시크릿(upstream API key): GCP Secret Manager에 보관, Cloud Run runtime에 주입
 
-### 자동 배포 (cron)
+### 자동 배포 (GitHub Actions)
 
-`~/.local/share/k-skill-proxy/scripts/auto-update-proxy.sh`가 매시 정각에 실행된다.
+`main` 브랜치에 push/merge되면 `.github/workflows/deploy-k-skill-proxy.yml` 워크플로가 실행되어 다음 순서로 동작한다.
 
-```
-0 * * * * PATH=/usr/bin:/opt/homebrew/bin:/opt/homebrew/lib/node_modules/.bin:$PATH ~/.local/share/k-skill-proxy/scripts/auto-update-proxy.sh >> /tmp/k-skill-proxy-update.log 2>&1
-```
-
-동작 순서:
-
-1. `git fetch origin main`
-2. local SHA == remote SHA 이면 종료 (up-to-date)
-3. `git pull --ff-only`
-4. `package-lock.json` 변경 시 `npm ci`
-5. `pm2 restart k-skill-proxy --update-env`
+1. Workload Identity Federation으로 GCP 인증
+2. `packages/k-skill-proxy/Dockerfile`로 이미지 빌드
+3. Artifact Registry (`asia-northeast1-docker.pkg.dev/k-skill-proxy/k-skill/k-skill-proxy:<sha>`)에 push
+4. Cloud Run service `k-skill-proxy` 재배포 (Secret Manager 시크릿 + 런타임 환경변수 주입)
+5. 직접 Cloud Run URL과 `https://k-skill-proxy.nomadamas.org/health` smoke test
 
 따라서 **main에 merge되어야 프로덕션에 반영**된다. dev 브랜치 변경은 프로덕션에 영향 없음.
 
-로그: `/tmp/k-skill-proxy-update.log`
+배포 상태와 로그는 GitHub Actions의 "Deploy k-skill-proxy to Cloud Run" 워크플로 실행 페이지와 GCP Console의 Cloud Run revision/log에서 확인한다.
 
-### 초기 설정 (PM2 + cloudflared)
+### 초기 셋업 (운영자 1회 수행)
 
-1. `pm2 start ecosystem.config.cjs`
-2. `pm2 save`
-3. `pm2 startup` 출력대로 launchd 등록
-4. Cloudflare Tunnel ingress 에 `k-skill-proxy.nomadamas.org -> http://localhost:4020` 추가
+WIF pool/provider, deploy service account, Secret Manager 시크릿 생성 등 1회성 GCP 셋업 절차와 GitHub repository secrets/variables 등록 방법은 [`docs/deploy-k-skill-proxy.md`](../deploy-k-skill-proxy.md)에 정리되어 있다.
 
 ## 기본 공개 정책
 
@@ -118,6 +120,20 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/fine-dust/report' \
 BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
 curl -fsS --get "${BASE}/v1/seoul-subway/arrival" \
   --data-urlencode 'stationName=강남'
+```
+
+서울 실시간 혼잡도 endpoint:
+
+```bash
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/seoul-density/citydata" \
+  --data-urlencode 'area=강남역'
+
+# 서울 따릉이 주변 대여소
+curl -fsS --get "${BASE}/v1/seoul-bike/nearby" \
+  --data-urlencode 'lat=37.5717' \
+  --data-urlencode 'lon=126.9763' \
+  --data-urlencode 'radius_m=500'
 ```
 
 한국 날씨 endpoint:
@@ -194,6 +210,33 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/mfds/drug-safety/lookup'
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/mfds/food-safety/search' \
   --data-urlencode 'query=김밥' \
   --data-urlencode 'limit=5'
+```
+
+KOSIS 통계 조회 endpoint (`KOSIS_API_KEY` 필요, caller `apiKey`는 무시하고 서버 쪽 키를 주입):
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/kosis/search' \
+  --data-urlencode 'q=1인 가구' \
+  --data-urlencode 'limit=3'
+
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/kosis/meta' \
+  --data-urlencode 'tableId=DT_1JC1501' \
+  --data-urlencode 'metaType=ITM'
+
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/kosis/data' \
+  --data-urlencode 'tableId=DT_1JC1501' \
+  --data-urlencode 'prdSe=Y' \
+  --data-urlencode 'start=2020' \
+  --data-urlencode 'end=2023' \
+  --data-urlencode 'objL1=ALL'
+```
+
+Kakao Local geocoding endpoint (`KAKAO_REST_API_KEY` 필요, caller `apiKey`는 무시하고 서버 쪽 키를 주입):
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/kakao-local/geocode' \
+  --data-urlencode 'q=서울역' \
+  --data-urlencode 'limit=1'
 ```
 
 

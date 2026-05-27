@@ -12,14 +12,13 @@
 - [공통 설정 가이드](../setup.md) 완료
 - [보안/시크릿 정책](../security-and-secrets.md) 확인
 - ODsay Server API Key 발급 및 호출 IP 화이트리스트 등록: https://lab.odsay.com
-- Kakao REST API Key 발급 (지도/로컬 서비스 활성화): https://developers.kakao.com
+- Kakao Local geocoding은 기본 hosted `k-skill-proxy` 경유. 사용자 쪽 Kakao 키는 불필요하며, self-host proxy 운영자만 Kakao REST API Key를 발급해 서버에 설정한다: https://developers.kakao.com
 
 ## 필요한 환경변수
 
 - `ODSAY_API_KEY` — ODsay LIVE API Server 키
-- `KAKAO_REST_API_KEY` — Kakao Local REST API 키
 
-두 값 모두 `~/.config/k-skill/secrets.env` 에 저장하거나 환경변수로 주입한다.
+`ODSAY_API_KEY` 를 `~/.config/k-skill/secrets.env` 에 저장하거나 환경변수로 주입한다. 별도 self-host proxy를 쓰는 경우에만 `KSKILL_PROXY_BASE_URL` 을 설정한다.
 
 ## 입력값
 
@@ -29,7 +28,7 @@
 
 ## 기본 흐름
 
-1. 출발지/도착지를 Kakao Local API(`address.json` → `keyword.json`)로 geocoding하여 좌표를 확보한다.
+1. 출발지/도착지를 `k-skill-proxy`의 `/v1/kakao-local/geocode`로 geocoding하여 좌표를 확보한다. Proxy 내부에서 Kakao Local `address.json` → `keyword.json` 순서로 시도한다.
 2. ODsay `searchPubTransPathT`에 출발/도착 좌표와 옵션을 전달한다.
 3. 응답의 `result.path[]`를 3개 이내로 정리한다.
 4. 각 경로의 `subPath[]`를 `trafficType`별로 표시하며, 첫/끝 도보 구간을 반드시 포함한다.
@@ -49,17 +48,15 @@ curl -s "https://api.odsay.com/v1/api/searchPubTransPathT?apiKey=${KEY}&SX=126.9
 ```python
 import os, urllib.parse, urllib.request, json
 
-H = {'Authorization': 'KakaoAK ' + os.environ['KAKAO_REST_API_KEY']}
+PROXY = os.environ.get('KSKILL_PROXY_BASE_URL', 'https://k-skill-proxy.nomadamas.org').rstrip('/')
 
 def geocode(q):
-    for ep, name in [('address', 'address_name'), ('keyword', 'place_name')]:
-        url = f'https://dapi.kakao.com/v2/local/search/{ep}.json?query=' + urllib.parse.quote(q)
-        req = urllib.request.Request(url, headers=H)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            d = json.loads(resp.read())
-        if d.get('documents'):
-            doc = d['documents'][0]
-            return float(doc['x']), float(doc['y']), doc.get(name) or doc['address_name']
+    url = PROXY + '/v1/kakao-local/geocode?q=' + urllib.parse.quote(q)
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        d = json.loads(resp.read())
+    if d.get('documents'):
+        doc = d['documents'][0]
+        return float(doc['x']), float(doc['y']), doc.get('place_name') or doc.get('address_name')
     return None
 
 sx, sy, s_name = geocode('서울역')
@@ -70,6 +67,6 @@ ex, ey, e_name = geocode('강남역')
 ## 주의할 점
 
 - ODsay Server 키는 **호출 IP 화이트리스트 등록이 필수**이다. 등록되지 않은 IP에서는 `error` 응답이 반환된다.
-- 묣료 일일 한도는 5,000건이다. `searchPubTransPathT`와 `searchStation` 호출이 합산된다.
+- 현재 ODsay 공식 Basic 상품 기준 무료 체험은 일 1,000건(6개월)이다. `searchPubTransPathT`와 `searchStation` 호출이 합산된다.
 - 한국 외 좌표는 지원하지 않는다.
 - 카카오맵/네이버지도 directions API는 대중교통 라우팅을 공개하지 않으므로 사용하지 말 것.

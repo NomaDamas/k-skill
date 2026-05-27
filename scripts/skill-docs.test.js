@@ -177,13 +177,54 @@ test("repository publishes Korean contribution guidance for external contributor
   assert.match(contributing, /릴리스나 패키징 관련 변경은 `npm run ci`/);
   assert.match(contributing, /`~\/\.claude\/skills\/<skill-name>`/);
   assert.match(contributing, /`~\/\.agents\/skills\/<skill-name>`/);
-  assert.match(contributing, /프로덕션 프록시는 `~\/\.local\/share\/k-skill-proxy`/);
+  assert.match(
+    contributing,
+    /프로덕션 프록시는 \*\*Google Cloud Run\*\* \(project `k-skill-proxy`, region `asia-northeast1`\)에서 운영하며 `k-skill-proxy\.nomadamas\.org` 도메인에 매핑/,
+  );
+  assert.match(
+    contributing,
+    /프로덕션 시크릿은 GCP Secret Manager에 보관되고 Cloud Run 런타임에 주입됩니다\. 프록시 운영자\(maintainer\)가 한 번 수행해야 하는 WIF\/Secret Manager 셋업과 운영 점검 절차는 \[`docs\/deploy-k-skill-proxy\.md`\]\(docs\/deploy-k-skill-proxy\.md\)에 정리/,
+  );
 });
 
 test("README links to the contribution guide", () => {
   const readme = read("README.md");
 
   assert.match(readme, /\[기여 가이드\]\(CONTRIBUTING\.md\)/);
+});
+
+
+test("repository docs advertise Daangn read-only search skills", () => {
+  const readme = read("README.md");
+  const sources = read(path.join("docs", "sources.md"));
+  const skills = [
+    ["daangn-used-goods-search", "당근 중고거래 검색"],
+    ["daangn-realty-search", "당근부동산 검색"],
+    ["daangn-jobs-search", "당근알바 검색"],
+    ["daangn-cars-search", "당근중고차 검색"],
+  ];
+
+  assert.match(sources, /www\.daangn\.com\/kr\/api\/v1\/regions\/keyword/);
+  assert.match(sources, /realty\.daangn\.com\/articles/);
+
+  for (const [skillName, label] of skills) {
+    const skill = read(path.join(skillName, "SKILL.md"));
+    const featureDocPath = path.join(repoRoot, "docs", "features", `${skillName}.md`);
+    const featureDoc = read(path.join("docs", "features", `${skillName}.md`));
+
+    assert.ok(fs.existsSync(featureDocPath), `expected docs/features/${skillName}.md to exist`);
+    assert.ok(
+      readme.includes(`| ${label} | \`${skillName}\``),
+      `README should advertise ${skillName}`,
+    );
+    assert.ok(
+      readme.includes(`](docs/features/${skillName}.md)`),
+      `README should link docs/features/${skillName}.md`,
+    );
+    assert.match(skill, /kr\/api\/v1\/regions\/keyword/);
+    assert.match(featureDoc, /kr\/api\/v1\/regions\/keyword/);
+    assert.match(featureDoc, /(로그인|채팅|구매|문의|지원).*자동화/);
+  }
 });
 
 test("hwp skill documents kordoc-based parsing and supported operations", () => {
@@ -1041,6 +1082,23 @@ test("daiso-product-search docs record the shipped feature and official sources"
   assert.match(sources, /https:\/\/www\.daisomall\.co\.kr\/api\/pd\/pdh\/selStrPkupStck/);
 });
 
+test("repository docs advertise the gangnamunni-clinic-search skill across install surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "gangnamunni-clinic-search.md");
+  const skillPath = path.join(repoRoot, "gangnamunni-clinic-search", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/gangnamunni-clinic-search.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected gangnamunni-clinic-search/SKILL.md to exist");
+  assert.match(readme, /\| 강남언니 병원 조회 \| `gangnamunni-clinic-search` \|/);
+  assert.match(readme, /\[강남언니 병원 조회 가이드\]\(docs\/features\/gangnamunni-clinic-search\.md\)/);
+  assert.match(install, /--skill gangnamunni-clinic-search/);
+  assert.match(install, /npm install -g .*gangnamunni-clinic-search/);
+  assert.match(sources, /강남언니 공개 검색: https:\/\/www\.gangnamunni\.com\/search\?q=<keyword>/);
+  assert.match(sources, /강남언니 공개 병원 페이지: https:\/\/www\.gangnamunni\.com\/hospitals\/<id>/);
+});
+
 test("repository docs advertise the market-kurly-search skill across the documented surfaces", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
@@ -1156,6 +1214,69 @@ test("olive-young-search skill documents the upstream daiso CLI flow for stores,
 
   for (const fallbackDoc of [featureFallback, skillFallback]) {
     assertOliveYoungCloneFallbackCommands(fallbackDoc, "olive-young clone fallback docs");
+  }
+});
+
+test("repository docs advertise the korean-cinema-search skill across the documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-cinema-search.md");
+  const skillPath = path.join(repoRoot, "korean-cinema-search", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-cinema-search.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-cinema-search/SKILL.md to exist");
+  assert.match(readme, /\| 영화관 검색 \|/);
+  assert.match(readme, /\[영화관 검색 가이드\]\(docs\/features\/korean-cinema-search\.md\)/);
+  assert.match(install, /--skill korean-cinema-search/);
+  assert.match(install, /--playDate <YYYYMMDD>/);
+  assert.match(install, /5xx|retry|재시도/);
+  assert.match(install, /git clone https:\/\/github\.com\/hmmhmmhm\/daiso-mcp\.git && cd daiso-mcp && npm install && npm run build/);
+  assert.match(install, /node dist\/bin\.js get \/api\/cgv\/timetable --keyword 강남 --playDate <YYYYMMDD> --json/);
+  assert.match(roadmap, /영화관 검색 스킬 출시/);
+  assert.match(sources, /https:\/\/github\.com\/hmmhmmhm\/daiso-mcp/);
+  assert.match(sources, /https:\/\/www\.npmjs\.com\/package\/daiso/);
+  assert.match(sources, /https:\/\/mcp\.aka\.page\/api\/cgv\/theaters/);
+  assert.match(sources, /https:\/\/mcp\.aka\.page\/api\/megabox\/theaters/);
+  assert.match(sources, /https:\/\/mcp\.aka\.page\/api\/lottecinema\/theaters/);
+});
+
+test("korean-cinema-search skill documents the upstream daiso CLI flow for Korean cinemas", () => {
+  const skillPath = path.join(repoRoot, "korean-cinema-search", "SKILL.md");
+  const featureDoc = read(path.join("docs", "features", "korean-cinema-search.md"));
+
+  assert.ok(fs.existsSync(skillPath), "expected korean-cinema-search/SKILL.md to exist");
+
+  const skill = read(path.join("korean-cinema-search", "SKILL.md"));
+
+  assert.match(skill, /^name: korean-cinema-search$/m);
+  assert.match(skill, /^description: .*CGV.*메가박스.*롯데시네마.*$/m);
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /hmmhmmhm\/daiso-mcp/);
+    assert.match(doc, /npm install -g daiso|npx --yes daiso|npx daiso/);
+    assert.match(doc, /MCP 서버를 .*직접 설치.*않고.*CLI/u);
+    assert.match(doc, /Asia\/Seoul|KST/);
+    assert.match(doc, /YYYYMMDD/);
+    assert.match(doc, /--playDate <YYYYMMDD>/);
+    assert.match(doc, /\/api\/cgv\/movies --keyword 강남 --playDate <YYYYMMDD> --json/);
+    assert.match(doc, /\/api\/cgv\/timetable --keyword 강남 --playDate <YYYYMMDD> --json/);
+    assert.match(doc, /\/api\/megabox\/seats --keyword 코엑스 --playDate <YYYYMMDD> --limit 10 --json/);
+    assert.match(doc, /\/api\/lottecinema\/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json/);
+    assert.match(doc, /CGV/);
+    assert.match(doc, /메가박스/);
+    assert.match(doc, /롯데시네마/);
+    assert.match(doc, /\/api\/cgv\/theaters/);
+    assert.match(doc, /\/api\/cgv\/movies/);
+    assert.match(doc, /\/api\/cgv\/timetable/);
+    assert.match(doc, /\/api\/megabox\/theaters/);
+    assert.match(doc, /\/api\/megabox\/movies/);
+    assert.match(doc, /\/api\/megabox\/seats/);
+    assert.match(doc, /\/api\/lottecinema\/theaters/);
+    assert.match(doc, /\/api\/lottecinema\/movies/);
+    assert.match(doc, /\/api\/lottecinema\/seats/);
+    assert.match(doc, /예매|결제/);
   }
 });
 
@@ -1289,6 +1410,54 @@ test("coupang-product-search docs drop non-allowlisted coupang-mcp-fallback and 
   for (const doc of [skill, featureDoc, wrapper]) {
     assert.match(doc, /openclaw-skill/);
   }
+});
+
+test("repository docs advertise the ohou-today-deal skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "ohou-today-deal.md");
+  const skillPath = path.join(repoRoot, "ohou-today-deal", "SKILL.md");
+  const helperPath = path.join(repoRoot, "ohou-today-deal", "scripts", "ohou_today_deal.py");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/ohou-today-deal.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected ohou-today-deal/SKILL.md to exist");
+  assert.ok(fs.existsSync(helperPath), "expected ohou-today-deal helper script to exist");
+  assert.match(readme, /\| 오늘의집 오늘의딜 조회 \| `ohou-today-deal` \|/);
+  assert.match(readme, /\[오늘의집 오늘의딜 조회 가이드\]\(docs\/features\/ohou-today-deal\.md\)/);
+  assert.match(install, /--skill ohou-today-deal/);
+  assert.match(roadmap, /오늘의집 오늘의딜 조회 스킬 출시/);
+  assert.match(sources, /ohou\.se\/commerces\/today_deals/);
+  assert.match(sources, /store\.ohou\.se\/today_deals/);
+});
+
+test("ohou-today-deal docs lock the public Next data read-only workflow", () => {
+  const skill = read(path.join("ohou-today-deal", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "ohou-today-deal.md"));
+  const helper = read(path.join("ohou-today-deal", "scripts", "ohou_today_deal.py"));
+  const sources = read(path.join("docs", "sources.md"));
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /https:\/\/ohou\.se\/commerces\/today_deals/);
+    assert.match(doc, /https:\/\/store\.ohou\.se\/today_deals/);
+    assert.match(doc, /__NEXT_DATA__/);
+    assert.match(doc, /today-deal-feed/);
+    assert.match(doc, /ohou_today_deal\.py list/);
+    assert.match(doc, /(로그인|API key|API 키).*(불필요|없음)|(불필요|없음).*(로그인|API key|API 키)/);
+    assert.match(doc, /(구매|장바구니|결제).*자동화.*(하지 않는다|하지 말고|제외)/);
+  }
+
+  assert.match(helper, /DEFAULT_URL = "https:\/\/ohou\.se\/commerces\/today_deals"/);
+  assert.match(helper, /__NEXT_DATA__/);
+  assert.match(helper, /today-deal-feed/);
+  assert.match(helper, /special-today-deal-feed/);
+  assert.match(
+    helper,
+    /k-skill-ohou-today-deal\/1\.0 \(\+https:\/\/github\.com\/NomaDamas\/k-skill\)/,
+  );
+  assert.match(sources, /ohou\.se\/commerces\/today_deals/);
+  assert.match(sources, /store\.ohou\.se\/today_deals/);
 });
 
 test("root pack:dry-run script covers all publishable workspaces", () => {
@@ -3831,6 +4000,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["다이소 상품 조회", "daiso-product-search"],
   ["마켓컬리 상품 조회", "market-kurly-search"],
   ["올리브영 검색", "olive-young-search"],
+  ["영화관 검색", "korean-cinema-search"],
   ["올라포케 역삼 포케", "hola-poke-yeoksam"],
   ["택배 배송조회", "delivery-tracking"],
   ["쿠팡 상품 검색", "coupang-product-search"],

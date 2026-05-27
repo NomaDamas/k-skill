@@ -4,14 +4,11 @@
 
 - 다이소 매장명으로 공식 매장 후보 찾기
 - 상품명/검색어로 공식 상품 후보 찾기
-- 특정 매장의 **매장 픽업 재고 수량** 확인 (공식 `selStrPkupStck` 표면이 응답할 때 한정)
-- 매장 픽업 재고가 `Unauthorized` 로 차단되면 `retrievalStatus: "blocked"` 차단 상태를 명확히 표시하고, 공식 픽업 가능 매장 목록(`selPkupStr`)으로 그 매장의 **픽업 가능 여부(yes/no)** 만이라도 `pickupEligibility` 로 확인
+- 특정 매장의 **매장 픽업 재고 수량** 확인 (Bearer 토큰 인증 기반 공식 `selStrPkupStck` 표면)
 - 필요하면 `referenceOnly: true` 온라인 재고 참고값 함께 확인
 
 ## 이 기능으로 할 수 없는 일 (스킬 범위 한계)
 
-- **`selStrPkupStck` 가 차단된 동안에는 정확한 매장별 재고 수량을 답할 수 없습니다.** 2026-05-05 부터 공식 매장 픽업 재고 API 가 `Unauthorized (401/403)` 로 차단되어 있고, 이 스킬은 세션 우회·CAPTCHA 우회·로그인 강제 등 anti-bot 우회를 시도하지 않습니다.
-- 차단 상태에서는 `pickupEligibility.pickupEligible` 로 "그 매장이 그 상품의 픽업 가능 매장으로 등록되어 있는지(yes/no)" 까지만 답합니다. **수량(예: "3개 남음")은 답하지 않습니다.**
 - 매장 내 진열 위치(aisle/매대)는 공식 표면이 제공하지 않으므로 답하지 않습니다.
 - 결제·주문·픽업 예약 자동화는 범위가 아닙니다.
 - 비공식 크롤링·헤드리스 브라우저 우회·계정 세션 재사용은 범위가 아닙니다.
@@ -36,8 +33,9 @@
 - store detail: `https://www.daisomall.co.kr/api/dl/dla-api/selStrInfo`
 - product search list: `https://www.daisomall.co.kr/ssn/search/SearchGoods`
 - product summary list: `https://www.daisomall.co.kr/ssn/search/GoodsMummResult`
-- store pickup stock: `https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck`
-- store pickup eligibility (특정 상품의 픽업 가능 매장 목록): `https://www.daisomall.co.kr/api/ms/msg/selPkupStr`
+- auth (비로그인 JWT 발급): `https://www.daisomall.co.kr/api/auth/request`
+- store pickup stock: `https://www.daisomall.co.kr/api/pd/pdh/selStrPkupStck` (Bearer 인증 필요)
+- pickup eligibility fallback: `https://www.daisomall.co.kr/api/ms/msg/selPkupStr`
 - optional online stock: `https://www.daisomall.co.kr/api/pdo/selOnlStck`
 
 ## 기본 흐름
@@ -46,11 +44,12 @@
 2. 상품명이 없으면 상품명/검색어를 한 번 더 물어봅니다.
 3. `selStr` 로 매장 후보를 찾고, 필요하면 `selStrInfo` 로 매장 상세를 확인합니다.
 4. `SearchGoods` 로 상품 후보를 찾습니다.
-5. `selStrPkupStck` 로 해당 매장의 상품 재고를 확인합니다.
-6. `selStrPkupStck` 가 `Unauthorized` 로 차단되면 매장 픽업 재고는 `unavailable/blocked/unauthorized` 로 보고하고 세션 우회를 시도하지 않습니다.
-7. 6번 차단이 발생하면 공식 `selPkupStr` 표면으로 그 상품의 **픽업 가능 매장 목록**을 받아 사용자가 고른 매장이 그 안에 들어 있는지(=`pickupEligibility.pickupEligible`) 만이라도 답합니다. 수량은 여전히 알 수 없습니다.
-8. 필요하면 `SearchGoods` 응답의 `onldPdNo` 를 함께 보존해 `selOnlStck` 온라인 재고 교차 확인에 사용합니다.
-9. 공식 표면이 매장 내 위치를 주지 않으면 재고 중심으로 답합니다.
+5. `GET /api/auth/request` 로 비로그인 JWT를 받아 AES-128-CBC / 키 `"PRE_AUTH_ENC_KEY"` 로 암호화한 뒤 Bearer 헤더를 빌드합니다.
+6. `selStrPkupStck` 에 Bearer 헤더를 실어 해당 매장의 상품 재고를 확인합니다.
+7. 403 응답이 오면 `/api/auth/request` 를 재호출해 Bearer를 새로 빌드한 뒤 한 번 재시도합니다.
+8. Bearer 재시도 후에도 401/403이면 `pickupStock.retrievalStatus: "blocked"` 를 반환하고, 선택적으로 `selPkupStr` 기반 `pickupEligibility` 로 픽업 가능 여부를 보조 확인합니다.
+9. 필요하면 `SearchGoods` 응답의 `onldPdNo` 를 함께 보존해 `selOnlStck` 온라인 재고 교차 확인에 사용합니다.
+10. 공식 표면이 매장 내 위치를 주지 않으면 재고 중심으로 답합니다.
 
 ## 예시
 
@@ -67,7 +66,6 @@ async function main() {
     store: result.selectedStore,
     product: result.selectedProduct,
     pickupStock: result.pickupStock,
-    pickupEligibility: result.pickupEligibility,
     onlineStock: result.onlineStock
   })
 }
@@ -85,18 +83,19 @@ main().catch((error) => {
 - 재고 수량은 실시간 100% 보장값이 아니므로, 필요하면 `방문 직전 다시 확인` 문구를 같이 줍니다.
 - 공식 표면이 매장 내 위치를 주지 않으면 `공식 표면에서는 매장 재고까지만 확인된다`고 답합니다.
 - 매장 픽업 재고의 `status` 는 조회 결과 범주입니다. 상품 재고 여부는 `inStock` 또는 `inventoryStatus` 로 설명하고, `status: "available"` 만으로 재고가 있다고 말하지 않습니다.
-- 매장 픽업 재고가 `Unauthorized` 로 차단된 경우에는 `다이소몰이 현재 매장 픽업 재고 API를 차단해 정확한 매장 재고 수량은 확인할 수 없다`고 답하고, 결과의 `retrievalStatus: "blocked"` 와 온라인 재고의 `referenceOnly: true` 참고값을 구분합니다.
-- 픽업 재고가 차단되어도 `pickupEligibility.pickupEligible === true` 면 `이 상품은 해당 매장의 픽업 가능 매장 목록에 등록되어 있어 픽업 자체는 가능합니다. 다만 정확한 수량은 확인할 수 없습니다.` 정도로 보수적으로 답합니다. `pickupEligible === false` 면 `해당 매장은 이 상품의 픽업 가능 매장에 등록되어 있지 않습니다.` 라고 답합니다. `null` 이면 차단 또는 `insufficient_coverage` 로 확인 불가로 답하고, 특히 검색 키워드가 없거나 첫 페이지가 전체 결과를 덮지 못한 경우에는 불가로 단정하지 않습니다.
+- 인증 키(`PRE_AUTH_ENC_KEY`)는 JS 번들에 하드코딩되어 있으며 변경될 수 있습니다. 403이 지속되면 키가 교체된 것일 수 있습니다.
 
 ## 라이브 확인 메모
 
-2026-03-27 기준으로 `selStrPkupStck` 는 실제 매장 픽업 재고를 반환했지만, 2026-05-05 기준 이 엔드포인트가 `Unauthorized` 로 차단되는 사례가 확인되었습니다.
+2026-03-27 기준으로 `selStrPkupStck` 는 실제 매장 픽업 재고를 반환했습니다.
+2026-05-15 기준 Bearer 토큰 인증(`/api/auth/request` + AES-128-CBC)으로 정상 접근 가능합니다.
 
 현재 운영 원칙은 다음과 같습니다.
 
 - `POST /api/ms/msg/selStr` → 매장 후보 확인
 - `GET /ssn/search/SearchGoods?searchTerm=...` → 상품 후보 및 `onldPdNo` 확인
-- `POST /api/pd/pdh/selStrPkupStck` → 성공하면 `status: "available"`, `retrievalStatus: "resolved"` 로 조회 성공을 표시하고, 실제 재고 여부는 `inStock` / `inventoryStatus` 로 표시
-- `selStrPkupStck` 가 `401`/`403` 또는 `{ "success": false, "message": "Unauthorized" }` 를 반환하면 `status: "unavailable"`, `retrievalStatus: "blocked"`, `inventoryStatus: "unknown"`, `reason: "unauthorized"` 로 표시
-- `POST /api/ms/msg/selPkupStr` → 픽업 재고가 차단되면 호출. 매장 픽업 가능 매장 목록을 받아 `pickupEligibility.pickupEligible`(true/false/null), `eligibleStoreCount`, `eligibleStores`, `matchedStore`, `searchedKeyword`, `totalCount` 로 응답 (수량 미제공). 검색 범위가 불충분하면 `retrievalStatus: "insufficient_coverage"` 와 `pickupEligible: null` 을 반환합니다.
+- `GET /api/auth/request` → 비로그인 JWT 발급, 헤더 `x-dm-uid` 보존 (유효 30초)
+- JWT를 AES-128-CBC / 키 `"PRE_AUTH_ENC_KEY"` 로 암호화 → `bearer = base64(IV) + base64(암호문)` 조합
+- `POST /api/pd/pdh/selStrPkupStck` + `Authorization: Bearer <bearer>`, `X-DM-UID: <uid>` → 성공 시 `status: "available"`, `retrievalStatus: "resolved"`. 실제 재고 여부는 `inStock` / `inventoryStatus` 로 표시
+- 403 → `/api/auth/request` 재호출 후 Bearer 재빌드 후 1회 재시도
 - `POST /api/pdo/selOnlStck` → 가능한 경우 온라인 재고 참고값 표시

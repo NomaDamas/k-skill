@@ -79,7 +79,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 유저에게 물어서 실제 값을 채운다.
 
-서울 지하철 도착정보, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. 별도 self-host proxy를 쓸 때만 `KSKILL_PROXY_BASE_URL` 을 채운다.
+서울 지하철 도착정보, 서울 실시간 혼잡도 조회, 서울 따릉이 실시간 대여소 조회, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. 별도 self-host proxy를 쓸 때만 `KSKILL_PROXY_BASE_URL` 을 채운다.
 
 한국 법령 검색은 로컬 `korean-law-mcp` 경로를 쓸 때만 `LAW_OC` 를 채운다. remote endpoint는 사용자 `LAW_OC` 없이 `url`만 등록하면 되고, 기존 경로 장애 시에는 `법망`(`https://api.beopmang.org`)을 fallback으로 안내한다.
 
@@ -100,6 +100,8 @@ chmod 0600 ~/.config/k-skill/secrets.env
 의약품 안전 체크는 `k-skill-proxy`의 `/v1/mfds/drug-safety/lookup` 라우트를 호출하고, `DATA_GO_KR_API_KEY` 는 프록시 서버에서만 주입/관리하므로 사용자 쪽에 둘 필요가 없다.
 
 식품 안전 체크는 `k-skill-proxy`의 `/v1/mfds/food-safety/search` 라우트를 호출하고, `DATA_GO_KR_API_KEY` 및 선택적 `FOODSAFETYKOREA_API_KEY` 는 프록시 서버에서만 주입/관리하므로 사용자 쪽에 둘 필요가 없다.
+
+창업진흥원 K-Startup 조회는 `k-skill-proxy`의 `/v1/kstartup/*` 라우트를 호출하고, `ServiceKey`(`DATA_GO_KR_API_KEY`)는 프록시 서버에서만 주입/관리하므로 일반 조회는 사용자 쪽에 키가 필요 없다. `--direct` 호출을 쓸 때만 `KSKILL_KSTARTUP_API_KEY` 를 채운다.
 
 
 한국 특허 정보 검색은 KIPRIS Plus Open API 경로를 쓸 때 `KIPRIS_PLUS_API_KEY` 를 채운다. helper는 이 값을 읽어 실제 요청에서 `ServiceKey` 쿼리 파라미터로 보낸다. 공공데이터포털에서 복사한 percent-encoded key도 그대로 넣어도 된다.
@@ -123,8 +125,10 @@ chmod 0600 ~/.config/k-skill/secrets.env
 - 도서관 도서 조회: 사용자 시크릿 불필요 (`DATA4LIBRARY_AUTH_KEY`는 proxy 서버만)
 - 의약품 안전 체크: 사용자 시크릿 불필요 (`DATA_GO_KR_API_KEY`는 proxy 서버만)
 - 식품 안전 체크: 사용자 시크릿 불필요 (`DATA_GO_KR_API_KEY`와 선택적 `FOODSAFETYKOREA_API_KEY`는 proxy 서버만)
+- 창업진흥원 K-Startup 조회: 사용자 시크릿 불필요 (`DATA_GO_KR_API_KEY`는 proxy 서버만; `--direct` 호출 때만 `KSKILL_KSTARTUP_API_KEY`)
 - 근처 가장 싼 주유소 찾기: 사용자 시크릿 불필요 (기본 hosted proxy 사용)
 - 서울 지하철: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`)
+- 서울 실시간 혼잡도: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`)
 - 한국 날씨: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KMA_OPEN_API_KEY`)
 - 사용자 위치 미세먼지 조회: `KSKILL_PROXY_BASE_URL` 또는 `AIR_KOREA_OPEN_API_KEY`
 

@@ -47,6 +47,8 @@ npx --yes skills add <owner/repo> \
   --skill hwp \
   --skill rhwp-edit \
   --skill rhwp-advanced \
+  --skill express-bus-booking \
+  --skill intercity-bus-booking \
   --skill foresttrip-vacancy \
   --skill kbo-results \
   --skill kbl-results \
@@ -64,6 +66,7 @@ npx --yes skills add <owner/repo> \
   --skill real-estate-search \
   --skill korean-scholarship-search \
   --skill korean-stock-search \
+  --skill daishin-report-search \
   --skill household-waste-info \
   --skill mfds-drug-safety \
   --skill mfds-food-safety \
@@ -72,19 +75,23 @@ npx --yes skills add <owner/repo> \
   --skill korea-weather \
   --skill cheap-gas-nearby \
   --skill public-restroom-nearby \
+  --skill emergency-room-beds \
   --skill fine-dust-location \
   --skill han-river-water-level \
   --skill subway-lost-property \
   --skill geeknews-search \
   --skill daiso-product-search \
   --skill market-kurly-search \
+  --skill gangnamunni-clinic-search \
   --skill olive-young-search \
+  --skill korean-cinema-search \
   --skill hola-poke-yeoksam \
   --skill blue-ribbon-nearby \
   --skill kakao-bar-nearby \
   --skill zipcode-search \
   --skill delivery-tracking \
   --skill coupang-product-search \
+  --skill ohou-today-deal \
   --skill bunjang-search \
   --skill used-car-price-search \
   --skill korean-spell-check \
@@ -92,7 +99,6 @@ npx --yes skills add <owner/repo> \
   --skill k-schoollunch-menu \
   --skill korean-character-count \
   --skill court-auction-notice-search \
-  --skill sh-notice-search \
   --skill donation-place-search \
   --skill k-skill-cleaner
 ```
@@ -104,6 +110,8 @@ npx --yes skills add <owner/repo> \
   --skill k-skill-setup \
   --skill srt-booking \
   --skill ktx-booking \
+  --skill express-bus-booking \
+  --skill intercity-bus-booking \
   --skill foresttrip-vacancy \
   --skill korean-law-search \
   --skill real-estate-search \
@@ -114,6 +122,8 @@ npx --yes skills add <owner/repo> \
   --skill korean-patent-search \
   --skill hipass-receipt \
   --skill seoul-subway-arrival \
+  --skill seoul-density \
+  --skill seoul-bike \
   --skill subway-lost-property \
   --skill geeknews-search \
   --skill korea-weather \
@@ -198,6 +208,40 @@ node dist/bin.js get /api/oliveyoung/products --keyword 선크림 --size 5 --jso
 node dist/bin.js get /api/oliveyoung/inventory --keyword 선크림 --storeKeyword 명동 --size 5 --json
 ```
 
+### `korean-cinema-search` upstream CLI quickstart
+
+`korean-cinema-search` 는 upstream 원본 [`hmmhmmhm/daiso-mcp`](https://github.com/hmmhmmhm/daiso-mcp) / npm package [`daiso`](https://www.npmjs.com/package/daiso) 를 그대로 사용한다.
+
+- 기본 경로는 **MCP 서버 직접 설치가 아니라 CLI first** 다.
+- 가장 빠른 smoke test 는 `npx --yes daiso health`
+- CGV, 메가박스, 롯데시네마의 영화관, 상영작, 시간표, 잔여석 조회를 다룬다.
+- 날짜가 있는 요청은 Asia/Seoul 기준 `YYYYMMDD` 로 바꿔 `--playDate <YYYYMMDD>` 를 명시한다.
+- 예매와 결제는 자동화하지 않는다.
+- 반복 사용이면 `npm install -g daiso`
+- public endpoint는 upstream 상태에 따라 간헐적인 `5xx/503` 이 날 수 있으니 먼저 한두 번 재시도한다.
+- 재시도 후에도 불안정하거나 버전 고정/원본 확인이 필요하면 `git clone https://github.com/hmmhmmhm/daiso-mcp.git && cd daiso-mcp && npm install && npm run build` clone fallback으로 전환한 뒤 `node dist/bin.js ...` 로 실행한다.
+
+```bash
+npx --yes daiso health
+npx --yes daiso get /api/cgv/theaters --keyword 강남 --limit 5 --json
+npx --yes daiso get /api/cgv/timetable --keyword 강남 --playDate <YYYYMMDD> --json
+npx --yes daiso get /api/megabox/theaters --keyword 코엑스 --limit 5 --json
+npx --yes daiso get /api/megabox/seats --keyword 코엑스 --playDate <YYYYMMDD> --limit 10 --json
+npx --yes daiso get /api/lottecinema/theaters --keyword 월드타워 --limit 5 --json
+npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json
+```
+
+clone fallback 예시:
+
+```bash
+git clone https://github.com/hmmhmmhm/daiso-mcp.git
+cd daiso-mcp
+npm install
+npm run build
+node dist/bin.js health
+node dist/bin.js get /api/cgv/timetable --keyword 강남 --playDate <YYYYMMDD> --json
+```
+
 ### `bunjang-search` upstream CLI quickstart
 
 `bunjang-search` 는 upstream 원본 [`pinion05/bunjangcli`](https://github.com/pinion05/bunjangcli) / npm package [`bunjang-cli`](https://www.npmjs.com/package/bunjang-cli) 를 그대로 사용한다.
@@ -279,7 +323,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search gongsijiga-search donation-place-search
+npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search gongsijiga-search donation-place-search gangnamunni-clinic-search
 export NODE_PATH="$(npm root -g)"
 ```
 
@@ -321,10 +365,9 @@ python3 scripts/patent_search.py --query "배터리"
 python3 scripts/scholarship_filter.py report --input scholarships.json --today 2026-04-14 --only-open-now
 ```
 
-국가데이터처 KOSIS 통계 조회 helper는 설치된 `kosis-stats` skill 안의 `scripts/run_kosis_stats.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
+국가데이터처 KOSIS 통계 조회 helper는 설치된 `kosis-stats` skill 안의 `scripts/run_kosis_stats.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다. 일반 `search`/`meta`/`data`는 기본 hosted proxy를 쓰므로 사용자 KOSIS 키가 필요 없다.
 
 ```bash
-export KSKILL_KOSIS_API_KEY=your-kosis-api-key
 python3 kosis-stats/scripts/run_kosis_stats.py search --query "1인 가구" --text
 ```
 
@@ -358,6 +401,8 @@ node scripts/korean_character_count.js --text $'첫 줄\n둘째 줄🙂' --profi
 - `srt-booking`
 - `ktx-booking`
 - `seoul-subway-arrival`
+- `seoul-density`
+- `seoul-bike`
 - `korea-weather`
 - `fine-dust-location`
 - `korean-law-search`

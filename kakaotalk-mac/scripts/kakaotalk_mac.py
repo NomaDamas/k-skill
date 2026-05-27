@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
@@ -47,6 +48,14 @@ class ResolvedAuth:
     database_name: str
     key: str
     source: str
+
+
+@dataclass
+class DeleteTarget:
+    message_id: int
+    text: str
+    timestamp: str | None
+    is_from_me: bool
 
 
 def parse_plist_xml(xml_text: str) -> Any:
@@ -575,6 +584,317 @@ def build_passthrough_command(command: str, auth: ResolvedAuth, forwarded_args: 
     ]
 
 
+def load_messages_for_delete(chat: str, auth: ResolvedAuth, *, limit: int) -> list[dict[str, Any]]:
+    result = run_command(
+        build_passthrough_command("messages", auth, ["--chat", chat, "--limit", str(limit), "--json"]),
+        check=True,
+    )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise AuthResolutionError(f"Could not parse kakaocli messages JSON: {exc}") from exc
+    if not isinstance(payload, list):
+        raise AuthResolutionError("kakaocli messages --json did not return a JSON array")
+    return [item for item in payload if isinstance(item, dict)]
+
+
+def select_delete_target(
+    messages: Sequence[dict[str, Any]],
+    *,
+    message_id: int | None,
+    delete_last: bool,
+    everyone: bool,
+) -> DeleteTarget:
+    if delete_last:
+        candidates = [message for message in messages if bool(message.get("is_from_me"))]
+        if not candidates:
+            raise AuthResolutionError("No outbound messages were found for delete-last.")
+        raw = max(candidates, key=_delete_last_sort_key)
+    else:
+        if message_id is None:
+            raise AuthResolutionError("message_id is required for delete.")
+        raw = next((message for message in messages if _message_id(message) == message_id), None)
+        if raw is None:
+            raise AuthResolutionError(f"Message id {message_id} was not found in the fetched chat history.")
+
+    selected_id = _message_id(raw)
+    if selected_id is None:
+        raise AuthResolutionError("Selected message is missing an id.")
+    is_from_me = bool(raw.get("is_from_me"))
+    if not is_from_me:
+        raise AuthResolutionError(
+            "Delete automation only supports messages sent by this KakaoTalk account; "
+            "--everyone also requires an outbound message."
+        )
+
+    text = raw.get("text")
+    normalized_text = _normalize_delete_text(text)
+    if normalized_text is None:
+        raise AuthResolutionError(
+            "Delete automation requires a selected outbound message with non-empty text; "
+            "non-text, attachment, or empty-text messages are not safe UI delete targets."
+        )
+    matching_text_ids = [
+        _message_id(message)
+        for message in messages
+        if _normalize_delete_text(message.get("text")) == normalized_text
+    ]
+    if len([item for item in matching_text_ids if item is not None]) > 1:
+        raise AuthResolutionError(
+            "Refusing to automate deletion because multiple fetched messages have the same normalized visible text. "
+            "Open the chat with only the target visible or use delete-last for the latest outbound message."
+        )
+    text = normalized_text
+    timestamp = raw.get("timestamp")
+    return DeleteTarget(
+        message_id=selected_id,
+        text=text,
+        timestamp=str(timestamp) if timestamp is not None else None,
+        is_from_me=is_from_me,
+    )
+
+
+def _normalize_delete_text(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = " ".join(value.split())
+    return normalized or None
+
+
+def _message_id(message: dict[str, Any]) -> int | None:
+    value = message.get("id")
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+
+def _delete_last_sort_key(message: dict[str, Any]) -> tuple[float, int]:
+    timestamp_score = _timestamp_sort_score(message.get("timestamp"))
+    message_id = _message_id(message) or 0
+    return (timestamp_score, message_id)
+
+
+def _timestamp_sort_score(value: Any) -> float:
+    if isinstance(value, bool) or value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not isinstance(value, str):
+        return 0.0
+    normalized = value.strip()
+    if not normalized:
+        return 0.0
+    if normalized.isdigit():
+        return float(normalized)
+    try:
+        if normalized.endswith("Z"):
+            normalized = f"{normalized[:-1]}+00:00"
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.timestamp()
+    except ValueError:
+        return 0.0
+
+
+def build_delete_osascript(chat: str, target: DeleteTarget, *, everyone: bool) -> str:
+    scope_labels = (
+        ["모두에게서 삭제", "Delete for Everyone", "Delete for everyone"]
+        if everyone
+        else ["나에게서만 삭제", "Delete for Me", "Delete for me", "삭제", "Delete"]
+    )
+    labels = ", ".join(_applescript_string(label) for label in scope_labels)
+    return f"""
+on normalizeText(rawText)
+  set normalizedText to rawText as text
+  set normalizedText to do shell script "python3 -c 'import sys; print(\\" \\".join(sys.stdin.read().split()))'" with input normalizedText
+  return normalizedText
+end normalizeText
+
+set chatName to {_applescript_string(chat)}
+set messageText to {_applescript_string(target.text)}
+set normalizedChatName to normalizeText(chatName)
+set normalizedMessageText to normalizeText(messageText)
+set deleteLabels to {{{labels}}}
+
+tell application "KakaoTalk" to activate
+delay 0.5
+
+tell application "System Events"
+  tell process "KakaoTalk"
+    set frontmost to true
+    keystroke "f" using command down
+    delay 0.2
+    keystroke chatName
+    delay 0.2
+    key code 36
+    delay 0.8
+    key code 36
+    delay 1.0
+
+    set activeChatMatches to {{}}
+    try
+      set frontWindowName to name of front window as text
+      if normalizeText(frontWindowName) is normalizedChatName then set end of activeChatMatches to front window
+    end try
+    try
+      repeat with chatCandidate in static texts of front window
+        try
+          set chatCandidateValue to value of chatCandidate as text
+          if normalizeText(chatCandidateValue) is normalizedChatName then set end of activeChatMatches to chatCandidate
+        end try
+      end repeat
+    end try
+    try
+      repeat with headerGroup in groups of front window
+        try
+          repeat with chatCandidate in static texts of headerGroup
+            try
+              set chatCandidateValue to value of chatCandidate as text
+              if normalizeText(chatCandidateValue) is normalizedChatName then set end of activeChatMatches to chatCandidate
+            end try
+          end repeat
+        end try
+      end repeat
+    end try
+    if (count of activeChatMatches) is 0 then error "Could not verify the active KakaoTalk chat."
+
+    set messageListCandidates to {{}}
+    try
+      repeat with scrollArea in scroll areas of front window
+        try
+          if (count of static texts of scrollArea) is greater than 0 then set end of messageListCandidates to scrollArea
+        end try
+        try
+          repeat with messageGroup in groups of scrollArea
+            try
+              if (count of static texts of messageGroup) is greater than 0 then set end of messageListCandidates to messageGroup
+            end try
+          end repeat
+        end try
+      end repeat
+    end try
+    if (count of messageListCandidates) is 0 then error "Could not find the KakaoTalk message transcript area."
+
+    set matchingElements to {{}}
+    repeat with messageListCandidate in messageListCandidates
+      try
+        repeat with candidate in static texts of messageListCandidate
+          try
+            set candidateValue to value of candidate as text
+            set candidateActionNames to name of actions of candidate
+            if normalizeText(candidateValue) is normalizedMessageText then
+              if candidateActionNames contains "AXShowMenu" then
+                if matchingElements does not contain candidate then set end of matchingElements to candidate
+              end if
+            end if
+          end try
+        end repeat
+      end try
+      try
+        repeat with messageGroup in groups of messageListCandidate
+          try
+            repeat with candidate in static texts of messageGroup
+              try
+                set candidateValue to value of candidate as text
+                set candidateActionNames to name of actions of candidate
+                if normalizeText(candidateValue) is normalizedMessageText then
+                  if candidateActionNames contains "AXShowMenu" then
+                    if matchingElements does not contain candidate then set end of matchingElements to candidate
+                  end if
+                end if
+              end try
+            end repeat
+          end try
+        end repeat
+      end try
+    end repeat
+
+    if (count of matchingElements) is 0 then error "Target message text was not visible as one exact targetable message bubble in the active chat."
+    if (count of matchingElements) is greater than 1 then error "Target message text matched multiple visible targetable message bubbles."
+    set targetElement to item 1 of matchingElements
+
+    perform action "AXShowMenu" of targetElement
+    delay 0.3
+    try
+      click menu item "삭제" of menu 1
+    on error
+      click menu item "Delete" of menu 1
+    end try
+    delay 0.5
+
+    set didChooseDeleteScope to false
+    repeat with labelText in deleteLabels
+      try
+        click button (labelText as text) of window 1
+        set didChooseDeleteScope to true
+        exit repeat
+      end try
+      try
+        click menu item (labelText as text) of menu 1
+        set didChooseDeleteScope to true
+        exit repeat
+      end try
+    end repeat
+    if didChooseDeleteScope is false then error "Could not choose the requested delete scope."
+    delay 0.3
+
+    set didConfirmDelete to false
+    try
+      click button "삭제" of window 1
+      set didConfirmDelete to true
+    end try
+    if didConfirmDelete is false then
+      try
+        click button "Delete" of window 1
+        set didConfirmDelete to true
+      end try
+    end if
+    if didConfirmDelete is false then error "Could not confirm the KakaoTalk delete dialog."
+  end tell
+end tell
+""".strip()
+
+def _applescript_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def run_delete_automation(chat: str, target: DeleteTarget, *, everyone: bool) -> subprocess.CompletedProcess[str]:
+    script = build_delete_osascript(chat, target, everyone=everyone)
+    return run_command(["/usr/bin/osascript", "-e", script], check=True)
+
+
+def handle_delete_command(args: argparse.Namespace) -> int:
+    delete_last = args.command == "delete-last"
+    message_id = None if delete_last else args.message_id
+
+    resolved = resolve_auth(
+        refresh=args.refresh_auth,
+        cache_path=Path(args.cache_path).expanduser(),
+        user_id_override=args.user_id,
+        uuid_override=args.uuid,
+        max_user_id=args.max_user_id,
+        workers=args.workers,
+        chunk_size=args.chunk_size,
+    )
+    messages = load_messages_for_delete(args.chat, resolved, limit=args.limit)
+    target = select_delete_target(messages, message_id=message_id, delete_last=delete_last, everyone=args.everyone)
+    if args.dry_run:
+        scope = "everyone" if args.everyone else "me"
+        print(
+            f"DRY RUN: Would delete message_id={target.message_id} "
+            f"from chat '{args.chat}' for {scope}: {target.text}"
+        )
+        return 0
+    run_delete_automation(args.chat, target, everyone=args.everyone)
+    print(f"Deleted message_id={target.message_id} from chat '{args.chat}'.")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
 
@@ -595,6 +915,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             print(render_auth(resolved, output_format=args.format, cache_path=cache_path))
             return 0
+
+        if args.command in {"delete", "delete-last"}:
+            if forwarded_args:
+                raise AuthResolutionError(f"Unexpected delete arguments: {' '.join(forwarded_args)}")
+            return handle_delete_command(args)
 
         resolved = resolve_auth(
             refresh=args.refresh_auth,
@@ -628,6 +953,17 @@ def build_parser() -> argparse.ArgumentParser:
         add_auth_options(passthrough)
         passthrough.add_argument("--refresh-auth", action="store_true", help="Refresh cached auth before running.")
 
+    delete_parser = subparsers.add_parser("delete", help="Delete one KakaoTalk message by local message id via UI automation.")
+    add_auth_options(delete_parser)
+    add_delete_options(delete_parser)
+    delete_parser.add_argument("chat", help="Chat name to open (substring match).")
+    delete_parser.add_argument("message_id", type=positive_int, help="Local KakaoTalk message id from messages --json.")
+
+    delete_last_parser = subparsers.add_parser("delete-last", help="Delete the latest outbound message in a chat via UI automation.")
+    add_auth_options(delete_last_parser)
+    add_delete_options(delete_last_parser)
+    delete_last_parser.add_argument("chat", help="Chat name to open (substring match).")
+
     return parser
 
 
@@ -638,6 +974,13 @@ def add_auth_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-user-id", type=non_negative_int, default=DEFAULT_MAX_USER_ID)
     parser.add_argument("--workers", type=positive_int, default=None)
     parser.add_argument("--chunk-size", type=positive_int, default=DEFAULT_CHUNK_SIZE)
+
+
+def add_delete_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--everyone", action="store_true", help="Use KakaoTalk's delete-for-everyone UI option.")
+    parser.add_argument("--dry-run", action="store_true", help="Validate and print the deletion plan without touching the UI.")
+    parser.add_argument("--refresh-auth", action="store_true", help="Refresh cached auth before resolving message metadata.")
+    parser.add_argument("--limit", type=positive_int, default=200, help="Messages to inspect when resolving delete target metadata.")
 
 
 def non_negative_int(value: str) -> int:

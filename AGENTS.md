@@ -47,10 +47,12 @@ These rules are repo-specific and apply to everything under this directory.
 ## Proxy server development
 
 - 개발 repo (`dev` 브랜치)에서 proxy 코드를 수정하고, main에 merge하면 프로덕션에 반영된다.
-- 프로덕션 배포본은 `~/.local/share/k-skill-proxy`에 main 브랜치 단독 clone으로 존재한다.
-- cron job (`0 * * * *`)이 매시 정각에 `~/.local/share/k-skill-proxy/scripts/auto-update-proxy.sh`를 실행해 origin/main fetch → fast-forward pull → package-lock 변경 시 npm ci → pm2 restart 순서로 자동 배포한다.
-- 로그: `/tmp/k-skill-proxy-update.log`
+- 프로덕션 배포 대상은 **Google Cloud Run** (`asia-northeast1`, GCP project `k-skill-proxy`)이며, 커스텀 도메인 `k-skill-proxy.nomadamas.org`로 노출된다.
+- `main` 브랜치에 merge되면 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증 → Artifact Registry로 image build/push → Cloud Run 재배포 → `/health` smoke test까지 자동으로 수행한다.
+- 따라서 **dev에서 route를 추가/수정한 뒤 main에 merge되기 전까지는 프로덕션 proxy에 반영되지 않는다.**
 - proxy 서버 코드: `packages/k-skill-proxy/src/server.js`
+- 컨테이너 이미지 빌드 정의: `packages/k-skill-proxy/Dockerfile`
 - proxy 서버 테스트: `packages/k-skill-proxy/test/server.test.js`
-- proxy 환경변수(API key 등)는 `~/.config/k-skill/secrets.env`에 넣고, `scripts/run-k-skill-proxy.sh`가 source한다.
-- **dev에서 route를 추가/수정한 뒤 main에 merge되기 전까지는 프로덕션 proxy에 반영되지 않는다.** 로컬 테스트는 `node packages/k-skill-proxy/src/server.js`로 직접 실행한다.
+- 로컬 테스트: `node packages/k-skill-proxy/src/server.js` (환경변수는 `~/.config/k-skill/secrets.env` 등에서 직접 export해서 띄운다)
+- 프로덕션 시크릿은 GCP Secret Manager에 보관되고 Cloud Run runtime에 주입된다.
+- **운영 관련 모든 절차는 [`docs/deploy-k-skill-proxy.md`](docs/deploy-k-skill-proxy.md)에 정리되어 있다.** 새 maintainer 인계를 위한 1회성 GCP/WIF 셋업, GitHub repository secrets 등록, upstream API 키 회전(rotation), 자동 배포 상태/로그/이미지 태그 확인, Cloud Run 트래픽 롤백, GitHub Actions 장애 시 로컬에서 동일한 배포를 수동으로 돌리는 비상 명령까지 전부 거기서 본다. proxy 운영 관련 어떤 질문이 들어와도 먼저 그 문서를 확인한다.

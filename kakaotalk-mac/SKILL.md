@@ -1,6 +1,6 @@
 ---
 name: kakaotalk-mac
-description: Use kakaocli on macOS to read KakaoTalk chats, search messages, and send replies after explicit confirmation.
+description: Use kakaocli on macOS to read KakaoTalk chats, search messages, send replies after explicit confirmation, and delete sent messages with explicit operator intent.
 license: MIT
 metadata:
   category: messaging
@@ -12,7 +12,7 @@ metadata:
 
 ## What this skill does
 
-`kakaocli` 를 사용해 macOS에서 카카오톡 대화 목록을 확인하고, 메시지를 검색하고, 필요할 때 답장을 보낸다.
+`kakaocli` 와 이 저장소 helper를 사용해 macOS에서 카카오톡 대화 목록을 확인하고, 메시지를 검색하고, 필요할 때 답장하거나 보낸 메시지를 삭제한다.
 
 이 스킬은 **macOS + 카카오톡 Mac 앱 설치**를 전제로 한다. 공식 Kakao API를 쓰는 것이 아니라 로컬 데이터베이스 읽기와 macOS 접근성 자동화 위에서 동작하므로, 권한과 안전 규칙을 먼저 확인해야 한다.
 
@@ -47,6 +47,7 @@ metadata:
 - 채팅방 이름 또는 검색 키워드
 - 읽기 범위: 최근 N개, `--since 1h`, `--since 7d` 등
 - 전송할 메시지 본문
+- 삭제할 로컬 메시지 ID 또는 최근 보낸 메시지 삭제 여부
 - 테스트 여부 (`--me`, `--dry-run`)
 
 ## Workflow
@@ -87,7 +88,7 @@ kakaocli status
 기본 규칙:
 
 - `status` / `auth` / `chats` 같은 읽기 명령도 Full Disk Access 가 필요하다.
-- `send`, `harvest`, `inspect` 류 작업은 Accessibility 권한까지 필요하다.
+- `send`, `delete`, `delete-last`, `harvest`, `inspect` 류 작업은 Accessibility 권한까지 필요하다.
 
 ### 3. Verify read access before attempting side effects
 
@@ -166,7 +167,25 @@ kakaocli send --dry-run "채팅방 이름" "보낼 문장"
 kakaocli send "채팅방 이름" "보낼 문장"
 ```
 
-### 7. Use login storage only when the user explicitly wants auto-login
+### 7. Delete a sent message only with explicit operator intent
+
+삭제는 카카오톡 Mac UI(우클릭 → 삭제)를 접근성으로 자동화한다. 먼저 `messages --json` 으로 로컬 메시지 ID와 보낸 메시지 여부를 확인하고, 항상 `--dry-run` 으로 대상 채팅방/메시지를 확인한 뒤 실행한다. `--everyone` 은 내가 보낸 메시지에만 허용된다.
+
+```bash
+python3 scripts/kakaotalk_mac.py messages --chat "채팅방 이름" --limit 20 --json
+python3 scripts/kakaotalk_mac.py delete "채팅방 이름" 123456 --dry-run
+python3 scripts/kakaotalk_mac.py delete "채팅방 이름" 123456 --everyone
+python3 scripts/kakaotalk_mac.py delete-last "채팅방 이름" --dry-run
+python3 scripts/kakaotalk_mac.py delete-last "채팅방 이름" --everyone
+```
+
+주의:
+
+- helper의 `chats`, `messages`, `search`, `schema` 는 read-only 경로다. `delete` / `delete-last` 는 UI side effect 이므로 Accessibility 권한과 명시적 실행 의도가 필요하다.
+- 메시지 ID는 로컬 DB의 `messages --json` 출력 기준이며 UI에서 동일한 DB row를 직접 증명할 수 있다는 뜻은 아니다. 실행 계약은 선택된 outbound DB 메시지의 정규화된 텍스트가 현재 활성 채팅방 transcript 영역에서 정확히 하나의 visible targetable message bubble 과 일치할 때만 삭제하는 것이다.
+- 대상 메시지 텍스트가 비어 있거나 첨부/비텍스트 메시지이거나, 정규화 후 같은 텍스트가 여러 개 있거나, 대상 bubble 이 보이지 않거나, 활성 채팅방/삭제 범위/최종 확인 버튼을 확인할 수 없으면 삭제 자동화는 실패한다.
+
+### 8. Use login storage only when the user explicitly wants auto-login
 
 자동 로그인 편의를 원할 때만 자격증명을 저장한다.
 
@@ -182,6 +201,7 @@ kakaocli login --status
 - 읽기 요청이면 상태 확인 + 대화/메시지 조회 결과가 정리되어 있다
 - 검색 요청이면 키워드 기준 결과가 정리되어 있다
 - 전송 요청이면 테스트(`--me` 또는 `--dry-run`)와 사용자 확인이 끝난 뒤 실제 전송 여부가 명확하다
+- 삭제 요청이면 `messages --json` 으로 대상 ID를 확인하고 `delete` / `delete-last --dry-run` 검증 뒤 실행 결과가 명확하다
 
 ## Failure modes
 
@@ -196,6 +216,7 @@ kakaocli login --status
 
 - 이 스킬은 macOS 전용이다.
 - 다른 사람에게 보내는 메시지는 항상 confirm before sending 원칙을 지킨다.
+- 삭제는 되돌리기 어렵고 UI 상태에 민감하므로 먼저 `--dry-run` 으로 대상과 범위를 확인한다.
 - 첫 검증은 `kakaocli status` 와 `kakaocli auth` 부터 시작하는 편이 안전하다.
 - `kakaocli auth` 가 `User ID: auto-detection failed` 로 멈추면 helper 경로를 우선 사용한다.
 - helper cache 는 로컬 SQLCipher key 를 포함하므로 본인 계정에서만 유지하고 공유하지 않는다.
