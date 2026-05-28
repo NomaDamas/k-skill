@@ -831,6 +831,40 @@ class KtxBookingTests(unittest.TestCase):
 
         self.assertIn("seat detail data is unavailable", str(exc.exception))
 
+    def test_command_seats_fails_when_seat_info_key_is_missing(self):
+        selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        client = FakeClient(
+            [],
+            train_details=[(selected, {"h_trn_no": "009"})],
+            cars=[{"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "9"}],
+        )
+        client.car_seats = lambda *args, **kwargs: {"seat_infos": {}}
+        args = argparse.Namespace(
+            dep="서울",
+            arr="부산",
+            date="20260328",
+            time="090000",
+            adults=1,
+            children=0,
+            toddlers=0,
+            seniors=0,
+            train_id=train_id,
+            room="general",
+            train_type="ktx",
+            car_no=None,
+            available_only=False,
+            power_only=False,
+            limit=10,
+        )
+
+        with patch.object(ktx_booking, "build_client", return_value=client):
+            with self.assertRaises(SystemExit) as exc:
+                with redirect_stdout(io.StringIO()):
+                    ktx_booking.command_seats(args)
+
+        self.assertIn("seat detail data is unavailable", str(exc.exception))
+
     def test_command_seats_fails_when_car_data_is_unavailable(self):
         selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
         train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
