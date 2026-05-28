@@ -127,6 +127,8 @@ DEFAULT_USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 13; SM-S928N Build/UP1A.23
 DYNAPATH_PATHS = [
     "/classes/com.korail.mobile.certification.TicketReservation",
     "/classes/com.korail.mobile.nonMember.NonMemTicket",
+    "/classes/com.korail.mobile.research.TrainResearch",
+    "/classes/com.korail.mobile.research.ResidualSeatsResearch.do",
     "/classes/com.korail.mobile.seatMovie.ScheduleView",
     "/classes/com.korail.mobile.seatMovie.ScheduleViewSpecial",
     "/classes/com.korail.mobile.trn.prcFare.do",
@@ -788,6 +790,12 @@ def normalize_seat(raw_seat: dict[str, object]) -> dict[str, object]:
     }
 
 
+def validate_raw_seat(raw_seat: dict[str, object]) -> None:
+    required_fields = ("h_con_seat_no", "h_seat_no", "h_sale_psb_flg")
+    if any(raw_seat.get(field) in (None, "") for field in required_fields):
+        raise ValueError("seat row is missing required fields")
+
+
 def parse_nonnegative_int_field(raw: object, field_name: str) -> int:
     text = "" if raw is None else str(raw)
     if not text.isdigit():
@@ -956,12 +964,19 @@ def command_seats(args: argparse.Namespace) -> None:
             raise SystemExit(seat_detail_unavailable)
         if any(not isinstance(seat, dict) for seat in raw_seats):
             raise SystemExit(seat_detail_unavailable)
+        try:
+            for raw_seat in raw_seats:
+                validate_raw_seat(raw_seat)
+        except ValueError as exc:
+            raise SystemExit(seat_detail_unavailable) from exc
         remaining_seats = car["remaining_seats"]
         if not isinstance(remaining_seats, int):
             raise SystemExit(seat_detail_unavailable)
         if not raw_seats and remaining_seats > 0:
             raise SystemExit(seat_detail_unavailable)
         all_seats = [normalize_seat(seat) for seat in raw_seats if seat.get("h_con_seat_no") != "0A"]
+        if not all_seats and remaining_seats > 0:
+            raise SystemExit(seat_detail_unavailable)
         seats = sort_seats_for_booking(all_seats)
         if args.available_only:
             seats = [seat for seat in seats if seat["available"]]

@@ -944,6 +944,91 @@ class KtxBookingTests(unittest.TestCase):
 
                 self.assertIn("seat detail data is unavailable", str(exc.exception))
 
+    def test_command_seats_fails_when_remaining_seats_have_only_sentinel_seat_info(self):
+        selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        client = FakeClient(
+            [],
+            train_details=[(selected, {"h_trn_no": "009"})],
+            cars=[{"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "9"}],
+            seat_payloads_by_car={
+                "05": {
+                    "seat_infos": {
+                        "seat_info": [
+                            {"h_con_seat_no": "0A", "h_seat_no": "000000", "h_sale_psb_flg": "N"},
+                        ],
+                    },
+                },
+            },
+        )
+        args = argparse.Namespace(
+            dep="서울",
+            arr="부산",
+            date="20260328",
+            time="090000",
+            adults=1,
+            children=0,
+            toddlers=0,
+            seniors=0,
+            train_id=train_id,
+            room="general",
+            train_type="ktx",
+            car_no=None,
+            available_only=False,
+            power_only=False,
+            limit=10,
+        )
+
+        with patch.object(ktx_booking, "build_client", return_value=client):
+            with self.assertRaises(SystemExit) as exc:
+                with redirect_stdout(io.StringIO()):
+                    ktx_booking.command_seats(args)
+
+        self.assertIn("seat detail data is unavailable", str(exc.exception))
+
+    def test_command_seats_fails_when_seat_info_object_is_missing_required_fields(self):
+        selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        args = argparse.Namespace(
+            dep="서울",
+            arr="부산",
+            date="20260328",
+            time="090000",
+            adults=1,
+            children=0,
+            toddlers=0,
+            seniors=0,
+            train_id=train_id,
+            room="general",
+            train_type="ktx",
+            car_no=None,
+            available_only=False,
+            power_only=False,
+            limit=10,
+        )
+        malformed_rows = [
+            {},
+            {"h_seat_no": "001001", "h_sale_psb_flg": "Y"},
+            {"h_con_seat_no": "1A", "h_sale_psb_flg": "Y"},
+            {"h_con_seat_no": "1A", "h_seat_no": "001001"},
+        ]
+
+        for row in malformed_rows:
+            with self.subTest(row=row):
+                client = FakeClient(
+                    [],
+                    train_details=[(selected, {"h_trn_no": "009"})],
+                    cars=[{"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "9"}],
+                    seat_payloads_by_car={"05": {"seat_infos": {"seat_info": [row]}}},
+                )
+
+                with patch.object(ktx_booking, "build_client", return_value=client):
+                    with self.assertRaises(SystemExit) as exc:
+                        with redirect_stdout(io.StringIO()):
+                            ktx_booking.command_seats(args)
+
+                self.assertIn("seat detail data is unavailable", str(exc.exception))
+
     def test_command_seats_allows_empty_seat_info_when_no_remaining_seats(self):
         selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
         train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
@@ -1058,6 +1143,34 @@ class KtxBookingTests(unittest.TestCase):
                     ktx_booking.command_seats(args)
 
         self.assertIn("seat car data is unavailable", str(exc.exception))
+
+    def test_seat_research_endpoints_use_dynapath_sid_boundary(self):
+        class FakeEngine:
+            def __init__(self):
+                self.calls = []
+
+            def generate_token(self, device_id, timestamp_ms, nonce):
+                self.calls.append((device_id, timestamp_ms, nonce))
+                return "dynapath-token"
+
+        client = ktx_booking.PatchedKorail.__new__(ktx_booking.PatchedKorail)
+        client._engine = FakeEngine()
+        client._device_id = "device-id"
+        client._generate_sid = lambda timestamp_ms: f"sid-{timestamp_ms}"
+
+        for url in (ktx_booking.KORAIL_CARS_INFO, ktx_booking.KORAIL_CAR_DETAIL):
+            with self.subTest(url=url):
+                with patch.object(ktx_booking.time, "time", return_value=1234.567):
+                    with patch.object(ktx_booking.random, "choices", return_value=list("ABCD")):
+                        headers, sid = client._auth_headers_and_sid(url)
+
+                self.assertEqual(headers["x-dynapath-m-token"], "dynapath-token")
+                self.assertEqual(sid, "sid-1234567")
+
+        self.assertEqual(
+            client._engine.calls,
+            [("device-id", 1234567, "ABCD"), ("device-id", 1234567, "ABCD")],
+        )
 
     def test_build_parser_has_ncard_commands(self):
         parser = ktx_booking.build_parser()
