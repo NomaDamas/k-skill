@@ -163,6 +163,7 @@ python3 scripts/ktx_booking.py seats 남춘천 용산 20260503 150000 \
 - 좌석별 `direction`, `position`, `seat_type`
 - 콘센트 힌트 (`power_outlet`)
 - 문 근처 여부 (`near_door`)
+- 호차 요약에는 잔여석이 있는데 상세 좌석 응답 형식이 깨졌다면 `seat_lookup_error` 와 보존된 `remaining_seats`
 
 이 기능은 좌석을 선택/선점하지 않는다. 실제 예약은 다음 단계의 `reserve` 로만 진행한다.
 

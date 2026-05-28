@@ -106,7 +106,7 @@ python3 scripts/ktx_booking.py seats 남춘천 용산 20260503 150000 \
   --available-only
 ```
 
-`seats` 응답은 호차별 `remaining_seats`, `available_seats`, 좌석별 순방향/역방향, 창측/내측, 좌석 종류, 문 근처 여부, 콘센트 힌트를 JSON 으로 반환한다. 이 단계는 좌석을 선택하거나 선점하지 않고, 예약 전 확인만 한다.
+`seats` 응답은 호차별 `remaining_seats`, `available_seats`, 좌석별 순방향/역방향, 창측/내측, 좌석 종류, 문 근처 여부, 콘센트 힌트를 JSON 으로 반환한다. 호차 요약에는 잔여석이 있는데 좌석 상세 응답 형식이 깨졌다면 해당 호차에 `seat_lookup_error` 를 포함하고 `remaining_seats` 를 보존한다. 이 단계는 좌석을 선택하거나 선점하지 않고, 예약 전 확인만 한다.
 
 예약:
 
