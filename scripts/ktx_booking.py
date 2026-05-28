@@ -788,14 +788,23 @@ def normalize_seat(raw_seat: dict[str, object]) -> dict[str, object]:
     }
 
 
-def normalize_car(raw_car: dict[str, object]) -> dict[str, object]:
+def parse_nonnegative_int_field(raw: object, field_name: str) -> int:
+    text = "" if raw is None else str(raw)
+    if not text.isdigit():
+        raise ValueError(f"{field_name} is not a non-negative integer")
+    return int(text)
+
+
+def normalize_car(raw_car: object) -> dict[str, object]:
+    if not isinstance(raw_car, dict):
+        raise ValueError("car row is not an object")
     return {
-        "car_no": int(str(raw_car.get("h_srcar_no", "0"))),
+        "car_no": parse_nonnegative_int_field(raw_car.get("h_srcar_no"), "h_srcar_no"),
         "car_no_raw": str(raw_car.get("h_srcar_no", "")),
         "room_class": ROOM_CLASS_NAME.get(str(raw_car.get("h_psrm_cl_cd", "")), str(raw_car.get("h_psrm_cl_nm", ""))),
         "room_class_code": str(raw_car.get("h_psrm_cl_cd", "")),
-        "total_seats": int(str(raw_car.get("h_seat_cnt", "0")) or "0"),
-        "remaining_seats": int(str(raw_car.get("h_rest_seat_cnt", "0")) or "0"),
+        "total_seats": parse_nonnegative_int_field(raw_car.get("h_seat_cnt"), "h_seat_cnt"),
+        "remaining_seats": parse_nonnegative_int_field(raw_car.get("h_rest_seat_cnt"), "h_rest_seat_cnt"),
     }
 
 
@@ -914,9 +923,13 @@ def command_seats(args: argparse.Namespace) -> None:
 
     train, raw_train = match
     room_class = ROOM_CLASS_MAP[args.room]
-    cars = [normalize_car(car) for car in client.train_cars(raw_train, passenger_count, room_class)]
+    seat_car_unavailable = f"seat car data is unavailable for {args.room}; retry search or choose another train"
+    try:
+        cars = [normalize_car(car) for car in client.train_cars(raw_train, passenger_count, room_class)]
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise SystemExit(seat_car_unavailable) from exc
     if not cars:
-        raise SystemExit(f"seat car data is unavailable for {args.room}; retry search or choose another train")
+        raise SystemExit(seat_car_unavailable)
     if args.car_no is not None:
         cars = [car for car in cars if car["car_no"] == args.car_no]
         if not cars:
@@ -940,6 +953,13 @@ def command_seats(args: argparse.Namespace) -> None:
         if isinstance(raw_seats, dict):
             raw_seats = [raw_seats]
         if not isinstance(raw_seats, list):
+            raise SystemExit(seat_detail_unavailable)
+        if any(not isinstance(seat, dict) for seat in raw_seats):
+            raise SystemExit(seat_detail_unavailable)
+        remaining_seats = car["remaining_seats"]
+        if not isinstance(remaining_seats, int):
+            raise SystemExit(seat_detail_unavailable)
+        if not raw_seats and remaining_seats > 0:
             raise SystemExit(seat_detail_unavailable)
         all_seats = [normalize_seat(seat) for seat in raw_seats if seat.get("h_con_seat_no") != "0A"]
         seats = sort_seats_for_booking(all_seats)

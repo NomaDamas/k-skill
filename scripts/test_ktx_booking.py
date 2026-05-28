@@ -109,6 +109,7 @@ class FakeClient:
         train_details=None,
         cars=None,
         seats_by_car=None,
+        seat_payloads_by_car=None,
     ):
         self._trains = trains
         self._search_handler = search_handler
@@ -117,6 +118,7 @@ class FakeClient:
         self._train_details = train_details
         self._cars = cars or []
         self._seats_by_car = seats_by_car or {}
+        self._seat_payloads_by_car = seat_payloads_by_car or {}
         self.search_calls = []
         self.search_detail_calls = []
         self.train_car_calls = []
@@ -151,6 +153,8 @@ class FakeClient:
             "passenger_count": passenger_count,
             "room_class": room_class,
         })
+        if car_no in self._seat_payloads_by_car:
+            return self._seat_payloads_by_car[car_no]
         return {"seat_infos": {"seat_info": list(self._seats_by_car.get(car_no, []))}}
 
     def reserve(self, train, **kwargs):
@@ -572,6 +576,10 @@ class KtxBookingTests(unittest.TestCase):
                 {"h_srcar_no": "04", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "1"},
                 {"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "1"},
             ],
+            seats_by_car={
+                car_no: [{"h_con_seat_no": "1A", "h_seat_no": "001001", "h_sale_psb_flg": "Y"}]
+                for car_no in ("01", "04", "05", "08")
+            },
         )
         args = argparse.Namespace(
             dep="서울",
@@ -864,6 +872,159 @@ class KtxBookingTests(unittest.TestCase):
                     ktx_booking.command_seats(args)
 
         self.assertIn("seat detail data is unavailable", str(exc.exception))
+
+    def test_command_seats_fails_when_remaining_seats_have_empty_seat_info(self):
+        selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        client = FakeClient(
+            [],
+            train_details=[(selected, {"h_trn_no": "009"})],
+            cars=[{"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "9"}],
+            seat_payloads_by_car={"05": {"seat_infos": {"seat_info": []}}},
+        )
+        args = argparse.Namespace(
+            dep="서울",
+            arr="부산",
+            date="20260328",
+            time="090000",
+            adults=1,
+            children=0,
+            toddlers=0,
+            seniors=0,
+            train_id=train_id,
+            room="general",
+            train_type="ktx",
+            car_no=None,
+            available_only=False,
+            power_only=False,
+            limit=10,
+        )
+
+        with patch.object(ktx_booking, "build_client", return_value=client):
+            with self.assertRaises(SystemExit) as exc:
+                with redirect_stdout(io.StringIO()):
+                    ktx_booking.command_seats(args)
+
+        self.assertIn("seat detail data is unavailable", str(exc.exception))
+
+    def test_command_seats_fails_when_seat_info_contains_non_object_entries(self):
+        selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        args = argparse.Namespace(
+            dep="서울",
+            arr="부산",
+            date="20260328",
+            time="090000",
+            adults=1,
+            children=0,
+            toddlers=0,
+            seniors=0,
+            train_id=train_id,
+            room="general",
+            train_type="ktx",
+            car_no=None,
+            available_only=False,
+            power_only=False,
+            limit=10,
+        )
+
+        for bad_entry in ["bad", None]:
+            with self.subTest(bad_entry=bad_entry):
+                client = FakeClient(
+                    [],
+                    train_details=[(selected, {"h_trn_no": "009"})],
+                    cars=[{"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "9"}],
+                    seat_payloads_by_car={"05": {"seat_infos": {"seat_info": [bad_entry]}}},
+                )
+
+                with patch.object(ktx_booking, "build_client", return_value=client):
+                    with self.assertRaises(SystemExit) as exc:
+                        with redirect_stdout(io.StringIO()):
+                            ktx_booking.command_seats(args)
+
+                self.assertIn("seat detail data is unavailable", str(exc.exception))
+
+    def test_command_seats_allows_empty_seat_info_when_no_remaining_seats(self):
+        selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        client = FakeClient(
+            [],
+            train_details=[(selected, {"h_trn_no": "009"})],
+            cars=[{"h_srcar_no": 5, "h_psrm_cl_cd": "1", "h_seat_cnt": 48, "h_rest_seat_cnt": 0}],
+            seat_payloads_by_car={"5": {"seat_infos": {"seat_info": []}}},
+        )
+        args = argparse.Namespace(
+            dep="서울",
+            arr="부산",
+            date="20260328",
+            time="090000",
+            adults=1,
+            children=0,
+            toddlers=0,
+            seniors=0,
+            train_id=train_id,
+            room="general",
+            train_type="ktx",
+            car_no=None,
+            available_only=False,
+            power_only=False,
+            limit=10,
+        )
+        output = io.StringIO()
+
+        with patch.object(ktx_booking, "build_client", return_value=client):
+            with redirect_stdout(output):
+                ktx_booking.command_seats(args)
+
+        car = json.loads(output.getvalue())["cars"][0]
+        self.assertEqual(car["remaining_seats"], 0)
+        self.assertEqual(car["available_seat_count"], 0)
+        self.assertEqual(car["seats"], [])
+
+    def test_command_seats_fails_when_car_metadata_is_malformed(self):
+        selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
+        train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
+        args = argparse.Namespace(
+            dep="서울",
+            arr="부산",
+            date="20260328",
+            time="090000",
+            adults=1,
+            children=0,
+            toddlers=0,
+            seniors=0,
+            train_id=train_id,
+            room="general",
+            train_type="ktx",
+            car_no=None,
+            available_only=False,
+            power_only=False,
+            limit=10,
+        )
+        malformed_cars = [
+            "bad",
+            {"h_srcar_no": "bad", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "9"},
+            {"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "bad", "h_rest_seat_cnt": "9"},
+            {"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "48", "h_rest_seat_cnt": "bad"},
+            {"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_rest_seat_cnt": "9"},
+            {"h_srcar_no": "05", "h_psrm_cl_cd": "1", "h_seat_cnt": "48"},
+        ]
+
+        for raw_car in malformed_cars:
+            with self.subTest(raw_car=raw_car):
+                client = FakeClient(
+                    [],
+                    train_details=[(selected, {"h_trn_no": "009"})],
+                    cars=[raw_car],
+                    seats_by_car={"05": [{"h_con_seat_no": "1A", "h_seat_no": "001001", "h_sale_psb_flg": "Y"}]},
+                )
+
+                with patch.object(ktx_booking, "build_client", return_value=client):
+                    with self.assertRaises(SystemExit) as exc:
+                        with redirect_stdout(io.StringIO()):
+                            ktx_booking.command_seats(args)
+
+                self.assertIn("seat car data is unavailable", str(exc.exception))
 
     def test_command_seats_fails_when_car_data_is_unavailable(self):
         selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
