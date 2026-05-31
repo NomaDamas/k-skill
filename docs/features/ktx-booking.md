@@ -4,6 +4,8 @@
 
 - KTX/Korail 열차 조회
 - 좌석 가능 여부 확인
+- 호차별 남은 좌석번호 확인
+- 콘센트 꿀팁 좌석 필터링
 - 예약 진행
 - 예약 내역 확인
 - 예약 취소
@@ -35,6 +37,7 @@
 - 희망 시작 시각: `HHMMSS`
 - 인원 수와 승객 유형
 - 좌석 선호
+- 좌석 상세 조건: 객실 등급, 호차 번호, 남은 좌석만 보기, 콘센트 좌석 우선
 - 조회 결과에서 복사한 `train_id`
 
 ## 왜 helper 를 쓰는가
@@ -54,8 +57,9 @@
 2. `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD` 가 없으면 credential resolution order에 따라 확보한다.
 3. helper 로 먼저 열차를 조회한다.
 4. 후보 열차의 `index`, `train_id`, 출발/도착 시각, KTX 여부, 좌석 여부를 보여준다.
-5. 대상 열차가 명확할 때만 예약한다.
-6. 예약 확인/취소는 대상 예약을 다시 식별한 뒤 진행한다.
+5. 사용자가 좌석번호, 호차별 잔여석, 콘센트 꿀팁 좌석을 물으면 `seats` 로 상세 좌석을 먼저 확인한다.
+6. 대상 열차가 명확할 때만 예약한다.
+7. 예약 확인/취소는 대상 예약을 다시 식별한 뒤 진행한다.
 
 ## 예시
 
@@ -68,6 +72,43 @@ python3 scripts/ktx_booking.py search 서울 부산 20260328 090000 --limit 5
 좌석이 없는 열차까지 같이 보고 싶으면 `--include-no-seats`, 예약 대기 가능 열차도 같이 보고 싶으면 `--include-waiting-list` 를 붙인다.
 
 응답 JSON 의 `train_id` 는 검색 시점의 정확한 열차를 가리키는 stable selector 다. 예약할 때는 이 값을 그대로 복사해서 쓴다. 같은 열차가 더 이상 조회되지 않으면 helper 가 실패하고 새로 조회하게 만든다.
+
+상세 좌석 확인:
+
+```bash
+python3 scripts/ktx_booking.py seats 서울 부산 20260328 090000 --train-id <train_id>
+```
+
+남은 좌석번호만 확인:
+
+```bash
+python3 scripts/ktx_booking.py seats 서울 부산 20260328 090000 --train-id <train_id> --available-only
+```
+
+특정 호차를 지정하지 않으면 `seats` 는 승강장 이동 거리가 짧은 가운데 호차부터 탐색한다. 각 호차 안에서는 콘센트 힌트가 있는 좌석을 먼저, 같은 조건에서는 순방향 좌석을 먼저 반환한다.
+
+특정 호차의 남은 좌석만 확인:
+
+```bash
+python3 scripts/ktx_booking.py seats 서울 부산 20260328 090000 --train-id <train_id> --car-no 5 --available-only
+```
+
+콘센트 꿀팁 좌석부터 확인:
+
+```bash
+python3 scripts/ktx_booking.py seats 서울 부산 20260328 090000 --train-id <train_id> --available-only --power-only
+```
+
+특실 좌석을 확인하려면 `--room special`, KTX 외 열차를 조회했다면 `search` 와 같은 `--train-type` 을 함께 넘긴다.
+
+```bash
+python3 scripts/ktx_booking.py seats 남춘천 용산 20260503 150000 \
+  --train-id <train_id> \
+  --train-type itx-cheongchun \
+  --available-only
+```
+
+`seats` 응답은 호차별 `remaining_seats`, `available_seats`, 좌석별 순방향/역방향, 창측/내측, 좌석 종류, 문 근처 여부, 콘센트 힌트를 JSON 으로 반환한다. 이 단계는 좌석을 선택하거나 선점하지 않고, 예약 전 확인만 한다.
 
 예약:
 

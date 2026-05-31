@@ -36,10 +36,12 @@ while IFS= read -r -d '' skill_dir; do
   fi
 done < <(
   find "$root" -mindepth 1 -maxdepth 1 -type d \
+    ! -name '.*' \
     ! -name .git \
     ! -name .github \
     ! -name .codex \
     ! -name .claude \
+    ! -name .agents \
     ! -name .omx \
     ! -name .ouroboros \
     ! -name .changeset \
@@ -47,6 +49,7 @@ done < <(
     ! -name .vscode \
     ! -name .sisyphus \
     ! -name .idea \
+    ! -name .venv \
     ! -name dist \
     ! -name docs \
     ! -name node_modules \
