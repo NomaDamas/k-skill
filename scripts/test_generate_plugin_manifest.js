@@ -97,3 +97,9 @@ test("run writes deterministic, trailing-newline JSON", () => {
   assert.ok(raw.endsWith("\n"));
   assert.equal(raw, serialize(buildManifest(root)));
 });
+
+test("marketplace manifest uses Claude validator-supported top-level keys", () => {
+  const marketplacePath = path.join(__dirname, "..", ".claude-plugin", "marketplace.json");
+  const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
+  assert.deepEqual(Object.keys(marketplace).sort(), ["name", "owner", "plugins"]);
+});
