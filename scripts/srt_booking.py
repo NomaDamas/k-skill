@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import base64
+import contextlib
+import io
 import importlib
 import json
 import os
@@ -164,19 +166,22 @@ def seat_page_params(train: SrtTrainLike, room: str, car_no: int | None) -> dict
 
 
 def fetch_seat_page(client: SrtClientLike, train: SrtTrainLike, room: str, car_no: int | None) -> str:
-    response = client._session.get(SRT_SEAT_ENDPOINT, params=seat_page_params(train, room, car_no))
+    with contextlib.redirect_stdout(io.StringIO()):
+        response = client._session.get(SRT_SEAT_ENDPOINT, params=seat_page_params(train, room, car_no))
     return response.text
 
 
 def command_search(args: argparse.Namespace) -> None:
     client = build_client(auto_login=False)
-    trains = client.search_train(args.dep, args.arr, args.date, args.time, args.time_limit, args.available_only)
+    with contextlib.redirect_stdout(io.StringIO()):
+        trains = client.search_train(args.dep, args.arr, args.date, args.time, args.time_limit, args.available_only)
     print_json({"count": len(trains[: args.limit]), "trains": [normalize_train(train, index) for index, train in enumerate(trains[: args.limit], 1)]})
 
 
 def command_seats(args: argparse.Namespace) -> None:
     client = build_client(auto_login=False)
-    trains = client.search_train(args.dep, args.arr, args.date, args.time, args.time_limit, available_only=False)
+    with contextlib.redirect_stdout(io.StringIO()):
+        trains = client.search_train(args.dep, args.arr, args.date, args.time, args.time_limit, available_only=False)
     train = find_train_by_id(trains, args.train_id)
     if train is None:
         raise SystemExit("train_id no longer matches any current search result; rerun search and choose a fresh train_id")

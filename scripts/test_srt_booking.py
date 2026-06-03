@@ -21,6 +21,17 @@ SEAT_HTML = "\n".join([
     "<span>5C<strong><em>(정방향, 내측, 선택불가)</em></strong></span>",
 ])
 
+SPECIAL_SEAT_HTML = "\n".join([
+    '<li class="scar-03 on"><a href="#none" onclick="selectScarInfo(\'0003\'); return false;"><strong>특실<br />3호차</strong></a></li>',
+    '<li class="scar-05 off"><strong>일반실<br />5호차</strong></li>',
+    '<a href="#none" onclick="selectSeatInfo(this, \'31\', \'1A\'); return false;">1A<strong><em>(정방향, 1인석)</em></strong></a>',
+    "<span>2C<strong><em>(역방향, 내측, 선택불가)</em></strong></span>",
+])
+
+MISSING_DETAIL_HTML = "\n".join([
+    '<a href="#none" onclick="selectSeatInfo(this, \'41\', \'9A\'); return false;">9A<strong><em>()</em></strong></a>',
+])
+
 
 class FakeTrain:
     train_number = "313"
@@ -82,6 +93,55 @@ class FakeClient:
         return [self.train]
 
 
+class NoisySession(FakeSession):
+    def get(self, _url: str, params: dict[str, str]) -> FakeResponse:
+        print("접속자가 많아 대기열에 들어갑니다.")
+        return super().get(_url, params)
+
+
+class NoisyClient(FakeClient):
+    def __init__(self, train: FakeTrain) -> None:
+        self.train = train
+        self._session = NoisySession()
+
+    def search_train(
+        self,
+        _dep: str,
+        _arr: str,
+        _date: str,
+        _time: str,
+        _time_limit: str | None = None,
+        available_only: bool = True,
+    ) -> list[FakeTrain]:
+        print("대기인원: 6명")
+        return [self.train]
+
+
+class EmptyClient(FakeClient):
+    def search_train(
+        self,
+        _dep: str,
+        _arr: str,
+        _date: str,
+        _time: str,
+        _time_limit: str | None = None,
+        available_only: bool = True,
+    ) -> list[FakeTrain]:
+        return []
+
+
+class SpecialSession(FakeSession):
+    def get(self, _url: str, params: dict[str, str]) -> FakeResponse:
+        self.calls.append(params)
+        return FakeResponse(SPECIAL_SEAT_HTML)
+
+
+class SpecialClient(FakeClient):
+    def __init__(self, train: FakeTrain) -> None:
+        self.train = train
+        self._session = SpecialSession()
+
+
 class SrtSeatTests(unittest.TestCase):
     def test_normalize_car_and_seat_maps_srt_html(self) -> None:
         cars = srt_seats.parse_cars(SEAT_HTML)
@@ -123,6 +183,22 @@ class SrtSeatTests(unittest.TestCase):
 
         self.assertEqual([seat["seat"] for seat in sorted_seats], ["2A", "6C", "3A"])
 
+    def test_booking_priority_treats_single_seat_as_window_preference(self) -> None:
+        seats: list[srt_seats.SrtSeat] = [
+            {"seat": "1C", "seat_no": "3", "available": True, "direction": "정방향", "position": "내측", "notes": []},
+            {"seat": "2A", "seat_no": "5", "available": True, "direction": "정방향", "position": "1인석", "notes": []},
+        ]
+
+        sorted_seats = srt_seats.sort_seats_for_booking(seats, "window-forward")
+
+        self.assertEqual([seat["seat"] for seat in sorted_seats], ["2A", "1C"])
+
+    def test_parse_seat_page_marks_missing_detail_attributes_unknown(self) -> None:
+        seats = srt_seats.parse_seats(MISSING_DETAIL_HTML)
+
+        self.assertEqual(seats[0]["direction"], "unknown")
+        self.assertEqual(seats[0]["position"], "unknown")
+
     def test_command_seats_outputs_available_seats_by_booking_preference(self) -> None:
         train = FakeTrain()
         train_id = srt_booking.build_train_id(train)
@@ -154,6 +230,119 @@ class SrtSeatTests(unittest.TestCase):
         self.assertTrue(car["requested_seat_available"])
         self.assertEqual(car["available_seats"], ["6C"])
         self.assertEqual(client._session.calls[-1]["scarNo1"], "0004")
+
+    def test_command_seats_filters_unavailable_when_available_only(self) -> None:
+        train = FakeTrain()
+        train_id = srt_booking.build_train_id(train)
+        client = FakeClient(train)
+        args = argparse.Namespace(
+            dep="수서",
+            arr="부산",
+            date="20260610",
+            time="080000",
+            time_limit=None,
+            train_id=train_id,
+            room="general",
+            car_no=4,
+            seat=None,
+            available_only=True,
+            car_priority="center",
+            seat_priority="forward-window",
+            limit=10,
+        )
+        output = io.StringIO()
+
+        with patch.object(srt_booking, "build_client", return_value=client):
+            with redirect_stdout(output):
+                srt_booking.command_seats(args)
+
+        result = json.loads(output.getvalue())
+        shown_seats = result["cars"][0]["seats"]
+        self.assertEqual([seat["seat"] for seat in shown_seats], ["6C", "3A"])
+        self.assertTrue(all(seat["available"] for seat in shown_seats))
+
+    def test_command_seats_returns_special_room_cars(self) -> None:
+        train = FakeTrain()
+        train_id = srt_booking.build_train_id(train)
+        client = SpecialClient(train)
+        args = argparse.Namespace(
+            dep="수서",
+            arr="부산",
+            date="20260610",
+            time="080000",
+            time_limit=None,
+            train_id=train_id,
+            room="special",
+            car_no=3,
+            seat=None,
+            available_only=True,
+            car_priority="center",
+            seat_priority="window-forward",
+            limit=10,
+        )
+        output = io.StringIO()
+
+        with patch.object(srt_booking, "build_client", return_value=client):
+            with redirect_stdout(output):
+                srt_booking.command_seats(args)
+
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["room"], "special")
+        self.assertEqual(result["cars"][0]["room_class"], "특실")
+        self.assertEqual(result["cars"][0]["available_seats"], ["1A"])
+
+    def test_command_seats_fails_when_train_id_is_stale(self) -> None:
+        train = FakeTrain()
+        args = argparse.Namespace(
+            dep="수서",
+            arr="부산",
+            date="20260610",
+            time="080000",
+            time_limit=None,
+            train_id=srt_booking.build_train_id(train),
+            room="general",
+            car_no=4,
+            seat=None,
+            available_only=False,
+            car_priority="center",
+            seat_priority="forward-window",
+            limit=10,
+        )
+
+        with patch.object(srt_booking, "build_client", return_value=EmptyClient(train)):
+            with self.assertRaises(SystemExit) as exc:
+                with redirect_stdout(io.StringIO()):
+                    srt_booking.command_seats(args)
+
+        self.assertIn("train_id", str(exc.exception))
+
+    def test_command_seats_keeps_json_stdout_when_upstream_prints_queue_messages(self) -> None:
+        train = FakeTrain()
+        train_id = srt_booking.build_train_id(train)
+        client = NoisyClient(train)
+        args = argparse.Namespace(
+            dep="수서",
+            arr="부산",
+            date="20260610",
+            time="080000",
+            time_limit=None,
+            train_id=train_id,
+            room="general",
+            car_no=4,
+            seat=None,
+            available_only=True,
+            car_priority="center",
+            seat_priority="forward-window",
+            limit=10,
+        )
+        output = io.StringIO()
+
+        with patch.object(srt_booking, "build_client", return_value=client):
+            with redirect_stdout(output):
+                srt_booking.command_seats(args)
+
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["cars"][0]["available_seats"], ["6C", "3A"])
 
     def test_command_seats_explores_middle_cars_first(self) -> None:
         train = FakeTrain()

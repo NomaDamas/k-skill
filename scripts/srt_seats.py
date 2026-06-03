@@ -44,8 +44,8 @@ def strip_tags(value: str) -> str:
 
 def parse_detail(detail: str) -> tuple[str, str, list[str]]:
     parts = [part.strip() for part in detail.split(",")]
-    direction = next((part for part in parts if part in {"정방향", "역방향"}), "")
-    position = next((part for part in parts if part in {"창측", "내측", "1인석"}), "")
+    direction = next((part for part in parts if part in {"정방향", "역방향"}), "unknown")
+    position = next((part for part in parts if part in {"창측", "내측", "1인석"}), "unknown")
     notes = [part for part in parts if part not in {direction, position} and part]
     return direction, position, notes
 
