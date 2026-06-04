@@ -34,6 +34,7 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/opinet/detail`
 - `GET /v1/neis/school-search` (나이스 학교기본정보, `KEDU_INFO_KEY`)
 - `GET /v1/neis/school-meal` (나이스 급식식단정보, `KEDU_INFO_KEY`)
+- `GET /v1/neis/school-schedule` (나이스 학사일정, `KEDU_INFO_KEY`)
 - `GET /v1/data4library/library-search` (도서관 정보나루 정보공개 도서관 조회, `DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/book-search` (도서관 정보나루 도서 검색, `DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/book-detail` (도서관 정보나루 도서 상세 조회, `DATA4LIBRARY_AUTH_KEY`)
@@ -171,7 +172,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/opinet/detail' \
   --data-urlencode 'id=A0009905'
 ```
 
-나이스 학교 검색·급식 endpoint (학교 급식 식단 스킬에서 사용):
+나이스 학교 검색·급식·학사일정 endpoint (학교 급식/학사일정 스킬에서 사용):
 
 ```bash
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/neis/school-search' \
@@ -184,6 +185,14 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/neis/school-meal' \
   --data-urlencode 'educationOfficeCode=B10' \
   --data-urlencode 'schoolCode=7010123' \
   --data-urlencode 'mealDate=20260410'
+```
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/neis/school-schedule' \
+  --data-urlencode 'educationOfficeCode=B10' \
+  --data-urlencode 'schoolCode=7010123' \
+  --data-urlencode 'from=2026-04-01' \
+  --data-urlencode 'to=2026-04-30'
 ```
 
 생활쓰레기 배출정보 endpoint. 쿼리에 **`pageNo`와 `numOfRows`를 반드시 포함**하고, 값은 각각 **`1`**, **`100`**만 허용한다(`page_no` / `num_of_rows` 동일). 누락·다른 값·숫자만이 아닌 문자열이면 **`400`**(upstream 미호출):

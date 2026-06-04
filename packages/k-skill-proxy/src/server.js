@@ -64,6 +64,7 @@ const KMA_FORECAST_READY_MINUTE = 10;
 const OPINET_API_BASE_URL = "https://www.opinet.co.kr/api";
 const NEIS_MEAL_SERVICE_URL = "https://open.neis.go.kr/hub/mealServiceDietInfo";
 const NEIS_SCHOOL_INFO_URL = "https://open.neis.go.kr/hub/schoolInfo";
+const NEIS_SCHOOL_SCHEDULE_URL = "https://open.neis.go.kr/hub/SchoolSchedule";
 
 const ALLOWED_AIRKOREA_ROUTES = new Map([
   ["MsrstnInfoInqireSvc", new Set(["getMsrstnList", "getNearbyMsrstnList", "getTMStdrCrdnt"])],
@@ -988,6 +989,57 @@ function normalizeNeisSchoolMealQuery(query) {
   return { atptOfcdcScCode, sdSchulCode, mlsvYmd, mmealScCode, pIndex, pSize };
 }
 
+function normalizeNeisDate(value, label) {
+  const date = value.replaceAll("-", "").replaceAll(".", "");
+  if (!/^\d{8}$/.test(date)) {
+    throw new Error(`${label} must be YYYYMMDD (8 digits).`);
+  }
+  return date;
+}
+
+function normalizeNeisSchoolScheduleQuery(query) {
+  const atptOfcdcScCode = trimOrNull(
+    query.atptOfcdcScCode ??
+      query.ATPT_OFCDC_SC_CODE ??
+      query.education_office_code ??
+      query.educationOfficeCode ??
+      query.atpt
+  );
+  const sdSchulCode = trimOrNull(
+    query.sdSchulCode ?? query.SD_SCHUL_CODE ?? query.school_code ?? query.schoolCode
+  );
+  const dateRaw = trimOrNull(query.aaYmd ?? query.AA_YMD ?? query.date);
+  const fromRaw = trimOrNull(query.aaFromYmd ?? query.AA_FROM_YMD ?? query.from);
+  const toRaw = trimOrNull(query.aaToYmd ?? query.AA_TO_YMD ?? query.to);
+
+  if (!atptOfcdcScCode) {
+    throw new Error("Provide educationOfficeCode (ATPT_OFCDC_SC_CODE).");
+  }
+  if (!sdSchulCode) {
+    throw new Error("Provide schoolCode (SD_SCHUL_CODE).");
+  }
+  if (!dateRaw && (!fromRaw || !toRaw)) {
+    throw new Error("Provide date (AA_YMD) or from/to (AA_FROM_YMD/AA_TO_YMD) as YYYYMMDD.");
+  }
+
+  const from = normalizeNeisDate(dateRaw || fromRaw, dateRaw ? "date" : "from");
+  const to = normalizeNeisDate(dateRaw || toRaw, dateRaw ? "date" : "to");
+  if (from > to) {
+    throw new Error("from must be before or equal to to.");
+  }
+
+  const pIndex = parseInteger(query.pIndex ?? query.p_index, 1);
+  const pSize = parseInteger(query.pSize ?? query.p_size, 100);
+  if (pIndex < 1) {
+    throw new Error("pIndex must be >= 1.");
+  }
+  if (pSize < 1 || pSize > 1000) {
+    throw new Error("pSize must be between 1 and 1000.");
+  }
+
+  return { atptOfcdcScCode, sdSchulCode, from, to, pIndex, pSize };
+}
+
 function normalizeNeisSchoolSearchQuery(query) {
   const educationOfficeRaw = trimOrNull(
     query.educationOffice ??
@@ -1823,6 +1875,48 @@ async function proxyNeisSchoolInfoRequest({
   };
 }
 
+async function proxyNeisSchoolScheduleRequest({
+  apiKey,
+  atptOfcdcScCode,
+  sdSchulCode,
+  from,
+  to,
+  pIndex = 1,
+  pSize = 100,
+  fetchImpl = global.fetch
+}) {
+  if (!apiKey) {
+    return {
+      statusCode: 503,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        error: "upstream_not_configured",
+        message: "KEDU_INFO_KEY is not configured on the proxy server."
+      })
+    };
+  }
+
+  const url = new URL(NEIS_SCHOOL_SCHEDULE_URL);
+  url.searchParams.set("KEY", apiKey);
+  url.searchParams.set("Type", "json");
+  url.searchParams.set("pIndex", String(pIndex));
+  url.searchParams.set("pSize", String(pSize));
+  url.searchParams.set("ATPT_OFCDC_SC_CODE", atptOfcdcScCode);
+  url.searchParams.set("SD_SCHUL_CODE", sdSchulCode);
+  url.searchParams.set("AA_FROM_YMD", from);
+  url.searchParams.set("AA_TO_YMD", to);
+
+  const response = await fetchImpl(url, {
+    signal: AbortSignal.timeout(20000)
+  });
+
+  return {
+    statusCode: response.status,
+    contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
+    body: await response.text()
+  };
+}
+
 
 
 function validateHouseholdWastePaginationQuery(query) {
@@ -1914,6 +2008,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         data4libraryConfigured: Boolean(config.data4libraryAuthKey),
         foodsafetyKoreaConfigured: Boolean(config.foodsafetyKoreaApiKey),
         neisSchoolMealConfigured: Boolean(config.keduInfoKey),
+        neisSchoolScheduleConfigured: Boolean(config.keduInfoKey),
         krxConfigured: Boolean(config.krxApiKey),
         kakaoLocalConfigured: Boolean(config.kakaoRestApiKey),
         kakaoMapConfigured: Boolean(config.kakaoRestApiKey),
@@ -4826,6 +4921,114 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       school_code: normalized.sdSchulCode,
       meal_date: normalized.mlsvYmd,
       meal_kind_code: normalized.mmealScCode,
+      p_index: normalized.pIndex,
+      p_size: normalized.pSize
+    };
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+
+    return payload;
+  });
+
+  app.get("/v1/neis/school-schedule", async (request, reply) => {
+    let normalized;
+
+    try {
+      normalized = normalizeNeisSchoolScheduleQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: "neis-school-schedule",
+      ...normalized
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: {
+            hit: true,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    if (!config.keduInfoKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KEDU_INFO_KEY is not configured on the proxy server.",
+        proxy: {
+          name: config.proxyName,
+          cache: {
+            hit: false,
+            ttl_ms: config.cacheTtlMs
+          }
+        }
+      };
+    }
+
+    let upstream;
+    try {
+      upstream = await proxyNeisSchoolScheduleRequest({
+        apiKey: config.keduInfoKey,
+        atptOfcdcScCode: normalized.atptOfcdcScCode,
+        sdSchulCode: normalized.sdSchulCode,
+        from: normalized.from,
+        to: normalized.to,
+        pIndex: normalized.pIndex,
+        pSize: normalized.pSize
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      return {
+        error: error.code || "proxy_error",
+        message: error.message
+      };
+    }
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+
+    const looksJson =
+      upstream.contentType.includes("json") ||
+      upstream.body.trimStart().startsWith("{") ||
+      upstream.body.trimStart().startsWith("[");
+
+    if (!looksJson) {
+      return upstream.body;
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(upstream.body);
+    } catch {
+      return upstream.body;
+    }
+
+    payload.proxy = {
+      name: config.proxyName,
+      cache: {
+        hit: false,
+        ttl_ms: config.cacheTtlMs
+      },
+      requested_at: new Date().toISOString()
+    };
+    payload.query = {
+      education_office_code: normalized.atptOfcdcScCode,
+      school_code: normalized.sdSchulCode,
+      from: normalized.from,
+      to: normalized.to,
       p_index: normalized.pIndex,
       p_size: normalized.pSize
     };
