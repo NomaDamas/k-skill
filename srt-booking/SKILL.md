@@ -12,7 +12,7 @@ metadata:
 
 ## What this skill does
 
-`SRTrain` 위에 `scripts/srt_booking.py` helper 를 얹어 SRT 조회, 호차별 좌석번호 확인, 예약과 취소를 처리한다.
+`SRTrain` 위에 `scripts/srt_booking.py` helper 를 얹어 SRT 조회와 호차별 좌석번호 확인을 처리하고, 예약과 취소는 고정된 열차/예약을 다시 식별한 뒤 `SRTrain`으로 진행한다.
 
 ## When to use
 
