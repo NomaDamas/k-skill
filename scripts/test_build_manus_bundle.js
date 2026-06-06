@@ -60,6 +60,7 @@ test("EXCLUDED_DIRS stays in lockstep with validate-skills.sh exclusions", () =>
     "python-packages",
     "scripts",
     "examples",
+    "legacy",
   ];
   for (const dir of required) {
     assert.ok(
@@ -68,6 +69,15 @@ test("EXCLUDED_DIRS stays in lockstep with validate-skills.sh exclusions", () =>
     );
     assert.ok(EXCLUDED_DIRS.has(dir), `EXCLUDED_DIRS must also skip ${dir}`);
   }
+});
+
+test("legacy folder is not treated as a Manus skill bundle source", () => {
+  const { EXCLUDED_DIRS, discoverSkills } = require("./build-manus-bundle.js");
+
+  assert.ok(EXCLUDED_DIRS.has("legacy"));
+  assert.ok(!discoverSkills().includes("legacy"));
+  assert.ok(!discoverSkills().includes("blue-ribbon-nearby"));
+  assert.ok(!discoverSkills().includes("naver-map-route"));
 });
 
 test("docs/install-manus.md documents both the GitHub URL path and the .skill bundle path", () => {

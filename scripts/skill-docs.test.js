@@ -1621,56 +1621,46 @@ test("kleague-results package README stays aligned with the official K League JS
   assert.match(packageReadme, /FC서울/);
 });
 
-test("repository docs advertise the blue-ribbon-nearby skill across the documented surfaces", () => {
+test("unsupported naver map and blue ribbon skills are archived outside default docs", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
-  const roadmap = read(path.join("docs", "roadmap.md"));
   const sources = read(path.join("docs", "sources.md"));
-  const featureDocPath = path.join(repoRoot, "docs", "features", "blue-ribbon-nearby.md");
+  const legacyReadmePath = path.join(repoRoot, "legacy", "README.md");
+  const blueRibbonSkillPath = path.join(repoRoot, "legacy", "unsupported-skills", "blue-ribbon-nearby", "SKILL.md");
+  const naverMapSkillPath = path.join(repoRoot, "legacy", "unsupported-skills", "naver-map-route", "SKILL.md");
+  const blueRibbonDocPath = path.join(
+    repoRoot,
+    "legacy",
+    "unsupported-skills",
+    "blue-ribbon-nearby",
+    "docs",
+    "features",
+    "blue-ribbon-nearby.md",
+  );
+  const naverMapDocPath = path.join(
+    repoRoot,
+    "legacy",
+    "unsupported-skills",
+    "naver-map-route",
+    "docs",
+    "features",
+    "naver-map-route.md",
+  );
 
-  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/blue-ribbon-nearby.md to exist");
-  assert.match(readme, /\| ~~근처 블루리본 맛집~~ ⚠️ 지원 중단 \|/);
-  assert.match(readme, /\[근처 블루리본 맛집 가이드\]\(docs\/features\/blue-ribbon-nearby\.md\)/);
-  assert.match(readme, /블루리본 측이 `www\.bluer\.co\.kr` 에 자동화 접근 전면 차단/);
-  assert.match(install, /--skill blue-ribbon-nearby/);
-  assert.match(roadmap, /근처 블루리본 맛집 스킬 출시/);
-  assert.match(sources, /블루리본 지역 검색: https:\/\/www\.bluer\.co\.kr\/search\/zone/);
-  assert.match(sources, /블루리본 주변 맛집 JSON: https:\/\/www\.bluer\.co\.kr\/restaurants\/map/);
-});
+  assert.ok(fs.existsSync(legacyReadmePath), "expected legacy/README.md to explain archived unsupported skills");
+  assert.ok(fs.existsSync(blueRibbonSkillPath), "expected blue-ribbon-nearby SKILL.md to be preserved under legacy");
+  assert.ok(fs.existsSync(naverMapSkillPath), "expected naver-map-route SKILL.md to be preserved under legacy");
+  assert.ok(fs.existsSync(blueRibbonDocPath), "expected blue-ribbon-nearby feature doc to be preserved under legacy");
+  assert.ok(fs.existsSync(naverMapDocPath), "expected naver-map-route feature doc to be preserved under legacy");
+  assert.ok(!fs.existsSync(path.join(repoRoot, "blue-ribbon-nearby", "SKILL.md")));
+  assert.ok(!fs.existsSync(path.join(repoRoot, "naver-map-route", "SKILL.md")));
+  assert.ok(!fs.existsSync(path.join(repoRoot, "docs", "features", "blue-ribbon-nearby.md")));
+  assert.ok(!fs.existsSync(path.join(repoRoot, "docs", "features", "naver-map-route.md")));
 
-test("blue-ribbon-nearby skill documents mandatory location prompting and official Blue Ribbon nearby search flow", () => {
-  const skillPath = path.join(repoRoot, "blue-ribbon-nearby", "SKILL.md");
-
-  assert.ok(fs.existsSync(skillPath), "expected blue-ribbon-nearby/SKILL.md to exist");
-
-  const skill = read(path.join("blue-ribbon-nearby", "SKILL.md"));
-  const featureDoc = read(path.join("docs", "features", "blue-ribbon-nearby.md"));
-
-  assert.match(skill, /^name: blue-ribbon-nearby$/m);
-  assert.match(skill, /^description: .*근처 맛집.*블루리본.*$/m);
-
-  for (const doc of [skill, featureDoc]) {
-    assert.match(doc, /반드시.*현재 위치/u);
-    assert.match(doc, /맛집.*기본적으로.*blue-ribbon-nearby|맛집.*기본적으로.*블루리본/u);
-    assert.match(doc, /https:\/\/www\.bluer\.co\.kr\/search\/zone/);
-    assert.match(doc, /https:\/\/www\.bluer\.co\.kr\/restaurants\/map/);
-    assert.match(doc, /zone2Lat/);
-    assert.match(doc, /zone2Lng/);
-    assert.match(doc, /isAround=true/);
-    assert.match(doc, /ribbon=true/);
-    assert.match(doc, /위도|경도|동네|역명/u);
-    assert.match(doc, /blue-ribbon-nearby|근처 블루리본 맛집/u);
+  for (const doc of [readme, install, sources]) {
+    assert.doesNotMatch(doc, /blue-ribbon-nearby|naver-map-route/);
+    assert.doesNotMatch(doc, /근처 블루리본 맛집|네이버맵 길찾기|네이버맵 자동차 길찾기/);
   }
-});
-
-test("blue-ribbon-nearby package README stays aligned with the location-first and official-surface guidance", () => {
-  const packageReadme = read(path.join("packages", "blue-ribbon-nearby", "README.md"));
-
-  assert.match(packageReadme, /먼저 현재 위치를 묻/u);
-  assert.match(packageReadme, /코엑스.*삼성동\/대치동/u);
-  assert.match(packageReadme, /https:\/\/www\.bluer\.co\.kr\/search\/zone/);
-  assert.match(packageReadme, /https:\/\/www\.bluer\.co\.kr\/restaurants\/map/);
-  assert.match(packageReadme, /searchNearbyByLocationQuery/);
 });
 
 test("repository docs advertise the kakao-bar-nearby skill across the documented surfaces", () => {
@@ -4045,21 +4035,20 @@ test("README skill table includes inline-code skill names for every documented r
   }
 });
 
-test("README skill table strikes through the deprecated blue-ribbon-nearby skill name (issue #165)", () => {
-  const readme = read("README.md");
+test("legacy blue ribbon package is not part of npm workspaces or pack dry run", () => {
+  const packageJson = readJson("package.json");
+  const packageLock = readJson("package-lock.json");
+  const packScript = packageJson.scripts["pack:dry-run"];
 
-  assert.match(
-    readme,
-    /\| ~~근처 블루리본 맛집~~ ⚠️ 지원 중단 \| ~~`blue-ribbon-nearby`~~ \|/,
-    "expected the deprecated blue-ribbon-nearby row to keep the strikethrough on its skill-name cell as well",
-  );
+  assert.doesNotMatch(packScript, /workspace blue-ribbon-nearby(?:\s|$)/);
+  assert.ok(!fs.existsSync(path.join(repoRoot, "packages", "blue-ribbon-nearby", "package.json")));
+  assert.ok(fs.existsSync(path.join(repoRoot, "legacy", "unsupported-packages", "blue-ribbon-nearby", "package.json")));
+  assert.ok(!Object.hasOwn(packageLock.packages, "packages/blue-ribbon-nearby"));
+  assert.ok(!Object.hasOwn(packageLock.packages, "node_modules/blue-ribbon-nearby"));
 });
 
 test("README skill table skill-name column entries match real on-disk skill directories (issue #165)", () => {
-  const allEntries = [
-    ...README_SKILL_NAME_COLUMN_MAPPING.map(([, skillName]) => skillName),
-    "blue-ribbon-nearby",
-  ];
+  const allEntries = README_SKILL_NAME_COLUMN_MAPPING.map(([, skillName]) => skillName);
 
   for (const skillName of allEntries) {
     const skillFile = path.join(repoRoot, skillName, "SKILL.md");

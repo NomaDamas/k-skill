@@ -79,7 +79,6 @@ jobs:
             SEOUL_OPEN_API_KEY=SEOUL_OPEN_API_KEY:latest
             HRFCO_OPEN_API_KEY=HRFCO_OPEN_API_KEY:latest
             OPINET_API_KEY=OPINET_API_KEY:latest
-            BLUE_RIBBON_SESSION_ID=BLUE_RIBBON_SESSION_ID:latest
             DATA_GO_KR_API_KEY=DATA_GO_KR_API_KEY:latest
             KEDU_INFO_KEY=KEDU_INFO_KEY:latest
             DATA4LIBRARY_AUTH_KEY=DATA4LIBRARY_AUTH_KEY:latest
@@ -126,15 +125,10 @@ jobs:
           if not data.get('ok'):
               print('Health response is not ok:', data)
               sys.exit(1)
-          # naverMapConfigured is expected to be false until NCP Maps keys are provisioned
-          KNOWN_UNCONFIGURED = {'naverMapConfigured'}
-          missing = [k for k, v in data.get('upstreams', {}).items() if k.endswith('Configured') and v is not True and k not in KNOWN_UNCONFIGURED]
+          missing = [k for k, v in data.get('upstreams', {}).items() if k.endswith('Configured') and v is not True]
           if missing:
               print('Upstreams not configured:', missing)
               sys.exit(1)
-          skipped = [k for k in KNOWN_UNCONFIGURED if not data.get('upstreams', {}).get(k)]
-          if skipped:
-              print(f'Note: {skipped} not yet configured (expected, see docs/features/naver-map-route.md)')
           print('Health OK. All upstreams configured.')
           "
 

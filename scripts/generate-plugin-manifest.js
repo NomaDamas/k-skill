@@ -44,6 +44,7 @@ const EXCLUDED_DIRS = new Set([
   ".idea",
   "docs",
   "dist",
+  "legacy",
   "node_modules",
   "packages",
   "python-packages",
@@ -54,7 +55,7 @@ const EXCLUDED_DIRS = new Set([
 
 // Skills that exist on disk but must not ship in the plugin (e.g. upstream
 // blocked automation and the skill no longer works).
-const EXCLUDED_SKILLS = new Set(["blue-ribbon-nearby"]);
+const EXCLUDED_SKILLS = new Set(["blue-ribbon-nearby", "naver-map-route"]);
 
 // Identity fields used when the manifest does not exist yet. Existing values
 // are never overwritten; only missing keys are backfilled.

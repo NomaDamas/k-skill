@@ -40,6 +40,7 @@ const EXCLUDED_DIRS = new Set([
   ".idea",
   "docs",
   "dist",
+  "legacy",
   "node_modules",
   "packages",
   "python-packages",

@@ -61,6 +61,18 @@ test("discoverSkillPaths drops deprecated EXCLUDED_SKILLS", () => {
   assert.deepEqual(discoverSkillPaths(root), ["./lotto-results"]);
 });
 
+test("discoverSkillPaths ignores legacy skills even when they contain SKILL.md", () => {
+  const root = makeFixtureRoot({
+    "legacy/blue-ribbon-nearby/SKILL.md": SKILL_FM,
+    "legacy/naver-map-route/SKILL.md": SKILL_FM,
+    "naver-map-route/SKILL.md": SKILL_FM,
+    "lotto-results/SKILL.md": SKILL_FM,
+  });
+
+  assert.ok(EXCLUDED_SKILLS.has("naver-map-route"));
+  assert.deepEqual(discoverSkillPaths(root), ["./lotto-results"]);
+});
+
 test("buildManifest backfills identity fields and preserves author overrides", () => {
   const root = makeFixtureRoot({ "lotto-results/SKILL.md": SKILL_FM });
   // Pre-seed a manifest with a custom description that must survive.

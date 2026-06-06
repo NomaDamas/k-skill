@@ -52,6 +52,7 @@ done < <(
     ! -name .venv \
     ! -name dist \
     ! -name docs \
+    ! -name legacy \
     ! -name node_modules \
     ! -name packages \
     ! -name python-packages \

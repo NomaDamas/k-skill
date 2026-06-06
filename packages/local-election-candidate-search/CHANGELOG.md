@@ -1,5 +1,11 @@
 # local-election-candidate-search
 
+## 0.4.0
+
+### Minor Changes
+
+- 68abad3: Add a public NEC local election candidate lookup skill and helper CLI.
+
 ## 0.3.0
 
 ### Minor Changes

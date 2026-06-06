@@ -1,6 +1,6 @@
 {
   "name": "sh-notice-search",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Public SH Seoul Housing notice lookup client for k-skill",
   "license": "MIT",
   "main": "src/index.js",

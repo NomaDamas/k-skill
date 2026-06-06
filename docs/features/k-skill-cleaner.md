@@ -27,7 +27,7 @@ python3 scripts/k_skill_cleaner.py \
   --skills-root . \
   --scan-default-logs \
   --days 90 \
-  --never-use blue-ribbon-nearby,lotto-results \
+  --never-use lotto-results \
   --keep k-skill-setup,k-skill-cleaner
 ```
 

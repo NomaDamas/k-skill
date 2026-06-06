@@ -13,7 +13,7 @@
 | 유형 | 설명 | 예시 |
 |------|------|------|
 | **SKILL.md 전용** | 문서만으로 동작 (에이전트가 bash/python 직접 실행) | `kakaotalk-mac`, `srt-booking` |
-| **npm 패키지** | `packages/` 아래 Node.js 라이브러리로 구현 | `k-lotto`, `blue-ribbon-nearby` |
+| **npm 패키지** | `packages/` 아래 Node.js 라이브러리로 구현 | `k-lotto`, `daiso-product-search` |
 | **프록시 경유** | `k-skill-proxy`가 upstream API 키를 보관하고 HTTP로 중계 | `seoul-subway-arrival`, `fine-dust-location` |
 | **Python 스크립트** | `scripts/`의 Python 파일 직접 실행 | `korean-spell-check`, `sillok-search` |
 
