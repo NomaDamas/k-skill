@@ -1851,7 +1851,7 @@ test("repository docs advertise the hipass-receipt skill across the documented s
   assert.match(sources, /https:\/\/www\.hipass\.co\.kr\/html\/guide\/siteguide_6\.jsp/);
 });
 
-test("toss-securities skill documents the tossctl install, auth, and read-only workflow", () => {
+test("toss-securities skill documents the official Open API and tossctl fallback workflow", () => {
   const skillPath = path.join(repoRoot, "toss-securities", "SKILL.md");
 
   assert.ok(fs.existsSync(skillPath), "expected toss-securities/SKILL.md to exist");
@@ -1862,6 +1862,12 @@ test("toss-securities skill documents the tossctl install, auth, and read-only w
   assert.match(skill, /^name: toss-securities$/m);
 
   for (const doc of [skill, featureDoc]) {
+    // Official Open API path (primary).
+    assert.match(doc, /openapi\.tossinvest\.com|developers\.tossinvest\.com/);
+    assert.match(doc, /TOSSINVEST_CLIENT_ID/);
+    assert.match(doc, /X-Tossinvest-Account/);
+    assert.match(doc, /\/oauth2\/token/);
+    // tossctl fallback path (retained).
     assert.match(doc, /tossctl/);
     assert.match(doc, /JungHoonGhae\/tossinvest-cli/);
     assert.match(doc, /auth login/);
@@ -1900,9 +1906,10 @@ test("hipass-receipt skill documents the logged-in browser session contract", ()
   assert.match(packageReadme, /playwright-core/);
 });
 
-test("toss-securities package exposes safe read-only tossctl helpers", () => {
+test("toss-securities package exposes safe read-only official + tossctl helpers", () => {
   const pkg = require(path.join(repoRoot, "packages", "toss-securities", "src", "index.js"));
 
+  // tossctl fallback wrapper (retained).
   assert.equal(typeof pkg.buildReadOnlyCommand, "function");
   assert.equal(typeof pkg.runReadOnlyCommand, "function");
   assert.equal(typeof pkg.getAccountSummary, "function");
@@ -1910,6 +1917,20 @@ test("toss-securities package exposes safe read-only tossctl helpers", () => {
   assert.equal(typeof pkg.getQuote, "function");
   assert.equal(typeof pkg.getQuoteBatch, "function");
   assert.equal(typeof pkg.listWatchlist, "function");
+
+  // Official Open API client (primary).
+  assert.equal(typeof pkg.issueAccessToken, "function");
+  assert.equal(typeof pkg.getPrices, "function");
+  assert.equal(typeof pkg.getHoldings, "function");
+  assert.equal(typeof pkg.getBuyingPower, "function");
+  assert.equal(typeof pkg.listOfficialAccounts, "function");
+  assert.equal(typeof pkg.TossApiError, "function");
+  assert.equal(typeof pkg.TossCredentialsError, "function");
+
+  // Read-only safety contract: no order mutation helpers.
+  assert.equal(pkg.placeOrder, undefined);
+  assert.equal(pkg.modifyOrder, undefined);
+  assert.equal(pkg.cancelOrder, undefined);
 });
 
 test("hipass-receipt package exposes fixture-friendly query, parse, and session helpers", () => {
@@ -1922,9 +1943,14 @@ test("hipass-receipt package exposes fixture-friendly query, parse, and session 
   assert.equal(typeof pkg.buildReceiptRequest, "function");
 });
 
-test("toss-securities package README stays aligned with the read-only tossctl wrapper contract", () => {
+test("toss-securities package README stays aligned with the official-first read-only contract", () => {
   const packageReadme = read(path.join("packages", "toss-securities", "README.md"));
 
+  // Official Open API path (primary).
+  assert.match(packageReadme, /official.*Open API|공식 Open API/i);
+  assert.match(packageReadme, /TOSSINVEST_CLIENT_ID/);
+  assert.match(packageReadme, /X-Tossinvest-Account/);
+  // tossctl fallback path (retained).
   assert.match(packageReadme, /read-only tossctl wrapper/i);
   assert.match(packageReadme, /brew tap JungHoonGhae\/tossinvest-cli/);
   assert.match(packageReadme, /account summary/);

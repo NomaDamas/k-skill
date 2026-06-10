@@ -339,6 +339,14 @@ brew tap JungHoonGhae/tossinvest-cli
 brew install tossctl
 ```
 
+`toss-securities` 스킬은 공식 토스증권 Open API를 우선 사용한다. 공식 경로를 쓰려면 발급받은 자격증명을 사용자 환경변수로 둔다(공유 프록시로 보내지 않고 토스 서버로 직접 호출한다). `tossctl` 설치는 공식 credentials가 없을 때의 fallback 경로용이다.
+
+```bash
+export TOSSINVEST_CLIENT_ID=...        # 필수
+export TOSSINVEST_CLIENT_SECRET=...    # 필수
+export TOSSINVEST_ACCOUNT=...          # 선택, 계좌·자산·주문조회 시 X-Tossinvest-Account
+```
+
 ### Python 패키지
 
 ```bash

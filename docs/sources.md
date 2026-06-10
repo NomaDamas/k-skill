@@ -18,6 +18,9 @@
 - KBL 일정/결과 API: https://api.kbl.or.kr/match/list
 - KBL 팀 순위 API: https://api.kbl.or.kr/league/rank/team
 - tossinvest-cli: https://github.com/JungHoonGhae/tossinvest-cli
+- 토스증권 공식 Open API 문서: https://developers.tossinvest.com/docs
+- 토스증권 공식 Open API OpenAPI JSON (source of truth): https://openapi.tossinvest.com/openapi-docs/latest/openapi.json
+- 토스증권 공식 Open API 개요: https://openapi.tossinvest.com/openapi-docs/overview.md — 서버 host `https://openapi.tossinvest.com`. OAuth2 Client Credentials(`POST /oauth2/token`) 토큰으로 호출하며, 계좌·자산·주문 API는 `X-Tossinvest-Account` 헤더가 추가로 필요하다. 사용자별 민감 자격증명이므로 `k-skill-proxy` 가 아니라 사용자 환경에서 직접 호출한다.
 - 하이패스 메인: https://www.hipass.co.kr/main.do
 - 하이패스 로그인: https://www.hipass.co.kr/comm/lginpg.do
 - 하이패스 사용내역 조회 진입: https://www.hipass.co.kr/usepculr/InitUsePculrTabSearch.do

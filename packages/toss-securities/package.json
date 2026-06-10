@@ -1,7 +1,7 @@
 {
   "name": "toss-securities",
   "version": "0.4.0",
-  "description": "Safe read-only tossctl wrapper for Toss Securities skill workflows",
+  "description": "Read-only Toss Securities client: official Open API (OAuth2) first, unofficial tossctl wrapper as fallback",
   "license": "MIT",
   "main": "src/index.js",
   "files": [
@@ -23,10 +23,12 @@
     "korea",
     "toss",
     "securities",
+    "tossinvest",
+    "openapi",
     "tossctl"
   ],
   "scripts": {
-    "lint": "node --check src/index.js && node --check src/parse.js && node --check test/index.test.js",
+    "lint": "node --check src/index.js && node --check src/parse.js && node --check src/official-client.js && node --check test/index.test.js && node --check test/official-client.test.js",
     "test": "node --test"
   }
 }

@@ -6,6 +6,8 @@ const {
   parseJsonOutput
 } = require("./parse");
 
+const officialClient = require("./official-client");
+
 const execFile = util.promisify(childProcess.execFile);
 const SESSION_EXPIRED_PATTERN = /stored session is no longer valid/iu;
 
@@ -183,6 +185,7 @@ function getQuoteBatch(symbols, options = {}) {
 }
 
 module.exports = {
+  // Unofficial tossctl wrapper (fallback path)
   buildReadOnlyCommand,
   checkSession,
   getAccountSummary,
@@ -195,5 +198,7 @@ module.exports = {
   listOrders,
   listWatchlist,
   runReadOnlyCommand,
-  TossSessionExpiredError
+  TossSessionExpiredError,
+  // Official Toss Securities Open API client (primary path)
+  ...officialClient
 };
