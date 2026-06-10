@@ -2052,12 +2052,30 @@ test("korean-law-search skill keeps korean-law-mcp-first guidance while document
     assert.match(doc, /CLI/i);
     assert.doesNotMatch(doc, /packages\/korean-law-search/);
     assert.doesNotMatch(doc, /python-packages\/korean-law-search/);
+    // Official 판례 (precedent) API evidence (#308).
+    // List lookup and body lookup endpoints from 법제처 Open API.
+    assert.match(doc, /lawSearch\.do\?target=prec/);
+    assert.match(doc, /lawService\.do\?target=prec/);
+    // Detail/body retrieval: upstream get_precedent_text or official lawService ID lookup.
+    assert.match(doc, /get_precedent_text|lawService\.do\?target=prec/);
+    // Supported precedent filters (concept-level, alternation tolerant).
+    assert.match(doc, /사건번호|case number/i);
+    assert.match(doc, /법원|court/i);
+    assert.match(doc, /선고일자|날짜|date/i);
+    assert.match(doc, /출처|source/i);
+    // Precedent-specific failure modes.
+    assert.match(doc, /0건|결과가 없|빈 결과|empty/i);
+    assert.match(doc, /본문[^\n]*(없|불가|실패|제공)|detail/i);
+    // Legal-advice boundary stays explicit.
+    assert.match(doc, /법률 자문/);
   }
 
   assert.match(doneSection, /search_interpretations/);
   assert.match(doneSection, /search_ordinance/);
   assert.match(doneSection, /법망|Beopmang/i);
   assert.match(doneSection, /fallback/i);
+  // Done-when must keep the precedent body/detail retrieval path explicit (#308).
+  assert.match(doneSection, /get_precedent_text|lawService\.do\?target=prec/);
 
   assert.doesNotMatch(
     featureDoc,
