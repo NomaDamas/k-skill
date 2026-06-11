@@ -108,33 +108,6 @@ korean-law get_law_text --mst 160001 --jo "제38조"
 korean-law search_precedents --query "부당해고"
 ```
 
-## 판례 검색과 본문 조회
-
-판례는 `korean-law-mcp` 의 `search_precedents` 로 먼저 검색하고, 본문이 필요하면 판례 ID로 상세 본문을 가져온다.
-
-```bash
-# 1) 키워드 검색
-korean-law search_precedents --query "부당해고"
-
-# 2) 사건번호로 검색 (지원 시)
-korean-law search_precedents --query "2017다12345"
-
-# 3) 검색 결과의 판례 ID/일련번호로 본문(상세) 조회
-korean-law get_precedent_text --id <판례일련번호>
-```
-
-`search_precedents` 는 법제처 Open API의 **판례 목록 조회**(`http://www.law.go.kr/DRF/lawSearch.do?target=prec`)를 감싸는 우선 경로다. 본문은 upstream `get_precedent_text` 또는 공식 **판례 본문 조회**(`http://www.law.go.kr/DRF/lawService.do?target=prec&ID=<판례일련번호>`)로 가져온다. `lawService.do?target=prec` 은 `법망` 같은 fallback이 아니라 공식 본문 조회 경로다.
-
-지원 필터: `query`(검색어), 법원(court), 사건번호(case number), 데이터출처명(source name), 선고일자/날짜(date), 정렬(sort). 활성 도구·엔드포인트가 실제 지원하는 필터만 넘기고, 요약 전에 반환 메타데이터를 확인한다.
-
-실패 모드:
-
-- 로컬 경로에서 `LAW_OC` 가 없으면 확보 방법만 안내하고 임의 크롤링으로 넘어가지 않는다.
-- remote MCP/공식 API가 응답하지 않거나 rate limit/timeout이면 원인을 밝히고, 그때만 `법망` fallback으로 전환한다.
-- 검색 결과가 0건이어도 "관련 판례가 없다"고 단정하지 말고 검색어·법원·사건번호·선고일자·출처명을 바꿔 다시 시도한다.
-- 일부 출처는 본문을 HTML로만 제공하거나 본문을 제공하지 않을 수 있다. 본문을 못 가져오면 목록 메타데이터(사건번호·법원·선고일자·출처·요지)까지만 제공하고 본문이 없다는 점을 명시한다.
-- 판례는 검색·요약·인용까지만 하고 승소 가능성·소송 전략 같은 법률 자문성 결론은 내리지 않는다.
-
 ## 운영 팁
 
 - `화관법` 같은 약칭은 `search_law` / `search_all` 로 정식 법령명을 먼저 확인한다.

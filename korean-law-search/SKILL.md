@@ -127,29 +127,11 @@ korean-law search_law --query "관세법"
 korean-law get_law_text --mst 160001 --jo "제38조"
 ```
 
-### 3. 판례 검색 + 본문 조회
+### 3. 판례 검색
 
 ```bash
-# 1) 판례 목록/검색: search_precedents (= 법제처 Open API 판례 목록 조회 lawSearch.do?target=prec 를 감싼 우선 경로)
 korean-law search_precedents --query "부당해고"
-
-# 2) 검색 결과의 판례 ID/일련번호를 확인한 뒤 본문(상세) 조회
-korean-law get_precedent_text --id <판례일련번호>
 ```
-
-판례 검색은 `korean-law-mcp` 의 `search_precedents` 를 먼저 쓰고, 본문이 필요하면 upstream `get_precedent_text` 로 이어간다. upstream 도구가 없거나 raw API를 직접 쓰는 경우에는 공식 경로를 사용한다.
-
-- 판례 목록 조회 (official): `http://www.law.go.kr/DRF/lawSearch.do?target=prec` — `OC`, `target=prec`, `query`, 검색범위, 정렬, 선고일자, 사건번호, 데이터출처명(법원/국세청 등) 등을 지원한다.
-- 판례 본문 조회 (official): `http://www.law.go.kr/DRF/lawService.do?target=prec&ID=<판례일련번호>` — 검색 결과의 판례 ID/일련번호를 넘겨 상세 본문을 가져온다. `lawService.do?target=prec` 은 `법망` 같은 fallback이 아니라 공식 본문 조회 경로다.
-
-지원 필터: `query`(검색어), 법원(court), 사건번호(case number), 데이터출처명(source name), 선고일자/날짜(date), 정렬(sort). 활성 도구·엔드포인트가 실제로 지원하는 필터만 넘기고, 요약 전에 반환 메타데이터를 먼저 확인한다.
-
-판례 검색 실패 모드:
-- 로컬 경로에서 `LAW_OC` 가 없으면 확보 방법만 안내하고 임의 크롤링으로 넘어가지 않는다.
-- remote MCP/공식 API가 응답하지 않거나 rate limit/timeout이면 원인을 밝히고, 그때만 `법망` fallback으로 전환한다.
-- 검색 결과가 0건이어도 "관련 판례가 없다"고 단정하지 말고 검색어·법원·사건번호·선고일자·출처명을 바꿔 다시 시도한다.
-- 일부 출처는 본문을 HTML로만 주거나 본문을 제공하지 않을 수 있다. 본문을 못 가져오면 목록 메타데이터(사건번호·법원·선고일자·출처·요지)까지만 제공하고 본문이 없다는 점을 명시한다(없는 본문을 지어내지 않는다).
-- 판례는 검색·요약·인용까지만 하고 승소 가능성이나 소송 전략 같은 법률 자문성 결론은 내리지 않는다.
 
 ### 4. 자치법규 검색
 
@@ -170,7 +152,6 @@ korean-law search_all --query "개인정보 처리방침 행정해석"
 - 약칭(`화관법`)이면 `search_law` / `search_all` 로 정식 법령명을 먼저 확인한다.
 - 조문 요청이면 검색 결과의 식별자(`mst`)를 확인한 뒤 `get_law_text` 로 본문을 가져온다.
 - 판례는 `search_precedents`, 유권해석은 `search_interpretations`, 자치법규는 `search_ordinance` 를 우선 사용한다.
-- 판례 본문이 필요하면 `search_precedents` 로 찾은 판례 ID로 upstream `get_precedent_text` 또는 공식 `lawService.do?target=prec&ID=...` 본문 조회로 이어간다.
 - 로컬 CLI/MCP 경로를 쓰는데 `LAW_OC` 가 없으면 credential resolution order에 따라 확보 방법을 짧게 안내하고, 임의의 크롤링/검색엔진 우회로 넘어가지 않는다.
 - remote MCP endpoint를 쓰면 사용자 `LAW_OC` 없이 `url` 등록 상태만 확인한다.
 - 법적 판단이 필요한 경우 `검색 결과 요약`과 `원문 출처`까지만 제공하고 법률 자문처럼 단정하지 않는다.
@@ -180,7 +161,6 @@ korean-law search_all --query "개인정보 처리방침 행정해석"
 - 한국 법령 관련 질의에 대해 `korean-law-mcp` 사용 경로가 선택되었다.
 - 필요한 검색/조회 명령이 정해졌다.
 - 법령/조문/판례/유권해석/자치법규 중 맞는 도구로 결과를 조회했다.
-- 판례 본문이 필요하면 `get_precedent_text` 또는 공식 `lawService.do?target=prec` ID 조회로 본문까지 연결했다.
 - 유권해석이면 `search_interpretations`, 자치법규면 `search_ordinance` 까지 명시적으로 연결했다.
 - 로컬 경로라면 `LAW_OC` 확보 방법을 정확한 변수 이름으로 안내했다.
 - remote endpoint라면 사용자 `LAW_OC` 없이 `url` 등록 상태를 확인했다.
