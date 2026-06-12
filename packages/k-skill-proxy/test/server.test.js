@@ -5705,6 +5705,7 @@ test("national-pension normalizer requires a workplace name and derives the 6-di
     wkplNm: "테스트상사",
     bnoPrefix: "123456"
   });
+  assert.throws(() => normalizeNationalPensionQuery({ name: "테스트상사", b_no: "123" }), /10-digit/);
 });
 
 test("parseNationalPensionXml classifies gateway auth errors and item lists", () => {
@@ -5750,10 +5751,13 @@ test("national-pension route orchestrates basic+detail+monthly and keeps the key
         headers: { "content-type": "application/xml" }
       });
     }
-    return new Response(npsItemsXml([{ dataCrtYm: "202604" }, { dataCrtYm: "202605" }]), {
-      status: 200,
-      headers: { "content-type": "application/xml" }
-    });
+    if (u.includes("getPdAcctoSttusInfoSearchV2")) {
+      return new Response(npsItemsXml([{ dataCrtYm: "202604" }, { dataCrtYm: "202605" }]), {
+        status: 200,
+        headers: { "content-type": "application/xml" }
+      });
+    }
+    throw new Error(`unexpected NPS URL: ${u}`);
   };
 
   const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
@@ -5775,7 +5779,12 @@ test("national-pension route orchestrates basic+detail+monthly and keeps the key
   assert.equal(body.detail[0].jnngpCnt, "120");
   assert.equal(body.monthly_status[0].dataCrtYm, "202604");
   assert.equal(body.proxy.cache.hit, false);
-  assert.match(calls[0], /serviceKey=data-go-key/);
+  assert.deepEqual(calls.map((u) => new URL(u).pathname.split("/").pop()), [
+    "getBassInfoSearchV2",
+    "getDetailInfoSearchV2",
+    "getPdAcctoSttusInfoSearchV2"
+  ]);
+  assert.ok(calls.every((u) => new URL(u).searchParams.get("serviceKey") === "data-go-key"));
   assert.equal(JSON.stringify(body).includes("data-go-key"), false, "service key must not leak into the response");
 
   const cached = await app.inject({
@@ -5810,11 +5819,14 @@ test("fsc corp normalizer requires a corporate name", () => {
     corpNm: "테스트",
     bno: "1234567890"
   });
+  assert.throws(() => normalizeFscCorpQuery({ name: "테스트", b_no: "123" }), /10-digit/);
 });
 
 test("fsc corp-outline route returns name-matched candidates and cross-checks bzno when present", async (t) => {
   const originalFetch = global.fetch;
+  let fetchCalls = 0;
   global.fetch = async (url) => {
+    fetchCalls += 1;
     assert.match(String(url), /corpNm=/);
     assert.match(String(url), /serviceKey=data-go-key/);
     return new Response(
@@ -5843,6 +5855,12 @@ test("fsc corp-outline route returns name-matched candidates and cross-checks bz
   assert.equal(body.candidate_count, 1);
   assert.equal(body.b_no_cross_check.checked, true);
   assert.equal(body.b_no_cross_check.matched_candidates.length, 1);
+  const cached = await app.inject({
+    method: "GET",
+    url: "/v1/fsc/corp-outline?name=" + encodeURIComponent("테스트") + "&b_no=1234567890"
+  });
+  assert.equal(cached.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls, 1);
 });
 
 test("fsc corp-outline route maps upstream 403 to a 502 forbidden error", async (t) => {
@@ -5879,9 +5897,9 @@ test("g2b extractSanctionItems tolerates dict and single-item variants", () => {
 
 test("g2b sanctioned-supplier route returns active sanctions and uses capital-S ServiceKey", async (t) => {
   const originalFetch = global.fetch;
-  let seenUrl = "";
+  const seenUrls = [];
   global.fetch = async (url) => {
-    seenUrl = String(url);
+    seenUrls.push(String(url));
     return new Response(
       JSON.stringify({
         response: {
@@ -5902,8 +5920,12 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   assert.equal(res.statusCode, 200);
   assert.equal(body.total_count, 1);
   assert.equal(body.active_sanctions[0].bizNm, "갑");
-  assert.match(seenUrl, /ServiceKey=data-go-key/);
-  assert.match(seenUrl, /inqryDiv=1/);
+  assert.match(seenUrls[0], /ServiceKey=data-go-key/);
+  assert.match(seenUrls[0], /inqryDiv=1/);
+
+  const cached = await app.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
+  assert.equal(cached.json().proxy.cache.hit, true);
+  assert.equal(seenUrls.length, 1);
 
   const noKey = buildServer();
   t.after(async () => {
@@ -5911,4 +5933,35 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   });
   const missing = await noKey.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
   assert.equal(missing.statusCode, 503);
+
+});
+
+test("korean-law search endpoint returns 503 when the proxy server lacks LAW_OC", async (t) => {
+  const app = buildServer();
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=law&query=%EA%B4%80%EC%84%B8%EB%B2%95"
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_not_configured");
+});
+
+test("health endpoint reports koreanLawConfigured from LAW_OC", async (t) => {
+  const off = buildServer();
+  const on = buildServer({ env: { LAW_OC: "server-oc" } });
+  t.after(async () => {
+    await off.close();
+    await on.close();
+  });
+
+  const offBody = (await off.inject({ method: "GET", url: "/health" })).json();
+  const onBody = (await on.inject({ method: "GET", url: "/health" })).json();
+
+  assert.equal(offBody.upstreams.koreanLawConfigured, false);
+  assert.equal(onBody.upstreams.koreanLawConfigured, true);
 });

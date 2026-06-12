@@ -81,7 +81,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 서울 지하철 도착정보, 서울 실시간 혼잡도 조회, 서울 따릉이 실시간 대여소 조회, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. 별도 self-host proxy를 쓸 때만 `KSKILL_PROXY_BASE_URL` 을 채운다.
 
-한국 법령 검색은 로컬 `korean-law-mcp` 경로를 쓸 때만 `LAW_OC` 를 채운다. remote endpoint는 사용자 `LAW_OC` 없이 `url`만 등록하면 되고, 기존 경로 장애 시에는 `법망`(`https://api.beopmang.org`)을 fallback으로 안내한다.
+한국 법령 검색은 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)의 `/v1/korean-law/...` endpoint를 경유하므로 사용자 쪽 `LAW_OC` 가 불필요하다. self-host proxy 운영자만 서버 환경변수 `LAW_OC` 를 채운다(무료 발급: `https://open.law.go.kr`).
 
 한국 부동산 실거래가 조회는 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 경유하므로 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다.
 
@@ -115,8 +115,7 @@ chmod 0600 ~/.config/k-skill/secrets.env
 - SRT: `KSKILL_SRT_ID`, `KSKILL_SRT_PASSWORD`
 - KTX: `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD`
 - 자연휴양림 빈 객실 조회: `KSKILL_FORESTTRIP_ID`, `KSKILL_FORESTTRIP_PASSWORD`
-- 로컬 한국 법령 검색: `LAW_OC` + `korean-law-mcp`
-- 한국 법령 검색 remote endpoint: 사용자 `LAW_OC` 없이 `url`만 등록, 장애 시 `법망` fallback
+- 한국 법령 검색: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `LAW_OC`)
 - 한국 부동산 실거래가 조회: 사용자 시크릿 불필요 (기본 hosted proxy 사용)
 - 한국 특허 정보 검색: `KIPRIS_PLUS_API_KEY`
 - 한국 주식 정보 조회: 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KRX_API_KEY`)

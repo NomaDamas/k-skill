@@ -22,6 +22,21 @@ function trimOrNull(value) {
 function digitsOnly(value) {
   return String(value ?? "").replace(/[^0-9]/g, "");
 }
+const AUTH_REASON_CODES = new Set(["20", "21", "30", "31", "32", "33"]);
+
+function parseGatewayAuthError(text) {
+  if (!text.includes("OpenAPI_ServiceResponse")) {
+    return null;
+  }
+  const reasonCode = (text.match(/<returnReasonCode>([^<]*)<\/returnReasonCode>/) || [])[1]?.trim() || "";
+  const authMsg = (text.match(/<returnAuthMsg>([^<]*)<\/returnAuthMsg>/) || [])[1]?.trim() || "SERVICE ERROR";
+  return AUTH_REASON_CODES.has(reasonCode) ? `${authMsg} (code ${reasonCode})` : null;
+}
+
+function isAuthResultCode(code) {
+  return AUTH_REASON_CODES.has(String(code ?? "").trim());
+}
+
 
 function normalizeFscCorpQuery(query = {}) {
   const corpNm = trimOrNull(query.corpNm ?? query.name ?? query.b_nm);
@@ -30,7 +45,11 @@ function normalizeFscCorpQuery(query = {}) {
       "Provide corpNm (corporate name). The FSC outline API cannot be queried by the 10-digit business number alone."
     );
   }
-  const bnoDigits = digitsOnly(query.b_no ?? query.bno);
+  const rawBno = trimOrNull(query.b_no ?? query.bno);
+  const bnoDigits = rawBno ? digitsOnly(rawBno) : "";
+  if (rawBno && !/^\d{10}$/.test(bnoDigits)) {
+    throw new Error("Provide b_no as a 10-digit business registration number.");
+  }
   return { corpNm, bno: bnoDigits || null };
 }
 
@@ -82,11 +101,26 @@ async function fetchFscCorpOutline({ corpNm, bno = null, serviceKey, fetchImpl =
     return { error: "upstream_error", message: `Upstream returned ${response.status}` };
   }
 
+  const text = await response.text();
+  const gatewayAuthError = parseGatewayAuthError(text);
+  if (gatewayAuthError) {
+    return {
+      error: "upstream_forbidden",
+      message: `FSC upstream rejected the request (${gatewayAuthError}). The proxy key may not be approved for service 15043184.`,
+    };
+  }
+
   let payload;
   try {
-    payload = JSON.parse(await response.text());
+    payload = JSON.parse(text);
   } catch {
     return { error: "upstream_invalid_response", message: "FSC upstream did not return valid JSON." };
+  }
+  if (isAuthResultCode(payload?.response?.header?.resultCode)) {
+    return {
+      error: "upstream_forbidden",
+      message: `FSC upstream rejected the request (${payload.response.header.resultMsg || "auth error"}). The proxy key may not be approved for service 15043184.`,
+    };
   }
 
   let items;

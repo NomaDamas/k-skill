@@ -13,6 +13,21 @@ const G2B_SANCTION_URL =
 function digitsOnly(value) {
   return String(value ?? "").replace(/[^0-9]/g, "");
 }
+const AUTH_REASON_CODES = new Set(["20", "21", "30", "31", "32", "33"]);
+
+function parseGatewayAuthError(text) {
+  if (!text.includes("OpenAPI_ServiceResponse")) {
+    return null;
+  }
+  const reasonCode = (text.match(/<returnReasonCode>([^<]*)<\/returnReasonCode>/) || [])[1]?.trim() || "";
+  const authMsg = (text.match(/<returnAuthMsg>([^<]*)<\/returnAuthMsg>/) || [])[1]?.trim() || "SERVICE ERROR";
+  return AUTH_REASON_CODES.has(reasonCode) ? `${authMsg} (code ${reasonCode})` : null;
+}
+
+function isAuthResultCode(code) {
+  return AUTH_REASON_CODES.has(String(code ?? "").trim());
+}
+
 
 function normalizeG2bSanctionQuery(query = {}) {
   const bizno = digitsOnly(query.bizno ?? query.b_no ?? query.bno);
@@ -73,11 +88,26 @@ async function fetchG2bSanctions({ bizno, serviceKey, fetchImpl = global.fetch }
     return { error: "upstream_error", message: `Upstream returned ${response.status}` };
   }
 
+  const text = await response.text();
+  const gatewayAuthError = parseGatewayAuthError(text);
+  if (gatewayAuthError) {
+    return {
+      error: "upstream_forbidden",
+      message: `Procurement upstream rejected the request (${gatewayAuthError}). The proxy key may not be approved for service 15129466.`,
+    };
+  }
+
   let payload;
   try {
-    payload = JSON.parse(await response.text());
+    payload = JSON.parse(text);
   } catch {
     return { error: "upstream_invalid_response", message: "Procurement upstream did not return valid JSON." };
+  }
+  if (isAuthResultCode(payload?.response?.header?.resultCode)) {
+    return {
+      error: "upstream_forbidden",
+      message: `Procurement upstream rejected the request (${payload.response.header.resultMsg || "auth error"}). The proxy key may not be approved for service 15129466.`,
+    };
   }
 
   let extracted;

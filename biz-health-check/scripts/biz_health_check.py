@@ -52,6 +52,11 @@ def _normalize_b_no(value: Any) -> str:
     return normalized
 
 
+def _unavailable(module_key: str, note: str) -> dict:
+    label, skill_dir, _ = _SIBLINGS[module_key]
+    return {"provider": label, "skill": skill_dir, "status": "unavailable",
+            "looked_up_at": _now_iso(), "data": None, "note": note}
+
 def _load(module_key: str) -> Any | None:
     """단품 스킬 helper를 레포 레이아웃 기준 파일 경로로 로드. 없으면 None."""
     _, skill_dir, filename = _SIBLINGS[module_key]
@@ -62,10 +67,7 @@ def _load(module_key: str) -> Any | None:
     if spec is None or spec.loader is None:
         return None
     module = importlib.util.module_from_spec(spec)
-    try:
-        spec.loader.exec_module(module)
-    except Exception:
-        return None
+    spec.loader.exec_module(module)
     return module
 
 
@@ -73,14 +75,20 @@ def _section(module_key: str, caller: Callable[[Any], dict]) -> dict:
     """단품 helper 하나를 호출해 섹션 결과로 감싼다. 어떤 오류든 강등."""
     label, skill_dir, _ = _SIBLINGS[module_key]
     base = {"provider": label, "skill": skill_dir, "looked_up_at": _now_iso()}
-    module = _load(module_key)
+    try:
+        module = _load(module_key)
+    except Exception as err:
+        return {**base, "status": "unavailable", "data": None,
+                "note": f"단품 스킬 '{skill_dir}' helper import 실패({type(err).__name__}: {err})."}
     if module is None:
-        return {**base, "status": "unavailable",
+        return {**base, "status": "unavailable", "data": None,
                 "note": f"단품 스킬 '{skill_dir}' helper를 찾지 못해 건너뜀 (개별 설치 시 함께 두세요)."}
     try:
-        return {**base, "data": caller(module)}
+        data = caller(module)
+        status = "unavailable" if isinstance(data, dict) and (data.get("status") == "unavailable" or data.get("error")) else "ok"
+        return {**base, "status": status, "data": data}
     except Exception as err:  # 경계 계약: 한 항목 실패가 전체를 막지 않는다
-        return {**base, "status": "unavailable", "note": f"조회 실패({type(err).__name__}: {err})."}
+        return {**base, "status": "unavailable", "data": None, "note": f"조회 실패({type(err).__name__}: {err})."}
 
 
 def run(b_no: str | None, name: str | None = None, region: str | None = None,
@@ -93,38 +101,31 @@ def run(b_no: str | None, name: str | None = None, region: str | None = None,
         sections["nts_status"] = _section(
             "nts_status", lambda m: m.query_status([no], base_url=base_url))
     else:
-        sections["nts_status"] = {"provider": _SIBLINGS["nts_status"][0], "status": "unavailable",
-                                  "looked_up_at": _now_iso(), "note": "사업자등록번호가 없어 상태조회 생략."}
+        sections["nts_status"] = _unavailable("nts_status", "사업자등록번호가 없어 상태조회 생략.")
 
     sections["national_pension"] = _section(
         "national_pension",
         lambda m: m.query_workplace(name, no, base_url=base_url)) if name else \
-        {"provider": _SIBLINGS["national_pension"][0], "status": "unavailable",
-         "looked_up_at": _now_iso(), "note": "상호(--name)가 없어 국민연금 조회 생략."}
+        _unavailable("national_pension", "상호(--name)가 없어 국민연금 조회 생략.")
 
     sections["fsc_corp"] = _section(
         "fsc_corp",
         lambda m: m.query_corp_outline(name, no, base_url=base_url)) if name else \
-        {"provider": _SIBLINGS["fsc_corp"][0], "status": "unavailable",
-         "looked_up_at": _now_iso(), "note": "법인명(--name)이 없어 금융위 조회 생략."}
+        _unavailable("fsc_corp", "법인명(--name)이 없어 금융위 조회 생략.")
 
     sections["g2b_sanction"] = _section(
         "g2b_sanction", lambda m: m.query_sanctions(no, base_url=base_url)) if no else \
-        {"provider": _SIBLINGS["g2b_sanction"][0], "status": "unavailable",
-         "looked_up_at": _now_iso(), "note": "사업자등록번호가 없어 부정당제재 조회 생략."}
+        _unavailable("g2b_sanction", "사업자등록번호가 없어 부정당제재 조회 생략.")
 
     sections["tax_delinquency"] = _section(
         "tax_delinquency", lambda m: m.lookup(name)) if name else \
-        {"provider": _SIBLINGS["tax_delinquency"][0], "status": "unavailable",
-         "looked_up_at": _now_iso(), "note": "상호(--name)가 없어 체납 명단 조회 생략."}
+        _unavailable("tax_delinquency", "상호(--name)가 없어 체납 명단 조회 생략.")
 
     if name and region:
         sections["localdata"] = _section(
             "localdata", lambda m: m.lookup(name, region, industries))
     else:
-        sections["localdata"] = {"provider": _SIBLINGS["localdata"][0], "status": "unavailable",
-                                 "looked_up_at": _now_iso(),
-                                 "note": "동네 사업장 인허가 조회는 상호(--name)와 지역(--region)이 함께 필요."}
+        sections["localdata"] = _unavailable("localdata", "동네 사업장 인허가 조회는 상호(--name)와 지역(--region)이 함께 필요.")
 
     return {
         "query": {"b_no": no, "name": name, "region": region, "industries": industries},

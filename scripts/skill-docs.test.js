@@ -2008,7 +2008,7 @@ test("package-lock captures the toss-securities workspace metadata for npm ci", 
   assert.equal(packageLock.packages["packages/toss-securities"].engines.node, ">=18");
 });
 
-test("repository docs advertise the korean-law-search skill with mode-specific korean-law-mcp setup guidance", () => {
+test("repository docs advertise the korean-law-search skill via k-skill-proxy", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
   const setup = read(path.join("docs", "setup.md"));
@@ -2024,26 +2024,30 @@ test("repository docs advertise the korean-law-search skill with mode-specific k
   assert.match(readme, /\[한국 법령 검색 가이드\]\(docs\/features\/korean-law-search\.md\)/);
   assert.match(readme, /\| 한국 법령 검색 \| .* \| 불필요 \|/);
   assert.match(install, /--skill korean-law-search/);
-  assert.match(install, /로컬 CLI\/MCP 경로는 `LAW_OC`/);
-  assert.match(install, /remote endpoint는 `LAW_OC` 없이 `url`만/);
-  assert.match(setup, /한국 법령 검색의 로컬 CLI\/MCP 경로용 `LAW_OC`/);
-  assert.match(setup, /remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결/);
-  assert.match(featureDoc, /로컬 CLI 또는 로컬 MCP server 경로는 `LAW_OC`/);
-  assert.match(featureDoc, /remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결/);
-  assert.match(setupSkill, /로컬 한국 법령 검색: `LAW_OC` \+ `korean-law-mcp`/);
-  assert.match(setupSkill, /remote endpoint: 사용자 `LAW_OC` 없이 `url`만 등록/);
+  assert.match(install, /k-skill-proxy\.nomadamas\.org/);
+  assert.match(install, /운영자만 proxy 서버에 `LAW_OC`/);
+  assert.match(setup, /한국 법령 검색은 기본 hosted proxy/);
+  assert.match(setup, /self-host proxy 운영자만 서버 환경변수 `LAW_OC`/);
+  assert.match(featureDoc, /\/v1\/korean-law\/search/);
+  assert.match(featureDoc, /\/v1\/korean-law\/detail/);
+  assert.match(setupSkill, /한국 법령 검색은 기본 hosted proxy/);
+  assert.match(setupSkill, /운영자만 서버 환경변수 `LAW_OC`/);
 
   for (const doc of [setup, security, setupSkill]) {
     assert.match(doc, /LAW_OC/);
-    assert.match(doc, /korean-law-mcp/);
+    assert.match(doc, /k-skill-proxy/);
   }
 
   assert.match(sources, /korean-law-mcp: https:\/\/github\.com\/chrisryugj\/korean-law-mcp/);
-  assert.match(sources, /beopmang: https:\/\/api\.beopmang\.org/);
   assert.match(roadmap, /한국 법령 검색 스킬 출시/);
+
+  for (const doc of [readme, install, setup, security, setupSkill, sources, featureDoc]) {
+    assert.doesNotMatch(doc, /법망|beopmang/i);
+    assert.doesNotMatch(doc, /api\.beopmang\.org/);
+  }
 });
 
-test("korean-law-search skill keeps korean-law-mcp-first guidance while documenting the approved Beopmang fallback", () => {
+test("korean-law-search skill is proxy-first and drops the Beopmang fallback", () => {
   const skillPath = path.join(repoRoot, "korean-law-search", "SKILL.md");
   const featureDoc = read(path.join("docs", "features", "korean-law-search.md"));
   const examplesSecrets = read(path.join("examples", "secrets.env.example"));
@@ -2060,30 +2064,24 @@ test("korean-law-search skill keeps korean-law-mcp-first guidance while document
   const doneSection = doneSectionMatch[1];
 
   for (const doc of [skill, featureDoc]) {
-    assert.match(doc, /korean-law-mcp.*먼저|먼저.*korean-law-mcp|항상 `korean-law-mcp`를 먼저 사용/u);
-    assert.match(doc, /npm install -g korean-law-mcp/);
-    assert.match(doc, /로컬 CLI 또는 로컬 MCP server 경로는 `LAW_OC`/);
-    assert.match(doc, /remote MCP endpoint는 사용자 `LAW_OC` 없이 `url`만으로 연결/);
+    assert.match(doc, /k-skill-proxy\.nomadamas\.org/);
+    assert.match(doc, /\/v1\/korean-law\/search/);
+    assert.match(doc, /\/v1\/korean-law\/detail/);
+    assert.match(doc, /target=law/);
+    assert.match(doc, /target=prec/);
     assert.match(doc, /open\.law\.go\.kr/);
-    assert.match(doc, /search_law/);
-    assert.match(doc, /get_law_text/);
-    assert.match(doc, /search_precedents/);
-    assert.match(doc, /search_interpretations/);
-    assert.match(doc, /search_ordinance/);
-    assert.match(doc, /https:\/\/korean-law-mcp\.fly\.dev\/mcp/);
-    assert.match(doc, /법망|Beopmang/i);
-    assert.match(doc, /https:\/\/api\.beopmang\.org/);
-    assert.match(doc, /fallback/i);
-    assert.match(doc, /MCP/i);
-    assert.match(doc, /CLI/i);
+    assert.match(doc, /github\.com\/chrisryugj\/korean-law-mcp/);
+    assert.match(doc, /KSKILL_PROXY_BASE_URL/);
+    assert.match(doc, /LAW_OC/);
+    assert.doesNotMatch(doc, /법망|beopmang/i);
+    assert.doesNotMatch(doc, /api\.beopmang\.org/);
+    assert.doesNotMatch(doc, /npm install -g korean-law-mcp/);
     assert.doesNotMatch(doc, /packages\/korean-law-search/);
     assert.doesNotMatch(doc, /python-packages\/korean-law-search/);
   }
 
-  assert.match(doneSection, /search_interpretations/);
-  assert.match(doneSection, /search_ordinance/);
-  assert.match(doneSection, /법망|Beopmang/i);
-  assert.match(doneSection, /fallback/i);
+  assert.match(doneSection, /target=prec/);
+  assert.match(doneSection, /target=ordin/);
 
   assert.doesNotMatch(
     featureDoc,

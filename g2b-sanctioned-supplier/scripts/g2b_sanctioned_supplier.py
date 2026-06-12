@@ -57,7 +57,13 @@ def normalize_bizno(value: Any) -> str:
 def read_json_response(request: urllib.request.Request) -> dict[str, Any]:
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
+            try:
+                payload = json.loads(response.read().decode("utf-8"))
+            except json.JSONDecodeError as error:
+                raise ApiError("g2b sanction proxy returned invalid JSON.") from error
+            if not isinstance(payload, dict):
+                raise ApiError("g2b sanction proxy returned a non-object JSON payload.")
+            return payload
     except urllib.error.HTTPError as error:
         body = error.read().decode("utf-8", errors="replace")
         try:

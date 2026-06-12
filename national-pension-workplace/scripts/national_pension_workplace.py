@@ -47,7 +47,13 @@ def resolve_proxy_base_url(explicit: str | None = None, env: dict[str, str] | No
 def read_json_response(request: urllib.request.Request) -> dict[str, Any]:
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
+            try:
+                payload = json.loads(response.read().decode("utf-8"))
+            except json.JSONDecodeError as error:
+                raise ApiError("national-pension proxy returned invalid JSON.") from error
+            if not isinstance(payload, dict):
+                raise ApiError("national-pension proxy returned a non-object JSON payload.")
+            return payload
     except urllib.error.HTTPError as error:
         body = error.read().decode("utf-8", errors="replace")
         try:
@@ -69,8 +75,9 @@ def query_workplace(name: str, b_no: str | None = None, *, base_url: str | None 
     params = {"name": name}
     if _text_or_none(b_no):
         digits = re.sub(r"\D", "", str(b_no))
-        if digits:
-            params["b_no"] = digits
+        if not re.fullmatch(r"\d{10}", digits):
+            raise ValueError("사업자등록번호는 숫자 10자리여야 합니다 (하이픈 허용).")
+        params["b_no"] = digits
     url = f"{resolve_proxy_base_url(base_url)}{ROUTE}?{urllib.parse.urlencode(params)}"
     request = urllib.request.Request(url, headers={
         "Accept": "application/json",

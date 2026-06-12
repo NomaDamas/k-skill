@@ -45,6 +45,11 @@ const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-cod
 const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require("./national-pension");
 const { normalizeFscCorpQuery, fetchFscCorpOutline } = require("./fsc-corp");
 const { normalizeG2bSanctionQuery, fetchG2bSanctions } = require("./g2b-sanction");
+const {
+  normalizeKoreanLawDetailQuery,
+  normalizeKoreanLawSearchQuery,
+  proxyKoreanLawRequest
+} = require("./korean-law");
 const AIR_KOREA_UPSTREAM_BASE_URL = "http://apis.data.go.kr";
 const DATA_GO_KR_UPSTREAM_BASE_URL = "https://apis.data.go.kr";
 const DATA4LIBRARY_UPSTREAM_BASE_URL = "https://data4library.kr/api";
@@ -187,6 +192,9 @@ function buildConfig(env = process.env) {
     kosisApiKey: trimOrNull(env.KOSIS_API_KEY ?? env.KSKILL_KOSIS_API_KEY),
     naverSearchClientId: trimOrNull(env.NAVER_SEARCH_CLIENT_ID ?? env.NAVER_CLIENT_ID),
     naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
+    lawOc: trimOrNull(env.LAW_OC),
+    lawReferer: trimOrNull(env.LAW_REFERER),
+    lawUserAgent: trimOrNull(env.LAW_USER_AGENT),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
     rateLimitMax: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_MAX, 60)
@@ -1894,7 +1902,8 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         kstartupConfigured: Boolean(config.molitApiKey),
         nationalPensionConfigured: Boolean(config.molitApiKey),
         fscCorpConfigured: Boolean(config.molitApiKey),
-        g2bSanctionConfigured: Boolean(config.molitApiKey)
+        g2bSanctionConfigured: Boolean(config.molitApiKey),
+        koreanLawConfigured: Boolean(config.lawOc)
       },
       auth: {
         tokenRequired: false
@@ -3413,8 +3422,15 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
+    const keyedErrorStatus = {
+      upstream_forbidden: 502,
+      upstream_timeout: 504,
+      upstream_invalid_response: 502,
+      upstream_error: 502
+    };
+
     if (result && result.error) {
-      reply.code(502);
+      reply.code(keyedErrorStatus[result.error] || 502);
       return {
         ...result,
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }, requested_at: new Date().toISOString() }
@@ -3601,6 +3617,97 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     request,
     reply
   }));
+
+  async function handleKoreanLawRoute({ endpoint, normalize, cacheRoute, request, reply }) {
+    let normalized;
+
+    try {
+      normalized = normalize(request.query || {});
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 400);
+      return {
+        error: error.code || "bad_request",
+        message: error.message
+      };
+    }
+
+    const cacheKey = makeCacheKey({
+      route: cacheRoute,
+      target: normalized.target,
+      type: normalized.type,
+      params: normalized.params
+    });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      if (typeof cached === "object" && cached.body !== undefined) {
+        reply.code(cached.statusCode);
+        reply.header("content-type", cached.contentType);
+        return cached.body;
+      }
+      return {
+        ...cached,
+        proxy: {
+          ...cached.proxy,
+          cache: { hit: true, ttl_ms: config.cacheTtlMs }
+        }
+      };
+    }
+
+    const upstream = await proxyKoreanLawRequest({
+      endpoint,
+      normalized,
+      oc: config.lawOc,
+      userAgent: config.lawUserAgent,
+      referer: config.lawReferer
+    });
+
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+
+    if (!upstream.contentType.includes("json")) {
+      if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+        cache.set(
+          cacheKey,
+          { statusCode: upstream.statusCode, contentType: upstream.contentType, body: upstream.body },
+          config.cacheTtlMs
+        );
+      }
+      return upstream.body;
+    }
+
+    const payload = JSON.parse(upstream.body);
+    if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+      payload.proxy = {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      };
+    }
+
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      cache.set(cacheKey, payload, config.cacheTtlMs);
+    }
+
+    return payload;
+  }
+
+  app.get("/v1/korean-law/search", async (request, reply) =>
+    handleKoreanLawRoute({
+      endpoint: "search",
+      normalize: normalizeKoreanLawSearchQuery,
+      cacheRoute: "korean-law-search",
+      request,
+      reply
+    }));
+
+  app.get("/v1/korean-law/detail", async (request, reply) =>
+    handleKoreanLawRoute({
+      endpoint: "detail",
+      normalize: normalizeKoreanLawDetailQuery,
+      cacheRoute: "korean-law-detail",
+      request,
+      reply
+    }));
 
   app.get("/v1/mfds/drug-safety/lookup", async (request, reply) => {
     let normalized;
