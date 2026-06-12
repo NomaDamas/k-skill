@@ -5669,3 +5669,139 @@ test("K-Startup integer fields reject non-numeric input before upstream call", a
   }
   assert.equal(called, false, "upstream must not be called for any invalid integer input");
 });
+
+test("korean-law search endpoint proxies law.go.kr with the server OC and browser headers", async (t) => {
+  const originalFetch = global.fetch;
+  let calledUrl = null;
+  let calledHeaders = null;
+  global.fetch = async (url, options) => {
+    calledUrl = String(url);
+    calledHeaders = options.headers;
+    return new Response(JSON.stringify({ PrecSearch: { prec: [{ 사건번호: "2023두54914" }] } }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { LAW_OC: "server-oc" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=prec&query=%EB%B6%80%EB%8B%B9%ED%95%B4%EA%B3%A0"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().PrecSearch.prec[0].사건번호, "2023두54914");
+  assert.equal(response.json().proxy.cache.hit, false);
+  assert.match(calledUrl, /\/DRF\/lawSearch\.do\?/);
+  assert.match(calledUrl, /OC=server-oc/);
+  assert.match(calledUrl, /target=prec/);
+  assert.ok(calledHeaders["User-Agent"].includes("Mozilla/5.0"));
+  assert.equal(calledHeaders.Referer, "https://www.law.go.kr/");
+});
+
+test("korean-law search endpoint caches successful upstream responses", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(JSON.stringify({ LawSearch: { law: [] } }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { LAW_OC: "server-oc" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/korean-law/search?target=law&query=%EA%B4%80%EC%84%B8%EB%B2%95";
+  const first = await app.inject({ method: "GET", url });
+  const second = await app.inject({ method: "GET", url });
+
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls, 1);
+});
+
+test("korean-law detail endpoint routes to lawService.do", async (t) => {
+  const originalFetch = global.fetch;
+  let calledUrl = null;
+  global.fetch = async (url) => {
+    calledUrl = String(url);
+    return new Response(JSON.stringify({ PrecService: { 판례정보일련번호: "228541" } }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { LAW_OC: "server-oc" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/detail?target=prec&ID=228541"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(calledUrl, /\/DRF\/lawService\.do\?/);
+  assert.match(calledUrl, /ID=228541/);
+});
+
+test("korean-law search endpoint returns 400 for a missing query", async (t) => {
+  const originalFetch = global.fetch;
+  let called = false;
+  global.fetch = async () => {
+    called = true;
+    return new Response("{}", { status: 200 });
+  };
+
+  const app = buildServer({ env: { LAW_OC: "server-oc" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: "/v1/korean-law/search?target=law" });
+  assert.equal(response.statusCode, 400);
+  assert.equal(called, false);
+});
+
+test("korean-law search endpoint returns 503 when the proxy server lacks LAW_OC", async (t) => {
+  const app = buildServer();
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=law&query=%EA%B4%80%EC%84%B8%EB%B2%95"
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_not_configured");
+});
+
+test("health endpoint reports koreanLawConfigured from LAW_OC", async (t) => {
+  const off = buildServer();
+  const on = buildServer({ env: { LAW_OC: "server-oc" } });
+  t.after(async () => {
+    await off.close();
+    await on.close();
+  });
+
+  const offBody = (await off.inject({ method: "GET", url: "/health" })).json();
+  const onBody = (await on.inject({ method: "GET", url: "/health" })).json();
+
+  assert.equal(offBody.upstreams.koreanLawConfigured, false);
+  assert.equal(onBody.upstreams.koreanLawConfigured, true);
+});

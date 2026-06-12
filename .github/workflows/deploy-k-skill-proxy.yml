@@ -88,6 +88,7 @@ jobs:
             KOSIS_API_KEY=KOSIS_API_KEY:latest
             NAVER_SEARCH_CLIENT_ID=NAVER_SEARCH_CLIENT_ID:latest
             NAVER_SEARCH_CLIENT_SECRET=NAVER_SEARCH_CLIENT_SECRET:latest
+            LAW_OC=LAW_OC:latest
           env_vars: |-
             KSKILL_PROXY_HOST=0.0.0.0
             KSKILL_PROXY_NAME=k-skill-proxy
