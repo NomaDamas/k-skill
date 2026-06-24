@@ -116,6 +116,24 @@ test("analyzeSaju returns pillars, element balance, and topic guidance", () => {
   assert.deepEqual(result.sources, ["saju-fortune-local-calculation", "fortuneteller-mcp-tool-model"]);
 });
 
+test("analyzeSaju keeps a conservative reading when birth time is unknown", () => {
+  const result = analyzeSaju({
+    name: "민준",
+    birthDate: "1990-03-15",
+    gender: "male"
+  }, { analysisType: "fortune", fortuneType: "love" });
+
+  assert.equal(result.input.birthTime, undefined);
+  assert.equal(result.timeAccuracy, "unknown");
+  assert.equal(result.pillars.year.label, "경오");
+  assert.equal(result.pillars.month.label, "기묘");
+  assert.equal(result.pillars.day.label, "기묘");
+  assert.equal(result.pillars.hour, null);
+  assert.deepEqual(result.interview.missingFields, ["birthTime"]);
+  assert.match(result.limitations.join(" "), /시간|시주|연·월·일/);
+  assert.match(result.fortune.caveat, /시간|시주/);
+});
+
 test("callSajuTool mirrors the upstream MCP tool names without serving MCP", () => {
   const result = callSajuTool("analyze_saju", {
     birthDate: "1990-03-15",

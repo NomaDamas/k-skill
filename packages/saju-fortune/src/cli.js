@@ -27,13 +27,14 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`Usage: saju-fortune --birth-date YYYY-MM-DD --birth-time HH:mm --gender male|female [options]
+  console.log(`Usage: saju-fortune --birth-date YYYY-MM-DD --gender male|female [--birth-time HH:mm] [options]
 
 Options:
   --name NAME                 Korean name for the reading
   --hanja-name NAME           Optional Hanja name
   --calendar solar|lunar      Birth calendar, defaults to solar; lunar is rejected until pre-converted
   --leap-month                Mark lunar leap month
+  --birth-time HH:mm          Optional birth time; omit when unknown
   --birth-city CITY           Birth city for reading context
   --analysis-type TYPE        basic|fortune|yongsin|school_compare|yongsin_method
   --fortune-type TYPE         general|career|wealth|health|love
