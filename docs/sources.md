@@ -160,7 +160,8 @@
 - 당근 메인: https://www.daangn.com/
 - 당근 지역 검색 API: https://www.daangn.com/kr/api/v1/regions/keyword?keyword=<지역명>
 - 당근 중고거래 검색 Remix data route: https://www.daangn.com/kr/buy-sell/all/?_data=routes/kr.buy-sell._index
-- 당근부동산 검색 Remix data route: https://www.daangn.com/kr/realty/?_data=routes/kr.realty._index
+- 당근부동산 검색 지도 페이지: https://realty.daangn.com/map/{name1}/{name2}/{name3} — SSR `window.RELAY_STORE`에서 매물 후보를 읽는다.
+- 당근부동산 폐기된 Remix data route: https://www.daangn.com/kr/realty/?_data=routes/kr.realty._index — 2026-06 기준 HTTP 204 빈 응답, 사용 금지.
 - 당근알바 검색 Remix data route: https://www.daangn.com/kr/jobs/?_data=routes/kr.jobs._index
 - 당근중고차 검색 Remix data route: https://www.daangn.com/kr/cars/?_data=routes/kr.cars._index
 - 당근부동산 상세 페이지: https://realty.daangn.com/articles/<id>
