@@ -1,0 +1,36 @@
+{
+  "name": "saju-fortune",
+  "version": "0.1.0",
+  "description": "Local saju fortune analysis helper for interview-style k-skills",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "saju-fortune": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "saju",
+    "fortune",
+    "korean-astrology",
+    "사주",
+    "운세"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/cli.js && node --check test/index.test.js",
+    "test": "node --test"
+  }
+}
