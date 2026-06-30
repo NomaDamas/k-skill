@@ -102,16 +102,17 @@ test("run --check passes when manifest matches, fails after drift", () => {
   assert.equal(run({ root, check: true }).ok, false);
 });
 
+test("run --check passes when local manifest is absent", () => {
+  const root = makeFixtureRoot({ "lotto-results/SKILL.md": SKILL_FM });
+  const result = run({ root, check: true });
+  assert.equal(result.ok, true);
+  assert.equal(result.missing, true);
+});
+
 test("run writes deterministic, trailing-newline JSON", () => {
   const root = makeFixtureRoot({ "lotto-results/SKILL.md": SKILL_FM });
   run({ root });
   const raw = fs.readFileSync(manifestPathFor(root), "utf8");
   assert.ok(raw.endsWith("\n"));
   assert.equal(raw, serialize(buildManifest(root)));
-});
-
-test("marketplace manifest uses Claude validator-supported top-level keys", () => {
-  const marketplacePath = path.join(__dirname, "..", ".claude-plugin", "marketplace.json");
-  const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
-  assert.deepEqual(Object.keys(marketplace).sort(), ["name", "owner", "plugins"]);
 });

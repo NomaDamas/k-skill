@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate / refresh the Claude Code plugin manifest's `skills` list.
+ * Generate / refresh a local Claude Code plugin manifest's `skills` list.
  *
  * This repo is a flat collection of `<skill-name>/SKILL.md` directories at the
  * repo root (NOT under a `skills/` folder), because the npm workspaces +
@@ -11,11 +11,12 @@
  *
  * Skill discovery mirrors scripts/validate-skills.sh and
  * scripts/build-manus-bundle.js. This script writes the sorted `skills` array
- * into `.claude-plugin/plugin.json` while preserving every other field.
+ * into an ignored `.claude-plugin/plugin.json` while preserving every other
+ * field. The manifest is intentionally local-only and should not be committed.
  *
  * Usage:
  *   node scripts/generate-plugin-manifest.js           # write/update plugin.json
- *   node scripts/generate-plugin-manifest.js --check    # exit 1 if out of date
+ *   node scripts/generate-plugin-manifest.js --check    # validate if present
  */
 
 "use strict";
@@ -126,6 +127,9 @@ function run({ root = repoRoot, check = false } = {}) {
   const current = fs.existsSync(manifestPath) ? fs.readFileSync(manifestPath, "utf8") : "";
 
   if (check) {
+    if (!current) {
+      return { ok: true, manifest, current, next, missing: true };
+    }
     return { ok: current === next, manifest, current, next };
   }
 
@@ -140,6 +144,10 @@ function main() {
   const count = result.manifest.skills.length;
 
   if (check) {
+    if (result.missing) {
+      console.log("plugin.json is not present; skipping local manifest check.");
+      return;
+    }
     if (!result.ok) {
       console.error(
         "plugin.json is out of date. Run `node scripts/generate-plugin-manifest.js` and commit the result.",
