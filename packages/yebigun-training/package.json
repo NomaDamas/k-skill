@@ -1,0 +1,39 @@
+{
+  "name": "yebigun-training",
+  "version": "0.1.0",
+  "description": "Yebigun (Korean reserve forces) logged-in browser-session helper for training-schedule lookup and year-over-year comparison",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "yebigun-training": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "test/fixtures",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "yebigun",
+    "reserve-forces",
+    "playwright"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/parse.js && node --check src/browser.js && node --check src/history.js && node --check src/cli.js && node --check test/index.test.js && node --check test/history.test.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "playwright-core": "^1.52.0"
+  }
+}
