@@ -3,6 +3,10 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+from fake_popbill import install_fake_popbill
+
+install_fake_popbill()
+
 MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "popbill_cli.py"
 spec = importlib.util.spec_from_file_location("popbill_cli", MODULE_PATH)
 popbill_cli = importlib.util.module_from_spec(spec)
