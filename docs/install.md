@@ -61,6 +61,7 @@ npx --yes skills add <owner/repo> \
   --skill korean-law-search \
   --skill korean-privacy-terms \
   --skill korean-jangbu-for \
+  --skill popbill \
   --skill corporate-registration-consulting \
   --skill iros-registry-automation \
   --skill real-estate-search \
@@ -140,6 +141,8 @@ npx --yes skills add <owner/repo> \
 
 
 `korean-jangbu-for` 는 `kimlawtech/korean-jangbu-for` (Apache-2.0, 원저작자 @kimlawtech / SpeciAI) 업스트림을 중심으로 사용하는 thin wrapper 다. 별도 hosted proxy 없이 `bash korean-jangbu-for/scripts/install.sh` 로 pinned upstream 을 `~/.claude/skills/korean-jangbu-for/upstream/` 와 `~/.agents/skills/korean-jangbu-for/upstream/` 양쪽에 설치하고, 업스트림 `jangbu-*` 하위 스킬을 양쪽 홈 디렉터리의 top-level skill 로 함께 등록한다. CODEF 자동 수집은 사용자가 직접 발급한 키를 쓰는 BYOK 방식이며, 장부·재무제표·세무사 전달 CSV 는 참고용 초안이므로 신고 전 세무사 검토 및 외감 대상 공인회계사 감사가 필요하다. 자세한 사용법은 [한국 사업자 장부 자동화 가이드](features/korean-jangbu-for.md)를 본다.
+
+`popbill` 은 사용자별 과금/권한 API인 팝빌 SDK를 로컬 BYOK 방식으로 호출한다. `KSKILL_POPBILL_LINK_ID`, `KSKILL_POPBILL_SECRET_KEY`, `KSKILL_POPBILL_CORP_NUM` 을 `~/.config/k-skill/secrets.env` 또는 환경변수로 공급하고, 기본 테스트 환경에서 `uv run popbill/scripts/popbill_cli.py config-check`, `methods taxinvoice`, `health taxinvoice` 순서로 확인한다. 전자세금계산서 발행은 테스트/운영 환경 각각 공동인증서 등록이 필요하고, 문자·카카오·팩스는 발신번호/채널/템플릿 사전 등록이 필요하다. 발행·전송·취소·삭제·계좌조회는 사용자 현재 턴 승인 후에만 `--yes-i-understand` 로 실행한다. 자세한 사용법은 [팝빌 all-service API helper](features/popbill.md)를 본다.
 
 `korean-stock-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `KRX_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/jjlabsio/korea-stock-mcp`. 자세한 사용법은 [한국 주식 정보 조회 가이드](features/korean-stock-search.md)를 본다.
 
