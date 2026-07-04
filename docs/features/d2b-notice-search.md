@@ -13,7 +13,7 @@
 ## 가장 중요한 정책 경계
 
 - Aside Browser를 기본으로 사용한다.
-- Aside Browser가 불가능하면 Playwright 또는 Chrome headless로 동일한 공개 화면을 조작한다.
+- Aside Browser가 불가능하면 사용자가 띄운 BrowserOS 세션에 CDP로 붙거나 로컬 브라우저로 동일한 공개 화면을 조작한다.
 - 직접 HTTP는 best-effort이며, `400 Bad Request`/security HTML은 blocked로 분류한다.
 - 공개 화면이므로 API key 없는 경로를 `k-skill-proxy`로 우회하지 않는다.
 - 로그인, 투찰, 서류 제출, 공동인증서, 결제, 보안 프로그램 우회는 하지 않는다.

@@ -5,6 +5,7 @@ const {
   D2B_HOME_URL,
   buildAsideSearchScript,
   buildPlaywrightSearchScript,
+  classifyUpstreamHtml,
   normalizeSearchOptions,
   parseBrowserSearchOutput,
   parseNoticeListText
@@ -60,6 +61,24 @@ test("Given production capacity deadline When parsing Then registration deadline
   assert.equal(result.items[0].production_capacity_due_at, "2026-07-05 17:00")
   assert.equal(result.items[0].registration_due_at, "2026-07-08 11:00")
   assert.equal(result.items[0].bid_due_at, "2026-07-09 10:30")
+})
+
+test("Given public D2B index text with login navigation When classifying Then it is not blocked", () => {
+  const html = `
+  <html>
+    <body>
+      <nav>통합검색 입찰공고 개찰결과 사용자등록 로그인</nav>
+      <main>오늘의 입찰공고 경쟁입찰 공고건명 발주기관 검색 통신보안 경고용 스티커 제조 국세청 시스템 점검 안내</main>
+    </body>
+  </html>`
+
+  assert.deepEqual(classifyUpstreamHtml(html), { status: "ok", reason: "" })
+})
+
+test("Given D2B security or bad-request page When classifying Then it is blocked", () => {
+  const html = "<html><body>400 Bad Request deceptive request routing TouchEn 보안 프로그램 오류 접근 차단 로그인 후 이용하십시오</body></html>"
+
+  assert.equal(classifyUpstreamHtml(html).status, "blocked")
 })
 
 test("Given Korean aliases When normalizing options Then D2B control values are returned", () => {

@@ -31,13 +31,13 @@ console.log(recipe.steps)
 
 - `normalizeSearchOptions(input)`: normalizes Korean/English aliases, dates, and page numbers.
 - `buildSearchRequest(input)`: returns the official D2B entry URL, browser form selectors, and best-effort direct request metadata.
-- `buildBrowserAutomationInstructions(input)`: documents the fallback order: Aside Browser, Playwright/Chrome headless, then direct HTTP best-effort.
+- `buildBrowserAutomationInstructions(input)`: documents the fallback order: Aside Browser, BrowserOS CDP/local browser, then direct HTTP best-effort.
 - `parseListHtml(html)`: extracts rendered notice links with JavaScript action metadata.
 - `classifyUpstreamHtml(html)`: classifies security/login/400 HTML as blocked rather than empty results.
 
 ## Boundaries
 
 - Primary execution should use Aside Browser against the official rendered page.
-- Playwright or Chrome headless is the fallback when Aside Browser is unavailable.
+- A user-launched BrowserOS session over CDP (or a local browser you own) is the fallback when Aside Browser is unavailable.
 - Direct HTTP is not the primary path because D2B security routing may reject non-browser requests.
 - No `k-skill-proxy` route is used because the discovered public search surface does not require an API key.

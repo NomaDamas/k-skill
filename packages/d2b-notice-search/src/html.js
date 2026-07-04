@@ -37,7 +37,7 @@ function textAfter(source, anchorHtml) {
 
 function classifyBlockedHtml(html) {
   const text = cleanText(stripTags(html))
-  if (/400\s*Bad Request|deceptive request routing|traffic|TouchEn|보안|차단|점검|login|로그인/i.test(text)) {
+  if (/400\s*Bad Request|deceptive request routing|traffic|TouchEn|보안\s*(?:프로그램|모듈|오류)|(?:접근|요청|서비스)\s*차단|(?:페이지|서비스)\s*점검\s*중|로그인\s*(?:후|필요|페이지|하십시오|하셔야)/i.test(text)) {
     return { status: "blocked", reason: text.slice(0, 300) }
   }
   return { status: "ok", reason: "" }

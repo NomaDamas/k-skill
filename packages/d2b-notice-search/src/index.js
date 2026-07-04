@@ -120,7 +120,7 @@ function buildBrowserAutomationInstructions(input = {}) {
     request,
     steps: [
       { channel: "aside-browser", action: "Open the official D2B page, snapshot the public 입찰공고 form, fill filters, submit 검색, then snapshot rendered results." },
-      { channel: "playwright-or-chrome-headless", action: "Run the same public form recipe in a fresh browser context and parse visible text or rendered links." },
+      { channel: "browseros-cdp-or-local-browser", action: "Prefer a user-launched BrowserOS session over CDP (via k-skill-browser-runtime); otherwise use a local browser you own. Run the same public form recipe and parse visible text or rendered links. Do not run headless as a bot-evasion tactic." },
       { channel: "direct-http-best-effort", action: "Try direct JSON only when it does not return 400 Bad Request/security HTML; classify blocked HTML explicitly." }
     ]
   }

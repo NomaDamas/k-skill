@@ -34,7 +34,7 @@ metadata:
 - 인터넷 연결
 - Node.js 18+
 - 기본: Aside Browser
-- fallback: Playwright 또는 Chrome headless
+- fallback: 사용자가 띄운 BrowserOS 세션에 CDP로 붙거나(권장), 로컬 브라우저 사용
 
 ## Public access path discovered
 
@@ -90,7 +90,7 @@ const instructions = buildBrowserAutomationInstructions({
 ### 3. Fallback order
 
 1. Aside Browser against the official rendered page.
-2. Playwright or Chrome headless with the same public form interactions.
+2. A user-launched BrowserOS session over CDP (or a local browser you own) with the same public form interactions.
 3. Direct HTTP best-effort only. Treat `400 Bad Request`, `deceptive request routing`, TouchEn/security, login, CAPTCHA, queue, or maintenance HTML as an explicit blocked state, not as empty results.
 
 ## Supported aliases
