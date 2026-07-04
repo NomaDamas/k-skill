@@ -148,7 +148,7 @@ upstream API 키를 사용자에게 노출하지 않으려면 `k-skill-proxy`를
 2. `SKILL.md` Workflow에 `curl $KSKILL_PROXY_BASE_URL/v1/...` 형태로 호출 작성
 3. upstream API 키는 서버의 `~/.config/k-skill/secrets.env`에만 보관
 
-프록시 route 변경은 `main`에 merge된 뒤에도 자동으로 프로덕션 배포되지 않는다. 프로덕션 반영은 gpu01에서 host-configured deploy SHA/ref를 의도적으로 승격하고 cron 배포가 통과해야 한다 (`AGENTS.md`, `docs/deploy-k-skill-proxy.md` 참고).
+프록시 route 변경은 `main`에 merge된 것만으로 프로덕션 배포나 승격을 의미하지 않는다. 운영 절차와 serving topology는 public docs에 기록하지 않고 maintainer private runbook에서만 다룬다.
 
 ### D. Python 스크립트 스킬
 
@@ -235,7 +235,7 @@ npm run ci
 - [ ] `npm run ci` 통과 (`./scripts/validate-skills.sh` 포함)
 - [ ] npm 패키지라면 `packages/`에 구현체와 테스트 추가
 - [ ] npm 패키지라면 `.changeset/*.md` 파일 추가 (반드시 **기능 PR에서**, Version Packages PR에서 추가하지 말 것)
-- [ ] 프록시 경유라면 `k-skill-proxy/src/server.js`에 route 추가, `main` merge, gpu01 deploy SHA/ref 승격 절차 확인
+- [ ] 프록시 경유라면 `k-skill-proxy/src/server.js`에 route 추가, public docs에는 hosted contract만 기록, 운영 승격은 private runbook에서 확인
 - [ ] 크롤링/검색 스킬이라면 공개 접근 경로, fallback 순서, 차단/로그인/빈 결과 실패 모드 문서화
 - [ ] 시크릿이 있다면 `KSKILL_` 접두사 규칙 준수 및 `docs/setup.md` 업데이트
 - [ ] `docs/features/my-new-skill.md` 작성 (선택, 상세 가이드)

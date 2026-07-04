@@ -62,10 +62,9 @@
 - 프록시 서버 테스트: `packages/k-skill-proxy/test/server.test.js`
 - 컨테이너 이미지 정의: `packages/k-skill-proxy/Dockerfile`
 - 로컬 테스트: 필요한 upstream 환경변수를 export한 상태에서 `node packages/k-skill-proxy/src/server.js`. 로컬에서 시크릿을 모아두는 표준 위치는 `~/.config/k-skill/secrets.env` 입니다.
-- 프로덕션 프록시는 **Google Cloud Run** (project `k-skill-proxy`, region `asia-northeast1`)에서 운영하며 `k-skill-proxy.nomadamas.org` 도메인에 매핑되어 있습니다.
-- `main` 브랜치에 머지되면 `.github/workflows/deploy-k-skill-proxy.yml` 워크플로가 Workload Identity Federation으로 GCP 인증 → Artifact Registry로 이미지 빌드/푸시 → Cloud Run 재배포 → `/health` smoke test까지 자동 수행합니다.
-- 프로덕션 시크릿은 GCP Secret Manager에 보관되고 Cloud Run 런타임에 주입됩니다. 프록시 운영자(maintainer)가 한 번 수행해야 하는 WIF/Secret Manager 셋업과 운영 점검 절차는 [`docs/deploy-k-skill-proxy.md`](docs/deploy-k-skill-proxy.md)에 정리되어 있습니다.
-- `dev`에서 route를 추가하거나 수정해도 `main`에 머지되기 전까지는 프로덕션 프록시에 반영되지 않습니다.
+- 공개 문서와 PR에는 production host identity, serving runtime, tunnel/reverse-proxy details, server-local paths, deployment triggers, rollback steps, secret placement를 기록하지 않습니다.
+- 운영자 전용 serving runbook은 repo 밖 private 위치에 보관합니다. `main` merge 자체는 프로덕션 배포나 승격을 의미하지 않습니다.
+- public smoke test는 hosted base URL의 `/health`와 대표 read-only route까지만 언급합니다.
 
 ## 검증
 

@@ -12,6 +12,7 @@ dist/
 .sisyphus/
 .omo/
 .gjc/
+.private/
 
 .agents/
 .cache/

@@ -27,6 +27,27 @@ function findSection(doc, heading) {
   return match[0];
 }
 
+function trackedTextFiles() {
+  return childProcess
+    .execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
+    .split("\n")
+    .filter(Boolean)
+    .filter((relativePath) => fs.existsSync(path.join(repoRoot, relativePath)))
+    .filter((relativePath) => {
+      if (relativePath.startsWith(".omo/") || relativePath.startsWith(".private/")) return false;
+      if (relativePath.includes("/fixtures/")) return false;
+      return (
+        relativePath.endsWith(".md") ||
+        relativePath.endsWith(".mdx") ||
+        relativePath.endsWith(".txt") ||
+        relativePath.endsWith(".sh") ||
+        relativePath.endsWith(".js") ||
+        relativePath.endsWith(".yml") ||
+        relativePath.endsWith(".yaml")
+      );
+    });
+}
+
 function assertOliveYoungCloneFallbackCommands(doc, label) {
   assert.match(doc, /node dist\/bin\.js health/, `${label} should document the runnable local health command`);
   assert.match(
@@ -177,14 +198,10 @@ test("repository publishes Korean contribution guidance for external contributor
   assert.match(contributing, /릴리스나 패키징 관련 변경은 `npm run ci`/);
   assert.match(contributing, /`~\/\.claude\/skills\/<skill-name>`/);
   assert.match(contributing, /`~\/\.agents\/skills\/<skill-name>`/);
-  assert.match(
-    contributing,
-    /프로덕션 프록시는 \*\*Google Cloud Run\*\* \(project `k-skill-proxy`, region `asia-northeast1`\)에서 운영하며 `k-skill-proxy\.nomadamas\.org` 도메인에 매핑/,
-  );
-  assert.match(
-    contributing,
-    /프로덕션 시크릿은 GCP Secret Manager에 보관되고 Cloud Run 런타임에 주입됩니다\. 프록시 운영자\(maintainer\)가 한 번 수행해야 하는 WIF\/Secret Manager 셋업과 운영 점검 절차는 \[`docs\/deploy-k-skill-proxy\.md`\]\(docs\/deploy-k-skill-proxy\.md\)에 정리/,
-  );
+  assert.match(contributing, /production host identity, serving runtime, tunnel\/reverse-proxy details/);
+  assert.match(contributing, /운영자 전용 serving runbook은 repo 밖 private 위치/);
+  assert.doesNotMatch(contributing, new RegExp(["Google", "Cloud", "Run"].join(" ")));
+  assert.doesNotMatch(contributing, new RegExp(["Secret", "Manager"].join(" ")));
 });
 
 test("README links to the contribution guide", () => {
@@ -630,7 +647,40 @@ test("hosted proxy docs keep self-host overrides inactive and demonstrate resolv
   assert.match(proxyDoc, /BASE="\$\{KSKILL_PROXY_BASE_URL:-https:\/\/k-skill-proxy\.nomadamas\.org\}"/);
   for (const endpoint of ["seoul-subway/arrival", "korea-weather/forecast"]) {
     assert.match(proxyDoc, new RegExp(`curl -fsS --get "\\$\\{BASE\\}/v1/${endpoint}"`));
-    assert.doesNotMatch(proxyDoc, new RegExp(`curl -fsS --get 'http://127\\.0\\.0\\.1:4020/v1/${endpoint}'`));
+    assert.doesNotMatch(proxyDoc, /http:\/\/127\.0\.0\.1:\d+/);
+  }
+});
+
+test("public tracked docs and helpers do not expose proxy serving topology", () => {
+  const forbidden = [
+    ["gpu", "01"].join(""),
+    ["/etc", "k-skill-proxy"].join("/"),
+    ["/opt", "k-skill"].join("/"),
+    ["/var", "log", "k-skill-proxy"].join("/"),
+    ["/var", "lib", "k-skill-proxy"].join("/"),
+    ["KSKILL_PROXY_DEPLOY", "_", "SHA"].join(""),
+    ["KSKILL_PROXY_DEPLOY", "_", "REF"].join(""),
+    ["rollback", "state"].join("-"),
+    ["deploy", "k-skill-proxy", ["gpu", "01"].join("")].join("-"),
+    ["docker", "logs", "k-skill-proxy"].join(" "),
+    ["127.0.0.1", ["40", "20"].join("")].join(":"),
+    ["127.0.0.1", ["40", "21"].join("")].join(":"),
+    ["Cloud", "Run"].join(" "),
+    ["Secret", "Manager"].join(" "),
+    ["cloud", "flared"].join(""),
+    ["Cloudflare", "Tunnel"].join(" "),
+  ].map((term) => [term, new RegExp(escapeRegex(term), "i")]);
+
+  for (const relativePath of trackedTextFiles()) {
+    const normalizedPath = relativePath.split(path.sep).join("/");
+    for (const [term, pattern] of forbidden) {
+      assert.doesNotMatch(normalizedPath, pattern, `public path should not expose proxy serving topology term ${term}`);
+    }
+
+    const contents = read(relativePath);
+    for (const [term, pattern] of forbidden) {
+      assert.doesNotMatch(contents, pattern, `${relativePath} should not expose proxy serving topology term ${term}`);
+    }
   }
 });
 
@@ -2547,7 +2597,7 @@ test("real-estate-search skill uses proxy endpoints not MCP self-host", () => {
     assert.match(doc, /curl/);
     assert.doesNotMatch(doc, /uv run/);
     assert.doesNotMatch(doc, /codex mcp add/);
-    assert.doesNotMatch(doc, /Cloudflare Tunnel/i);
+    assert.doesNotMatch(doc, new RegExp(["Cloudflare", "Tunnel"].join(" "), "i"));
     assert.doesNotMatch(doc, /launchd/i);
     assert.doesNotMatch(doc, /docker compose/i);
   }
