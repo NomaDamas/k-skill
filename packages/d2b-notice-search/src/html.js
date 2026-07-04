@@ -108,17 +108,33 @@ function extractAgency(text) {
 }
 
 function parseSchedule(text) {
-  const deadlinePattern = /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})/g
-  const deadlines = Array.from(text.matchAll(deadlinePattern), (match) => match[1])
-  const tail = cleanText(text.replace(deadlinePattern, " "))
-  const tailTokens = tail.split(" ").filter(Boolean)
+  const tokens = cleanText(text).split(" ").filter(Boolean)
+  const schedule = []
+  let index = 0
+  for (; schedule.length < 2 && index < tokens.length; index += 1) {
+    const token = readScheduleToken(tokens, index)
+    if (!token) break
+    schedule.push(token.value)
+    index = token.nextIndex - 1
+  }
+  const tailTokens = tokens.slice(index)
   return {
-    registrationDueAt: deadlines[0] || null,
-    bidDueAt: deadlines[1] || null,
+    registrationDueAt: nullableDeadline(schedule[0]),
+    bidDueAt: nullableDeadline(schedule[1]),
     contractMethod: tailTokens[0] || null,
     bidForm: tailTokens[1] || null,
     basePriceStatus: tailTokens.slice(2).join(" ") || null
   }
+}
+
+function readScheduleToken(tokens, index) {
+  const value = tokens[index]
+  const next = tokens[index + 1]
+  if (value === "해당없음") return { value, nextIndex: index + 1 }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value) && /^\d{2}:\d{2}$/.test(next || "")) {
+    return { value: `${value} ${next}`, nextIndex: index + 2 }
+  }
+  return null
 }
 
 function nullableDeadline(value) {

@@ -80,6 +80,11 @@ test("Given mixed D2B bid categories When parsing Then each visible row stays is
   assert.equal(result.items[1].sequence, 6)
   assert.equal(result.items[1].bid_category, "공개수의")
   assert.equal(result.items[1].title, "병영식당 취사기구(냉동고 등 11개 품목) 구매")
+  assert.equal(result.items[1].registration_due_at, null)
+  assert.equal(result.items[1].bid_due_at, null)
+  assert.equal(result.items[1].contract_method, "수의계약")
+  assert.equal(result.items[1].bid_form, "전자입찰")
+  assert.equal(result.items[1].base_price_status, "20,205,000")
 })
 
 test("Given public D2B index text with login navigation When classifying Then it is not blocked", () => {
