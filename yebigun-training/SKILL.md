@@ -164,7 +164,7 @@ node packages/yebigun-training/src/cli.js diff --year 2026
 
 - 자동 검증: `npm run lint && npm test` — `detectSessionState`/`inspectYebigunPage` 분류, **완전히 가상의 데이터로 작성한 fixture**(`test/fixtures/training-info-page.html`, `test/fixtures/view-list-page.html`) 기반 `parseTrainingInfo`/`parseGenericTable` 단위 테스트, mocked-CDP `inspect`/`fetchTrainingInfo`/`fetchInquiry`(AJAX `Loading...` 폴링 포함)/`openApplicationMenu`, 그리고 `record`/`history`/`diff`의 로컬 JSON 로직 단위 테스트.
 - smoke 검증(로그인 불필요): `chrome-command`로 출력된 명령이 실제 Chrome을 올바른 프로필/포트로 띄우는지 확인.
-- 실서비스 검증: 2026-06-24, 사용자가 직접 로그인한 세션에서 `training-info`(소속 정보 · 올해 훈련(2026.06.22~2026.06.25, 동원훈련Ⅱ형 1차) · 과거 3개 연도 기록 · 작년 대비 비교), `open-menu`(`selfSelect`/`delay`/`honors`/`editProfile` 모두 정확한 화면으로 이동, 데이터 미추출 확인), `view`(8개 메뉴 전부 실행 — `delayResults`/`myQna`는 실제 데이터, 나머지는 빈 목록 또는 "검색된 데이터가 없습니다" 확인)까지 전부 실행해 정확히 동작하는 것을 확인했다.
+- 실서비스 검증: 사용자가 직접 로그인한 BrowserOS/Chrome CDP 세션에서 `training-info`가 소속 정보, 올해 훈련, 과거 연도 기록, 작년 대비 비교를 구조화 JSON으로 반환하는지 확인한다. 공개 문서에는 실제 날짜, 부대, 성명, 군번, 훈련장, 민원/신청 내용 같은 인증 세션 값을 기록하지 않는다.
 
 ## Failure modes
 
