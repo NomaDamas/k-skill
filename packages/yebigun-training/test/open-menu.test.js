@@ -38,7 +38,7 @@ test("openApplicationMenu clicks the matching button label and stops at the next
 
       assert.equal(state.gotoUrl, TRAINING_INFO_URL);
       assert.equal(state.evaluatedLabel, APPLICATION_MENUS.selfSelect.label);
-      assert.equal(state.closed, false);
+      assert.equal(state.closed, true);
       assert.equal(result.menu, "selfSelect");
       assert.equal(result.label, "훈련일정 자율선택");
     },
@@ -125,7 +125,7 @@ test("openApplicationMenu navigates directly without reading sensitive HTML for 
       const result = await openApplicationMenu("delay");
 
       assert.equal(state.gotoUrl, `${BASE_URL}${APPLICATION_MENUS.delay.path}`);
-      assert.equal(state.closed, false);
+      assert.equal(state.closed, true);
       assert.equal(result.menu, "delay");
       assert.equal(result.label, "훈련 연기신청");
       assert.equal(result.title, "연기 신청");
