@@ -2,7 +2,6 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
-const Module = require("node:module");
 const os = require("node:os");
 const path = require("node:path");
 
@@ -23,27 +22,7 @@ const usageHistoryHtml = fs.readFileSync(path.join(fixturesDir, "usage-history-l
 const loginHtml = fs.readFileSync(path.join(fixturesDir, "login-page.html"), "utf8");
 const permissionHtml = fs.readFileSync(path.join(fixturesDir, "permission-check.html"), "utf8");
 
-async function withMockedBrowserModule(factory, callback) {
-  const browserModulePath = require.resolve("../src/browser");
-  const originalLoad = Module._load;
-
-  Module._load = function patchedLoad(request, parent, isMain) {
-    if (request === "playwright-core" || request === "playwright") {
-      return factory();
-    }
-    return originalLoad.call(this, request, parent, isMain);
-  };
-
-  delete require.cache[browserModulePath];
-
-  try {
-    const browserModule = require("../src/browser");
-    return await callback(browserModule);
-  } finally {
-    Module._load = originalLoad;
-    delete require.cache[browserModulePath];
-  }
-}
+const { listUsageHistory, openReceiptPopup } = require("../src/browser");
 
 test("buildUsageHistoryQuery normalizes defaults for logged-in usage-history searches", () => {
   const query = buildUsageHistoryQuery({
@@ -251,7 +230,8 @@ const fakePlaywright = {
               return [page];
             }
           }];
-        }
+        },
+        async disconnect() {}
       };
     }
   }
@@ -298,162 +278,144 @@ Module._load = function patchedLoad(request, parent, isMain) {
 
 test("listUsageHistory uses the absolute usage-history URL and closes the browser connection", async () => {
   const state = {
-    closed: false,
+    disconnected: false,
     gotoUrl: null
   };
 
-  await withMockedBrowserModule(
-    () => {
-      const frame = {
-        name() {
-          return "if_main_post";
-        },
-        url() {
-          return USAGE_HISTORY_LIST_URL;
-        },
-        async waitForLoadState() {},
-        async content() {
-          return usageHistoryHtml;
-        }
-      };
-
-      const page = {
-        async goto(url) {
-          state.gotoUrl = url;
-        },
-        async content() {
-          return "<html><body>사용내역 조회</body></html>";
-        },
-        async evaluate() {},
-        frames() {
-          return [frame];
-        },
-        async waitForTimeout() {}
-      };
-
-      const context = {
-        pages() {
-          return [page];
-        }
-      };
-
-      return {
-        chromium: {
-          async connectOverCDP() {
-            return {
-              contexts() {
-                return [context];
-              },
-              async close() {
-                state.closed = true;
-              }
-            };
-          }
-        }
-      };
+  const frame = {
+    name() {
+      return "if_main_post";
     },
-    async ({ listUsageHistory }) => {
-      const parsed = await listUsageHistory({
-        startDate: "2026-04-01",
-        endDate: "2026-04-07"
-      });
-
-      assert.equal(parsed.rows.length, 2);
-      assert.equal(state.gotoUrl, USAGE_HISTORY_INIT_URL);
-      assert.equal(state.closed, true);
+    url() {
+      return USAGE_HISTORY_LIST_URL;
     },
-  );
+    async waitForLoadState() {},
+    async content() {
+      return usageHistoryHtml;
+    }
+  };
+
+  const page = {
+    async goto(url) {
+      state.gotoUrl = url;
+    },
+    async content() {
+      return "<html><body>사용내역 조회</body></html>";
+    },
+    async evaluate() {},
+    frames() {
+      return [frame];
+    },
+    async waitForTimeout() {}
+  };
+
+  const context = {
+    pages() {
+      return [page];
+    }
+  };
+
+  const browser = {
+    contexts() {
+      return [context];
+    },
+    async disconnect() {
+      state.disconnected = true;
+    }
+  };
+
+  const parsed = await listUsageHistory({
+    startDate: "2026-04-01",
+    endDate: "2026-04-07",
+    probe: false,
+    connectLoader: async () => browser
+  });
+
+  assert.equal(parsed.rows.length, 2);
+  assert.equal(state.gotoUrl, USAGE_HISTORY_INIT_URL);
+  assert.equal(state.disconnected, true);
 });
 
 test("openReceiptPopup uses the receipt flow and closes the browser connection", async () => {
   const state = {
-    closed: false,
+    disconnected: false,
     gotoUrl: null
   };
 
-  await withMockedBrowserModule(
-    () => {
-      const popup = {
-        url() {
-          return RECEIPT_URL;
-        },
-        async title() {
-          return "영수증 출력";
-        },
-        async waitForLoadState() {}
-      };
+  const popup = {
+    url() {
+      return RECEIPT_URL;
+    },
+    async title() {
+      return "영수증 출력";
+    },
+    async waitForLoadState() {}
+  };
 
-      const frame = {
-        name() {
-          return "if_main_post";
-        },
-        url() {
-          return USAGE_HISTORY_LIST_URL;
-        },
-        async waitForLoadState() {},
-        async content() {
-          return usageHistoryHtml;
-        },
-        locator() {
+  const frame = {
+    name() {
+      return "if_main_post";
+    },
+    url() {
+      return USAGE_HISTORY_LIST_URL;
+    },
+    async waitForLoadState() {},
+    async content() {
+      return usageHistoryHtml;
+    },
+    locator() {
+      return {
+        nth() {
           return {
-            nth() {
-              return {
-                async evaluate() {}
-              };
-            }
+            async evaluate() {}
           };
         }
       };
+    }
+  };
 
-      const page = {
-        async goto(url) {
-          state.gotoUrl = url;
-        },
-        async content() {
-          return "<html><body>사용내역 조회</body></html>";
-        },
-        async evaluate() {},
-        frames() {
-          return [frame];
-        },
-        async waitForTimeout() {}
-      };
-
-      const context = {
-        pages() {
-          return [page];
-        },
-        async waitForEvent() {
-          return popup;
-        }
-      };
-
-      return {
-        chromium: {
-          async connectOverCDP() {
-            return {
-              contexts() {
-                return [context];
-              },
-              async close() {
-                state.closed = true;
-              }
-            };
-          }
-        }
-      };
+  const page = {
+    async goto(url) {
+      state.gotoUrl = url;
     },
-    async ({ openReceiptPopup }) => {
-      const parsed = await openReceiptPopup({
-        startDate: "2026-04-01",
-        endDate: "2026-04-07",
-        rowIndex: 1
-      });
-
-      assert.equal(parsed.popupCaptured, true);
-      assert.equal(parsed.popupUrl, RECEIPT_URL);
-      assert.equal(state.gotoUrl, USAGE_HISTORY_INIT_URL);
-      assert.equal(state.closed, true);
+    async content() {
+      return "<html><body>사용내역 조회</body></html>";
     },
-  );
+    async evaluate() {},
+    frames() {
+      return [frame];
+    },
+    async waitForTimeout() {}
+  };
+
+  const context = {
+    pages() {
+      return [page];
+    },
+    async waitForEvent() {
+      return popup;
+    }
+  };
+
+  const browser = {
+    contexts() {
+      return [context];
+    },
+    async disconnect() {
+      state.disconnected = true;
+    }
+  };
+
+  const parsed = await openReceiptPopup({
+    startDate: "2026-04-01",
+    endDate: "2026-04-07",
+    rowIndex: 1,
+    probe: false,
+    connectLoader: async () => browser
+  });
+
+  assert.equal(parsed.popupCaptured, true);
+  assert.equal(parsed.popupUrl, RECEIPT_URL);
+  assert.equal(state.gotoUrl, USAGE_HISTORY_INIT_URL);
+  assert.equal(state.disconnected, true);
 });

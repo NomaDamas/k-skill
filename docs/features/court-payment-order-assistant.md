@@ -55,9 +55,10 @@ console.log(buildBrowserHandoff(input))
 
 ## Browser policy
 
-1. Aside Browser를 기본으로 사용한다.
-2. Playwright/Chrome headless는 비로그인 discovery와 dry-run selector 확인에만 쓴다.
-3. 로그인, 인증서, 보안 모듈, 전자서명, 결제, 제출은 사용자가 직접 한다.
+1. `k-skill-browser-runtime`의 BrowserOS provider를 기본으로 쓴다. CDP-only로 사용자가 직접 띄운 BrowserOS GUI 세션에 붙는다(기본 `KSKILL_BROWSEROS_CDP_URL=http://127.0.0.1:9100`, `KSKILL_BROWSER_PROVIDER`, `KSKILL_CHROME_CDP_URL`). 런타임이 BrowserOS를 launch하거나 headless로 띄우지 않는다.
+2. 공개 화면은 직접 HTTP로 먼저 확인하고, 브라우저는 BrowserOS CDP로 붙은 사용자 세션에서 되돌릴 수 있는 입력 handoff에만 쓴다. BrowserOS CDP가 불가하면 정확한 입력값을 수동 브라우저 handoff로 넘긴다.
+3. 로그인, 인증서, 보안 모듈, 전자서명, 결제, 제출은 사용자가 직접 한다. 해당 경계에 도달하면 runtime의 typed stop rule(`AUTH_REQUIRED`, `CAPTCHA_DETECTED`, `PAYMENT_REQUIRED`, `ELECTRONIC_SIGNATURE`, `IRREVERSIBLE_BOUNDARY`)로 멈추고 수동 handoff로 넘긴다.
+4. CAPTCHA/로그인/결제/전자서명/되돌릴 수 없는 제출 자동화 우회는 하지 않는다.
 
 ## Done when
 

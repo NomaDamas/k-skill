@@ -2,7 +2,7 @@
 
 ## 이 기능으로 할 수 있는 일
 
-- 공식 하이패스 홈페이지에서 로그인된 Chrome 세션 재사용
+- 공식 하이패스 홈페이지에서 로그인된 BrowserOS(기본 우선) 또는 Chrome CDP 세션 재사용
 - 사용내역 조회
 - 특정 거래의 영수증 팝업/출력 화면 진입
 - 세션 만료 감지 후 재로그인 안내
@@ -21,9 +21,17 @@
 npm install hipass-receipt
 ```
 
-배포 패키지에는 CDP 연결용 `playwright-core` 가 함께 들어 있다. 별도 Playwright 브라우저를 내려받지 않고, 사용자가 직접 연 Chrome/Chromium 세션에 붙는다.
+배포 패키지는 CDP 연결을 `k-skill-browser-runtime`으로 처리하고 `playwright-core`를 CDP 클라이언트로 함께 설치한다. 별도 Playwright 브라우저 번들을 내려받지 않고, 사용자가 직접 연 Chrome/Chromium 또는 BrowserOS 세션에 붙는다.
 
 이 레포를 clone 한 유지보수자라면 루트에서 `npm install` 로 workspace 패키지까지 함께 설치해도 된다.
+
+## 브라우저 런타임
+
+기본값은 `auto` provider다. 사용자가 띄운 BrowserOS CDP(`http://127.0.0.1:9100`)를 우선 시도하고, 닿지 않으면 Chrome CDP(`http://127.0.0.1:9222`)로 fallback 한다. `hipass-receipt chrome-command` 로 전용 Chrome 프로필을 띄우고 `--cdp-url http://127.0.0.1:9222` 로 붙이는 흐름은 그대로 유지된다.
+
+특정 provider를 고정하려면 `KSKILL_BROWSER_PROVIDER=browseros` 또는 `=chrome-cdp`(혹은 `options.provider`)를 지정한다. `--cdp-url`을 주면 그 URL에 직접 붙는다. 런타임은 BrowserOS를 launch하거나 headless로 띄우지 않는다.
+
+정리(cleanup)는 automation client disconnect만 수행하고, 로그인된 Chrome/BrowserOS 브라우저와 사용자 프로필을 닫지 않는다.
 
 ## 로그인 브라우저 준비
 

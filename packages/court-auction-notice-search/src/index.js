@@ -152,6 +152,15 @@ function pickClientOptions(input) {
   }
   if (input.now !== undefined) out.now = input.now;
   if (input.delayImpl !== undefined) out.delayImpl = input.delayImpl;
+  if (input.chromiumLoader !== undefined) out.chromiumLoader = input.chromiumLoader;
+  if (input.provider !== undefined) out.provider = input.provider;
+  if (input.cdpUrl !== undefined) out.cdpUrl = input.cdpUrl;
+  if (input.probe !== undefined) out.probe = input.probe;
+  if (input.connectLoader !== undefined) out.connectLoader = input.connectLoader;
+  if (input.preferRuntime !== undefined) out.preferRuntime = input.preferRuntime;
+  if (input.reuseDefaultContext !== undefined) {
+    out.reuseDefaultContext = input.reuseDefaultContext;
+  }
   return out;
 }
 

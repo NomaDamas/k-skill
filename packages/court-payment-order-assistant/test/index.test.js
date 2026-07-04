@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict")
 const test = require("node:test")
 
+const { STOP_CODES } = require("k-skill-browser-runtime")
 const {
   buildBrowserHandoff,
   buildPaymentOrderDraft,
@@ -75,14 +76,50 @@ test("Given missing data When asking questions Then required debtor and claim pr
   assert.ok(questions.some((question) => question.field === "claim.amount"))
 })
 
-test("Given browser handoff When building instructions Then Aside is primary and submission is blocked", () => {
+test("Given browser handoff When building instructions Then BrowserOS/runtime CDP is primary, shared stop codes present, and submission is blocked", () => {
   const handoff = buildBrowserHandoff(completeInput)
 
+  // BrowserOS/runtime CDP is the first handoff channel; fallback is manual, not local headless launch.
   assert.deepEqual(
     handoff.fallbackOrder.map((step) => step.channel),
-    ["aside-browser", "playwright-or-chrome-headless", "manual-browser"]
+    ["browseros-cdp", "manual-browser"]
   )
+  const primary = handoff.fallbackOrder[0]
+  assert.equal(primary.provider, "browseros")
+  assert.equal(primary.cdpUrl, "http://127.0.0.1:9100")
+  assert.equal(primary.launchesBrowser, false)
+  assert.equal(handoff.runtimeProvider, "browseros")
+  assert.equal(handoff.browserosCdpUrl, "http://127.0.0.1:9100")
+  assert.equal(handoff.launchesBrowser, false)
   assert.match(handoff.entryUrl, /ecfs\.scourt\.go\.kr\/psp\/index\.on/)
+  assert.equal(handoff.fallbackOrder.slice(1).some((step) => /headless|playwright|chrome/i.test(step.channel + " " + step.purpose)), false)
+
+  // Shared stop codes from k-skill-browser-runtime are present and agents can branch on them.
+  const expectedCodes = [
+    STOP_CODES.AUTH_REQUIRED,
+    STOP_CODES.CAPTCHA_DETECTED,
+    STOP_CODES.PAYMENT_REQUIRED,
+    STOP_CODES.ELECTRONIC_SIGNATURE,
+    STOP_CODES.IRREVERSIBLE_BOUNDARY,
+    STOP_CODES.MANUAL_HANDOFF
+  ]
+  assert.deepEqual(handoff.stopCodes, expectedCodes)
+  assert.deepEqual(
+    handoff.stopRulesStructured.map((entry) => entry.code),
+    expectedCodes
+  )
+  for (const code of expectedCodes) {
+    const entry = handoff.stopRulesStructured.find((item) => item.code === code)
+    assert.ok(entry && typeof entry.rule === "string" && entry.rule.length > 0, `missing rule for ${code}`)
+  }
+
+  // Irreversible-action safety strings remain in human-readable stopRules.
   assert.match(handoff.stopRules.join("\n"), /최종 제출|전자서명|인지대/)
-  assert.doesNotMatch(handoff.steps.join("\n"), /자동 제출/)
+
+  // No auto-submit/login automation/payment/e-signature bypass wording is introduced in agent steps.
+  const stepsJoined = handoff.steps.join("\n")
+  assert.doesNotMatch(stepsJoined, /자동 제출|자동 로그인|자동 결제|자동 서명/)
+  assert.doesNotMatch(stepsJoined, /automatically (submit|log in|pay|sign)/i)
+  // Stop rules describe boundaries (do-NOT wording), not automation instructions.
+  assert.doesNotMatch(handoff.stopRules.join("\n"), /자동으로|automatically submit|log in automatically|pay automatically/)
 })

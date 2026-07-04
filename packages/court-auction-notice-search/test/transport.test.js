@@ -12,6 +12,10 @@ const {
   createBlockedError,
   createUpstreamError
 } = require("../src/transport/http");
+const {
+  CourtAuctionPlaywrightClient,
+  resetChromiumCacheForTests
+} = require("../src/transport/playwright");
 
 const fixturesDir = path.join(__dirname, "fixtures");
 function loadFixture(name) {
@@ -215,4 +219,186 @@ test("createBlockedError and createUpstreamError carry diagnostics", () => {
   assert.equal(upstream.code, "UPSTREAM_ERROR");
   assert.equal(upstream.statusCode, 500);
   assert.equal(upstream.upstreamMessage, "boom");
+});
+const propertiesSample = loadFixture("properties-sample.json");
+
+// --- Browser-runtime fallback tier (BrowserOS/CDP preferred, local launch intact) ---
+
+test.afterEach(() => {
+  resetChromiumCacheForTests();
+});
+
+function createFakePage(response) {
+  const calls = { goto: 0, evaluate: 0, close: 0 };
+  const page = {
+    goto: async () => {
+      calls.goto += 1;
+    },
+    evaluate: async () => {
+      calls.evaluate += 1;
+      return { status: response.status, body: JSON.stringify(response.body) };
+    },
+    close: async () => {
+      calls.close += 1;
+    }
+  };
+  return { page, calls };
+}
+
+function createFakeCdpBrowser(response) {
+  const fakePage = createFakePage(response);
+  const calls = { newContext: 0, newPage: 0, disconnect: 0, close: 0 };
+  const context = {
+    pages: () => [],
+    newPage: async () => {
+      calls.newPage += 1;
+      return fakePage.page;
+    },
+    close: async () => {}
+  };
+  const browser = {
+    contexts: () => [],
+    newContext: async () => {
+      calls.newContext += 1;
+      return context;
+    },
+    disconnect: async () => {
+      calls.disconnect += 1;
+    },
+    close: async () => {
+      calls.close += 1;
+    }
+  };
+  return { browser, context, page: fakePage.page, pageCalls: fakePage.calls, calls };
+}
+
+function createFakeLocalChromium(response) {
+  const fakePage = createFakePage(response);
+  const launchCalls = [];
+  const context = {
+    newPage: async () => fakePage.page,
+    close: async () => {}
+  };
+  const browser = {
+    newContext: async () => context,
+    close: async () => {}
+  };
+  const chromium = {
+    launch: async (opts) => {
+      launchCalls.push(opts);
+      return browser;
+    }
+  };
+  return { chromium, browser, context, page: fakePage.page, pageCalls: fakePage.calls, launchCalls };
+}
+
+test("CourtAuctionPlaywrightClient prefers the BrowserOS/runtime CDP path when usable and never launches a headless browser", async () => {
+  const cdp = createFakeCdpBrowser({ status: 200, body: propertiesSample });
+  const client = new CourtAuctionPlaywrightClient({
+    baseUrl: "https://www.courtauction.go.kr",
+    probe: false,
+    connectLoader: async () => cdp.browser
+  });
+
+  const payload = await client.postJson("propertySearch", {
+    dma_pageInfo: { pageNo: 1, pageSize: 10 },
+    dma_srchGdsDtlSrchInfo: {}
+  });
+
+  assert.equal(payload.status, 200);
+  assert.ok(client.usesCdp, "client should be attached over CDP");
+  assert.equal(cdp.calls.newContext, 1, "CDP path creates an owned automation context");
+  assert.equal(cdp.pageCalls.evaluate, 1, "request is issued through the CDP page");
+  assert.equal(cdp.calls.close, 0, "user-owned BrowserOS/Chrome browser is never closed");
+
+  await client.close();
+  assert.equal(cdp.calls.disconnect, 1, "CDP browser is disconnected on close");
+  assert.equal(cdp.calls.close, 0, "close() still never closes the user-owned browser");
+});
+
+test("CourtAuctionPlaywrightClient falls back to the local chromium.launch path when the CDP endpoint is unavailable", async () => {
+  const local = createFakeLocalChromium({ status: 200, body: propertiesSample });
+  const client = new CourtAuctionPlaywrightClient({
+    baseUrl: "https://www.courtauction.go.kr",
+    // Simulate BrowserOS/CDP not running: probe fails closed with UNAVAILABLE.
+    probe: async () => ({ ok: false, statusCode: 0, url: "http://127.0.0.1:9100/json/version" }),
+    chromiumLoader: async () => local.chromium
+  });
+
+  const payload = await client.postJson("propertySearch", {
+    dma_pageInfo: { pageNo: 1, pageSize: 10 },
+    dma_srchGdsDtlSrchInfo: {}
+  });
+
+  assert.equal(payload.status, 200);
+  assert.ok(!client.usesCdp, "client fell through to the local launch path");
+  assert.equal(local.launchCalls.length, 1, "local chromium.launch was used as fallback");
+  assert.deepEqual(local.launchCalls[0], { headless: true }, "local launch preserves headless flag");
+
+  await client.close();
+  assert.equal(client.browser, null, "local launch close clears the owned browser");
+});
+
+test("CourtAuctionPlaywrightClient local launch path still works directly with preferRuntime:false", async () => {
+  const local = createFakeLocalChromium({ status: 200, body: propertiesSample });
+  const client = new CourtAuctionPlaywrightClient({
+    baseUrl: "https://www.courtauction.go.kr",
+    preferRuntime: false,
+    headless: false,
+    chromiumLoader: async () => local.chromium
+  });
+
+  await client.postJson("propertySearch", {
+    dma_pageInfo: { pageNo: 1, pageSize: 10 },
+    dma_srchGdsDtlSrchInfo: {}
+  });
+
+  assert.equal(local.launchCalls.length, 1);
+  assert.deepEqual(local.launchCalls[0], { headless: false });
+  assert.ok(!client.usesCdp);
+  await client.close();
+  assert.equal(client.browser, null);
+});
+
+test("CourtAuctionPlaywrightClient surfaces PLAYWRIGHT_UNAVAILABLE when the local fallback has no playwright module", async () => {
+  const client = new CourtAuctionPlaywrightClient({
+    baseUrl: "https://www.courtauction.go.kr",
+    preferRuntime: false
+  });
+
+  // Force loadChromium down the "no module installed" branch by injecting a
+  // loader that throws the same PLAYWRIGHT_UNAVAILABLE error the real loader
+  // produces when none of playwright-core/playwright/rebrowser-playwright exist.
+  client.loader = async () => {
+    const error = new Error("no playwright module");
+    error.code = "PLAYWRIGHT_UNAVAILABLE";
+    throw error;
+  };
+
+  await assert.rejects(
+    () => client.postJson("propertySearch", {}),
+    (err) => err.code === "PLAYWRIGHT_UNAVAILABLE"
+  );
+});
+
+test("CourtAuctionPlaywrightClient CDP path cleans up only owned page/context and disconnects safely", async () => {
+  const cdp = createFakeCdpBrowser({ status: 200, body: propertiesSample });
+  const client = new CourtAuctionPlaywrightClient({
+    baseUrl: "https://www.courtauction.go.kr",
+    probe: false,
+    connectLoader: async () => cdp.browser
+  });
+
+  await client.postJson("propertySearch", {});
+  const ownedPage = client.runtimeSession.page;
+  const ownedContext = client.runtimeSession.context;
+
+  await client.close();
+
+  assert.equal(cdp.pageCalls.close, 1, "owned automation page is closed");
+  assert.equal(cdp.calls.disconnect, 1, "automation client is disconnected");
+  assert.equal(cdp.calls.close, 0, "user browser is never closed");
+  assert.equal(client.runtimeSession, null, "runtime session is dropped");
+  assert.equal(client.usesCdp, false);
+  assert.ok(ownedPage && ownedContext, "owned session resources were tracked before cleanup");
 });

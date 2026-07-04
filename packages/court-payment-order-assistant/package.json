@@ -11,6 +11,9 @@
   "engines": {
     "node": ">=18"
   },
+  "dependencies": {
+    "k-skill-browser-runtime": "^0.1.0"
+  },
   "publishConfig": {
     "access": "public"
   },

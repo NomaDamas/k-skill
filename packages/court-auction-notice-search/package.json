@@ -34,6 +34,9 @@
     "lint": "node --check src/index.js && node --check src/normalize.js && node --check src/codetables/index.js && node --check src/transport/http.js && node --check src/transport/playwright.js && node --check src/cli.js && node --check bin/court-auction-notice-search.js && node --check test/normalize.test.js && node --check test/transport.test.js && node --check test/index.test.js && node --check test/cli.test.js",
     "test": "node --test"
   },
+  "dependencies": {
+    "k-skill-browser-runtime": "^0.1.0"
+  },
   "optionalDependencies": {
     "playwright-core": ">=1.40.0",
     "rebrowser-playwright": ">=1.40.0"

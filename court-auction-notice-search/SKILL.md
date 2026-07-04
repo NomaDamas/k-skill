@@ -16,6 +16,7 @@ metadata:
 
 - 공식 OPEN API가 없어 사이트 내부의 WebSquare JSON XHR endpoint를 그대로 호출한다.
 - 1차 transport 는 직접 HTTP다. Workflow C 자유검색에서 raw-HTTP WAF성 HTTP 400이 날 때만 Playwright fallback 으로 전환하며, 명시적 차단(`BLOCKED`/`ipcheck=false`)은 기본적으로 중단한다 (`rebrowser-playwright` 또는 `playwright-core` 가 있을 때만).
+- **기본 조회는 실제 브라우저 없이 동작한다.** 매각공고/사건/물건 조회의 정상 경로는 직접 HTTP다. 브라우저는 Workflow C 자유검색이 WAF성 HTTP 400을 낼 때만 fallback으로 쓰이고, 그때 권장 순서는 사용자가 띄운 BrowserOS/runtime CDP → (닿지 않으면) Chrome CDP → 로컬 Playwright launch다.
 - 사이트는 **IP 단위 봇 차단** 이 매우 공격적이다 (16회/30초 정도면 1시간 차단). 이 패키지는 호출 간 최소 2초 jitter, 세션당 호출 budget(기본 10회), `data.ipcheck === false` 즉시 throw 로 보수적으로 동작한다.
 - **참고용 도구**다. 실제 입찰 전에는 반드시 법원 원문 매각공고를 다시 확인해야 한다.
 

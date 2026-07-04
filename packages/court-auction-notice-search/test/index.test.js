@@ -20,6 +20,7 @@ const {
   buildNoticeDetailBody,
   ENDPOINT_PATHS,
   CourtAuctionHttpClient,
+  CourtAuctionPlaywrightClient,
   isPlaywrightFallbackAvailable
 } = require("../src/index");
 
@@ -548,4 +549,101 @@ test("isPlaywrightFallbackAvailable is a boolean (no crash even when modules are
 
 test("CourtAuctionHttpClient is exported for advanced clients to override transport", () => {
   assert.equal(typeof CourtAuctionHttpClient, "function");
+});
+
+test("searchProperties keeps direct HTTP first and only constructs a fallback on an eligible error", async () => {
+  const primary = makeFakeClient((endpoint) => {
+    assert.equal(endpoint, "propertySearch");
+    return loadFixture("properties-sample.json");
+  });
+
+  const result = await searchProperties({
+    client: primary,
+    region: { sido: "11", sigungu: "11680" },
+    usage: { large: "20000" },
+    saleDate: { from: "2026-05-01", to: "2026-05-20" },
+    bidType: "date",
+    page: 1,
+    pageSize: 10,
+    includeRaw: false
+  });
+
+  assert.equal(primary.calls.length, 1, "direct HTTP is used first and only once on success");
+  assert.equal(result.count, 2);
+});
+
+test("searchProperties constructs and safely closes a BrowserOS/runtime CDP fallback on WAF-style HTTP 400", { skip: !isPlaywrightFallbackAvailable() }, async () => {
+  // Use a real CourtAuctionHttpClient primary so searchProperties treats it as
+  // a fallback-eligible client and constructs the CourtAuctionPlaywrightClient.
+  const fetchCalls = [];
+  const fetchImpl = async (url, init = {}) => {
+    fetchCalls.push({ url: String(url), method: init.method || "GET" });
+    const target = String(url).split("?")[0].replace(/^https?:\/\/[^/]+/, "");
+    if (target.startsWith("/pgj/index.on")) {
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null, getSetCookie: () => ["JSESSIONID=cdp1; Path=/"] },
+        json: async () => ({})
+      };
+    }
+    if (target.startsWith("/pgj/pgjsearch/searchControllerMain.on")) {
+      return {
+        ok: false,
+        status: 400,
+        headers: { get: () => null, getSetCookie: () => [] },
+        json: async () => ({})
+      };
+    }
+    throw new Error(`unmocked URL: ${url}`);
+  };
+  const primary = new CourtAuctionHttpClient({
+    fetchImpl,
+    minDelayMs: 0,
+    jitterMs: 0,
+    delayImpl: async () => {},
+    now: () => 1_000_000
+  });
+
+  const disconnectCalls = { disconnect: 0, close: 0 };
+  const fakePage = {
+    goto: async () => {},
+    evaluate: async () => ({
+      status: 200,
+      body: JSON.stringify(loadFixture("properties-sample.json"))
+    }),
+    close: async () => {}
+  };
+  const fakeContext = { pages: () => [], newPage: async () => fakePage, close: async () => {} };
+  const fakeBrowser = {
+    contexts: () => [],
+    newContext: async () => fakeContext,
+    disconnect: async () => {
+      disconnectCalls.disconnect += 1;
+    },
+    close: async () => {
+      disconnectCalls.close += 1;
+    }
+  };
+
+  const result = await searchProperties({
+    client: primary,
+    // Flow runtime-CDP injection options through pickClientOptions into the
+    // internally constructed CourtAuctionPlaywrightClient.
+    probe: false,
+    connectLoader: async () => fakeBrowser,
+    courtCode: "B000210",
+    saleDate: { from: "2026-05-08", to: "2026-05-22" },
+    pageSize: 10,
+    includeRaw: false
+  });
+
+  assert.equal(
+    fetchCalls.filter((c) => c.method === "POST").length,
+    1,
+    "direct HTTP POST is attempted first"
+  );
+  assert.equal(result.items.length, 2);
+  assert.equal(disconnectCalls.disconnect, 1, "fallback CDP browser is disconnected on cleanup");
+  assert.equal(disconnectCalls.close, 0, "searchProperties never closes the user-owned browser");
 });

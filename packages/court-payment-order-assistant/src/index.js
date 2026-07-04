@@ -1,8 +1,46 @@
 "use strict"
 
 const { BOUNDARIES, buildRequiredQuestions, normalizeIntake, validateIntake } = require("./intake")
+const { STOP_CODES } = require("k-skill-browser-runtime")
 
 const COURT_PORTAL_URL = "https://ecfs.scourt.go.kr/psp/index.on"
+
+// BrowserOS is the primary browser handoff target: a user-launched BrowserOS
+// GUI session attached over CDP. The skill never launches BrowserOS and never
+// runs headless. The default CDP URL matches k-skill-browser-runtime.
+const BROWSEROS_PROVIDER = "browseros"
+const BROWSEROS_DEFAULT_CDP_URL = "http://127.0.0.1:9100"
+
+// Shared stop-rule taxonomy for court-payment browser handoff. The codes are
+// k-skill-browser-runtime STOP_CODES so agents can branch on the same
+// structured reasons across skills. Human-readable `rule` strings remain for
+// existing consumers/tests and preserve irreversible-action safety wording.
+const HANDOFF_STOP_RULES = [
+  {
+    code: STOP_CODES.AUTH_REQUIRED,
+    rule: "Do not bypass login, certificate(공동인증서), or security module prompts; the user must authenticate manually."
+  },
+  {
+    code: STOP_CODES.CAPTCHA_DETECTED,
+    rule: "Do not solve CAPTCHA or bot-check challenges; hand off to the user."
+  },
+  {
+    code: STOP_CODES.PAYMENT_REQUIRED,
+    rule: "Do not pay 인지대 or 송달료; the user completes filing-fee payment manually."
+  },
+  {
+    code: STOP_CODES.ELECTRONIC_SIGNATURE,
+    rule: "Do not perform 전자서명(electronic signature); the user signs manually."
+  },
+  {
+    code: STOP_CODES.IRREVERSIBLE_BOUNDARY,
+    rule: "Do not perform 최종 제출(final submit) or any irreversible court filing action."
+  },
+  {
+    code: STOP_CODES.MANUAL_HANDOFF,
+    rule: "If automation is blocked by certificate, security software, CAPTCHA, or maintenance, hand off exact field values for manual entry."
+  }
+]
 
 function buildPaymentOrderDraft(input = {}) {
   const intake = normalizeIntake(input)
@@ -41,25 +79,33 @@ function buildBrowserHandoff(input = {}) {
   const draft = buildPaymentOrderDraft(input)
   return {
     entryUrl: COURT_PORTAL_URL,
+    runtimeProvider: BROWSEROS_PROVIDER,
+    browserosCdpUrl: BROWSEROS_DEFAULT_CDP_URL,
+    launchesBrowser: false,
     fallbackOrder: [
-      { channel: "aside-browser", purpose: "Use the user's browser session to inspect the official electronic litigation portal and fill reversible draft fields after manual login." },
-      { channel: "playwright-or-chrome-headless", purpose: "Use only for unauthenticated page discovery or dry-run selector checks; authenticated filing should stay in the user's browser." },
-      { channel: "manual-browser", purpose: "If browser automation is blocked by certificate, security software, CAPTCHA, or maintenance, hand off exact field values for manual entry." }
+      {
+        channel: "browseros-cdp",
+        provider: BROWSEROS_PROVIDER,
+        cdpUrl: BROWSEROS_DEFAULT_CDP_URL,
+        launchesBrowser: false,
+        purpose: "Attach over CDP to the user-launched BrowserOS GUI session (default http://127.0.0.1:9100) to inspect the official electronic litigation portal and fill reversible draft fields after manual login. Never launch BrowserOS and never run headless."
+      },
+      {
+        channel: "manual-browser",
+        purpose: "If browser automation is blocked by certificate, security software, CAPTCHA, or maintenance, hand off exact field values for manual entry."
+      }
     ],
     steps: [
-      "Open the official electronic litigation portal.",
+      "Attach over CDP to the user-launched BrowserOS GUI session (do not launch BrowserOS and do not run headless).",
       "User manually logs in and handles certificate/security prompts.",
       "Navigate to 서류제출 > 민사 서류 > 지급명령 or 독촉 관련 신청서.",
       "Fill reversible draft fields from the prepared parties, claim, cause, and evidence checklist.",
-      "Pause for user review before any irreversible action."
+      "Pause for user review before any irreversible action; if BrowserOS CDP is unavailable, hand off exact field values for manual browser entry."
     ],
     draft,
-    stopRules: [
-      "Do not perform final submit.",
-      "Do not perform electronic signature.",
-      "Do not pay 인지대 or 송달료.",
-      "Do not bypass login, certificate, security module, CAPTCHA, or maintenance pages."
-    ]
+    stopCodes: HANDOFF_STOP_RULES.map((entry) => entry.code),
+    stopRules: HANDOFF_STOP_RULES.map((entry) => entry.rule),
+    stopRulesStructured: HANDOFF_STOP_RULES
   }
 }
 
@@ -73,6 +119,8 @@ function buildClaimStatement(intake) {
 
 module.exports = {
   COURT_PORTAL_URL,
+  BROWSEROS_DEFAULT_CDP_URL,
+  HANDOFF_STOP_RULES,
   buildBrowserHandoff,
   buildPaymentOrderDraft,
   buildRequiredQuestions,

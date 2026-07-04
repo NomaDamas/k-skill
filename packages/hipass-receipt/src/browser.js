@@ -1,6 +1,9 @@
 const fs = require("node:fs")
 const path = require("node:path")
 
+const runtime = require("k-skill-browser-runtime")
+const { PROVIDERS } = runtime
+
 const {
   HIPASS_ENDPOINTS,
   USAGE_HISTORY_INIT_URL,
@@ -45,33 +48,38 @@ function buildChromeLaunchCommand(options = {}) {
   return `${shellQuote(chromePath)} ${args.join(" ")}`
 }
 
-async function loadChromium() {
-  for (const moduleName of ["playwright-core", "playwright"]) {
-    try {
-      const loaded = require(moduleName)
-      if (loaded.chromium) {
-        return loaded.chromium
-      }
-    } catch {
-      // ignore and try the next module name
-    }
+function resolveHipassProvider(options = {}) {
+  if (options.provider) {
+    return String(options.provider).trim()
   }
-
-  throw new Error(
-    "playwright-core or playwright is required for live browser-session automation. Install one of them in the environment that uses hipass-receipt.",
-  )
+  if (process.env.KSKILL_BROWSER_PROVIDER) {
+    return String(process.env.KSKILL_BROWSER_PROVIDER).trim()
+  }
+  // An explicit --cdp-url points at a specific browser the user launched (Chrome
+  // via `hipass-receipt chrome-command`), so target it directly. Otherwise use the
+  // recommended default: prefer a user-launched BrowserOS session, fall back to Chrome CDP.
+  if (options.cdpUrl) {
+    return PROVIDERS.CHROME_CDP
+  }
+  return PROVIDERS.AUTO
 }
 
 async function connectToChrome(options = {}) {
-  const chromium = await loadChromium()
-  return chromium.connectOverCDP(options.cdpUrl || "http://127.0.0.1:9222")
-}
-
-async function getAutomationPage(browser) {
-  const context = browser.contexts()[0] || (await browser.newContext())
-  const existingPage = context.pages()[0]
-  const page = existingPage || (await context.newPage())
-  return { context, page }
+  const connectOptions = {
+    provider: resolveHipassProvider(options),
+    probe: options.probe === undefined ? false : options.probe
+  }
+  if (options.cdpUrl) {
+    connectOptions.cdpUrl = options.cdpUrl
+  }
+  if (typeof options.connectLoader === "function") {
+    connectOptions.connectLoader = options.connectLoader
+  }
+  if (typeof options.chromiumLoader === "function") {
+    connectOptions.chromiumLoader = options.chromiumLoader
+  }
+  const { browser } = await runtime.connect(connectOptions)
+  return browser
 }
 
 async function gotoUsageHistoryPage(page) {
@@ -144,17 +152,20 @@ async function waitForUsageHistoryFrame(page) {
 }
 
 async function closeBrowserConnection(browser) {
-  if (!browser || typeof browser.close !== "function") {
-    return
+  try {
+    await runtime.disconnectBrowser(browser)
+  } catch {
+    // The runtime refuses to close a user-owned browser that lacks disconnect()
+    // (e.g. a Playwright CDP Browser). That refusal preserves the logged-in
+    // Chrome session; connection cleanup is left to process exit / GC for the
+    // chrome-cdp case. BrowserOS clients expose disconnect() and clean up here.
   }
-
-  await browser.close().catch(() => {})
 }
 
 async function listUsageHistory(options = {}) {
   const browser = await connectToChrome(options)
   try {
-    const { page } = await getAutomationPage(browser)
+    const { page } = await runtime.getAutomationPage(browser, { reuseDefaultContext: true })
     await gotoUsageHistoryPage(page)
     const query = buildUsageHistoryQuery(options)
     const { html } = await submitUsageHistorySearch(page, query)
@@ -170,7 +181,7 @@ async function listUsageHistory(options = {}) {
 async function openReceiptPopup(options = {}) {
   const browser = await connectToChrome(options)
   try {
-    const { page, context } = await getAutomationPage(browser)
+    const { page, context } = await runtime.getAutomationPage(browser, { reuseDefaultContext: true })
     await gotoUsageHistoryPage(page)
     const query = buildUsageHistoryQuery(options)
     const { frame, html } = await submitUsageHistorySearch(page, query)

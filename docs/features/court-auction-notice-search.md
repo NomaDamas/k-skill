@@ -10,7 +10,7 @@
 - ✅ Workflow B — **사건번호 직접 조회**: 법원사무소코드 + 사건번호(`2024타경100001`) → 사건정보·물건내역·매각기일별 이력·배당요구종기
 - ✅ Workflow C — **부동산 물건 자유 조건검색**: 지역·용도·가격대·면적·유찰횟수·매각기일 조건 → 물건 목록 JSON
 - ✅ 법원사무소 코드(60+개) + 입찰구분 코드(기일입찰=`000331`, 기간입찰=`000332`) + Workflow C용 대표 용도/지역 코드 변환
-- ✅ 2-tier transport — direct HTTP 1차, Playwright fallback 옵션
+- ✅ 3-tier transport — direct HTTP 1차, BrowserOS/runtime CDP fallback, 로컬 Playwright(`rebrowser-playwright`/`playwright-core`) launch fallback
 - ✅ 안티봇 가드 — 호출 간 ≥2초 jitter, 세션당 호출 budget, `data.ipcheck === false` 즉시 `BLOCKED` throw
 
 ## 무엇을 할 수 없나 (별도 follow-up 이슈)
@@ -96,12 +96,22 @@ const properties = await searchProperties({
 
 세션 cookie(`JSESSIONID`, `WMONID`)는 endpoint별 진입 화면을 먼저 열어 받아둡니다. 매각공고/상세는 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01`, 물건 자유 조건검색(Workflow C)은 `GET /pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml&pgjId=151F00` 으로 warmup 합니다.
 
+## 브라우저 fallback 런타임
+
+Workflow C direct HTTP가 WAF-style HTTP 400을 반환하거나, 명시적으로 `fallbackOnBlocked:true` 를 준 `BLOCKED` 응답일 때만 browser fallback을 쓴다. fallback 순서는 다음과 같다.
+
+1. **runtime CDP (기본 `auto`)** — `k-skill-browser-runtime`으로 사용자가 직접 띄운 BrowserOS GUI 세션(`http://127.0.0.1:9100`)에 먼저 attach하고, 닿지 않으면 Chrome/Chromium CDP(`http://127.0.0.1:9222`)로 fallback한다. `KSKILL_BROWSER_PROVIDER`(`auto`/`browseros`/`chrome-cdp`), `KSKILL_BROWSEROS_CDP_URL`, `KSKILL_CHROME_CDP_URL`, `provider`, `cdpUrl` 로 조정할 수 있다. BrowserOS를 launch하거나 headless로 띄우지 않는다.
+2. **Local Playwright launch fallback** — CDP endpoint가 닿지 않을 때만 이 패키지가 직접 소유하는 로컬 브라우저를 `chromium.launch({ headless })`로 띄운다. 이 로컬 브라우저는 패키지가 닫을 수 있다.
+
+CDP로 붙은 BrowserOS/Chrome 세션은 사용자 소유이므로 fallback 종료 시 automation client만 disconnect하고 브라우저/프로필은 닫지 않는다. 로그인/CAPTCHA/payment/전자서명/irreversible 액션은 자동화하지 않는다.
+
 ## 설치
 
 ```bash
 npm install court-auction-notice-search
-# Playwright fallback 을 쓰려면 (선택)
-npm install rebrowser-playwright   # 권장
+# BrowserOS/runtime CDP fallback 은 k-skill-browser-runtime regular dependency로 자동 설치된다.
+# CDP가 unavailable일 때 로컬 launch fallback까지 쓰려면 (선택):
+npm install rebrowser-playwright
 # 또는
 npm install playwright-core
 ```

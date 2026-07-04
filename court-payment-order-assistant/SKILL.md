@@ -26,7 +26,9 @@ metadata:
 ## Prerequisites
 
 - Node.js 18+
-- Aside Browser 우선 사용
+
+- **실제 브라우저는 필수가 아니다.** 이 스킬의 핵심 산출물(지급명령/독촉 초안, 필요서류 체크리스트, 입력값 handoff)은 실제 브라우저를 띄우지 않고 생성된다. 브라우저는 사용자가 공식 포털에서 직접 로그인·확인·제출하는 수동 단계에서만 쓰이며, 그때 권장 순서는 BrowserOS/runtime CDP → 수동 브라우저다.
+- BrowserOS/runtime CDP 우선 사용: 사용자가 직접 띄운 BrowserOS GUI 세션(`KSKILL_BROWSEROS_CDP_URL`, 기본 `http://127.0.0.1:9100`)에 attach한다. 스킬은 BrowserOS를 launch하거나 headless로 띄우지 않는다.
 - 사용자가 직접 처리할 것: 전자소송 로그인, 공동/금융인증서 또는 간편인증, 보안 프로그램, 전자서명, 인지대/송달료 결제, 최종 제출
 
 ## Public access path discovered
@@ -96,9 +98,8 @@ console.log(buildBrowserHandoff(input))
 
 Fallback order:
 
-1. Aside Browser: official portal inspection and reversible field entry after the user manually logs in.
-2. Playwright/Chrome headless: unauthenticated discovery or dry-run selector checks only.
-3. Manual browser: if authentication, certificate, security module, CAPTCHA, or maintenance blocks automation.
+1. BrowserOS/runtime CDP: attach to the user-launched BrowserOS GUI session for official portal inspection and reversible field entry after the user manually logs in.
+2. Manual browser: if BrowserOS CDP is unavailable or authentication, certificate, security module, CAPTCHA, or maintenance blocks automation, hand off exact field values for manual entry.
 
 ## Stop rules
 
@@ -112,7 +113,7 @@ Fallback order:
 
 - Required facts were collected or missing questions were returned.
 - A draft/checklist was generated for user review.
-- Official portal entry and login-required boundary were confirmed through Aside Browser or documented fallback.
+- Official portal entry and login-required boundary were confirmed through BrowserOS/runtime CDP or documented fallback.
 - The browser handoff stops before signature, payment, and final submission.
 
 ## Failure modes

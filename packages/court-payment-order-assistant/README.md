@@ -35,11 +35,13 @@ console.log(buildBrowserHandoff(input).stopRules)
 
 - Official portal: `https://ecfs.scourt.go.kr/psp/index.on`
 - Observed public surface: login/register, `서류제출`, `민사 서류`, and login-required document drafting boundary.
-- Primary browser: Aside Browser.
-- Fallback: Playwright/Chrome headless for unauthenticated discovery only, then manual browser handoff when authentication/security modules appear.
+- Primary browser: BrowserOS/runtime CDP, attached to the user-launched BrowserOS GUI session (default `http://127.0.0.1:9100`). The skill never launches BrowserOS and never runs headless.
+- Fallback: manual browser handoff with exact field values when BrowserOS CDP is unavailable or authentication/security modules appear.
 
 ## Boundaries
 
 - Stop before electronic signature, filing-fee/payment screens, and final submit.
 - User handles all login, certificate, CAPTCHA/security module, payment, and final review steps.
 - The package returns drafts/checklists; it does not decide whether filing is legally appropriate.
+- BrowserOS is used as a GUI/session browser over CDP, not as a headless backend, login solver, CAPTCHA bypass, payment solver, or stealth scraping browser.
+- Handoff may describe reversible field entry only and must stop before irreversible steps.
