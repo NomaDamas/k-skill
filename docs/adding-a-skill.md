@@ -188,6 +188,20 @@ upstream API 키를 사용자에게 노출하지 않으려면 `k-skill-proxy`를
 
 ---
 
+## 브라우저가 필요한 스킬: k-skill-browser-runtime
+
+로그인된 브라우저 세션이나 렌더링 의존 화면이 필요한 스킬은 `k-skill-browser-runtime`을 기본 런타임으로 쓴다 ([브라우저 런타임 문서](browser-runtime.md) 참고).
+
+1. **런타임을 선호한다**: 인라인 CDP/Playwright 연결 로직을 새로 짜지 말고 런타임의 `connect()`/`runJob()`과 typed stop rule을 쓴다.
+2. **semver 의존성**: `package.json`의 `dependencies`는 `"k-skill-browser-runtime": "^0.1.0"` 처럼 semver로 고정한다. `workspace:` 프로토콜은 npm publish를 깨뜨리므로 쓰지 않는다.
+3. **typed stop rule 노출**: 인증·CAPTCHA·결제·전자서명·되돌릴 수 없는 제출 경계에서 멈추고 수동 handoff로 넘긴다. 런타임이 BrowserOS를 launch하거나 headless로 띄우지 않는다.
+4. **사이트별 로직은 스킬 안에**: navigation, selector, 파싱, fallback 순서는 각 스킬의 `SKILL.md`와 패키지 코드에 좁고 명확하게 기록한다.
+5. **공개/직접 HTTP 우선**: 브라우저 없이 잡히는 공개 endpoint(RSS/sitemap/공개 JSON/문서화된 API)를 먼저 쓰고, 브라우저는 로그인이 필요한 화면이나 렌더링 의존 화면에만 쓴다.
+
+기본 환경변수: `KSKILL_BROWSER_PROVIDER`(기본 `auto` — BrowserOS 우선, 닿지 않으면 Chrome CDP fallback), `KSKILL_BROWSEROS_CDP_URL`(기본 `http://127.0.0.1:9100`), `KSKILL_CHROME_CDP_URL`(기본 `http://127.0.0.1:9222`). CAPTCHA/로그인/결제/전자서명/되돌릴 수 없는 제출 자동화 우회는 하지 않는다.
+
+---
+
 ## 스킬 등록 & 검증
 
 스킬은 **별도 레지스트리 없이 디렉토리 스캔으로 자동 발견**된다.
@@ -239,6 +253,7 @@ npm run ci
 - [ ] 크롤링/검색 스킬이라면 공개 접근 경로, fallback 순서, 차단/로그인/빈 결과 실패 모드 문서화
 - [ ] 시크릿이 있다면 `KSKILL_` 접두사 규칙 준수 및 `docs/setup.md` 업데이트
 - [ ] `docs/features/my-new-skill.md` 작성 (선택, 상세 가이드)
+- [ ] 브라우저가 필요한 스킬이라면 `k-skill-browser-runtime` semver 의존성, typed stop rule, 직접 HTTP 우선, `workspace:` 미사용 확인 ([브라우저 런타임 문서](browser-runtime.md))
 
 ---
 
@@ -247,3 +262,4 @@ npm run ci
 - [공통 설정 가이드](setup.md) — 시크릿 설정 방법
 - [릴리스와 자동 배포](releasing.md) — npm 패키지 배포 흐름
 - [보안/시크릿 정책](security-and-secrets.md) — 인증 정보 취급 원칙
+- [브라우저 런타임](browser-runtime.md) — BrowserOS CDP 런타임과 stop rule
