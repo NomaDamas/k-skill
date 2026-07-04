@@ -63,6 +63,25 @@ test("Given production capacity deadline When parsing Then registration deadline
   assert.equal(result.items[0].bid_due_at, "2026-07-09 10:30")
 })
 
+test("Given mixed D2B bid categories When parsing Then each visible row stays isolated", () => {
+  const visibleText = `
+  * 총 2 건
+  5 물품 경쟁입찰 긴급공고 2026-07-03 2026SCF063526548-01 2026SCF26548 26548
+  (긴급) 마린 기어 조립품 1종 해군군수사령부 해당없음 2026-07-08 14:00 2026-07-09 10:00 제한경쟁 전자입찰 7,745,000
+  6 물품 공개수의 - 2026-07-03 LKF0052-1 2026LKF27065 27065
+  병영식당 취사기구(냉동고 등 11개 품목) 구매 제50보병사단 해당없음 해당없음 수의계약 전자입찰 20,205,000
+  순번 업무구분 입찰구분
+  `
+
+  const result = parseNoticeListText(visibleText)
+
+  assert.equal(result.items.length, 2)
+  assert.equal(result.items[0].base_price_status, "7,745,000")
+  assert.equal(result.items[1].sequence, 6)
+  assert.equal(result.items[1].bid_category, "공개수의")
+  assert.equal(result.items[1].title, "병영식당 취사기구(냉동고 등 11개 품목) 구매")
+})
+
 test("Given public D2B index text with login navigation When classifying Then it is not blocked", () => {
   const html = `
   <html>

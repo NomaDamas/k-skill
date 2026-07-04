@@ -43,6 +43,8 @@ function classifyBlockedHtml(html) {
   return { status: "ok", reason: "" }
 }
 
+const BID_CATEGORY_PATTERN = "(?:경쟁입찰|공개수의|수의계약|일반경쟁|제한경쟁)"
+
 function parseNoticeListText(text, options = {}) {
   const sourceText = cleanText(text)
   const rows = extractCandidateRows(sourceText).map(parseCandidateRow).filter(Boolean)
@@ -62,13 +64,13 @@ function parseTotalCount(text) {
 
 function extractCandidateRows(text) {
   const normalized = cleanText(text)
-  const pattern = /(?:^|\s)(\d+\s+(?:물품|용역|공사|국외)\s+경쟁입찰\s+.+?)(?=\s+\d+\s+(?:물품|용역|공사|국외)\s+경쟁입찰\s+|순번\s+업무구분|$)/g
+  const pattern = new RegExp(`(?:^|\\s)(\\d+\\s+(?:물품|용역|공사|국외)\\s+${BID_CATEGORY_PATTERN}\\s+.+?)(?=\\s+\\d+\\s+(?:물품|용역|공사|국외)\\s+${BID_CATEGORY_PATTERN}\\s+|순번\\s+업무구분|$)`, "g")
   return Array.from(normalized.matchAll(pattern), (match) => match[1])
 }
 
 function parseCandidateRow(row) {
   const normalized = cleanText(row)
-  const pattern = /^(\d+)\s+(물품|용역|공사|국외)\s+(경쟁입찰)\s+(\S+)\s+(\d{4}-\d{2}-\d{2})\s+([A-Z0-9-]+)\s+([A-Z0-9]+)\s+([A-Z0-9]+)\s+(.+)$/
+  const pattern = new RegExp(`^(\\d+)\\s+(물품|용역|공사|국외)\\s+(${BID_CATEGORY_PATTERN})\\s+(\\S+)\\s+(\\d{4}-\\d{2}-\\d{2})\\s+([A-Z0-9-]+)\\s+([A-Z0-9]+)\\s+([A-Z0-9]+)\\s+(.+)$`)
   const prefix = normalized.match(pattern)
   if (!prefix) return null
   const rest = prefix[9]
