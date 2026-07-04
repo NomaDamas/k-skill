@@ -24,7 +24,7 @@
 npm install yebigun-training
 ```
 
-배포 패키지에는 CDP 연결용 `playwright-core`가 함께 들어 있다. 별도 Playwright 브라우저를 내려받지 않고, 사용자가 직접 연 Chrome/Chromium 세션에 붙는다.
+배포 패키지는 CDP 연결을 `k-skill-browser-runtime`으로 처리하고 `playwright-core`를 CDP 클라이언트로 함께 설치한다. 별도 Playwright 브라우저 번들을 내려받지 않고, 사용자가 직접 연 BrowserOS/Chrome/Chromium 세션에 붙는다. 기본은 `auto`로, BrowserOS CDP(`http://127.0.0.1:9100`)를 우선 시도하고 닿지 않으면 Chrome CDP(`http://127.0.0.1:9222`)로 fallback 한다. `KSKILL_BROWSER_PROVIDER`로 provider를 고정하거나 `--cdp-url`로 특정 세션에 직접 붙일 수 있다. 런타임은 BrowserOS를 launch하거나 headless로 띄우지 않고, 정리 시 automation client만 disconnect한다.
 
 이 레포를 clone한 유지보수자라면 루트에서 `npm install`로 workspace 패키지까지 함께 설치해도 된다.
 

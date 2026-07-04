@@ -16,7 +16,7 @@ const {
 } = require("./index")
 
 function printHelp() {
-  process.stdout.write(`yebigun-training — logged-in browser session helper for https://www.yebigun1.mil.kr
+  return writeStdout(`yebigun-training — logged-in browser session helper for https://www.yebigun1.mil.kr
 
 Commands:
   yebigun-training --help
@@ -67,10 +67,19 @@ function required(args, key, description) {
   return args[key]
 }
 
+function writeStdout(value) {
+  return new Promise((resolve, reject) => {
+    process.stdout.write(value, (error) => {
+      if (error) reject(error)
+      else resolve()
+    })
+  })
+}
+
 async function main() {
   const argv = process.argv.slice(2)
   if (argv.length === 0 || argv[0] === "--help" || argv[0] === "help") {
-    printHelp()
+    await printHelp()
     return
   }
 
@@ -78,7 +87,7 @@ async function main() {
   const args = parseArgs(argv.slice(1))
 
   if (command === "chrome-command") {
-    process.stdout.write(
+    await writeStdout(
       `${buildChromeLaunchCommand({
         chromePath: args.chromePath,
         profileDir: args.profileDir,
@@ -98,27 +107,27 @@ async function main() {
       textPreview: textPreview(result.html),
       html: args.full ? result.html : undefined
     }
-    process.stdout.write(`${JSON.stringify(output, null, 2)}\n`)
+    await writeStdout(`${JSON.stringify(output, null, 2)}\n`)
     return
   }
 
   if (command === "training-info") {
     const result = await fetchTrainingInfo({ cdpUrl: args.cdpUrl, path: args.path })
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    await writeStdout(`${JSON.stringify(result, null, 2)}\n`)
     return
   }
 
   if (command === "view") {
     const menu = required(args, "menu", `menu (one of: ${Object.keys(VIEW_MENUS).join(", ")})`)
     const result = await fetchInquiry(menu, { cdpUrl: args.cdpUrl })
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    await writeStdout(`${JSON.stringify(result, null, 2)}\n`)
     return
   }
 
   if (command === "open-menu") {
     const menu = required(args, "menu", `menu (one of: ${Object.keys(APPLICATION_MENUS).join(", ")})`)
     const result = await openApplicationMenu(menu, { cdpUrl: args.cdpUrl })
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    await writeStdout(`${JSON.stringify(result, null, 2)}\n`)
     return
   }
 
@@ -126,16 +135,16 @@ async function main() {
     const year = required(args, "year", "year YYYY")
     const data = JSON.parse(required(args, "json", "json '<data>'"))
     const result = recordYear(year, data)
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    await writeStdout(`${JSON.stringify(result, null, 2)}\n`)
     return
   }
 
   if (command === "history") {
     if (args.year) {
-      process.stdout.write(`${JSON.stringify(getYear(args.year), null, 2)}\n`)
+      await writeStdout(`${JSON.stringify(getYear(args.year), null, 2)}\n`)
       return
     }
-    process.stdout.write(`${JSON.stringify(listYears(), null, 2)}\n`)
+    await writeStdout(`${JSON.stringify(listYears(), null, 2)}\n`)
     return
   }
 
@@ -143,14 +152,17 @@ async function main() {
     const year = required(args, "year", "year YYYY")
     const compareYear = args.compareYear || String(Number(year) - 1)
     const result = diffYears(year, compareYear)
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    await writeStdout(`${JSON.stringify(result, null, 2)}\n`)
     return
   }
 
   throw new Error(`Unsupported command: ${command}`)
 }
 
-main().catch((error) => {
-  console.error(error.message || error)
-  process.exitCode = 1
-})
+main().then(
+  () => process.exit(0),
+  (error) => {
+    console.error(error.message || error)
+    process.exit(1)
+  },
+)

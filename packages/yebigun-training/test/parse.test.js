@@ -31,6 +31,20 @@ test("detectSessionState treats a generic page without login markers as authenti
   assert.equal(state.authenticated, true);
 });
 
+test("detectSessionState flags a protected page that fires a 로그인 후 이용 notice as requiring login", () => {
+  const html = "<html><head><title>훈련정보</title></head><body><script>alert('로그인 후 이용해주시기 바랍니다.');</script></body></html>";
+  const state = detectSessionState({ url: `${BASE_URL}/dmobis/rfh/rgt/edutrasubjpsn/IvdTraScheDetail.do`, html });
+  assert.equal(state.requiresLogin, true);
+  assert.equal(state.reason, "login_required_notice");
+});
+
+test("detectSessionState flags an unauthenticated shell whose title is the login page as requiring login", () => {
+  const html = "<html><head><title>예비군 홈페이지 로그인</title></head><body></body></html>";
+  const state = detectSessionState({ url: `${BASE_URL}/dmobis/rfh/rgt/edutrasubjpsn/IvdTraScheDetail.do`, html });
+  assert.equal(state.requiresLogin, true);
+  assert.equal(state.reason, "login_title");
+});
+
 test("inspectYebigunPage classifies login pages but reports unknown for unverified authenticated pages", () => {
   const loginPage = inspectYebigunPage({ url: HOME_URL, html: loginHtml });
   assert.equal(loginPage.pageType, "login");

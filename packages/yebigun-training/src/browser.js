@@ -1,10 +1,15 @@
 const fs = require("node:fs")
 const path = require("node:path")
 
+const runtime = require("k-skill-browser-runtime")
+const { PROVIDERS } = runtime
+
 const { APPLICATION_MENUS, BASE_URL, HOME_URL, TRAINING_INFO_URL, VIEW_MENUS } = require("./menus")
 const { parseGenericTable, parseInquiry } = require("./inquiry")
 const { inspectYebigunPage, parseTrainingInfo } = require("./parse")
 const { contentWithRetry, openApplicationMenuPage } = require("./open-menu")
+
+const DISCONNECT_TIMEOUT_MS = 100
 
 function resolveChromePath(explicitPath) {
   if (explicitPath) {
@@ -42,33 +47,42 @@ function buildChromeLaunchCommand(options = {}) {
   return `${shellQuote(chromePath)} ${args.join(" ")}`
 }
 
-async function loadChromium() {
-  for (const moduleName of ["playwright-core", "playwright"]) {
-    try {
-      const loaded = require(moduleName)
-      if (loaded.chromium) {
-        return loaded.chromium
-      }
-    } catch {
-      // ignore and try the next module name
-    }
+function resolveYebigunProvider(options = {}) {
+  if (options.provider) {
+    return String(options.provider).trim()
   }
-
-  throw new Error(
-    "playwright-core or playwright is required for live browser-session automation. Install one of them in the environment that uses yebigun-training.",
-  )
+  if (process.env.KSKILL_BROWSER_PROVIDER) {
+    return String(process.env.KSKILL_BROWSER_PROVIDER).trim()
+  }
+  // An explicit --cdp-url points at a specific browser the user launched (Chrome
+  // via `yebigun-training chrome-command`), so target it directly. Otherwise use the
+  // recommended default: prefer a user-launched BrowserOS session, fall back to Chrome CDP.
+  if (options.cdpUrl) {
+    return PROVIDERS.CHROME_CDP
+  }
+  return PROVIDERS.AUTO
 }
 
 async function connectToChrome(options = {}) {
-  const chromium = await loadChromium()
-  return chromium.connectOverCDP(options.cdpUrl || "http://127.0.0.1:9222")
+  const connectOptions = {
+    provider: resolveYebigunProvider(options),
+    probe: options.probe === undefined ? false : options.probe
+  }
+  if (options.cdpUrl) {
+    connectOptions.cdpUrl = options.cdpUrl
+  }
+  if (typeof options.connectLoader === "function") {
+    connectOptions.connectLoader = options.connectLoader
+  }
+  if (typeof options.chromiumLoader === "function") {
+    connectOptions.chromiumLoader = options.chromiumLoader
+  }
+  const { browser } = await runtime.connect(connectOptions)
+  return browser
 }
 
 async function getAutomationPage(browser) {
-  const context = browser.contexts()[0] || (await browser.newContext())
-  const existingPage = context.pages()[0]
-  const page = existingPage || (await context.newPage())
-  return { context, page }
+  return runtime.getAutomationPage(browser, { reuseDefaultContext: true })
 }
 
 function resolveTargetUrl(targetPath) {
@@ -195,11 +209,20 @@ async function openApplicationMenu(menu, options = {}) {
 }
 
 async function closeBrowserConnection(browser) {
-  if (!browser || typeof browser.close !== "function") {
-    return
+  let timeoutId
+  try {
+    const timeout = new Promise((resolve) => {
+      timeoutId = setTimeout(resolve, DISCONNECT_TIMEOUT_MS)
+    })
+    await Promise.race([runtime.disconnectBrowser(browser), timeout])
+  } catch {
+    // The runtime refuses to close a user-owned browser that lacks disconnect()
+    // (e.g. a Playwright CDP Browser). That refusal preserves the logged-in
+    // Chrome session; connection cleanup is left to process exit / GC for the
+    // chrome-cdp case. BrowserOS clients expose disconnect() and clean up here.
+  } finally {
+    clearTimeout(timeoutId)
   }
-
-  await browser.close().catch(() => {})
 }
 
 module.exports = {

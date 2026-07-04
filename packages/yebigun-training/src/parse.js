@@ -54,6 +54,27 @@ function detectSessionState({ url = "", html = "" } = {}) {
     };
   }
 
+  // Logged-out pages on yebigun1.mil.kr do not always expose a password field:
+  // hitting a protected page (e.g. IvdTraScheDetail.do) unauthenticated returns
+  // a shell whose <title> is the login page and which fires a "로그인 후 이용"
+  // alert before redirecting. Detect both signals so callers stop clearly at
+  // the login boundary instead of parsing an empty page as if authenticated.
+  if (/로그인\s*후\s*이용/.test(normalizedHtml)) {
+    return {
+      authenticated: false,
+      requiresLogin: true,
+      reason: "login_required_notice",
+    };
+  }
+
+  if (/<title>[^<]*로그인[^<]*<\/title>/i.test(normalizedHtml)) {
+    return {
+      authenticated: false,
+      requiresLogin: true,
+      reason: "login_title",
+    };
+  }
+
   return {
     authenticated: true,
     requiresLogin: false,

@@ -24,6 +24,14 @@ async function withMockedBrowserModule(factory, callback) {
 
   delete require.cache[browserModulePath];
 
+  // The shared browser runtime lazily loads and caches a chromium module. Reset
+  // that cache so each mocked factory is picked up instead of the first one.
+  try {
+    require("k-skill-browser-runtime").resetChromiumCacheForTests();
+  } catch {
+    // runtime not resolvable in this environment; module mock still applies
+  }
+
   try {
     const browserModule = require("../src/browser");
     return await callback(browserModule);
