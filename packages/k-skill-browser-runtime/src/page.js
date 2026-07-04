@@ -54,7 +54,9 @@ async function disconnectBrowser(browser) {
     await browser.disconnect()
     return
   }
-  throw new Error("Connected browser does not expose disconnect(); refusing to close a potentially user-owned browser.")
+  if (typeof browser.close === "function") {
+    await browser.close()
+  }
 }
 
 module.exports = {

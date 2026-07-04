@@ -18,7 +18,7 @@ async function withTimeout(promise, timeoutMs, message) {
   }
 }
 
-test("inspectPage navigates with the resolved target URL and disconnects without closing the user-owned session", async () => {
+test("inspectPage navigates with the resolved target URL and releases the CDP client", async () => {
   const state = { closed: false, gotoUrl: null };
 
   await withMockedBrowserModule(
@@ -44,14 +44,14 @@ test("inspectPage navigates with the resolved target URL and disconnects without
       const result = await inspectPage({ path: "/mypage/training.do" });
 
       assert.equal(state.gotoUrl, `${BASE_URL}/mypage/training.do`);
-      assert.equal(state.closed, false);
+      assert.equal(state.closed, true);
       assert.equal(result.title, "나의 훈련정보");
       assert.equal(result.pageInfo.pageType, "unknown");
     },
   );
 });
 
-test("fetchTrainingInfo navigates straight to TRAINING_INFO_URL, parses it, and does not close the user session", async () => {
+test("fetchTrainingInfo navigates straight to TRAINING_INFO_URL, parses it, and releases the CDP client", async () => {
   const state = { closed: false, gotoUrl: null };
 
   await withMockedBrowserModule(
@@ -74,7 +74,7 @@ test("fetchTrainingInfo navigates straight to TRAINING_INFO_URL, parses it, and 
       const result = await fetchTrainingInfo();
 
       assert.equal(state.gotoUrl, TRAINING_INFO_URL);
-      assert.equal(state.closed, false);
+      assert.equal(state.closed, true);
       assert.equal(result.member.name, "테스트사용자");
       assert.equal(result.comparison.year, "2026");
     },

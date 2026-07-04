@@ -1,12 +1,4 @@
-const {
-  APPLICATION_MENUS,
-  BASE_URL,
-  HOME_URL,
-  TRAINING_INFO_PATH,
-  TRAINING_INFO_URL,
-  VIEW_MENUS,
-  YEBIGUN_ENDPOINTS,
-} = require("./menus");
+const { APPLICATION_MENUS, BASE_URL, HOME_URL, TRAINING_INFO_PATH, TRAINING_INFO_URL, VIEW_MENUS, YEBIGUN_ENDPOINTS } = require("./menus");
 const { parseGenericTable, parseInquiry } = require("./inquiry");
 
 const TAG_PATTERN = /<[^>]+>/g, WHITESPACE_PATTERN = /\s+/g;

@@ -28,7 +28,7 @@
     "browser-runtime"
   ],
   "scripts": {
-    "lint": "node --check src/index.js src/provider.js src/cdp.js src/page.js src/stop-rules.js src/runner.js test/runtime.test.js",
+    "lint": "node --check src/index.js src/provider.js src/cdp.js src/page.js src/stop-rules.js src/runner.js test/runtime.test.js test/runner.test.js",
     "test": "node --test"
   },
   "optionalDependencies": {
