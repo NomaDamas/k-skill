@@ -33,6 +33,28 @@ const listFixture = `
   </tbody>
 </table>`
 
+const twoRowListFixture = `
+<table>
+  <tbody>
+    <tr>
+      <td rowspan="2" class="td_list_white_c_01">1</td>
+      <td rowspan="2" class="td_list_white_c_01">1인 수의</td>
+      <td class="td_list_white_c_01">-</td>
+      <td rowspan="2" class="td_list_white_c_01">202607031350436</td>
+      <td colspan="3" class="td_list_white_l_01">
+        &nbsp;<a href="javascript:f_detail('202607031350436','1');">부산체육고등학교 급식실 내 창문형 냉난방기 구매 및 설치총2대</a>
+      </td>
+      <td rowspan="2" class="td_list_white_c_02"><img src="/S2BNCustomer/S2B/scrweb/images/main2012/bt_type011.gif"></td>
+    </tr>
+    <tr>
+      <td class="td_list_white_c_01">물품</td>
+      <td class="td_list_white_l_01">&nbsp;부산체육고등학교</td>
+      <td class="td_list_white_c_01">2026-07-03</td>
+      <td class="td_list_white_c_01">2026-07-07 18:00</td>
+    </tr>
+  </tbody>
+</table>`
+
 const detailFixture = `
 <html>
   <body>
@@ -162,6 +184,30 @@ test("ignores S2B navigation rows when parsing a full page", () => {
   assert.equal(rows[1].title, "방과후 프로그램 위탁")
 })
 
+test("parses live S2B list records that span title and metadata rows", () => {
+  // Given: live S2B result markup where one notice spans two table rows.
+  // When: the full list parser scans the page fragment.
+  const rows = parseListHtml(twoRowListFixture)
+
+  // Then: the title row and metadata row are merged into one notice record.
+  assert.equal(rows.length, 1)
+  assert.deepEqual(rows[0], {
+    noticeCode: "202607031350436",
+    estimateCode: "202607031350436",
+    title: "부산체육고등학교 급식실 내 창문형 냉난방기 구매 및 설치총2대",
+    organization: "부산체육고등학교",
+    status: "",
+    itemType: "물품",
+    postedDate: "2026-07-03",
+    deadline: "2026-07-07 18:00",
+    detailAction: {
+      functionName: "f_detail",
+      args: ["202607031350436", "1"],
+      raw: "f_detail('202607031350436','1');"
+    }
+  })
+})
+
 test("parses detail fixture HTML into fields, content, and attachments", () => {
   // Given: an S2B-like detail fixture.
   // When: the detail parser runs.
@@ -193,10 +239,10 @@ test("documents browser automation fallback order before direct HTTP", () => {
   // When: automation instructions are generated.
   const instructions = buildBrowserAutomationInstructions(options)
 
-  // Then: Aside Browser is preferred, Playwright/Chrome is fallback, and direct HTTP is last.
+  // Then: Aside Browser is preferred, BrowserOS CDP/local browser is fallback, and direct HTTP is last.
   assert.deepEqual(
     instructions.steps.map((step) => step.channel),
-    ["aside-browser", "playwright-or-chrome-headless", "direct-http-best-effort"]
+    ["aside-browser", "browseros-cdp-or-local-browser", "direct-http-best-effort"]
   )
   assert.match(instructions.steps[0].action, /snapshot/)
   assert.match(instructions.steps[1].action, /POST/)

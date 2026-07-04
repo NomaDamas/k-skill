@@ -19,7 +19,7 @@ https://www.s2b.kr/S2BNCustomer/tcmo001.do
 S2B는 브라우저 session/form state에 의존할 수 있으므로 자동화 순서는 다음으로 고정한다.
 
 1. Aside Browser REPL snapshot/action
-2. Playwright 또는 Chrome headless
+2. BrowserOS CDP(사용자가 띄운 세션) 또는 로컬 브라우저
 3. Direct HTTP best-effort, 같은 session/form 조건이 동작할 때만 사용
 
 ## 입력 제한

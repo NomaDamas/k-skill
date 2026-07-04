@@ -34,7 +34,7 @@ https://www.s2b.kr/S2BNCustomer/tcmo001.do
 ## Fallback order
 
 1. Aside Browser REPL snapshot/action: 공개 페이지를 열고 snapshot으로 검색 폼과 결과 테이블을 확인한 뒤, 입력/제출/action metadata를 브라우저 표면에서 읽는다.
-2. Playwright 또는 Chrome headless: Aside를 사용할 수 없으면 새 browser context로 `https://www.s2b.kr/S2BNCustomer/tcmo001.do`를 열고 검색 폼을 제출한 뒤 렌더링된 목록/상세 HTML을 파싱한다.
+2. BrowserOS CDP 또는 로컬 브라우저: Aside를 사용할 수 없으면 사용자가 띄운 BrowserOS 세션에 CDP로 붙거나 로컬 브라우저로 `https://www.s2b.kr/S2BNCustomer/tcmo001.do`를 열고 검색 폼을 제출한 뒤 렌더링된 목록/상세 HTML을 파싱한다.
 3. Direct HTTP best-effort: 같은 session cookie, referer, form token 조건이 브라우저와 동일하게 동작할 때만 `/S2BNCustomer/tcmo001.do`에 POST form body를 보낸다. session/form이 맞지 않으면 브라우저 경로로 돌아간다.
 
 ## Inputs

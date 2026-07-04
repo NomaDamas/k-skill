@@ -6,8 +6,10 @@ function parseListRow(rowHtml) {
   const texts = cells.map(cleanText).filter((value) => value)
   const titleCell = cells.find((cell) => /<a\b/i.test(cell)) || cells[2] || ""
   const action = parseAction(getAttribute(titleCell, "onclick") || getJavascriptHref(titleCell))
+  if (!isDetailAction(action)) return null
   const title = cleanText(firstMatch(titleCell, /<a\b[^>]*>([\s\S]*?)<\/a>/i)) || texts[2] || ""
   const code = action && action.args.length ? action.args[0] : findCode(rowHtml)
+  if (!code) return null
   const withoutOrdinal = texts.filter((text) => !/^\d+$/.test(text))
   const itemType = findFirst(withoutOrdinal, /^(물품|공사|용역)$/) || ""
   const organization = withoutOrdinal.find((text) => text !== itemType && text !== title && /(학교|교육청|기관|초등|중학교|고등)/.test(text)) || ""
@@ -30,6 +32,10 @@ function parseListRow(rowHtml) {
 function hasNoticeRowShape(row) {
   if (!row.action || !row.title || row.dates.length === 0) return false
   return Boolean(row.itemType || row.organization || row.status)
+}
+
+function isDetailAction(action) {
+  return Boolean(action && /^(?:f_detail|fn_detail|goView)$/i.test(action.functionName))
 }
 
 function parseAttachments(source) {

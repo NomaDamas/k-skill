@@ -95,9 +95,23 @@ function buildSearchRequest(input = {}) {
 }
 
 function parseListHtml(html) {
-  return matchAll(String(html || ""), /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)
-    .map((rowHtml) => parseListRow(rowHtml))
-    .filter(Boolean)
+  const rows = matchAll(String(html || ""), /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)
+  const parsed = []
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = parseListRow(rows[index])
+    if (row) {
+      parsed.push(row)
+      continue
+    }
+    const nextRow = rows[index + 1]
+    if (!nextRow) continue
+    const merged = parseListRow(`${rows[index]}${nextRow}`)
+    if (merged) {
+      parsed.push(merged)
+      index += 1
+    }
+  }
+  return parsed
 }
 
 function parseDetailHtml(html) {
@@ -131,8 +145,8 @@ function buildBrowserAutomationInstructions(input = {}) {
         action: "Open https://www.s2b.kr/S2BNCustomer/tcmo001.do, take a snapshot, fill the visible search form, submit, then snapshot the result table and detail page action."
       },
       {
-        channel: "playwright-or-chrome-headless",
-        action: `Create a browser context, navigate to ${request.url}, submit a POST-equivalent form with the normalized fields, and parse the rendered result table.`
+        channel: "browseros-cdp-or-local-browser",
+        action: `Prefer a user-launched BrowserOS session over CDP (via k-skill-browser-runtime); otherwise use a local browser you own. Navigate to ${request.url}, submit a POST-equivalent form with the normalized fields, and parse the rendered result table.`
       },
       {
         channel: "direct-http-best-effort",
