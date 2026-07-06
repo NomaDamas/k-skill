@@ -1,6 +1,6 @@
 {
   "name": "court-payment-order-assistant",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Korean court payment order application intake, drafting, and browser handoff helpers for k-skill",
   "license": "MIT",
   "main": "src/index.js",
