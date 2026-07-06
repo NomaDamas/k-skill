@@ -92,7 +92,9 @@ python3 ... detail "https://realty.daangn.com/articles/2947028"
 
 ## Output fields
 
-매물: `article_id, salesType, area_sqm, area_pyeong, trades[{type,label,deposit_manwon,monthly_manwon,price_manwon,per_pyeong_manwon}], url, region, title, address, floor_label, nearby_subway`
+매물: `article_id, salesType, area_sqm, area_pyeong, trades[{type,label,deposit_manwon,monthly_manwon,price_manwon,per_pyeong_manwon}], url, region, title, address, floor_label, nearby_subway, release_date`
+
+`release_date`는 상세 페이지 JSON-LD의 `Product.releaseDate`(ISO 8601, UTC)이며 `--titles` 보강 대상 매물에만 채워진다. 최초 등록일인지 최근 끌어올리기/수정일인지는 당근 쪽 명세에 없어 확정할 수 없다.
 
 ## Region handling
 
