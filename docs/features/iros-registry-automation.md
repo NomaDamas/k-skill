@@ -10,6 +10,7 @@
 - 부동산등기부등본: 주소/동호수 JSON을 사용해 `iros_cart_realty.py`로 장바구니에 담는다. 결제·열람·다운로드는 인터넷등기소 웹 UI에서 수동 처리하는 것을 기본 권장한다.
 - TouchEn nxKey 설치, Playwright/Chromium 준비, 입력 파일 형식, 저장 폴더를 점검한다.
 - 다운로드된 PDF와 법인정보 리포트 같은 산출물을 저장소 밖 안전한 경로에 두도록 안내한다.
+- 발급받은 등기부 PDF에서 근저당·가압류·소유권 변동 등 핵심 항목을 **사실만** 뽑아 요약한다(로컬 처리, 판단 없음 — "발급 후 PDF 요약" 참고).
 
 ## 먼저 알아둘 점
 
@@ -146,6 +147,18 @@ python iros_wizard.py
 ```
 
 마법사는 법인/부동산 장바구니, 결제 후 열람·저장, 사업자번호 기반 법인정보 조회, 다운로드된 법인 PDF 종합 리포트 생성을 메뉴로 제공한다. 사업자번호/고객 workbook 경로는 `excel_path`가 `$workdir/customer-list.xlsx`를 가리키게 한 뒤 사용하고, upstream repo `data/고객리스트.xlsx`에는 실제 고객 Excel을 두지 않는다.
+
+## 발급 후 PDF 요약 (선택)
+
+발급·저장이 끝난 등기부등본 PDF에서 근저당·가압류·소유권 변동 등 핵심 항목을 **사실만** 뽑아 요약한다(`iros-registry-automation/scripts/iros_pdf_summary.py`). 로그인·결제를 다시 하지 않는 발급 후 단계 전용이다.
+
+- 기본은 로컬 텍스트 추출(`pip install pypdf` 또는 `pdfplumber`), PDF를 원격으로 전송하지 않는다.
+- 스캔(이미지) PDF는 사용자가 로컬 self-host 변환기(예: `NomaDamas/marker-api-server`)로 먼저 텍스트/마크다운으로 바꾼 뒤 `--from-text`로 넘긴다.
+- 출력은 등기 종류·발급일·소유권 변동 건수·근저당권(채권최고액/설정일/말소여부)·가압류/가처분 건수까지 **판단 없이 사실 나열**한다. "안전/위험/추천" 결론을 내지 않으며, 결과는 개인정보를 포함할 수 있으므로 `$workdir/output/`에만 두고 주민등록번호는 마스킹한다.
+
+```bash
+python iros-registry-automation/scripts/iros_pdf_summary.py "$workdir/downloads/등기.pdf" --out "$workdir/output"
+```
 
 ## 트러블슈팅
 

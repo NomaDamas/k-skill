@@ -182,6 +182,28 @@ python iros_wizard.py
 - 사업자번호 → 법인정보 조회 (`excel_path`는 `$workdir/customer-list.xlsx`)
 - 다운로드된 법인 PDF → 종합 리포트 엑셀 생성 (`excel_path`와 `pdf_dir`는 저장소 밖 경로)
 
+### 7. 발급 후 — 등기부등본 PDF 요약 (선택)
+
+발급·저장이 끝난 등기부등본 PDF(`$workdir/downloads/*.pdf`)에서 **근저당·가압류·소유권 변동 등 핵심 항목만 사실로 뽑아** 사람이 읽기 쉬운 요약을 만든다. 로그인·결제를 다시 하지 않는 **발급 후 단계 전용**이다.
+
+- **판단하지 않는다.** "PDF에 이렇게 적혀 있다"는 사실(종류·발급일·소유권이전 건수·근저당 채권최고액/설정일/말소여부·가압류·가처분)까지만. "안전/위험/추천" 같은 결론을 내지 않는다.
+- **원격 전송 없음.** 이 스크립트는 PDF를 어디에도 보내지 않고 로컬에서만 텍스트를 추출한다. 요약 결과에도 개인정보가 있을 수 있으므로 `$workdir/output/`에만 두고 저장소·PR·로그에 남기지 않는다. 주민등록번호는 마스킹한다.
+
+```bash
+# 텍스트 레이어가 있는 일반 등기 PDF (기본) — pypdf 또는 pdfplumber 필요
+pip install pypdf   # 또는 pip install pdfplumber (표 추출에 유리)
+python iros-registry-automation/scripts/iros_pdf_summary.py \
+  "$workdir/downloads/등기.pdf" --out "$workdir/output"
+
+# 스캔(이미지) PDF인 경우: 사용자가 로컬에 self-host한 변환기(예: marker)로 먼저
+# 텍스트/마크다운으로 바꾼 뒤 그 결과를 요약한다 (원격 전송 없이 로컬 파일만).
+python iros-registry-automation/scripts/iros_pdf_summary.py 변환결과.md --from-text --out "$workdir/output"
+```
+
+출력(모두 사실 나열, 판단 없음): 등기 종류(부동산/법인), 열람·발급 일시, 소유권 변동 건수, 근저당권 목록(채권최고액·설정일·말소여부), 가압류/가처분/압류 건수. 추출 텍스트 구조에 따라 부정확할 수 있으니 **원문 대조를 권한다.**
+
+스캔 PDF 변환 참고 구현(로컬 self-host, 사용자가 직접 실행): `NomaDamas/marker-api-server` — https://github.com/NomaDamas/marker-api-server (PDF→Markdown). 이 스킬은 marker에 PDF를 원격으로 보내지 않으며, 사용자가 로컬 변환 결과를 `--from-text`로 넘기는 경우에만 이용한다.
+
 ## Response policy
 
 - 먼저 “로그인과 결제는 사용자가 직접”이라고 말한다.
@@ -189,7 +211,8 @@ python iros_wizard.py
 - TouchEn nxKey 사전 설치와 브라우저 재시작 가능성을 안내한다.
 - 발급 대상 목록, PDF, Excel, 보고서에는 개인정보/민감정보가 있을 수 있으므로 저장소 밖 비공개 폴더를 사용하게 한다.
 - 법률 자문이나 권리관계 해석으로 보일 수 있는 표현을 피하고, 등기부등본 발급 보조와 파일 정리까지만 돕는다.
-- 원 저작자/참고 구현 링크를 문서나 답변에 남긴다: `challengekim/iros-registry-automation` — https://github.com/challengekim/iros-registry-automation
+- PDF 요약(섹션 7)은 "PDF에 이렇게 적혀 있다"는 **사실 추출까지만** 한다. 요약이나 답변에서 "안전/위험/추천/괜찮다" 같은 판단형 결론을 내지 않는다. 요약 결과는 개인정보를 포함할 수 있으므로 저장소·PR·로그에 남기지 않는다.
+- 원 저작자/참고 구현 링크를 문서나 답변에 남긴다: `challengekim/iros-registry-automation` — https://github.com/challengekim/iros-registry-automation. PDF→Markdown 변환 참고: `NomaDamas/marker-api-server` — https://github.com/NomaDamas/marker-api-server.
 
 ## Verification
 

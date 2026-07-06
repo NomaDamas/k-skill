@@ -71,7 +71,7 @@
 - `KOSIS_API_KEY` 또는 `KSKILL_KOSIS_API_KEY` — 프록시 서버 쪽 KOSIS Open API upstream key (`kosis/search`, `kosis/meta`, `kosis/data`)
 - `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 네이버 검색 Open API 키(`shop.json`, `news.json` 공통). 네이버 뉴스 route(`naver-news/search`)는 이 키가 **필수**이며 없으면 `503 upstream_not_configured` 를 돌려준다. 네이버 쇼핑 route(`naver-shopping/search`)는 **선택**이며 설정되면 공식 API 를 우선 사용하고, 없으면 공개 BFF JSON 파서로 fallback 한다. 공식 쇼핑 API 는 `review` 정렬을 지원하지 않아 `meta.sort_applied: "unsupported"`로 표시한다. no-key 쇼핑 fallback 은 `page`를 BFF에 전달해 해당 페이지를 고르고, `price_asc`/`price_dsc`/`review`는 선택 페이지 안에서 로컬 정렬하며, `date`는 `meta.sort_applied: "unsupported"`로 표시
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
-- `KSKILL_PROXY_PORT` — 기본 `4020`
+- `KSKILL_PROXY_PORT` — local development listen port. Set it explicitly in your shell.
 - `KSKILL_PROXY_CACHE_TTL_MS` — 기본 `300000`
 - `KSKILL_PROXY_RATE_LIMIT_WINDOW_MS` — 기본 `60000`
 - `KSKILL_PROXY_RATE_LIMIT_MAX` — 기본 `60`
@@ -85,13 +85,14 @@
 node packages/k-skill-proxy/src/server.js
 ```
 
-환경변수(`AIR_KOREA_OPEN_API_KEY` 등)가 이미 설정되어 있거나 `~/.config/k-skill/secrets.env`를 source한 상태에서 실행한다.
+환경변수(`AIR_KOREA_OPEN_API_KEY` 등)가 이미 설정되어 있거나 개인 dotenv 파일을 source한 상태에서 실행한다.
 
+로컬 호출 예시는 `LOCAL_PROXY_BASE_URL`에 실행 중인 로컬 프록시 URL을 넣은 상태를 기준으로 한다.
 
 국세청 사업자등록 상태조회 예시:
 
 ```bash
-curl -fsS -X POST 'http://127.0.0.1:4020/v1/nts-business/status' \
+curl -fsS -X POST "${LOCAL_PROXY_BASE_URL}/v1/nts-business/status" \
   -H 'content-type: application/json' \
   -d '{"b_no":["123-45-67890"]}'
 ```
@@ -99,18 +100,18 @@ curl -fsS -X POST 'http://127.0.0.1:4020/v1/nts-business/status' \
 서울 지하철 도착정보 예시:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-subway/arrival' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/seoul-subway/arrival" \
   --data-urlencode 'stationName=강남'
 ```
 
 서울 실시간 혼잡도 예시 (`SEOUL_OPEN_API_KEY` 필요):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-density/citydata' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/seoul-density/citydata" \
   --data-urlencode 'area=강남역'
 
 # Seoul Bike nearby stations
-curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-bike/nearby' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/seoul-bike/nearby" \
   --data-urlencode 'lat=37.5717' \
   --data-urlencode 'lon=126.9763' \
   --data-urlencode 'radius_m=500'
@@ -119,7 +120,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/seoul-bike/nearby' \
 한국 날씨 예시:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/korea-weather/forecast' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/korea-weather/forecast" \
   --data-urlencode 'lat=37.5665' \
   --data-urlencode 'lon=126.9780'
 ```
@@ -127,7 +128,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/korea-weather/forecast' \
 한강 수위 정보 예시:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/han-river/water-level' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/han-river/water-level" \
   --data-urlencode 'stationName=한강대교'
 ```
 
@@ -136,7 +137,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/han-river/water-level' \
 학교 검색:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/neis/school-search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/neis/school-search" \
   --data-urlencode 'educationOffice=서울특별시교육청' \
   --data-urlencode 'schoolName=미래초등학교'
 ```
@@ -144,7 +145,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/neis/school-search' \
 급식 식단:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/neis/school-meal' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/neis/school-meal" \
   --data-urlencode 'educationOfficeCode=B10' \
   --data-urlencode 'schoolCode=7010123' \
   --data-urlencode 'mealDate=20260410'
@@ -153,7 +154,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/neis/school-meal' \
 생활쓰레기 배출정보 예시 (`DATA_GO_KR_API_KEY` 필요). `pageNo`·`numOfRows`는 반드시 `1`·`100`:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/household-waste/info' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/household-waste/info" \
   --data-urlencode 'cond[SGG_NM::LIKE]=강남구' \
   --data-urlencode 'pageNo=1' \
   --data-urlencode 'numOfRows=100'
@@ -163,7 +164,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/household-waste/info' \
 공영주차장 검색 예시 (`DATA_GO_KR_API_KEY` 필요):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/parking-lots/search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/parking-lots/search" \
   --data-urlencode 'latitude=37.573713' \
   --data-urlencode 'longitude=126.978338' \
   --data-urlencode 'address_hint=서울특별시 종로구' \
@@ -174,7 +175,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/parking-lots/search' \
 의약품 안전 체크 예시 (`DATA_GO_KR_API_KEY` 필요):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/mfds/drug-safety/lookup' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/mfds/drug-safety/lookup" \
   --data-urlencode 'itemName=타이레놀' \
   --data-urlencode 'itemName=판콜' \
   --data-urlencode 'limit=5'
@@ -183,7 +184,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/mfds/drug-safety/lookup' \
 식품 안전 체크 예시 (`DATA_GO_KR_API_KEY` 필요, `FOODSAFETYKOREA_API_KEY` 없으면 회수 정보는 sample fallback):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/mfds/food-safety/search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/mfds/food-safety/search" \
   --data-urlencode 'query=김밥' \
   --data-urlencode 'limit=5'
 ```
@@ -192,7 +193,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/mfds/food-safety/search' \
 네이버 쇼핑 가격비교 예시 (`NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET`이 있으면 공식 Search API를 우선 사용):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/naver-shopping/search" \
   --data-urlencode 'q=에어팟 프로 2세대' \
   --data-urlencode 'limit=10'
 ```
@@ -201,7 +202,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
 도서관 정보나루 도서 검색 예시 (`DATA4LIBRARY_AUTH_KEY` 필요):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/data4library/book-search" \
   --data-urlencode 'keyword=역사' \
   --data-urlencode 'pageNo=1' \
   --data-urlencode 'pageSize=10'
@@ -210,11 +211,11 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-search' \
 도서관 정보나루 상세/소장 확인 예시:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-detail' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/data4library/book-detail" \
   --data-urlencode 'isbn13=9788971998557' \
   --data-urlencode 'loaninfoYN=Y'
 
-curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-exists' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/data4library/book-exists" \
   --data-urlencode 'libraryCode=111001' \
   --data-urlencode 'isbn13=9788971998557'
 ```
@@ -222,7 +223,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/data4library/book-exists' \
 한국 주식 검색 예시:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/korean-stock/search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/korean-stock/search" \
   --data-urlencode 'q=삼성전자' \
   --data-urlencode 'bas_dd=20260408'
 ```
@@ -230,7 +231,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/korean-stock/search' \
 LH 청약 공고 목록 예시 (`DATA_GO_KR_API_KEY` 필요):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/lh-notice/search" \
   --data-urlencode 'panSs=공고중' \
   --data-urlencode 'uppAisTpCd=06' \
   --data-urlencode 'cnpCdNm=부산광역시' \
@@ -240,7 +241,7 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/search' \
 LH 청약 공고 상세:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/detail' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/lh-notice/detail" \
   --data-urlencode 'panId=2015122300019828' \
   --data-urlencode 'ccrCnntSysDsCd=03' \
   --data-urlencode 'splInfTpCd=051'
@@ -251,15 +252,15 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/lh-notice/detail' \
 KOSIS 통계 조회 예시 (`KOSIS_API_KEY` 필요):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/kosis/search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kosis/search" \
   --data-urlencode 'q=1인 가구' \
   --data-urlencode 'limit=3'
 
-curl -fsS --get 'http://127.0.0.1:4020/v1/kosis/meta' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kosis/meta" \
   --data-urlencode 'tableId=DT_1JC1501' \
   --data-urlencode 'metaType=ITM'
 
-curl -fsS --get 'http://127.0.0.1:4020/v1/kosis/data' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kosis/data" \
   --data-urlencode 'tableId=DT_1JC1501' \
   --data-urlencode 'prdSe=Y' \
   --data-urlencode 'start=2020' \
@@ -270,18 +271,18 @@ curl -fsS --get 'http://127.0.0.1:4020/v1/kosis/data' \
 Kakao Local geocoding 예시 (`KAKAO_REST_API_KEY` 필요, caller `apiKey`는 무시하고 서버 쪽 키를 주입):
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/kakao-local/geocode' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kakao-local/geocode" \
   --data-urlencode 'q=서울역' \
   --data-urlencode 'limit=1'
 ```
 
 
-## 프로덕션 배포
+## 프로덕션 운영 정보
 
-프로덕션 프록시는 **gpu01**의 Docker 컨테이너로 운영되며, `k-skill-proxy.nomadamas.org` 도메인으로 노출됩니다.
+Production serving topology, host identity, tunnel/reverse-proxy details, server-local
+paths, deployment triggers, rollback steps, and secret placement are intentionally not
+tracked in this public README. Maintainers keep that runbook in a private,
+non-repository location.
 
-- 컨테이너 이미지: `packages/k-skill-proxy/Dockerfile`
-- 자동 배포: gpu01 cron이 `scripts/deploy-k-skill-proxy-gpu01.sh`를 실행하되, `/etc/k-skill-proxy/deploy.env`에 명시된 `KSKILL_PROXY_DEPLOY_SHA` 또는 `KSKILL_PROXY_DEPLOY_REF`만 배포합니다. `main` merge 자체는 프로덕션 배포가 아니며, helper는 `origin/main`을 기본값으로 삼지 않습니다.
-- 시크릿: gpu01의 `/etc/k-skill-proxy/secrets.env`에만 보관하고 컨테이너 env로 주입합니다. Docker daemon/socket/`docker` group 접근은 production secret 접근 권한과 동일하게 제한합니다.
-- 배포 성공 조건: local `/health`, public `https://k-skill-proxy.nomadamas.org/health`, 대표 public route smoke가 모두 통과한 뒤에만 deployed-state를 갱신합니다.
-- 운영자 1회 셋업, cron entry, explicit deploy SHA/ref 승격, 로그, full serving-path rollback, legacy GCP cleanup 절차는 [`docs/deploy-k-skill-proxy.md`](../../docs/deploy-k-skill-proxy.md) 참고.
+Public smoke checks may use only the hosted base URL contract:
+`https://k-skill-proxy.nomadamas.org/health`.

@@ -47,7 +47,7 @@ metadata:
 기본값은 public/read-only/no-auth 프록시다. 프록시 서버에 `NAVER_SEARCH_CLIENT_ID`와 `NAVER_SEARCH_CLIENT_SECRET`이 있으면 공식 Search API를 우선 사용한다.
 
 ```bash
-curl -fsS --get "${KSKILL_PROXY_BASE_URL:-http://127.0.0.1:4020}/v1/naver-shopping/search" \
+curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v1/naver-shopping/search" \
   --data-urlencode 'q=에어팟 프로 2세대' \
   --data-urlencode 'limit=10' \
   --data-urlencode 'sort=rel'

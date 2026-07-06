@@ -170,6 +170,7 @@ def cmd_search(args):
                 it["address"] = d.get("address")
                 it["floor_label"] = d.get("floor_label")
                 it["nearby_subway"] = d.get("nearby_subway")
+                it["release_date"] = d.get("release_date")
             except (json.JSONDecodeError, OSError, TimeoutError, urllib.error.URLError):
                 pass
 

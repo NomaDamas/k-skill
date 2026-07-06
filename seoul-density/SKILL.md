@@ -28,7 +28,7 @@ metadata:
 별도 API 키 발급 없이 그대로 쓸 수 있다. 모든 호출은 **k-skill-proxy 경유**다.
 
 - 기본 프록시 URL: `https://k-skill-proxy.nomadamas.org` — 프록시 서버가 `SEOUL_OPEN_API_KEY`를 보유하고 있어 사용자는 키 없이 호출만 하면 된다.
-- `KSKILL_PROXY_BASE_URL` 환경변수로 프록시 주소를 바꿀 수 있다(예: 로컬 개발용 `http://127.0.0.1:4020`).
+- `KSKILL_PROXY_BASE_URL` 환경변수로 프록시 주소를 바꿀 수 있다(예: 별도 self-host 프록시).
 
 ## Single entrypoint
 

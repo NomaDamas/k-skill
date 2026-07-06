@@ -65,36 +65,17 @@ client/skill -> k-skill-proxy -> upstream public API
 - `DATA4LIBRARY_AUTH_KEY=...` (도서관 정보나루 Open API 인증키)
 - `KRX_API_KEY=...`
 - `NAVER_SEARCH_CLIENT_ID=...`, `NAVER_SEARCH_CLIENT_SECRET=...` (선택: 네이버 검색 Open API 쇼핑 검색)
-- `KSKILL_PROXY_PORT=4020`
+- `KSKILL_PROXY_PORT` (local development only; choose it in your shell)
 
-## 프로덕션 배포 구조
+## 프로덕션 운영 정보
 
-프로덕션 proxy 서버는 **gpu01**의 Docker 컨테이너로 운영한다.
+Production serving topology, host identity, tunnel/reverse-proxy details, server-local
+paths, deployment triggers, rollback steps, and secret placement are intentionally not
+tracked in public docs. Maintainers keep that runbook in a private, non-repository
+location.
 
-- 공개 도메인: `k-skill-proxy.nomadamas.org`
-- 컨테이너 이미지 정의: `packages/k-skill-proxy/Dockerfile`
-- 컨테이너 이름: `k-skill-proxy`
-- gpu01 배포 helper: `scripts/deploy-k-skill-proxy-gpu01.sh`
-- 시크릿(upstream API key): gpu01의 `/etc/k-skill-proxy/secrets.env`에만 보관하고 컨테이너 env로 주입
-- 배포 대상 config: gpu01의 `/etc/k-skill-proxy/deploy.env`
-
-### 자동 배포 (gpu01 cron)
-
-gpu01 cron이 주기적으로 배포 helper를 실행한다. cron은 `main` 브랜치를 자동 배포하지 않고, `/etc/k-skill-proxy/deploy.env`에 명시된 `KSKILL_PROXY_DEPLOY_SHA` 또는 `KSKILL_PROXY_DEPLOY_REF`만 배포한다. 배포 대상이 없으면 fail-closed로 종료하며, helper는 절대 `origin/main`을 기본값으로 삼지 않는다.
-
-배포 성공 조건은 다음 순서다.
-
-1. 명시된 deploy SHA/ref를 commit SHA로 해석
-2. checkout을 resolved SHA로 detach/force 이동한 뒤 `packages/k-skill-proxy/Dockerfile`로 repo root에서 Docker image build
-3. 후보 컨테이너 local `/health` smoke test
-4. production 컨테이너/route 전환
-5. `https://k-skill-proxy.nomadamas.org/health` public smoke test
-6. 대표 read-only public route smoke test
-7. 모든 public smoke가 통과한 뒤에만 deployed-state 갱신
-
-Docker daemon/socket/`docker` group 접근은 컨테이너 env를 읽을 수 있으므로 production secret 접근 권한과 동일하게 제한한다.
-
-배포 상태와 로그는 gpu01의 `/var/log/k-skill-proxy/deploy.log`, `docker logs k-skill-proxy`, reverse proxy 로그에서 확인한다. 1회성 gpu01 셋업, cron entry, env/secrets, rollback, legacy GCP cleanup은 [`docs/deploy-k-skill-proxy.md`](../deploy-k-skill-proxy.md)에 정리되어 있다.
+Public docs may refer only to the hosted base URL contract and public smoke endpoint:
+`https://k-skill-proxy.nomadamas.org/health`.
 
 ## 기본 공개 정책
 

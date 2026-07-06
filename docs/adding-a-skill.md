@@ -144,9 +144,9 @@ npm에 배포하려면 `.changeset/` 파일을 추가한다 (`docs/releasing.md`
 
 upstream API 키를 사용자에게 노출하지 않으려면 `k-skill-proxy`를 경유한다.
 
-1. `packages/k-skill-proxy/src/server.js`에 새 route 추가
+1. `k-skill-proxy`에 새 read-only route 추가
 2. `SKILL.md` Workflow에 `curl $KSKILL_PROXY_BASE_URL/v1/...` 형태로 호출 작성
-3. upstream API 키는 서버의 `~/.config/k-skill/secrets.env`에만 보관
+3. upstream API 키는 운영자 전용 private runbook의 시크릿 주입 절차를 따른다
 
 프록시 route 변경은 `main`에 merge된 것만으로 프로덕션 배포나 승격을 의미하지 않는다. 운영 절차와 serving topology는 public docs에 기록하지 않고 maintainer private runbook에서만 다룬다.
 
@@ -228,8 +228,8 @@ npm run ci
 
 1. 이미 환경변수에 있으면 → 그대로 사용
 2. 에이전트 vault(1Password, Bitwarden, macOS Keychain) → 주입
-3. `~/.config/k-skill/secrets.env` → 파일에서 읽기
-4. 아무것도 없으면 → 사용자에게 물어보고 3번에 저장
+3. 개인 dotenv 파일 → 파일에서 읽기
+4. 아무것도 없으면 → 사용자에게 물어보고 개인 dotenv 파일에 저장
 
 시크릿 변수 이름 규칙: `KSKILL_<서비스명>_<항목>` (예: `KSKILL_SRT_ID`)
 

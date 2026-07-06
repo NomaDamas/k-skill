@@ -23,7 +23,7 @@
 ## 기본 호출
 
 ```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/naver-shopping/search' \
+curl -fsS --get "https://k-skill-proxy.nomadamas.org/v1/naver-shopping/search" \
   --data-urlencode 'q=에어팟 프로 2세대' \
   --data-urlencode 'limit=10' \
   --data-urlencode 'sort=rel'
@@ -32,7 +32,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/naver-shopping/search' \
 로컬 proxy:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/naver-shopping/search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/naver-shopping/search" \
   --data-urlencode 'q=아이폰 15 케이스' \
   --data-urlencode 'limit=5' \
   --data-urlencode 'sort=price_asc'

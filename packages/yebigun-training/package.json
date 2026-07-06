@@ -1,6 +1,6 @@
 {
   "name": "yebigun-training",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Yebigun (Korean reserve forces) logged-in browser-session helper for training-schedule lookup and year-over-year comparison",
   "license": "MIT",
   "main": "src/index.js",

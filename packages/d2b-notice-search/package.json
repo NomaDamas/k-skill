@@ -1,6 +1,6 @@
 {
   "name": "d2b-notice-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "D2B defense procurement notice lookup recipe and parsers for k-skill",
   "license": "MIT",
   "main": "src/index.js",

@@ -44,7 +44,7 @@ description: k-skill-proxy 경유 네이버 검색 Open API 뉴스 검색으로 
 ## 기본 호출
 
 ```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/naver-news/search' \
+curl -fsS --get "https://k-skill-proxy.nomadamas.org/v1/naver-news/search" \
   --data-urlencode 'q=삼성전자 실적' \
   --data-urlencode 'display=10' \
   --data-urlencode 'sort=date'
@@ -53,7 +53,7 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/naver-news/search' \
 로컬 proxy:
 
 ```bash
-curl -fsS --get 'http://127.0.0.1:4020/v1/naver-news/search' \
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/naver-news/search" \
   --data-urlencode 'q=인공지능 규제' \
   --data-urlencode 'display=5'
 ```

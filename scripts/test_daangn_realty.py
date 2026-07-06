@@ -104,7 +104,7 @@ class DetailParsingTest(unittest.TestCase):
         <script type="application/ld+json">{"@context":"https://schema.org","@graph":null}</script>
         <script type="application/ld+json">
         {"@graph":[
-          {"@type":"Product","name":"상가 월세","additionalProperty":[
+          {"@type":"Product","name":"상가 월세","releaseDate":"2026-07-02T11:34:38.149Z","additionalProperty":[
             {"name":"floor","value":"8.0"},
             {"name":"topFloor","value":"10"},
             {"name":"nearbySubwayStation","value":"매교역"}
@@ -121,6 +121,103 @@ class DetailParsingTest(unittest.TestCase):
         self.assertEqual(detail["address"], "경기도 수원시 팔달구 매교동")
         self.assertEqual(detail["floor_label"], "8층/10층")
         self.assertEqual(detail["nearby_subway"], "매교역")
+        self.assertEqual(detail["release_date"], "2026-07-02T11:34:38.149Z")
+
+    def test_parse_detail_defaults_release_date_to_none_when_absent(self):
+        html = """
+        <script type="application/ld+json">
+        {"@graph":[{"@type":"Product","name":"매매"}]}
+        </script>
+        """
+
+        with mock.patch.object(daangn_realty, "fetch_text", return_value=html):
+            detail = daangn_realty.parse_detail("https://realty.daangn.com/articles/456")
+
+        self.assertIsNone(detail["release_date"])
+
+    def test_parse_detail_extracts_release_date_from_later_product_node(self):
+        html = """
+        <script type="application/ld+json">
+        {"@graph":[
+          {"@type":"Product","name":"상가 월세"},
+          {"@type":"Product","name":"상가 월세","releaseDate":"2026-07-05T09:12:33.000Z"}
+        ]}
+        </script>
+        """
+
+        with mock.patch.object(daangn_realty, "fetch_text", return_value=html):
+            detail = daangn_realty.parse_detail("https://realty.daangn.com/articles/789")
+
+        self.assertEqual(detail["title"], "상가 월세")
+        self.assertEqual(detail["release_date"], "2026-07-05T09:12:33.000Z")
+
+
+class SearchEnrichmentTest(unittest.TestCase):
+    def test_cmd_search_enriches_items_with_release_date(self):
+        store = {
+            "card:1": {"__typename": "ArticleFeedCard", "article": {"__ref": "article:1"}},
+            "article:1": {
+                "__typename": "Article",
+                "originalId": "123",
+                "area": "33.05785",
+                "salesTypeV3": {"__ref": "sales:1"},
+                "trades": {"__refs": ["trade:month"]},
+            },
+            "sales:1": {"__typename": "ArticleSalesTypeV2", "type": "STORE"},
+            "trade:month": {"__typename": "MonthTrade", "deposit": "1000", "monthlyPay": "50"},
+        }
+        detail_html = """
+        <script type="application/ld+json">
+        {"@graph":[{"@type":"Product","name":"상가 월세","releaseDate":"2026-07-02T11:34:38.149Z"}]}
+        </script>
+        """
+
+        def fake_fetch_text(url):
+            if "articles" in url:
+                return detail_html
+            return relay_html(store)
+
+        args = daangn_realty.build_parser().parse_args(
+            ["search", "--region", "매교동", "--limit", "5", "--titles", "5"]
+        )
+
+        with mock.patch.object(
+            daangn_realty, "resolve_region",
+            return_value={"name1": "경기도", "name2": "수원시 팔달구", "name3": "매교동"},
+        ), mock.patch.object(daangn_realty, "fetch_text", side_effect=fake_fetch_text), \
+                mock.patch("builtins.print") as mock_print:
+            daangn_realty.cmd_search(args)
+
+        printed = json.loads(mock_print.call_args[0][0])
+        self.assertEqual(printed["items"][0]["release_date"], "2026-07-02T11:34:38.149Z")
+
+    def test_cmd_search_leaves_release_date_absent_when_titles_disabled(self):
+        store = {
+            "card:1": {"__typename": "ArticleFeedCard", "article": {"__ref": "article:1"}},
+            "article:1": {
+                "__typename": "Article",
+                "originalId": "123",
+                "area": "33.05785",
+                "salesTypeV3": {"__ref": "sales:1"},
+                "trades": {"__refs": ["trade:month"]},
+            },
+            "sales:1": {"__typename": "ArticleSalesTypeV2", "type": "STORE"},
+            "trade:month": {"__typename": "MonthTrade", "deposit": "1000", "monthlyPay": "50"},
+        }
+
+        args = daangn_realty.build_parser().parse_args(
+            ["search", "--region", "매교동", "--limit", "5", "--titles", "0"]
+        )
+
+        with mock.patch.object(
+            daangn_realty, "resolve_region",
+            return_value={"name1": "경기도", "name2": "수원시 팔달구", "name3": "매교동"},
+        ), mock.patch.object(daangn_realty, "fetch_text", return_value=relay_html(store)), \
+                mock.patch("builtins.print") as mock_print:
+            daangn_realty.cmd_search(args)
+
+        printed = json.loads(mock_print.call_args[0][0])
+        self.assertNotIn("release_date", printed["items"][0])
 
 
 class CliCompatibilityTest(unittest.TestCase):
