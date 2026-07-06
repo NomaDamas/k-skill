@@ -36,6 +36,14 @@ These rules are repo-specific and apply to everything under this directory.
 - Record the discovered site-dependent access path, fallback order, inputs/outputs, and failure modes in `SKILL.md` and any helper package code. See `docs/adding-a-skill.md` for the canonical checklist.
 - Do not add crawling dependencies by default; first prefer existing runtime capabilities, public endpoints, or narrow allowlisted proxy routes.
 
+## Browser runtime skill authoring
+
+- For new or changed Node skills that need a logged-in browser session, rendered-page automation, or CDP browser fallback, use `k-skill-browser-runtime` as the default browser runtime instead of writing ad hoc CDP or Playwright connection code.
+- The default provider is `auto`: attach to a user-launched BrowserOS GUI session first (`KSKILL_BROWSEROS_CDP_URL`, default `http://127.0.0.1:9100`), then fall back to a user-launched Chrome/Chromium CDP session (`KSKILL_CHROME_CDP_URL`, default `http://127.0.0.1:9222`). `KSKILL_BROWSER_PROVIDER` may pin `auto`, `browseros`, or `chrome-cdp`.
+- BrowserOS is CDP-only attach. Skills must not launch BrowserOS, pass headless flags to BrowserOS, close the user browser/profile, solve login/CAPTCHA/payment/e-signature flows, or automate irreversible submission. Disconnect automation clients and clean up only pages/contexts the skill created.
+- Package dependencies must use publishable semver such as `"k-skill-browser-runtime": "^0.1.0"`; do not use `workspace:` for publishable packages.
+- Keep site-specific navigation, selectors, parsing, fallback order, and typed stop/failure modes in the skill's `SKILL.md` and helper package code. Prefer public/direct HTTP endpoints before browser automation when they are stable and do not require authentication.
+
 ## Free API proxy policy
 
 - The built-in `k-skill-proxy` is for **free APIs only**.
