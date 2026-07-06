@@ -5,4 +5,4 @@
 "d2b-notice-search": patch
 ---
 
-Add the BrowserOS-first CDP runtime and fix live yebigun, S2B, and D2B flows.
+Add the shared browser runtime, prefer Aside Browser before Chrome CDP fallback, and fix live yebigun, S2B, and D2B flows.

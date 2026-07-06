@@ -71,17 +71,19 @@ function loadRuntime() {
 }
 
 function isFallbackAvailable() {
-  // The local launch path and the CDP/runtime path both drive the page through
-  // a playwright-core-compatible chromium, so the same module gate covers both.
   for (const moduleName of FALLBACK_MODULE_NAMES) {
     try {
       require.resolve(moduleName);
       return true;
     } catch {
-      // try next
     }
   }
-  return false;
+  try {
+    loadRuntime();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 class CourtAuctionPlaywrightClient {
@@ -99,6 +101,9 @@ class CourtAuctionPlaywrightClient {
     this.provider = options.provider || undefined;
     this.cdpUrl = options.cdpUrl || undefined;
     this.probe = options.probe;
+    this.asideProbe = options.asideProbe;
+    this.asideCommand = options.asideCommand;
+    this.asideTimeoutMs = options.asideTimeoutMs;
     this.connectLoader =
       typeof options.connectLoader === "function" ? options.connectLoader : null;
     this.reuseDefaultContext = options.reuseDefaultContext === true;
@@ -156,6 +161,9 @@ class CourtAuctionPlaywrightClient {
     if (this.provider) connectOptions.provider = this.provider;
     if (this.cdpUrl) connectOptions.cdpUrl = this.cdpUrl;
     if (this.probe !== undefined) connectOptions.probe = this.probe;
+    if (this.asideProbe !== undefined) connectOptions.asideProbe = this.asideProbe;
+    if (this.asideCommand !== undefined) connectOptions.asideCommand = this.asideCommand;
+    if (this.asideTimeoutMs !== undefined) connectOptions.asideTimeoutMs = this.asideTimeoutMs;
     if (this.connectLoader) connectOptions.connectLoader = this.connectLoader;
     if (this.loader) connectOptions.chromiumLoader = this.loader;
 

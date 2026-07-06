@@ -1,7 +1,7 @@
 {
   "name": "k-skill-browser-runtime",
   "version": "0.1.0",
-  "description": "BrowserOS-first CDP browser runtime adapter for k-skill packages",
+  "description": "Browser runtime adapter for k-skill packages with BrowserOS, Aside, and Chrome CDP providers",
   "license": "MIT",
   "main": "src/index.js",
   "exports": {
@@ -28,7 +28,7 @@
     "browser-runtime"
   ],
   "scripts": {
-    "lint": "node --check src/index.js src/provider.js src/cdp.js src/page.js src/stop-rules.js src/runner.js test/runtime.test.js test/runner.test.js",
+    "lint": "node --check src/index.js src/provider.js src/aside.js src/aside-repl.js src/aside-page.js src/aside-locator.js src/cdp.js src/page.js src/stop-rules.js src/runner.js test/runtime.test.js test/runner.test.js",
     "test": "node --test"
   },
   "optionalDependencies": {

@@ -198,7 +198,7 @@ upstream API 키를 사용자에게 노출하지 않으려면 `k-skill-proxy`를
 4. **사이트별 로직은 스킬 안에**: navigation, selector, 파싱, fallback 순서는 각 스킬의 `SKILL.md`와 패키지 코드에 좁고 명확하게 기록한다.
 5. **공개/직접 HTTP 우선**: 브라우저 없이 잡히는 공개 endpoint(RSS/sitemap/공개 JSON/문서화된 API)를 먼저 쓰고, 브라우저는 로그인이 필요한 화면이나 렌더링 의존 화면에만 쓴다.
 
-기본 환경변수: `KSKILL_BROWSER_PROVIDER`(기본 `auto` — BrowserOS 우선, 닿지 않으면 Chrome CDP fallback), `KSKILL_BROWSEROS_CDP_URL`(기본 `http://127.0.0.1:9100`), `KSKILL_CHROME_CDP_URL`(기본 `http://127.0.0.1:9222`). CAPTCHA/로그인/결제/전자서명/되돌릴 수 없는 제출 자동화 우회는 하지 않는다.
+기본 환경변수: `KSKILL_BROWSER_PROVIDER`(기본 `auto` — BrowserOS → Aside Browser → Chrome CDP), `KSKILL_BROWSEROS_CDP_URL`(기본 `http://127.0.0.1:9100`), `KSKILL_CHROME_CDP_URL`(기본 `http://127.0.0.1:9222`), `KSKILL_ASIDE_COMMAND`(기본 `aside`). Aside는 공개 `aside repl` 표면만 쓰고 비공개 CDP/daemon port에 의존하지 않는다. CAPTCHA/로그인/결제/전자서명/되돌릴 수 없는 제출 자동화 우회는 하지 않는다.
 
 ---
 

@@ -1,31 +1,34 @@
 # k-skill-browser-runtime
 
-BrowserOS-first CDP browser runtime adapter for k-skill packages.
+Browser runtime adapter for k-skill packages, with BrowserOS first and Aside Browser before Chrome CDP fallback.
 
 ## Scope
 
-- The recommended default is `auto`: prefer a user-launched BrowserOS session, and fall back to a Chrome/Chromium CDP session when BrowserOS is not reachable.
+- The recommended default is `auto`: prefer a user-launched BrowserOS session, then Aside Browser when available, then a Chrome/Chromium CDP session.
 - BrowserOS is used as a GUI/session browser over CDP, not as a headless backend, CAPTCHA bypass, login solver, payment solver, or stealth scraping browser.
 - The `browseros` provider connects to a user-launched BrowserOS session. It never launches BrowserOS and never passes headless flags.
+- The `aside` provider uses the public `aside repl` CLI surface. It does not rely on undocumented local ports or a private CDP endpoint.
 - Site-specific navigation, parsing, and irreversible-boundary decisions stay in each skill.
 
 ## Providers
 
-| Provider | Default CDP URL | Launches browser | Intended use |
+| Provider | Default surface | Launches browser | Intended use |
 | --- | --- | --- | --- |
-| `auto` (default) | probes `9100` then `9222` | No | Recommended: BrowserOS first, Chrome CDP fallback |
+| `auto` (default) | BrowserOS `9100`, then `aside repl`, then Chrome `9222` | No | Recommended fallback order |
 | `browseros` | `http://127.0.0.1:9100` | No | Force a user-launched BrowserOS GUI/session browser |
+| `aside` | `aside repl` | No | Force an available Aside Browser session through the documented CLI REPL |
 | `chrome-cdp` | `http://127.0.0.1:9222` | No | Force a Chrome/Chromium CDP session |
 Unknown provider names fail closed with a typed `UNKNOWN_PROVIDER` error rather than silently falling back to BrowserOS.
 
 ## Environment
-- `KSKILL_BROWSER_PROVIDER` selects `auto` (default), `browseros`, or `chrome-cdp`.
+- `KSKILL_BROWSER_PROVIDER` selects `auto` (default), `browseros`, `aside`, or `chrome-cdp`.
 - `KSKILL_BROWSEROS_CDP_URL` overrides the BrowserOS CDP URL.
 - `KSKILL_CHROME_CDP_URL` overrides the Chrome CDP URL.
+- `KSKILL_ASIDE_COMMAND` overrides the Aside CLI command (default `aside`).
 
 ## Lifecycle
 
-For BrowserOS CDP sessions, disconnect automation clients instead of closing the browser application or persistent user profile. Adapter-created pages and contexts may be cleaned up by the adapter; pre-existing user pages must not be closed.
+For BrowserOS CDP and Chrome CDP sessions, disconnect automation clients instead of closing the browser application or persistent user profile. For Aside Browser sessions, close only tabs created by the adapter. Pre-existing user pages must not be closed.
 
 ## Connect options
 
@@ -35,7 +38,7 @@ For BrowserOS CDP sessions, disconnect automation clients instead of closing the
 - `options.connectLoader` — function `(cdpUrl, options) => browser` replacing the default `connectOverCDP` path (which lazily loads `playwright-core`/`playwright`/`rebrowser-playwright`).
 - `options.chromiumLoader` — function passed through to the default CDP loader for lazy chromium resolution and caching.
 
-`connect()` probes `<cdpUrl>/json/version` before connecting and throws `UNAVAILABLE` on probe failure. Unknown providers throw `UNKNOWN_PROVIDER`.
+`connect()` probes CDP providers with `<cdpUrl>/json/version` before connecting. For Aside, it runs a safe `aside repl` probe that lists tabs without opening a page. Provider failures throw `UNAVAILABLE`; unknown providers throw `UNKNOWN_PROVIDER`.
 
 ## Stop rules
 

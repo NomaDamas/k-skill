@@ -320,8 +320,8 @@ test("CourtAuctionPlaywrightClient falls back to the local chromium.launch path 
   const local = createFakeLocalChromium({ status: 200, body: propertiesSample });
   const client = new CourtAuctionPlaywrightClient({
     baseUrl: "https://www.courtauction.go.kr",
-    // Simulate BrowserOS/CDP not running: probe fails closed with UNAVAILABLE.
     probe: async () => ({ ok: false, statusCode: 0, url: "http://127.0.0.1:9100/json/version" }),
+    asideProbe: async () => ({ ok: false }),
     chromiumLoader: async () => local.chromium
   });
 

@@ -5,17 +5,20 @@ const test = require("node:test")
 
 const runtime = require("../src")
 
-test("exports BrowserOS and Chrome CDP defaults", () => {
+test("exports Aside, BrowserOS, and Chrome CDP defaults", () => {
+  assert.equal(runtime.PROVIDERS.ASIDE, "aside")
   assert.equal(runtime.PROVIDERS.BROWSEROS, "browseros")
   assert.equal(runtime.DEFAULT_BROWSEROS_CDP_URL, "http://127.0.0.1:9100")
   assert.equal(runtime.DEFAULT_CHROME_CDP_URL, "http://127.0.0.1:9222")
 })
 
-test("resolves the auto provider by default (BrowserOS preferred, Chrome CDP fallback)", () => {
+test("resolves the auto provider by default (BrowserOS, Aside, Chrome CDP order)", () => {
   assert.equal(runtime.normalizeProvider(), "auto")
   assert.equal(runtime.PROVIDERS.AUTO, "auto")
+  assert.equal(runtime.resolveCdpUrl("aside"), null)
   assert.equal(runtime.resolveCdpUrl("browseros"), "http://127.0.0.1:9100")
   assert.equal(runtime.resolveCdpUrl("chrome-cdp"), "http://127.0.0.1:9222")
+  assert.deepEqual(runtime.AUTO_ORDER, ["browseros", "aside", "chrome-cdp"])
 })
 
 test("auto provider prefers BrowserOS when its endpoint probes ok", async () => {
@@ -30,33 +33,159 @@ test("auto provider prefers BrowserOS when its endpoint probes ok", async () => 
   assert.deepEqual(connectCalls, ["http://127.0.0.1:9100"])
 })
 
-test("auto provider falls back to Chrome CDP when BrowserOS probe fails", async () => {
+test("auto provider falls back to Chrome CDP when BrowserOS and Aside probes fail", async () => {
   const probeCalls = []
   const connectCalls = []
   const probe = async (url) => { probeCalls.push(url); return { ok: /9222/.test(url), url } }
+  const asideProbe = async () => { probeCalls.push("aside"); return { ok: false } }
   const connectLoader = async (url) => { connectCalls.push(url); return { url } }
-  const result = await runtime.connect({ provider: "auto", probe, connectLoader })
+  const result = await runtime.connect({ provider: "auto", probe, asideProbe, connectLoader })
   assert.equal(result.provider, "chrome-cdp")
   assert.equal(result.cdpUrl, "http://127.0.0.1:9222")
-  assert.deepEqual(probeCalls, ["http://127.0.0.1:9100", "http://127.0.0.1:9222"])
+  assert.deepEqual(probeCalls, ["http://127.0.0.1:9100", "aside", "http://127.0.0.1:9222"])
   assert.deepEqual(connectCalls, ["http://127.0.0.1:9222"])
 })
 
-test("auto provider with probe:false connects to BrowserOS first, else Chrome CDP", async () => {
+test("auto provider prefers Aside before Chrome CDP when BrowserOS is unavailable", async () => {
+  const probeCalls = []
+  const connectCalls = []
+  const probe = async (url) => { probeCalls.push(url); return { ok: false, url } }
+  const asideProbe = async () => { probeCalls.push("aside"); return { ok: true } }
+  const connectLoader = async (url) => { connectCalls.push(url); return { url } }
+  const asideConnectLoader = async () => { connectCalls.push("aside"); return { aside: true } }
+  const result = await runtime.connect({ provider: "auto", probe, asideProbe, connectLoader, asideConnectLoader })
+  assert.equal(result.provider, "aside")
+  assert.equal(result.cdpUrl, null)
+  assert.deepEqual(probeCalls, ["http://127.0.0.1:9100", "aside"])
+  assert.deepEqual(connectCalls, ["aside"])
+  assert.equal(result.browser.aside, true)
+})
+
+test("explicit Aside provider uses the Aside adapter without a CDP URL", async () => {
+  const probeCalls = []
+  const connectCalls = []
+  const asideProbe = async () => { probeCalls.push("aside"); return { ok: true } }
+  const asideConnectLoader = async () => { connectCalls.push("aside"); return { aside: true } }
+  const result = await runtime.connect({ provider: "aside", asideProbe, asideConnectLoader })
+  assert.equal(result.provider, "aside")
+  assert.equal(result.cdpUrl, null)
+  assert.deepEqual(probeCalls, ["aside"])
+  assert.deepEqual(connectCalls, ["aside"])
+  assert.equal(result.browser.aside, true)
+})
+
+test("explicit Aside provider fails closed when the Aside probe fails", async () => {
+  await assert.rejects(
+    () => runtime.connect({ provider: "aside", asideProbe: async () => ({ ok: false }) }),
+    (err) => err.code === "UNAVAILABLE" && /Aside Browser provider/.test(err.message)
+  )
+})
+
+test("auto provider with probe:false connects to BrowserOS, then Aside, then Chrome CDP", async () => {
+  const connectCalls = []
+  const connectLoader = async (url) => {
+    connectCalls.push(url)
+    if (/9100/.test(url)) throw new Error("browseros not running")
+    if (/9222/.test(url)) return { url }
+    throw new Error(`unexpected CDP URL ${url}`)
+  }
+  const asideConnectLoader = async () => {
+    connectCalls.push("aside")
+    throw new Error("aside not running")
+  }
+  const result = await runtime.connect({ provider: "auto", probe: false, connectLoader, asideConnectLoader })
+  assert.equal(result.provider, "chrome-cdp")
+  assert.deepEqual(connectCalls, ["http://127.0.0.1:9100", "aside", "http://127.0.0.1:9222"])
+})
+
+test("auto provider with probe:false uses Aside before Chrome CDP when BrowserOS fails", async () => {
   const connectCalls = []
   const connectLoader = async (url) => {
     connectCalls.push(url)
     if (/9100/.test(url)) throw new Error("browseros not running")
     return { url }
   }
-  const result = await runtime.connect({ provider: "auto", probe: false, connectLoader })
+  const asideConnectLoader = async () => { connectCalls.push("aside"); return { aside: true } }
+  const result = await runtime.connect({ provider: "auto", probe: false, connectLoader, asideConnectLoader })
+  assert.equal(result.provider, "aside")
+  assert.deepEqual(connectCalls, ["http://127.0.0.1:9100", "aside"])
+  assert.equal(result.browser.aside, true)
+})
+
+test("auto provider with probe:false falls through to Chrome CDP when Aside CLI is missing", async () => {
+  const connectCalls = []
+  const connectLoader = async (url) => {
+    connectCalls.push(url)
+    if (/9100/.test(url)) throw new Error("browseros not running")
+    return { url }
+  }
+  const result = await runtime.connect({
+    provider: "auto",
+    probe: false,
+    asideCommand: "/definitely/missing/k-skill-aside",
+    asideTimeoutMs: 100,
+    connectLoader
+  })
   assert.equal(result.provider, "chrome-cdp")
+  assert.equal(result.cdpUrl, "http://127.0.0.1:9222")
   assert.deepEqual(connectCalls, ["http://127.0.0.1:9100", "http://127.0.0.1:9222"])
+})
+
+test("Aside context waitForEvent('page') resolves newly opened browser tabs", async () => {
+  const responses = [
+    ["existing-tab"],
+    [
+      { targetId: "existing-tab", url: "https://example.com/", title: "Example", active: false },
+      { targetId: "popup-tab", url: "https://example.com/popup", title: "Popup", active: true }
+    ]
+  ]
+  const context = new runtime.AsideContext({
+    asideReplRunner: async () => responses.shift()
+  })
+  const page = await context.waitForEvent("page", { timeout: 1000 })
+  assert.equal(page.targetId, "popup-tab")
+  assert.equal(page.url(), "https://example.com/popup")
+  assert.equal(context.pages().includes(page), true)
+})
+
+test("Aside page goto tracks only the newly opened tab as owned", async () => {
+  let capturedCode = ""
+  const page = new runtime.AsidePage({
+    asideReplRunner: async (code) => {
+      capturedCode = code
+      return { targetId: "new-tab", url: "https://example.com/", title: "Example Domain" }
+    }
+  })
+  await page.goto("https://example.com/")
+  assert.equal(page.targetId, "new-tab")
+  assert.match(capturedCode, /const beforeTargetIds = new Set/)
+  assert.match(capturedCode, /!beforeTargetIds\.has\(candidate\.targetId\)/)
+  assert.doesNotMatch(capturedCode, /candidate\.url === currentUrl/)
+  assert.doesNotMatch(capturedCode, /candidate\.active/)
+})
+
+test("Aside REPL session queue recovers after a failed command", async () => {
+  const calls = []
+  const session = new runtime.AsideReplSession()
+  session.runNow = async (code) => {
+    calls.push(code)
+    if (code === "fail") throw new Error("first command failed")
+    return { ok: true, code }
+  }
+  await assert.rejects(() => session.run("fail"), /first command failed/)
+  const result = await session.run("cleanup")
+  assert.deepEqual(result, { ok: true, code: "cleanup" })
+  assert.deepEqual(calls, ["fail", "cleanup"])
 })
 
 test("auto provider throws UNAVAILABLE when neither BrowserOS nor Chrome CDP is reachable", async () => {
   await assert.rejects(
-    () => runtime.connect({ provider: "auto", probe: async () => ({ ok: false }), connectLoader: async () => ({}) }),
+    () => runtime.connect({
+      provider: "auto",
+      probe: async () => ({ ok: false }),
+      asideProbe: async () => ({ ok: false }),
+      connectLoader: async () => ({})
+    }),
     (err) => err.code === "UNAVAILABLE" && /auto provider/.test(err.message)
   )
 })
@@ -135,6 +264,7 @@ test("connect fails closed with UNKNOWN_PROVIDER on unknown provider", async () 
     () => runtime.connect({ provider: "firefox", probe: false, connectLoader: async () => ({}) }),
     (err) => err.code === "UNKNOWN_PROVIDER" && /firefox/.test(err.message)
   )
+  assert.equal(runtime.isKnownProvider("aside"), true)
   assert.equal(runtime.isKnownProvider("browseros"), true)
   assert.equal(runtime.isKnownProvider("chrome-cdp"), true)
   assert.equal(runtime.isKnownProvider("firefox"), false)
@@ -169,7 +299,11 @@ test("connect surfaces probe failure as UNAVAILABLE without calling connectLoade
   let connectCalled = false
   const probe = async () => ({ ok: false, cause: new Error("connection refused") })
   await assert.rejects(
-    () => runtime.connect({ probe, connectLoader: async () => { connectCalled = true; return {} } }),
+    () => runtime.connect({
+      probe,
+      asideProbe: async () => ({ ok: false }),
+      connectLoader: async () => { connectCalled = true; return {} }
+    }),
     (err) => err.code === "UNAVAILABLE" && /unavailable/.test(err.message)
   )
   assert.equal(connectCalled, false)

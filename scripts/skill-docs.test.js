@@ -1933,7 +1933,7 @@ test("repository docs advertise the hipass-receipt skill across the documented s
   assert.match(readme, /\| 하이패스 영수증 발급 \|/);
   assert.match(readme, /\[하이패스 영수증 발급 가이드\]\(docs\/features\/hipass-receipt\.md\)/);
   assert.match(install, /--skill hipass-receipt/);
-  assert.match(setup, /하이패스 영수증 발급 \| 사용자 시크릿 불필요 \(기본 `auto`: BrowserOS CDP `http:\/\/127\.0\.0\.1:9100` 우선 → Chrome CDP `http:\/\/127\.0\.0\.1:9222` fallback 세션에서 수동 로그인, \[브라우저 런타임\]\(browser-runtime\.md\) 참고\)/);
+  assert.match(setup, /하이패스 영수증 발급 \| 사용자 시크릿 불필요 \(기본 `auto`: BrowserOS CDP → Aside Browser → Chrome CDP 세션에서 수동 로그인, \[브라우저 런타임\]\(browser-runtime\.md\) 참고\)/);
   assert.match(roadmap, /하이패스 영수증 발급 스킬 출시/);
   assert.match(sources, /https:\/\/www\.hipass\.co\.kr\/main\.do/);
   assert.match(sources, /https:\/\/www\.hipass\.co\.kr\/html\/guide\/siteguide_6\.jsp/);
