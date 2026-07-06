@@ -1,0 +1,33 @@
+{
+  "name": "d2b-notice-search",
+  "version": "0.1.0",
+  "description": "D2B defense procurement notice lookup recipe and parsers for k-skill",
+  "license": "MIT",
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "d2b",
+    "defense",
+    "procurement",
+    "notices",
+    "korea"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js && node --check src/html.js && node --check src/browser.js && node --check test/index.test.js",
+    "test": "node --test"
+  }
+}

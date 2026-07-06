@@ -54,6 +54,10 @@
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
 - korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
 - korean-jangbu-for upstream: https://github.com/kimlawtech/korean-jangbu-for (Apache-2.0; original author @kimlawtech, SpeciAI)
+- Popbill developer center: https://developers.popbill.com
+- Popbill Python SDK: https://pypi.org/project/popbill/
+- Popbill 전자세금계산서 환경설정: https://developers.popbill.com/guide/taxinvoice/getting-started/environment-set-up
+- Popbill 운영 전환 신청: https://developers.popbill.com/customer-center/serviceopen
 - corporate-registration-consulting skill: local://corporate-registration-consulting
 - 대법원 인터넷등기소: https://www.iros.go.kr
 - 온라인법인설립시스템: https://www.startbiz.go.kr
@@ -247,3 +251,13 @@
 - LOCALDATA 본체: https://www.localdata.go.kr
 - 잡코리아 기업 인재검색: https://www.jobkorea.co.kr/corp/person/find — 기업회원 로그인 세션에서 마스킹 이력서/목록을 읽는 브라우저 기반 경로. 유료 열람/마스킹 해제/포지션 제안은 수동 확인 대상.
 - 사람인 기업회원 인재풀 검색: https://www.saramin.co.kr/zf_user/memcom/talent-pool/main/search — 기업회원 로그인 및 첫 기기 2차 인증 후 현재 보이는 마스킹 후보 정보를 읽는 브라우저 기반 경로. 유료 열람/연락처 확인/제안 발송은 수동 확인 대상.
+- 예비군 홈페이지 메인: https://www.yebigun1.mil.kr/
+- 예비군 홈페이지 로그인: https://www.yebigun1.mil.kr/dmobis/rfh/main/login/LoginForm.do
+- 예비군 나의 훈련정보: https://www.yebigun1.mil.kr/dmobis/rfh/rgt/edutrasubjpsn/IvdTraScheDetail.do — 소속 정보 표와 올해(`#detailTb`)/과거 연도(`#detail2`, 이미 DOM에 로드됨) 훈련 기록을 같은 페이지에서 함께 제공. PASS/공동인증서/간편인증 로그인 필요, 도메인은 `mma.go.kr`이 아니라 `yebigun1.mil.kr`.
+- 예비군 훈련 연기신청: https://www.yebigun1.mil.kr/dmobis/rft/rgt/ivdTraDelayApplInForm.do
+- 예비군 보류 신청: https://www.yebigun1.mil.kr/dmobis/rfh/rrm/holdpsn/HoldPsnReqForm.do
+- 예비군 해소 신청: https://www.yebigun1.mil.kr/dmobis/rfh/rrm/holdpsn/HoldPsnCancelReqForm.do
+- 예비군 개인정보수정: https://www.yebigun1.mil.kr/dmobis/rfh/rrm/reserveforce/ReserveForceForm.do
+- 예비군 상훈: https://www.yebigun1.mil.kr/dmobis/rfh/rrm/reserveforce/ReserveForcePrzdcr.do
+- 예비군 사이트맵: https://www.yebigun1.mil.kr/dmobis/rfh/rgt/sitemap/sitemap.jsp
+- 병무청 디지털서비스개방 청년 동원훈련 일정조회(v1에서 비교 대상으로 시도하지 않음): https://openservice.go.kr/youthMilTrainSch

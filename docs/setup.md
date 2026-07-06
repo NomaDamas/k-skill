@@ -35,6 +35,11 @@ KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
 # Kakao Local geocoding은 hosted proxy 사용. self-host proxy 운영 때만 채운다.
 KAKAO_REST_API_KEY=replace-me
+# Popbill은 사용자별 과금/권한 API이므로 BYOK 로컬 호출 때만 채운다.
+KSKILL_POPBILL_LINK_ID=replace-me
+KSKILL_POPBILL_SECRET_KEY=replace-me
+KSKILL_POPBILL_CORP_NUM=replace-me
+KSKILL_POPBILL_USER_ID=
 KSKILL_PROXY_BASE_URL=
 EOF
 chmod 0600 ~/.config/k-skill/secrets.env
@@ -81,6 +86,7 @@ bash scripts/check-setup.sh
 | 한국 법령 검색 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `LAW_OC`) |
 | 한국 부동산 실거래가 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
 | 한국 특허 정보 검색 | `KIPRIS_PLUS_API_KEY` |
+| 팝빌 업무 API | `KSKILL_POPBILL_LINK_ID`, `KSKILL_POPBILL_SECRET_KEY`, `KSKILL_POPBILL_CORP_NUM`, 선택 `KSKILL_POPBILL_USER_ID` |
 | 하이패스 영수증 발급 | 사용자 시크릿 불필요 (로그인된 브라우저 세션 필요) |
 | 한국 주식 정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KRX_API_KEY`) |
 | 근처 가장 싼 주유소 찾기 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
@@ -122,6 +128,7 @@ bash scripts/check-setup.sh
 - [의약품 안전 체크 가이드](features/mfds-drug-safety.md)
 - [식품 안전 체크 가이드](features/mfds-food-safety.md)
 - [창업진흥원 K-Startup 조회 가이드](features/kstartup-search.md)
+- [팝빌 all-service API helper](features/popbill.md)
 - [지방선거 후보자 조회 가이드](features/local-election-candidate-search.md)
 - [보안/시크릿 정책](security-and-secrets.md)
 

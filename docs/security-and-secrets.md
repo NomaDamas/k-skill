@@ -35,6 +35,11 @@ KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
 # Kakao Local geocoding은 hosted proxy 사용. self-host proxy 운영 때만 필요.
 KAKAO_REST_API_KEY=replace-me
+# Popbill은 사용자별 과금/권한 API이므로 BYOK 로컬 호출 때만 채운다.
+KSKILL_POPBILL_LINK_ID=replace-me
+KSKILL_POPBILL_SECRET_KEY=replace-me
+KSKILL_POPBILL_CORP_NUM=replace-me
+KSKILL_POPBILL_USER_ID=
 KSKILL_PROXY_BASE_URL=
 ```
 
@@ -78,8 +83,13 @@ KSKILL_PROXY_BASE_URL=
 - `AIR_KOREA_OPEN_API_KEY`
 - `KAKAO_REST_API_KEY`
 - `KRX_API_KEY`
+- `KSKILL_POPBILL_LINK_ID`
+- `KSKILL_POPBILL_SECRET_KEY`
+- `KSKILL_POPBILL_CORP_NUM`
+- `KSKILL_POPBILL_USER_ID`
 - `KSKILL_PROXY_BASE_URL`
 
 `LAW_OC` 는 법제처 Open API(`open.law.go.kr`)를 호출할 때 쓰는 표준 식별자다. 한국 법령 검색은 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)의 `/v1/korean-law/...` 라우트가 `LAW_OC` 와 브라우저 User-Agent/Referer 를 proxy 서버에서만 주입하므로 사용자 쪽 키가 불필요하다. `LAW_OC` 는 self-host proxy 운영자 문맥에서만 서버에 넣는다. `DATA_GO_KR_API_KEY` 는 프록시 운영자 문맥에서만 서버에 넣는다. 부동산 실거래가 조회는 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 경유하므로 사용자 쪽 키가 불필요하다. 생활쓰레기 배출정보 조회는 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 거쳐 `serviceKey`(`DATA_GO_KR_API_KEY`)를 proxy 서버에서 주입하므로 사용자 쪽 키가 불필요하다. 의약품 안전 체크도 `k-skill-proxy`의 `/v1/mfds/drug-safety/lookup` 라우트를 거쳐 `DATA_GO_KR_API_KEY` 를 proxy 서버에서만 주입하므로 사용자 쪽 키가 불필요하다. 식품 안전 체크는 `k-skill-proxy`의 `/v1/mfds/food-safety/search` 라우트를 거쳐 `DATA_GO_KR_API_KEY` 및 선택적 `FOODSAFETYKOREA_API_KEY` 를 proxy 서버에서만 주입하므로 사용자 쪽 키가 불필요하다. 한국 주식 정보 조회도 기본 hosted proxy를 경유하므로 사용자 쪽 `KRX_API_KEY` 가 불필요하다. `KRX_API_KEY` 는 self-host proxy 운영자 문맥에서만 서버에 넣는다. KOSIS 일반 조회도 기본 hosted proxy를 경유하므로 사용자 쪽 KOSIS 키가 불필요하다. `KOSIS_API_KEY` 또는 `KSKILL_KOSIS_API_KEY` 는 self-host proxy 운영자, direct 호출, 또는 bigdata 호출 문맥에서만 쓴다. Kakao Local geocoding도 기본 hosted proxy를 경유하므로 사용자 쪽 `KAKAO_REST_API_KEY` 가 불필요하다. `KAKAO_REST_API_KEY` 는 self-host proxy 운영자 문맥에서만 서버에 넣는다. 근처 가장 싼 주유소 찾기는 기본 hosted proxy를 경유하므로 사용자 쪽 `OPINET_API_KEY` 가 불필요하다. `OPINET_API_KEY` 는 프록시 운영자 문맥에서만 서버에 넣는다. 창업진흥원 K-Startup 조회도 `k-skill-proxy`의 `/v1/kstartup/*` 라우트를 거쳐 `ServiceKey`(`DATA_GO_KR_API_KEY`)를 proxy 서버에서만 주입하므로 사용자 쪽 키가 불필요하다. `KSKILL_KSTARTUP_API_KEY` 는 `--direct` 호출 문맥에서만 사용자 쪽에 둔다. `KIPRIS_PLUS_API_KEY` 는 한국 특허 정보 검색 helper가 KIPRIS Plus Open API에 보낼 `ServiceKey` 값을 담는 표준 변수명이다. 공공데이터포털에서 복사한 percent-encoded key도 helper가 한 번 정규화한 뒤 요청한다. public 공유용 Cloudflare Tunnel/Auth0/operator secret은 사용자 기본 secrets 파일에 넣지 않는다. 프록시 운영자 문맥에서는 upstream 환경변수 `SEOUL_OPEN_API_KEY`, `KMA_OPEN_API_KEY`, `AIR_KOREA_OPEN_API_KEY`, `HRFCO_OPEN_API_KEY`, `OPINET_API_KEY`, `DATA_GO_KR_API_KEY`, `FOODSAFETYKOREA_API_KEY`, `KRX_API_KEY`, `KOSIS_API_KEY`, `KAKAO_REST_API_KEY`, `LAW_OC` 를 사용할 수 있다. 다만 일반 사용자/client 쪽 기본 secrets 파일에는 넣지 않는다. `KSKILL_PROXY_BASE_URL` 은 별도 self-host proxy를 쓸 때만 넣는다. 서울 지하철, 서울 실시간 혼잡도, 서울 따릉이, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 한국 주식 정보 조회, 한국 법령 검색, KOSIS 일반 조회, Kakao Local geocoding, 의약품 안전 체크, 식품 안전 체크는 이 값이 없거나 비어 있으면 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 사용한다.
+`KSKILL_POPBILL_LINK_ID`, `KSKILL_POPBILL_SECRET_KEY`, `KSKILL_POPBILL_CORP_NUM`, `KSKILL_POPBILL_USER_ID` 는 팝빌 사용자별 과금/권한 API를 로컬 BYOK 방식으로 호출할 때만 사용한다. hosted proxy에 넣지 않고, 테스트/운영 환경을 혼동하지 않으며, 실제 SecretKey·사업자번호·수신자 연락처·계좌번호는 문서/PR/로그에 남기지 않는다.
 
 이 레포의 credential-bearing skill은 전부 이 정책을 전제로 작성한다. 자세한 공통 설치 절차는 [공통 설정 가이드](setup.md)를 본다.
