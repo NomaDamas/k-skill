@@ -17,6 +17,7 @@ const {
   normalizeKosisDataQuery,
   normalizeKosisMetaQuery,
   normalizeKosisSearchQuery,
+  normalizeKoreanHolidayQuery,
   normalizeKopisListQuery,
   normalizeKstartupQuery,
   normalizeKrWhoisDomainQuery,
@@ -84,6 +85,99 @@ test("createMemoryCache refuses to store failure responses", () => {
 
   assert.equal(cache.set("k4", { items: [{ id: 1 }] }, 60000), true);
   assert.deepEqual(cache.get("k4"), { items: [{ id: 1 }] }, "successful payload must be stored");
+});
+
+test("Korean holiday normalizer validates operation and solar year/month", () => {
+  assert.deepEqual(normalizeKoreanHolidayQuery({ type: "rest", year: "2026", month: "7", limit: "20" }), {
+    operation: "rest",
+    solYear: "2026",
+    solMonth: "07",
+    pageNo: 1,
+    numOfRows: 20
+  });
+  assert.deepEqual(normalizeKoreanHolidayQuery({ operation: "solarTerm", solYear: "2026" }), {
+    operation: "solarTerm",
+    solYear: "2026",
+    solMonth: null,
+    pageNo: 1,
+    numOfRows: 100
+  });
+  assert.throws(() => normalizeKoreanHolidayQuery({ year: "26" }), /solYear/);
+  assert.throws(() => normalizeKoreanHolidayQuery({ year: "2026", month: "13" }), /solMonth/);
+  assert.throws(() => normalizeKoreanHolidayQuery({ year: "2026", operation: "unknown" }), /operation/);
+});
+
+test("Korean holiday route injects ServiceKey and caches XML success", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(
+      "<response><header><resultCode>00</resultCode><resultMsg>OK</resultMsg></header><body><items><item><dateName>광복절</dateName><isHoliday>Y</isHoliday><locdate>20260815</locdate></item></items></body></response>",
+      { status: 200, headers: { "content-type": "application/xml;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({ method: "GET", url: "/v1/korean-holiday/calendar?operation=rest&year=2026&month=08" });
+  assert.equal(first.statusCode, 200);
+  assert.match(first.body, /광복절/);
+  assert.match(calls[0], /\/SpcdeInfoService\/getRestDeInfo\?/);
+  assert.match(calls[0], /ServiceKey=data-go-key/);
+  assert.match(calls[0], /solYear=2026/);
+  assert.match(calls[0], /solMonth=08/);
+
+  const second = await app.inject({ method: "GET", url: "/v1/korean-holiday/calendar?operation=rest&year=2026&month=08" });
+  assert.equal(second.statusCode, 200);
+  assert.equal(calls.length, 1);
+});
+
+test("Korean holiday route maps solar-term operation and missing key", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response("<response><body><items /></body></response>", {
+      status: 200,
+      headers: { "content-type": "application/xml;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const missingApp = buildServer({ env: {} });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+    await missingApp.close();
+  });
+
+  assert.equal((await app.inject({ method: "GET", url: "/v1/korean-holiday/calendar?operation=solarTerm&year=2026" })).statusCode, 200);
+  assert.match(calls[0], /get24DivisionsInfo/);
+  const missing = await missingApp.inject({ method: "GET", url: "/v1/korean-holiday/calendar?year=2026" });
+  assert.equal(missing.statusCode, 503);
+  assert.equal(missing.json().error, "upstream_not_configured");
+});
+
+test("Korean holiday route reports rejected upstream key", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    "<OpenAPI_ServiceResponse><cmmMsgHeader><returnAuthMsg>SERVICE KEY IS NOT REGISTERED ERROR</returnAuthMsg></cmmMsgHeader></OpenAPI_ServiceResponse>",
+    { status: 200, headers: { "content-type": "application/xml" } }
+  );
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "bad-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const rejected = await app.inject({ method: "GET", url: "/v1/korean-holiday/calendar?year=2026" });
+  assert.equal(rejected.statusCode, 502);
+  assert.equal(rejected.json().error, "upstream_forbidden");
 });
 
 test("KR WHOIS domain normalizer accepts only .kr and .한국 domains", () => {
