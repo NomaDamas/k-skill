@@ -820,6 +820,79 @@ function normalizeKosisDataQuery(query) {
   return normalized;
 }
 
+function normalizeKosisListQuery(query) {
+  const vwCd = trimOrNull(query.vwCd ?? query.vw_cd);
+  if (!vwCd) {
+    throw new Error("Provide vwCd (service view code).");
+  }
+  return {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    vwCd,
+    parentId: trimOrNull(query.parentId ?? query.parent_id) || ""
+  };
+}
+
+function normalizeKosisExplainQuery(query) {
+  const statId = trimOrNull(query.statId ?? query.stat_id);
+  const orgId = trimOrNull(query.orgId ?? query.org_id);
+  const tblId = trimOrNull(query.tblId ?? query.table_id ?? query.tbl_id);
+  const metaItm = trimOrNull(query.metaItm ?? query.meta_itm) || "All";
+
+  if (!statId && !(orgId && tblId)) {
+    throw new Error("Provide statId or both orgId and tblId.");
+  }
+
+  const normalized = {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    metaItm
+  };
+  if (statId) {
+    normalized.statId = statId;
+  } else {
+    normalized.orgId = orgId;
+    normalized.tblId = tblId;
+  }
+  return normalized;
+}
+
+function normalizeKosisIndicatorQuery(query) {
+  const service = trimOrNull(query.service) || "1";
+  if (!["1", "2", "3"].includes(service)) {
+    throw new Error("service must be 1, 2, or 3.");
+  }
+  const jipyoId = trimOrNull(query.jipyoId ?? query.jipyo_id);
+  if (!jipyoId) {
+    throw new Error("Provide jipyoId.");
+  }
+
+  const serviceDetailMap = { "1": "pkNotion", "2": "pkCalcSource", "3": "pkAll" };
+
+  return {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    service,
+    serviceDetail: serviceDetailMap[service],
+    jipyoId,
+    pageNo: String(parseBoundedPositiveInteger(query.pageNo ?? query.page_no ?? query.page, {
+      defaultValue: 1,
+      min: 1,
+      max: 1000000,
+      label: "pageNo"
+    })),
+    numOfRows: String(parseBoundedPositiveInteger(query.numOfRows ?? query.num_of_rows ?? query.limit, {
+      defaultValue: 10,
+      min: 1,
+      max: 5000,
+      label: "numOfRows"
+    }))
+  };
+}
+
 function normalizeKakaoLocalGeocodeQuery(query) {
   const q = trimOrNull(query.q ?? query.query);
   if (!q) {
@@ -1503,7 +1576,10 @@ async function proxyKosisRequest({
   const paths = {
     search: "statisticsSearch.do",
     meta: "statisticsData.do",
-    data: "Param/statisticsParameterData.do"
+    data: "Param/statisticsParameterData.do",
+    list: "statisticsList.do",
+    explain: "statisticsExplData.do",
+    indicator: "pkNumberService.do"
   };
   const path = paths[operation];
 
@@ -2376,6 +2452,30 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     operation: "data",
     normalize: normalizeKosisDataQuery,
     cacheRoute: "kosis-data",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kosis/list", async (request, reply) => handleKosisRoute({
+    operation: "list",
+    normalize: normalizeKosisListQuery,
+    cacheRoute: "kosis-list",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kosis/explain", async (request, reply) => handleKosisRoute({
+    operation: "explain",
+    normalize: normalizeKosisExplainQuery,
+    cacheRoute: "kosis-explain",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kosis/indicator", async (request, reply) => handleKosisRoute({
+    operation: "indicator",
+    normalize: normalizeKosisIndicatorQuery,
+    cacheRoute: "kosis-indicator",
     request,
     reply
   }));

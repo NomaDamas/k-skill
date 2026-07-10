@@ -71,6 +71,34 @@ class ParseArgsTest(unittest.TestCase):
                 "search", "--query", "x", "--result-count", "9999",
             ])
 
+    def test_list_subcommand_parses_vw_cd(self):
+        args = helper.parse_args(["list", "--vw-cd", "MT_ZTITLE"])
+        self.assertEqual(args.command, "list")
+        self.assertEqual(args.vw_cd, "MT_ZTITLE")
+        self.assertEqual(args.parent_id, "")
+
+    def test_list_invalid_vw_cd_rejected(self):
+        with self.assertRaises(SystemExit):
+            helper.parse_args(["list", "--vw-cd", "INVALID_CODE"])
+
+    def test_explain_requires_stat_id_or_org_tbl(self):
+        args = helper.parse_args(["explain", "--stat-id", "A10120100413104843"])
+        self.assertEqual(args.stat_id, "A10120100413104843")
+        args2 = helper.parse_args(["explain", "--org-id", "101", "--table-id", "DT_1IN0001"])
+        self.assertEqual(args2.org_id, "101")
+        self.assertEqual(args2.table_id, "DT_1IN0001")
+
+    def test_indicator_defaults_service_to_1(self):
+        args = helper.parse_args(["indicator", "--jipyo-id", "160"])
+        self.assertEqual(args.service, "1")
+        self.assertEqual(args.jipyo_id, "160")
+        self.assertEqual(args.page_no, 1)
+        self.assertEqual(args.num_of_rows, 10)
+
+    def test_indicator_invalid_service_rejected(self):
+        with self.assertRaises(SystemExit):
+            helper.parse_args(["indicator", "--jipyo-id", "160", "--service", "9"])
+
 
 class CredentialResolutionTest(unittest.TestCase):
     def test_env_var_takes_precedence(self):
@@ -174,6 +202,40 @@ class UrlBuilderTest(unittest.TestCase):
         self.assertTrue(url.startswith("https://example.com/x?"))
         self.assertIn("a=1", url)
         self.assertIn("b=", url)
+
+    def test_list_params_include_vw_cd_and_parent_id(self):
+        args = helper.parse_args(["list", "--vw-cd", "MT_ZTITLE", "--parent-id", "sub123"])
+        params = helper.build_list_params("KEY", args)
+        self.assertEqual(params["vwCd"], "MT_ZTITLE")
+        self.assertEqual(params["parentId"], "sub123")
+        self.assertEqual(params["method"], "getList")
+
+    def test_explain_params_with_org_and_table(self):
+        args = helper.parse_args(["explain", "--org-id", "101", "--table-id", "DT_1IN0001"])
+        params = helper.build_explain_params("KEY", args)
+        self.assertEqual(params["orgId"], "101")
+        self.assertEqual(params["tblId"], "DT_1IN0001")
+        self.assertEqual(params["metaItm"], "All")
+
+    def test_explain_params_with_stat_id(self):
+        args = helper.parse_args(["explain", "--stat-id", "A10120100413104843"])
+        params = helper.build_explain_params("KEY", args)
+        self.assertEqual(params["statId"], "A10120100413104843")
+        self.assertNotIn("orgId", params)
+
+    def test_explain_without_any_id_exits(self):
+        args = helper.parse_args(["explain"])
+        with self.assertRaises(SystemExit):
+            helper.build_explain_params("KEY", args)
+
+    def test_indicator_params_include_service_and_jipyo_id(self):
+        args = helper.parse_args(["indicator", "--jipyo-id", "160", "--service", "2"])
+        params = helper.build_indicator_params("KEY", args)
+        self.assertEqual(params["jipyoId"], "160")
+        self.assertEqual(params["service"], "2")
+        self.assertEqual(params["serviceDetail"], "pkCalcSource")
+        self.assertEqual(params["pageNo"], "1")
+        self.assertEqual(params["numOfRows"], "10")
 
 
 class JsonHandlingTest(unittest.TestCase):
@@ -339,6 +401,43 @@ class RenderTextTest(unittest.TestCase):
         self.assertIn("35.5", text)
         self.assertIn("%", text)
 
+    def test_list_empty_suggests_parent_id_or_vw_cd(self):
+        text = helper.render_list_text([])
+        self.assertIn("--parent-id", text)
+        self.assertIn("--vw-cd", text)
+
+    def test_list_text_shows_category_entries(self):
+        payload = [
+            {"LIST_ID": "L1", "LIST_NM": "인구/가구", "ORG_ID": "", "TBL_ID": "", "TBL_NM": "", "SEND_DE": ""},
+            {"LIST_ID": "L2", "LIST_NM": "경제/산업", "ORG_ID": "101", "TBL_ID": "DT_X", "TBL_NM": "GDP", "SEND_DE": "20240101"},
+        ]
+        text = helper.render_list_text(payload)
+        self.assertIn("인구/가구", text)
+        self.assertIn("GDP", text)
+        self.assertIn("DT_X", text)
+
+    def test_explain_empty_suggests_search(self):
+        text = helper.render_explain_text([])
+        self.assertIn("search", text)
+
+    def test_explain_text_shows_fields(self):
+        payload = [{"statsNm": "인구총조사", "writingPurps": "인구 파악", "statsPeriod": "5년"}]
+        text = helper.render_explain_text(payload)
+        self.assertIn("인구총조사", text)
+        self.assertIn("인구 파악", text)
+        self.assertIn("조사주기", text)
+
+    def test_indicator_empty_suggests_jipyo_id(self):
+        text = helper.render_indicator_text([])
+        self.assertIn("--jipyo-id", text)
+
+    def test_indicator_text_shows_concept(self):
+        payload = [{"statJipyoId": "160", "statJipyoNm": "인구밀도", "jipyoExplan": "인구밀도 설명", "jipyoExplan1": "1km²당 인구수"}]
+        text = helper.render_indicator_text(payload)
+        self.assertIn("160", text)
+        self.assertIn("인구밀도", text)
+        self.assertIn("1km²당 인구수", text)
+
 
 class DryRunTest(unittest.TestCase):
     def test_dry_run_redacts_api_key_and_does_not_call_network(self):
@@ -367,6 +466,45 @@ class DryRunTest(unittest.TestCase):
         self.assertIn("<DRY-RUN>", out)
         self.assertIn('"via_proxy": false', out)
         self.assertIn("apiKey", out)
+
+    def test_list_dry_run_uses_proxy_and_no_api_key(self):
+        args = helper.parse_args(["list", "--vw-cd", "MT_ZTITLE", "--dry-run", "--json"])
+        with mock.patch.object(helper, "fetch_text") as fetch_mock:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = helper.run(args)
+        self.assertEqual(rc, 0)
+        fetch_mock.assert_not_called()
+        out = buf.getvalue()
+        self.assertIn('"via_proxy": true', out)
+        self.assertIn("/v1/kosis/list", out)
+        self.assertIn("statisticsList.do", out)
+
+    def test_explain_dry_run_uses_proxy(self):
+        args = helper.parse_args(["explain", "--org-id", "101", "--table-id", "DT_1IN0001", "--dry-run", "--json"])
+        with mock.patch.object(helper, "fetch_text") as fetch_mock:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = helper.run(args)
+        self.assertEqual(rc, 0)
+        fetch_mock.assert_not_called()
+        out = buf.getvalue()
+        self.assertIn('"via_proxy": true', out)
+        self.assertIn("/v1/kosis/explain", out)
+        self.assertIn("statisticsExplData.do", out)
+
+    def test_indicator_dry_run_uses_proxy(self):
+        args = helper.parse_args(["indicator", "--jipyo-id", "160", "--dry-run", "--json"])
+        with mock.patch.object(helper, "fetch_text") as fetch_mock:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = helper.run(args)
+        self.assertEqual(rc, 0)
+        fetch_mock.assert_not_called()
+        out = buf.getvalue()
+        self.assertIn('"via_proxy": true', out)
+        self.assertIn("/v1/kosis/indicator", out)
+        self.assertIn("pkNumberService.do", out)
 
 
 class RunIntegrationTest(unittest.TestCase):

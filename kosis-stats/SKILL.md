@@ -22,6 +22,9 @@ metadata:
 - `statisticsData.do?method=getMeta` — 통계표 메타데이터 (분류·항목·단위)
 - `statisticsParameterData.do` — 통계표 데이터 셀 조회 (기간/분류 필터)
 - `statisticsBigData.do` — 대용량 자료 (사전 등록한 `userStatsId` 필요)
+- `statisticsList.do` — 통계목록 카테고리 트리 탐색 (주제별/기관별/국제통계/북한통계 등)
+- `statisticsExplData.do` — 통계설명 (조사목적·주기·대상·법적근거·공표방법 등 27개 항목)
+- `pkNumberService.do` — 통계주요지표 (1,473개 핵심 지표의 개념·산정방법·출처)
 
 ## When to use
 
@@ -29,6 +32,9 @@ metadata:
 - "KOSIS에서 고령인구 비율 시도별 데이터 가져와"
 - "DT_1IN0001 표 메타데이터 보여줘"
 - "최근 5년치 소비자물가지수 KOSIS에서 뽑아줘"
+- "국내통계 주제별로 어떤 카테고리가 있어?" (`list`)
+- "인구총조사 조사목적·조사주기 알려줘" (`explain`)
+- "인구밀도 지표 산정방법 보여줘" (`indicator`)
 
 ## When not to use
 
@@ -40,7 +46,7 @@ metadata:
 ## Prerequisites
 
 - Python 3.9+ (stdlib only, 외부 패키지 없음)
-- 일반 `search`/`meta`/`data`: `k-skill-proxy`의 KOSIS route가 있는 hosted/self-host 프록시에 접근 가능할 것
+- 일반 `search`/`meta`/`data`/`list`/`explain`/`indicator`: `k-skill-proxy`의 KOSIS route가 있는 hosted/self-host 프록시에 접근 가능할 것
 - `bigdata` 또는 `--direct`: KOSIS Open API 인증키 (무료, https://kosis.kr/openapi/ 에서 회원가입 후 활용신청)
 
 ```bash
@@ -49,7 +55,7 @@ python3 kosis-stats/scripts/run_kosis_stats.py --help
 
 ## Required environment variables
 
-- 일반 `search`/`meta`/`data`: 없음. 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.
+- 일반 `search`/`meta`/`data`/`list`/`explain`/`indicator`: 없음. 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.
 - `KSKILL_PROXY_BASE_URL` — self-host·별도 프록시를 쓸 때만 설정. 비우면 기본 hosted proxy를 사용한다.
 - `KSKILL_KOSIS_API_KEY` — `bigdata` 또는 `--direct`로 KOSIS를 직접 호출할 때만 필요하다.
 
@@ -64,10 +70,11 @@ python3 kosis-stats/scripts/run_kosis_stats.py --help
 
 기본 경로에 저장하는 것은 fallback일 뿐, 강제가 아니다.
 일반 조회 helper는 proxy URL만 읽고, KOSIS 인증키는 proxy 서버에서만 주입한다. `bigdata`/`--direct` 호출만 `KSKILL_KOSIS_API_KEY` 환경변수와 위 secrets 파일을 읽는다.
+`list`/`explain`/`indicator`는 `search`/`meta`/`data`와 마찬가지로 proxy 경유로 동작한다.
 
 ## Inputs
 
-서브커맨드: `search`, `meta`, `data`, `bigdata`.
+서브커맨드: `search`, `meta`, `data`, `bigdata`, `list`, `explain`, `indicator`.
 
 공통 옵션:
 
@@ -99,6 +106,16 @@ python3 kosis-stats/scripts/run_kosis_stats.py --help
   - `--user-stats-id <KOSIS 등록 ID>`
   - `--format json|sdmx|csv` (xls는 바이너리라 helper 미지원 — 필요 시 KOSIS 웹에서 직접 다운로드)
   - `--prd-se`, `--new-est-prd-cnt` (선택)
+- `list`
+  - `--vw-cd MT_ZTITLE|MT_OTITLE|MT_GTITLE01|MT_GTITLE02|MT_CHOSUN_TITLE|MT_HANKUK_TITLE|MT_STOP_TITLE|MT_RTITLE|MT_BUKHAN|MT_TM1_TITLE|MT_TM2_TITLE|MT_ETITLE` (필수)
+  - `--parent-id <LIST_ID>` (하위 카테고리 탐색, 기본 빈 문자열=최상위)
+- `explain`
+  - `--stat-id <통계조사ID>` (단독) 또는 `--org-id 101 --table-id DT_1IN0001` (조합, 둘 중 하나 필수)
+  - `--meta-itm All|statsNm,statsKind,...` (기본 All)
+- `indicator`
+  - `--jipyo-id 160` (필수, 지표ID)
+  - `--service 1|2|3` (기본 1: 1=개념, 2=산정방법·출처, 3=전체설명)
+  - `--page-no N`, `--num-of-rows N` (페이징)
 
 ## Workflow
 

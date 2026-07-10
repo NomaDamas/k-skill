@@ -30,6 +30,9 @@ SEARCH_URL = "https://kosis.kr/openapi/statisticsSearch.do"
 META_URL = "https://kosis.kr/openapi/statisticsData.do"
 DATA_URL = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
 BIGDATA_URL = "https://kosis.kr/openapi/statisticsBigData.do"
+LIST_URL = "https://kosis.kr/openapi/statisticsList.do"
+EXPLAIN_URL = "https://kosis.kr/openapi/statisticsExplData.do"
+INDICATOR_URL = "https://kosis.kr/openapi/pkNumberService.do"
 PROXY_BASE_URL_ENV_VAR = "KSKILL_PROXY_BASE_URL"
 DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
 
@@ -39,6 +42,16 @@ PRD_SE_VALUES = {"M", "Q", "S", "Y", "F", "IR"}
 # but the helper streams text-only output. Use bigdata json/sdmx/csv (text)
 # for now; download xls files manually from the KOSIS web UI if you need them.
 BIGDATA_FORMATS = {"json", "sdmx", "csv"}
+
+# statisticsList.do service view codes
+VIEW_CODES = {
+    "MT_ZTITLE", "MT_OTITLE", "MT_GTITLE01", "MT_GTITLE02",
+    "MT_CHOSUN_TITLE", "MT_HANKUK_TITLE", "MT_STOP_TITLE",
+    "MT_RTITLE", "MT_BUKHAN", "MT_TM1_TITLE", "MT_TM2_TITLE", "MT_ETITLE",
+}
+
+# pkNumberService.do sub-services
+INDICATOR_SERVICES = {"1", "2", "3"}
 
 ERROR_CODE_HINTS: dict[str, str] = {
     "10": "인증키가 누락되었습니다. KSKILL_KOSIS_API_KEY 환경변수를 확인하세요.",
@@ -92,6 +105,23 @@ def parse_bigdata_format(value: str) -> str:
             "must be one of: " + ", ".join(sorted(BIGDATA_FORMATS))
         )
     return lower
+
+
+def parse_view_code(value: str) -> str:
+    upper = value.strip().upper()
+    if upper not in VIEW_CODES:
+        raise argparse.ArgumentTypeError(
+            "must be one of: " + ", ".join(sorted(VIEW_CODES))
+        )
+    return upper
+
+
+def parse_indicator_service(value: str) -> str:
+    if value not in INDICATOR_SERVICES:
+        raise argparse.ArgumentTypeError(
+            "must be one of: " + ", ".join(sorted(INDICATOR_SERVICES))
+        )
+    return value
 
 
 def _add_common_flags(parser: argparse.ArgumentParser) -> None:
@@ -206,6 +236,71 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--new-est-prd-cnt",
         type=int,
         help="Count of latest periods to fetch (alternative to start/end).",
+    )
+
+    list_cmd = sub.add_parser(
+        "list",
+        help="Browse statistical table categories (statisticsList.do).",
+    )
+    _add_common_flags(list_cmd)
+    list_cmd.add_argument(
+        "--vw-cd",
+        type=parse_view_code,
+        required=True,
+        help="Service view code: MT_ZTITLE(국내통계주제별) MT_OTITLE(기관별) "
+        "MT_GTITLE01/02(e-지방지표) MT_RTITLE(국제통계) MT_BUKHAN(북한통계) etc.",
+    )
+    list_cmd.add_argument(
+        "--parent-id",
+        default="",
+        help="Parent list ID for sub-categories. Empty string = top-level.",
+    )
+
+    explain = sub.add_parser(
+        "explain",
+        help="Fetch statistical survey description (statisticsExplData.do).",
+    )
+    _add_common_flags(explain)
+    explain.add_argument(
+        "--stat-id",
+        help="Statistics survey ID (alternative to --org-id/--table-id).",
+    )
+    explain.add_argument("--org-id", help="Organization ID (with --table-id).")
+    explain.add_argument("--table-id", help="KOSIS table ID (with --org-id).")
+    explain.add_argument(
+        "--meta-itm",
+        default="All",
+        help="Requested field(s): All(전체) or comma-separated list "
+        "(statsNm,statsKind,writingPurps,...). Default All.",
+    )
+
+    indicator = sub.add_parser(
+        "indicator",
+        help="Fetch key indicator metadata (pkNumberService.do).",
+    )
+    _add_common_flags(indicator)
+    indicator.add_argument(
+        "--service",
+        type=parse_indicator_service,
+        default="1",
+        help="Sub-service: 1(개념) 2(산정방법·출처) 3(전체설명). Default 1.",
+    )
+    indicator.add_argument(
+        "--jipyo-id",
+        required=True,
+        help="Indicator ID (e.g. 160).",
+    )
+    indicator.add_argument(
+        "--page-no",
+        type=int,
+        default=1,
+        help="Page number (default 1).",
+    )
+    indicator.add_argument(
+        "--num-of-rows",
+        type=int,
+        default=10,
+        help="Rows per page (default 10).",
     )
 
     return parser.parse_args(argv)
@@ -331,6 +426,52 @@ def build_bigdata_params(api_key: str, args: argparse.Namespace) -> dict[str, st
     if args.new_est_prd_cnt is not None:
         params["newEstPrdCnt"] = str(args.new_est_prd_cnt)
     return params
+
+
+def build_list_params(api_key: str, args: argparse.Namespace) -> dict[str, str]:
+    return {
+        "method": "getList",
+        "apiKey": api_key,
+        "format": "json",
+        "jsonVD": "Y",
+        "vwCd": args.vw_cd,
+        "parentId": args.parent_id,
+    }
+
+
+def build_explain_params(api_key: str, args: argparse.Namespace) -> dict[str, str]:
+    params: dict[str, str] = {
+        "method": "getList",
+        "apiKey": api_key,
+        "format": "json",
+        "jsonVD": "Y",
+        "metaItm": args.meta_itm,
+    }
+    if args.stat_id:
+        params["statId"] = args.stat_id
+    elif args.org_id and args.table_id:
+        params["orgId"] = args.org_id
+        params["tblId"] = args.table_id
+    else:
+        raise SystemExit(
+            "explain requires either --stat-id or both --org-id and --table-id."
+        )
+    return params
+
+
+def build_indicator_params(api_key: str, args: argparse.Namespace) -> dict[str, str]:
+    return {
+        "method": "getList",
+        "apiKey": api_key,
+        "format": "json",
+        "jsonVD": "Y",
+        "service": args.service,
+        "serviceDetail": "pkNotion" if args.service == "1" else "pkCalcSource"
+        if args.service == "2" else "pkAll",
+        "jipyoId": args.jipyo_id,
+        "pageNo": str(args.page_no),
+        "numOfRows": str(args.num_of_rows),
+    }
 
 
 def build_url(base: str, params: dict[str, str]) -> str:
@@ -500,6 +641,110 @@ def render_data_text(payload: Any) -> str:
     return "\n".join(lines)
 
 
+_EXPLAIN_FIELD_LABELS: dict[str, str] = {
+    "statsNm": "조사명",
+    "statsKind": "작성유형",
+    "statsEnd": "통계종류",
+    "statsContinue": "계속여부",
+    "basisLaw": "법적근거",
+    "writingPurps": "조사목적",
+    "examinPd": "조사기간",
+    "statsPeriod": "조사주기",
+    "writingSystem": "조사체계",
+    "writingTel": "연락처",
+    "statsField": "통계분야·실태",
+    "examinObjrange": "조사대상범위",
+    "examinObjArea": "조사대상지역",
+    "josaUnit": "조사단위·규모",
+    "applyGroup": "적용분류",
+    "josaItm": "조사항목",
+    "pubPeriod": "공표주기",
+    "pubExtent": "공표범위",
+    "pubDate": "공표시기",
+    "publictMth": "공표방법/URL",
+    "examinTrgetPd": "조사대상기간/기준시점",
+    "dataUserNote": "자료이용시 유의사항",
+    "mainTermExpl": "주요 용어해설",
+    "dataCollectMth": "자료 수집방법",
+    "examinHistory": "조사연혁",
+    "confmNo": "승인번호",
+    "confmDt": "승인일자",
+}
+
+
+def render_list_text(payload: Any) -> str:
+    if not isinstance(payload, list) or not payload:
+        return (
+            "조회 결과가 없습니다. --parent-id 를 비워 최상위 카테고리를 보거나, "
+            "다른 --vw-cd (서비스뷰 코드)를 시도하세요."
+        )
+    lines: list[str] = []
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+        list_id = entry.get("LIST_ID", "")
+        list_nm = entry.get("LIST_NM", "?")
+        org_id = entry.get("ORG_ID", "")
+        tbl_id = entry.get("TBL_ID", "")
+        tbl_nm = entry.get("TBL_NM", "")
+        send_de = entry.get("SEND_DE", "")
+        if tbl_id:
+            lines.append(f"- [{list_id}] {list_nm} → [{org_id}/{tbl_id}] {tbl_nm} (갱신: {send_de})")
+        else:
+            lines.append(f"- [{list_id}] {list_nm}")
+    lines.append(
+        "\nNext: 하위 카테고리는 `list --vw-cd <코드> --parent-id <LIST_ID>`. "
+        "통계표는 `meta --table-id <TBL_ID>` 또는 `data --table-id <TBL_ID> ...`."
+    )
+    return "\n".join(lines)
+
+
+def render_explain_text(payload: Any) -> str:
+    if not isinstance(payload, list) or not payload:
+        return (
+            "설명 정보가 없습니다. statId 또는 orgId+tblId 를 재확인하세요. "
+            "`search --query <키워드>` 로 정확한 ID를 찾을 수 있습니다."
+        )
+    lines: list[str] = []
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+        lines.append("---")
+        for field, label in _EXPLAIN_FIELD_LABELS.items():
+            value = entry.get(field, "")
+            if value:
+                lines.append(f"{label}: {value}")
+    if len(lines) == 1 and lines[0] == "---":
+        return "설명 정보 필드가 모두 비어 있습니다. 다른 --meta-itm 을 시도하세요."
+    return "\n".join(lines)
+
+
+def render_indicator_text(payload: Any) -> str:
+    if not isinstance(payload, list) or not payload:
+        return (
+            "지표 정보가 없습니다. --jipyo-id 를 확인하세요. "
+            "KOSIS 개발가이드에서 사용 가능한 지표ID 목록을 볼 수 있습니다."
+        )
+    lines: list[str] = []
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+        jipyo_id = entry.get("statJipyoId", entry.get("jipyoId", "?"))
+        jipyo_nm = entry.get("statJipyoNm", entry.get("jipyoNm", "?"))
+        title = entry.get("jipyoExplan", "")
+        concept = entry.get("jipyoExplan1", entry.get("jipyoCalc", ""))
+        lines.append(f"- [{jipyo_id}] {jipyo_nm}")
+        if title:
+            lines.append(f"  제목: {title}")
+        if concept:
+            # Truncate long text fields
+            display = concept[:500] if len(concept) > 500 else concept
+            lines.append(f"  내용: {display}")
+            if len(concept) > 500:
+                lines.append(f"  ... ({len(concept) - 500}자 생략, --json으로 전체)")
+    return "\n".join(lines)
+
+
 def render_text(command: str, payload: Any) -> str:
     if command == "search":
         return render_search_text(payload)
@@ -507,6 +752,12 @@ def render_text(command: str, payload: Any) -> str:
         return render_meta_text(payload)
     if command == "data":
         return render_data_text(payload)
+    if command == "list":
+        return render_list_text(payload)
+    if command == "explain":
+        return render_explain_text(payload)
+    if command == "indicator":
+        return render_indicator_text(payload)
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
@@ -516,11 +767,14 @@ def cite_endpoint(command: str) -> str:
         "meta": META_URL,
         "data": DATA_URL,
         "bigdata": BIGDATA_URL,
+        "list": LIST_URL,
+        "explain": EXPLAIN_URL,
+        "indicator": INDICATOR_URL,
     }[command]
 
 
 def should_use_proxy(args: argparse.Namespace) -> bool:
-    return args.command in {"search", "meta", "data"} and not args.direct
+    return args.command in {"search", "meta", "data", "list", "explain", "indicator"} and not args.direct
 
 
 def proxy_endpoint(command: str, base_url: str) -> str:
@@ -528,6 +782,9 @@ def proxy_endpoint(command: str, base_url: str) -> str:
         "search": "/v1/kosis/search",
         "meta": "/v1/kosis/meta",
         "data": "/v1/kosis/data",
+        "list": "/v1/kosis/list",
+        "explain": "/v1/kosis/explain",
+        "indicator": "/v1/kosis/indicator",
     }[command]
     return f"{base_url.rstrip('/')}{path}"
 
@@ -551,6 +808,9 @@ def run(args: argparse.Namespace) -> int:
         "meta": build_meta_params,
         "data": build_data_params,
         "bigdata": build_bigdata_params,
+        "list": build_list_params,
+        "explain": build_explain_params,
+        "indicator": build_indicator_params,
     }[args.command]
     base = cite_endpoint(args.command)
     params = builder(api_key, args)
