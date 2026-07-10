@@ -54,11 +54,13 @@ These rules are repo-specific and apply to everything under this directory.
 
 ## Proxy server development
 
-- 개발 repo (`dev` 브랜치)에서 proxy 코드를 수정한다. `main` merge 자체는 프로덕션 배포나 승격을 의미하지 않는다.
-- 공개 문서에는 production host 이름, serving runtime, tunnel/reverse-proxy 구조, 서버 파일 경로, 배포 트리거, rollback 절차를 기록하지 않는다.
-- 운영자 전용 serving runbook은 repo 밖 private 위치에 보관하고, public PR/issue/comment에는 해당 내용을 붙이지 않는다.
-- public smoke test는 hosted base URL의 `/health`와 대표 read-only route까지만 언급한다. 내부 serving 경로는 공개하지 않는다.
-- proxy 코드·빌드·테스트는 repo 내부 개발 파일에서 다루되, public 문서에 운영 serving 경로·시크릿 경로·배포 구조를 추가하지 않는다.
-- 로컬 검증은 개발자 개인 환경에서 수행하고, public 문서에는 운영 경로·서버 경로·시크릿 위치를 남기지 않는다.
-- 프로덕션 시크릿은 repo/GitHub Actions/public docs에 저장하지 않는다. 런타임·터널·프로세스 권한은 production secret 접근 권한과 동일하게 취급한다.
-- proxy 운영 관련 질문이 들어오면 public repo 문서가 아니라 maintainer의 private runbook을 확인한다.
+- 개발 repo (`dev` 브랜치)에서 proxy 코드를 수정하고, main에 merge하면 프로덕션에 반영된다.
+- 프로덕션 배포 대상은 **Google Cloud Run** (`asia-northeast1`, GCP project `k-skill-proxy`)이며, 커스텀 도메인 `k-skill-proxy.nomadamas.org`로 노출된다.
+- `main` 브랜치에 merge되면 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증 → Artifact Registry로 image build/push → Cloud Run 재배포 → `/health` smoke test까지 자동으로 수행한다.
+- 따라서 **dev에서 route를 추가/수정한 뒤 main에 merge되기 전까지는 프로덕션 proxy에 반영되지 않는다.**
+- proxy 서버 코드: `packages/k-skill-proxy/src/server.js`
+- 컨테이너 이미지 빌드 정의: `packages/k-skill-proxy/Dockerfile`
+- proxy 서버 테스트: `packages/k-skill-proxy/test/server.test.js`
+- 로컬 테스트: `node packages/k-skill-proxy/src/server.js` (환경변수는 `~/.config/k-skill/secrets.env` 등에서 직접 export해서 띄운다)
+- 프로덕션 시크릿은 GCP Secret Manager에 보관되고 Cloud Run runtime에 주입된다.
+- **운영 관련 모든 절차는 [`docs/deploy-k-skill-proxy.md`](docs/deploy-k-skill-proxy.md)에 정리되어 있다.** 새 maintainer 인계를 위한 1회성 GCP/WIF 셋업, GitHub repository secrets 등록, upstream API 키 회전(rotation), 자동 배포 상태/로그/이미지 태그 확인, Cloud Run 트래픽 롤백, GitHub Actions 장애 시 로컬에서 동일한 배포를 수동으로 돌리는 비상 명령까지 전부 거기서 본다. proxy 운영 관련 어떤 질문이 들어와도 먼저 그 문서를 확인한다.

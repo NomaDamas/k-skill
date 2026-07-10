@@ -279,12 +279,11 @@ curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kakao-local/geocode" \
 ```
 
 
-## 프로덕션 운영 정보
+## 프로덕션 배포
 
-Production serving topology, host identity, tunnel/reverse-proxy details, server-local
-paths, deployment triggers, rollback steps, and secret placement are intentionally not
-tracked in this public README. Maintainers keep that runbook in a private,
-non-repository location.
+프로덕션 프록시는 **Google Cloud Run** (`asia-northeast1`, GCP project `k-skill-proxy`)에서 운영되며, `k-skill-proxy.nomadamas.org` 도메인에 매핑되어 있습니다.
 
-Public smoke checks may use only the hosted base URL contract:
-`https://k-skill-proxy.nomadamas.org/health`.
+- 컨테이너 이미지: `packages/k-skill-proxy/Dockerfile`
+- 자동 배포: `main` 브랜치 머지 시 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증 후 Artifact Registry로 이미지 빌드/푸시, Cloud Run 재배포, `/health` smoke test까지 수행합니다.
+- 시크릿: GCP Secret Manager에서 Cloud Run runtime에 주입됩니다.
+- 운영자 셋업, 키 회전, 상태 확인, rollback 절차는 [`docs/deploy-k-skill-proxy.md`](../../docs/deploy-k-skill-proxy.md) 참고.

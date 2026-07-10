@@ -1,0 +1,149 @@
+name: Deploy k-skill-proxy to Cloud Run
+
+# Live: https://k-skill-proxy.nomadamas.org
+# GCP project: k-skill-proxy, region: asia-northeast1
+# Auth: Workload Identity Federation. Setup: docs/deploy-k-skill-proxy.md
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-k-skill-proxy
+  cancel-in-progress: false
+
+env:
+  GCP_PROJECT_ID: k-skill-proxy
+  GCP_REGION: asia-northeast1
+  AR_REPO: k-skill
+  SERVICE_NAME: k-skill-proxy
+  IMAGE_NAME: k-skill-proxy
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Resolve image URI
+        id: image
+        run: |
+          IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${GITHUB_SHA}"
+          echo "uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "Image: ${IMAGE_URI}"
+
+      - name: Build container image
+        run: |
+          docker build \
+            --tag "${{ steps.image.outputs.uri }}" \
+            --file packages/k-skill-proxy/Dockerfile \
+            .
+
+      - name: Push image to Artifact Registry
+        run: docker push "${{ steps.image.outputs.uri }}"
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ steps.image.outputs.uri }}
+          secrets: |-
+            AIR_KOREA_OPEN_API_KEY=AIR_KOREA_OPEN_API_KEY:latest
+            ASSEMBLY_API_KEY=ASSEMBLY_API_KEY:latest
+            KMA_OPEN_API_KEY=KMA_OPEN_API_KEY:latest
+            SEOUL_OPEN_API_KEY=SEOUL_OPEN_API_KEY:latest
+            HRFCO_OPEN_API_KEY=HRFCO_OPEN_API_KEY:latest
+            OPINET_API_KEY=OPINET_API_KEY:latest
+            DATA_GO_KR_API_KEY=DATA_GO_KR_API_KEY:latest
+            KEDU_INFO_KEY=KEDU_INFO_KEY:latest
+            DATA4LIBRARY_AUTH_KEY=DATA4LIBRARY_AUTH_KEY:latest
+            FOODSAFETYKOREA_API_KEY=FOODSAFETYKOREA_API_KEY:latest
+            KAKAO_REST_API_KEY=KAKAO_REST_API_KEY:latest
+            KRX_API_KEY=KRX_API_KEY:latest
+            KOPIS_API_KEY=KOPIS_API_KEY:latest
+            KOSIS_API_KEY=KOSIS_API_KEY:latest
+            NAVER_SEARCH_CLIENT_ID=NAVER_SEARCH_CLIENT_ID:latest
+            NAVER_SEARCH_CLIENT_SECRET=NAVER_SEARCH_CLIENT_SECRET:latest
+            LAW_OC=LAW_OC:latest
+          env_vars: |-
+            KSKILL_PROXY_HOST=0.0.0.0
+            KSKILL_PROXY_NAME=k-skill-proxy
+            KSKILL_PROXY_CACHE_TTL_MS=300000
+            KSKILL_PROXY_RATE_LIMIT_WINDOW_MS=60000
+            KSKILL_PROXY_RATE_LIMIT_MAX=60
+          flags: >-
+            --platform=managed
+            --allow-unauthenticated
+            --cpu=1
+            --memory=512Mi
+            --min-instances=0
+            --max-instances=3
+            --concurrency=80
+            --timeout=60
+            --execution-environment=gen2
+            --cpu-boost
+
+      - name: Smoke test /health on the new revision
+        env:
+          SERVICE_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          echo "Service URL: ${SERVICE_URL}"
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS --max-time 15 "${SERVICE_URL}/health" >/tmp/health.json; then
+              break
+            fi
+            echo "Health probe attempt ${attempt} failed, retrying in 5s..."
+            sleep 5
+          done
+          python3 -c "
+          import json, sys
+          data = json.load(open('/tmp/health.json'))
+          if not data.get('ok'):
+              print('Health response is not ok:', data)
+              sys.exit(1)
+          missing = [k for k, v in data.get('upstreams', {}).items() if k.endswith('Configured') and v is not True]
+          if missing:
+              print('Upstreams not configured:', missing)
+              sys.exit(1)
+          print('Health OK. All upstreams configured.')
+          "
+
+      - name: Smoke test custom domain (k-skill-proxy.nomadamas.org)
+        run: |
+          set -euo pipefail
+          if curl -fsS --max-time 15 https://k-skill-proxy.nomadamas.org/health >/tmp/prod-health.json; then
+            python3 -c "
+          import json
+          data = json.load(open('/tmp/prod-health.json'))
+          print('Prod /health ok:', data.get('ok'))
+          "
+          else
+            echo "::warning::Custom domain /health probe failed; revision may need traffic split or DNS warm-up."
+          fi

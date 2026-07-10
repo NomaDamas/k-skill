@@ -22,5 +22,5 @@ COPY packages/parking-lot-search/package.json ./packages/parking-lot-search/pack
 WORKDIR /workspace/packages/k-skill-proxy
 EXPOSE 8080
 USER node
-# The runtime may set PORT; the server reads KSKILL_PROXY_PORT. Forward it.
+# Cloud Run injects PORT; the server reads KSKILL_PROXY_PORT. Forward it.
 CMD ["sh", "-c", "KSKILL_PROXY_PORT=${PORT:-8080} node src/server.js"]

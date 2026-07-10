@@ -67,15 +67,18 @@ client/skill -> k-skill-proxy -> upstream public API
 - `NAVER_SEARCH_CLIENT_ID=...`, `NAVER_SEARCH_CLIENT_SECRET=...` (선택: 네이버 검색 Open API 쇼핑 검색)
 - `KSKILL_PROXY_PORT` (local development only; choose it in your shell)
 
-## 프로덕션 운영 정보
+## 프로덕션 배포 구조
 
-Production serving topology, host identity, tunnel/reverse-proxy details, server-local
-paths, deployment triggers, rollback steps, and secret placement are intentionally not
-tracked in public docs. Maintainers keep that runbook in a private, non-repository
-location.
+프로덕션 proxy 서버는 **Google Cloud Run**에서 운영한다.
 
-Public docs may refer only to the hosted base URL contract and public smoke endpoint:
-`https://k-skill-proxy.nomadamas.org/health`.
+- GCP project: `k-skill-proxy`
+- Region: `asia-northeast1`
+- Cloud Run service: `k-skill-proxy`
+- 공개 도메인: `k-skill-proxy.nomadamas.org`
+- 컨테이너 이미지 정의: `packages/k-skill-proxy/Dockerfile`
+- 시크릿: GCP Secret Manager에서 Cloud Run runtime에 주입
+
+`main` 브랜치에 push/merge되면 `.github/workflows/deploy-k-skill-proxy.yml`이 WIF로 GCP에 인증하고 Artifact Registry image build/push, Cloud Run 재배포, 새 revision 및 커스텀 도메인 `/health` smoke test를 수행한다. 운영 절차와 rollback 방법은 [`docs/deploy-k-skill-proxy.md`](../deploy-k-skill-proxy.md)에 정리되어 있다.
 
 ## 기본 공개 정책
 

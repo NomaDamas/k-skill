@@ -651,37 +651,30 @@ test("hosted proxy docs keep self-host overrides inactive and demonstrate resolv
   }
 });
 
-test("public tracked docs and helpers do not expose proxy serving topology", () => {
-  const forbidden = [
-    ["gpu", "01"].join(""),
-    ["/etc", "k-skill-proxy"].join("/"),
-    ["/opt", "k-skill"].join("/"),
-    ["/var", "log", "k-skill-proxy"].join("/"),
-    ["/var", "lib", "k-skill-proxy"].join("/"),
-    ["KSKILL_PROXY_DEPLOY", "_", "SHA"].join(""),
-    ["KSKILL_PROXY_DEPLOY", "_", "REF"].join(""),
-    ["rollback", "state"].join("-"),
-    ["deploy", "k-skill-proxy", ["gpu", "01"].join("")].join("-"),
-    ["docker", "logs", "k-skill-proxy"].join(" "),
-    ["127.0.0.1", ["40", "20"].join("")].join(":"),
-    ["127.0.0.1", ["40", "21"].join("")].join(":"),
-    ["Cloud", "Run"].join(" "),
-    ["Secret", "Manager"].join(" "),
-    ["cloud", "flared"].join(""),
-    ["Cloudflare", "Tunnel"].join(" "),
-  ].map((term) => [term, new RegExp(escapeRegex(term), "i")]);
+test("proxy deployment workflow and docs stay aligned with Cloud Run automation", () => {
+  const workflow = read(path.join(".github", "workflows", "deploy-k-skill-proxy.yml"));
+  const agents = read("AGENTS.md");
+  const deployDoc = read(path.join("docs", "deploy-k-skill-proxy.md"));
+  const featureDoc = read(path.join("docs", "features", "k-skill-proxy.md"));
+  const packageReadme = read(path.join("packages", "k-skill-proxy", "README.md"));
 
-  for (const relativePath of trackedTextFiles()) {
-    const normalizedPath = relativePath.split(path.sep).join("/");
-    for (const [term, pattern] of forbidden) {
-      assert.doesNotMatch(normalizedPath, pattern, `public path should not expose proxy serving topology term ${term}`);
-    }
+  assert.match(workflow, /^name: Deploy k-skill-proxy to Cloud Run$/m);
+  assert.match(workflow, /^\s+branches: \[main\]$/m);
+  assert.match(workflow, /^\s+id-token: write$/m);
+  assert.match(workflow, /google-github-actions\/auth@v3/);
+  assert.match(workflow, /google-github-actions\/deploy-cloudrun@v3/);
+  assert.match(workflow, /ASSEMBLY_API_KEY=ASSEMBLY_API_KEY:latest/);
+  assert.match(workflow, /KOPIS_API_KEY=KOPIS_API_KEY:latest/);
+  assert.match(workflow, /Smoke test \/health on the new revision/);
 
-    const contents = read(relativePath);
-    for (const [term, pattern] of forbidden) {
-      assert.doesNotMatch(contents, pattern, `${relativePath} should not expose proxy serving topology term ${term}`);
-    }
+  for (const doc of [agents, deployDoc, featureDoc, packageReadme]) {
+    assert.match(doc, /Cloud Run/i);
+    assert.match(doc, /main/i);
   }
+
+  assert.match(agents, /\.github\/workflows\/deploy-k-skill-proxy\.yml/);
+  assert.match(deployDoc, /Workload Identity Federation/);
+  assert.match(deployDoc, /GCP Secret Manager|Secret Manager/);
 });
 
 test("kakaotalk-mac skill documents katok archive search usage", () => {

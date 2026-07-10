@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const Fastify = require("fastify");
+const { LogController } = Fastify;
 const {
   isAssemblyErrorBody,
   normalizeAssemblyBillDetailQuery,
@@ -1873,7 +1874,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   const rateLimit = buildRateLimiter(config);
   const app = Fastify({
     logger: true,
-    disableRequestLogging: true
+    logController: new LogController({ disableRequestLogging: true })
   });
 
   app.decorate("configValues", config);
