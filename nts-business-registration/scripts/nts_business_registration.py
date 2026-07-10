@@ -12,6 +12,8 @@ from typing import Any
 
 PROXY_BASE_URL_ENV_VAR = "KSKILL_PROXY_BASE_URL"
 DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
+PROXY_DOWN_MSG = "k-skill-proxy 서버(k-skill-proxy.nomadamas.org)가 응답하지 않습니다. 잠시 후 재시도하거나 운영자에게 문의하세요."
+PROXY_KEY_NOT_CONFIGURED_MSG = "k-skill-proxy에 필요한 API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요."
 BATCH_LIMIT = 100
 VALIDATE_TEXT_FIELD_LIMITS = {
     "p_nm": 30,
@@ -136,6 +138,8 @@ def read_json_response(request: urllib.request.Request) -> dict[str, Any]:
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
+        if error.code == 503:
+            raise ApiError(PROXY_KEY_NOT_CONFIGURED_MSG, status_code=error.code, url=getattr(error, "url", None)) from error
         body = error.read().decode("utf-8", errors="replace")
         try:
             payload = json.loads(body)
@@ -145,7 +149,7 @@ def read_json_response(request: urllib.request.Request) -> dict[str, Any]:
             raise ApiError(str(payload["message"]), status_code=error.code, url=getattr(error, "url", None)) from error
         raise ApiError(f"NTS business proxy request failed with HTTP {error.code}", status_code=error.code, url=getattr(error, "url", None)) from error
     except urllib.error.URLError as error:
-        raise ApiError(f"NTS business proxy request failed: {error.reason}") from error
+        raise ApiError(f"{PROXY_DOWN_MSG} (상세: {error.reason})") from error
 
 
 def _post_json(path: str, payload: dict[str, Any], *, base_url: str | None = None, read_json: Any = read_json_response) -> dict[str, Any]:

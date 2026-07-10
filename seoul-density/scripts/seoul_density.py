@@ -74,6 +74,8 @@ AREAS: dict[str, list[str]] = {
 TIMEOUT_SEC = 10
 PROXY_BASE_URL_NAME = "KSKILL_PROXY_BASE_URL"
 DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
+PROXY_DOWN_MSG = "k-skill-proxy 서버(k-skill-proxy.nomadamas.org)가 응답하지 않습니다. 잠시 후 재시도하거나 운영자에게 문의하세요."
+PROXY_KEY_NOT_CONFIGURED_MSG = "k-skill-proxy에 필요한 API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요."
 
 
 def all_areas() -> list[str]:
@@ -197,10 +199,13 @@ def cmd_query(args: argparse.Namespace) -> int:
         payload = fetch_density_via_proxy(area)
         summary = summarize(payload)
     except urllib.error.HTTPError as exc:
-        print(f"API HTTP 오류: {exc.code} {exc.reason}", file=sys.stderr)
+        if exc.code == 503:
+            print(PROXY_KEY_NOT_CONFIGURED_MSG, file=sys.stderr)
+        else:
+            print(f"API HTTP 오류: {exc.code} {exc.reason}", file=sys.stderr)
         return 1
     except urllib.error.URLError as exc:
-        print(f"API 연결 실패: {exc.reason}", file=sys.stderr)
+        print(f"{PROXY_DOWN_MSG} (상세: {exc.reason})", file=sys.stderr)
         return 1
     except (RuntimeError, json.JSONDecodeError) as exc:
         print(str(exc), file=sys.stderr)
