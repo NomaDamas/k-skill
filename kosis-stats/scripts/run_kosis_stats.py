@@ -345,10 +345,16 @@ def fetch_text(url: str, timeout: int) -> str:
             charset = response.headers.get_content_charset() or "utf-8"
             return response.read().decode(charset, errors="replace")
     except urllib.error.HTTPError as exc:
+        if exc.code == 503:
+            raise KosisError("503", "k-skill-proxy에 필요한 KOSIS API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요.") from exc
         body = exc.read().decode("utf-8", errors="replace")
         raise KosisError(str(exc.code), f"HTTP {exc.code}: {body[:200]}") from exc
     except urllib.error.URLError as exc:
-        raise KosisError(None, f"network error: {exc.reason}") from exc
+        raise KosisError(
+            None,
+            f"k-skill-proxy 서버(k-skill-proxy.nomadamas.org)가 응답하지 않습니다. "
+            f"잠시 후 재시도하거나 운영자에게 문의하세요. (상세: {exc.reason})"
+        ) from exc
 
 
 def fix_unquoted_keys(text: str) -> str:

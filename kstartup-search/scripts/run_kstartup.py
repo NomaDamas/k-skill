@@ -18,6 +18,8 @@ import urllib.request
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
+PROXY_DOWN_MSG = "k-skill-proxy 서버(k-skill-proxy.nomadamas.org)가 응답하지 않습니다. 잠시 후 재시도하거나 운영자에게 문의하세요."
+PROXY_KEY_NOT_CONFIGURED_MSG = "k-skill-proxy에 필요한 API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요."
 KSTARTUP_UPSTREAM_BASE_URL = "https://apis.data.go.kr/B552735/kisedKstartupService01"
 DEFAULT_SECRETS_PATH = os.path.expanduser("~/.config/k-skill/secrets.env")
 
@@ -215,10 +217,12 @@ def http_get(url: str, *, timeout: int) -> Tuple[int, str, str]:
             body = response.read().decode("utf-8", errors="replace")
             return response.status, response.headers.get("content-type", ""), body
     except urllib.error.HTTPError as exc:
+        if exc.code == 503:
+            raise HelperError(PROXY_KEY_NOT_CONFIGURED_MSG) from exc
         body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
         return exc.code, exc.headers.get("content-type", "") if exc.headers else "", body
     except urllib.error.URLError as exc:
-        raise HelperError(f"network error: {exc.reason}") from exc
+        raise HelperError(f"{PROXY_DOWN_MSG} (상세: {exc.reason})") from exc
 
 
 def _normalise_filter_token(field: str, token: str) -> str:
