@@ -1,6 +1,6 @@
 {
   "name": "s2b-notice-search",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "S2B school marketplace notice lookup recipe and parsers for k-skill",
   "license": "MIT",
   "main": "src/index.js",

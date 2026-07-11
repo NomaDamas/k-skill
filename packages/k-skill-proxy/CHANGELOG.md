@@ -1,5 +1,11 @@
 # k-skill-proxy
 
+## 0.7.1
+
+### Patch Changes
+
+- 1d2e5d6: Avoid caching semantic Assembly and KOPIS upstream errors, bound public proxy cache and rate-limit state, attribute Cloud Run clients through the configured trusted proxy hops, redact AirKorea upstream failures, tighten KR WHOIS domain validation, and update Fastify dependencies for current security fixes.
+
 ## 0.7.0
 
 ### Minor Changes

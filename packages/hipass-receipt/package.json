@@ -1,6 +1,6 @@
 {
   "name": "hipass-receipt",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Hi-Pass logged-in browser-session helper for usage-history and receipt workflows",
   "license": "MIT",
   "main": "src/index.js",
@@ -34,7 +34,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "k-skill-browser-runtime": "^0.1.0",
+    "k-skill-browser-runtime": "^0.2.0",
     "playwright-core": "^1.52.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "k-skill-browser-runtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Browser runtime adapter for k-skill packages with BrowserOS, Aside, and Chrome CDP providers",
   "license": "MIT",
   "main": "src/index.js",
