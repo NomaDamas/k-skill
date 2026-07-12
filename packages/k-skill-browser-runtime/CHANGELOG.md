@@ -1,5 +1,11 @@
 # k-skill-browser-runtime
 
+## 0.3.0
+
+### Minor Changes
+
+- 701b6f1: Add KISA WHOIS IP and AS lookups, and prefer Aside Browser first for automatic browser selection on macOS.
+
 ## 0.2.0
 
 ### Minor Changes
