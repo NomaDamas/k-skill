@@ -72,16 +72,15 @@ client/skill -> k-skill-proxy -> upstream public API
 
 ## 프로덕션 배포 구조
 
-프로덕션 proxy 서버는 **Google Cloud Run**에서 운영한다.
+프로덕션 proxy 서버는 **gpu01**에서 운영한다.
 
-- GCP project: `k-skill-proxy`
-- Region: `asia-northeast1`
-- Cloud Run service: `k-skill-proxy`
+- systemd user service: `k-skill-proxy.service`
+- tunnel service: `k-skill-proxy-tunnel.service`
 - 공개 도메인: `k-skill-proxy.nomadamas.org`
-- 컨테이너 이미지 정의: `packages/k-skill-proxy/Dockerfile`
-- 시크릿: GCP Secret Manager에서 Cloud Run runtime에 주입
+- 자동 배포 스크립트: `scripts/deploy-k-skill-proxy-gpu01.sh`
+- 시크릿: gpu01 app directory의 `.env`에서 runtime에 주입
 
-`main` 브랜치에 push/merge되면 `.github/workflows/deploy-k-skill-proxy.yml`이 WIF로 GCP에 인증하고 Artifact Registry image build/push, Cloud Run 재배포, 새 revision 및 커스텀 도메인 `/health` smoke test를 수행한다. 운영 절차와 rollback 방법은 [`docs/deploy-k-skill-proxy.md`](../deploy-k-skill-proxy.md)에 정리되어 있다.
+`main` 브랜치에 push/merge되면 gpu01 cron이 `origin/main`을 감지하고 테스트, 백업, 파일 동기화, systemd 재시작, local/public `/health` smoke test를 수행한다. 운영 절차와 rollback 방법은 [`docs/deploy-k-skill-proxy.md`](../deploy-k-skill-proxy.md)에 정리되어 있다.
 
 ## 기본 공개 정책
 

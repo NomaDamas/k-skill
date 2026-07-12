@@ -55,12 +55,12 @@ These rules are repo-specific and apply to everything under this directory.
 ## Proxy server development
 
 - 개발 repo (`dev` 브랜치)에서 proxy 코드를 수정하고, main에 merge하면 프로덕션에 반영된다.
-- 프로덕션 배포 대상은 **Google Cloud Run** (`asia-northeast1`, GCP project `k-skill-proxy`)이며, 커스텀 도메인 `k-skill-proxy.nomadamas.org`로 노출된다.
-- `main` 브랜치에 merge되면 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증 → Artifact Registry로 image build/push → Cloud Run 재배포 → `/health` smoke test까지 자동으로 수행한다.
+- 프로덕션 배포 대상은 **gpu01**의 systemd user service이며, Cloudflare Tunnel을 통해 `k-skill-proxy.nomadamas.org`로 노출된다.
+- `main` 브랜치에 merge되면 gpu01 cron이 `origin/main`을 감지하고 테스트, 백업, 파일 동기화, systemd 재시작, local/public `/health` smoke test를 수행한다.
 - 따라서 **dev에서 route를 추가/수정한 뒤 main에 merge되기 전까지는 프로덕션 proxy에 반영되지 않는다.**
 - proxy 서버 코드: `packages/k-skill-proxy/src/server.js`
-- 컨테이너 이미지 빌드 정의: `packages/k-skill-proxy/Dockerfile`
+- 자동 배포 스크립트: `scripts/deploy-k-skill-proxy-gpu01.sh`
 - proxy 서버 테스트: `packages/k-skill-proxy/test/server.test.js`
 - 로컬 테스트: `node packages/k-skill-proxy/src/server.js` (환경변수는 `~/.config/k-skill/secrets.env` 등에서 직접 export해서 띄운다)
-- 프로덕션 시크릿은 GCP Secret Manager에 보관되고 Cloud Run runtime에 주입된다.
-- **운영 관련 모든 절차는 [`docs/deploy-k-skill-proxy.md`](docs/deploy-k-skill-proxy.md)에 정리되어 있다.** 새 maintainer 인계를 위한 1회성 GCP/WIF 셋업, GitHub repository secrets 등록, upstream API 키 회전(rotation), 자동 배포 상태/로그/이미지 태그 확인, Cloud Run 트래픽 롤백, GitHub Actions 장애 시 로컬에서 동일한 배포를 수동으로 돌리는 비상 명령까지 전부 거기서 본다. proxy 운영 관련 어떤 질문이 들어와도 먼저 그 문서를 확인한다.
+- 프로덕션 시크릿은 gpu01의 `/data/home/jeffrey/apps/k-skill-proxy/.env`에 보관되고 systemd가 주입한다.
+- **운영 관련 모든 절차는 [`docs/deploy-k-skill-proxy.md`](docs/deploy-k-skill-proxy.md)에 정리되어 있다.** 자동 배포, 상태 확인, 로그, 수동 배포, rollback 절차는 그 문서를 기준으로 한다.

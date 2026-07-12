@@ -2085,7 +2085,7 @@ test("korean stock search rate limit does not trust spoofed cf-connecting-ip on 
   assert.equal(second.json().error, "rate_limited");
 });
 
-test("rate limit separates Cloud Run clients behind two trusted proxy hops", async (t) => {
+test("rate limit separates clients behind two trusted proxy hops", async (t) => {
   const app = buildServer({
     env: {
       KSKILL_PROXY_RATE_LIMIT_MAX: "1",
