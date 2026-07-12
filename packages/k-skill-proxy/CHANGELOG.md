@@ -1,5 +1,11 @@
 # k-skill-proxy
 
+## 0.8.0
+
+### Minor Changes
+
+- 701b6f1: Add KISA WHOIS IP and AS lookups, and prefer Aside Browser first for automatic browser selection on macOS.
+
 ## 0.7.1
 
 ### Patch Changes

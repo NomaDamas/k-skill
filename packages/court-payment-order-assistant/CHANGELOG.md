@@ -1,5 +1,12 @@
 # court-payment-order-assistant
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [701b6f1]
+  - k-skill-browser-runtime@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes
