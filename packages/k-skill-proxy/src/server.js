@@ -2139,7 +2139,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     if (
       upstream.statusCode >= 200 &&
       upstream.statusCode < 300 &&
-      isVWorldSuccessBody(operation, upstream.body)
+      isVWorldSuccessBody(operation, upstream.body, normalized)
     ) {
       cache.set(cacheKey, upstream, config.cacheTtlMs);
     }

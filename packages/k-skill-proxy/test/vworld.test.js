@@ -300,6 +300,43 @@ test("VWorld routes do not cache structurally incomplete success envelopes", asy
   assert.equal(priceCalls, 2);
 });
 
+test("VWorld apartment-price route does not cache a response for a different page", async (t) => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return Response.json({
+      apartHousingPrices: {
+        resultCode: "",
+        resultMsg: "",
+        totalCount: "1",
+        pageNo: calls === 1 ? "2" : "1",
+        numOfRows: "1000",
+        field: []
+      }
+    });
+  };
+  const app = buildServer({ env: { KSKILL_PROXY_CACHE_TTL_MS: "60000" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+  const request = {
+    method: "GET",
+    url: "/v1/vworld/apartment-prices?pnu=1150010400104480001&stdrYear=2026&pageNo=1&numOfRows=1000",
+    headers: { "x-k-skill-vworld-api-key": "delegated-secret" }
+  };
+
+  const wrongPage = await app.inject(request);
+  const recovered = await app.inject(request);
+  const cached = await app.inject(request);
+
+  assert.equal(wrongPage.json().apartHousingPrices.pageNo, "2");
+  assert.equal(recovered.json().apartHousingPrices.pageNo, "1");
+  assert.deepEqual(cached.json(), recovered.json());
+  assert.equal(calls, 2, "a wrong-page response must not enter the successful-response cache");
+});
+
 test("encoded credentials never enter the shared successful-response cache", async (t) => {
   const originalFetch = global.fetch;
   let calls = 0;

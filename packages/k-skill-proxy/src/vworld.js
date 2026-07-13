@@ -188,7 +188,7 @@ function redactCredential(body, apiKey) {
   });
 }
 
-function isVWorldSuccessBody(operation, body) {
+function isVWorldSuccessBody(operation, body, params = null) {
   let payload;
   try {
     payload = JSON.parse(body);
@@ -200,13 +200,29 @@ function isVWorldSuccessBody(operation, body) {
   }
   if (operation === "prices") {
     const prices = payload?.apartHousingPrices;
-    return (
+    const totalCount = Number(prices?.totalCount);
+    const pageNo = Number(prices?.pageNo);
+    const numOfRows = Number(prices?.numOfRows);
+    const structurallyComplete = (
       prices?.resultCode === "" &&
       /^\d+$/.test(prices?.totalCount || "") &&
       /^\d+$/.test(prices?.pageNo || "") &&
       /^\d+$/.test(prices?.numOfRows || "") &&
+      Number.isSafeInteger(totalCount) &&
+      totalCount >= 0 &&
+      Number.isSafeInteger(pageNo) &&
+      pageNo >= 1 &&
+      Number.isSafeInteger(numOfRows) &&
+      numOfRows >= 1 &&
       Array.isArray(prices?.field)
     );
+    if (!structurallyComplete) {
+      return false;
+    }
+    if (params) {
+      return pageNo === params.pageNo && numOfRows === params.numOfRows;
+    }
+    return true;
   }
   return false;
 }
