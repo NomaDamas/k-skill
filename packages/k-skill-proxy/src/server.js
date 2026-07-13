@@ -266,23 +266,42 @@ function isFailureResponse(value) {
   return false;
 }
 
-function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
+function createMemoryCache({
+  maxEntries = 1000,
+  maxBytes = Number.POSITIVE_INFINITY,
+  sizeOf = () => 0,
+  now = Date.now
+} = {}) {
   const entries = new Map();
+  let totalBytes = 0;
 
-  function makeRoom() {
-    if (entries.size < maxEntries) {
+  function deleteEntry(key) {
+    const entry = entries.get(key);
+    if (!entry) {
+      return;
+    }
+    totalBytes -= entry.size;
+    entries.delete(key);
+  }
+
+  function makeRoom(requiredBytes) {
+    if (entries.size < maxEntries && totalBytes + requiredBytes <= maxBytes) {
       return;
     }
 
     const currentTime = now();
     for (const [key, entry] of entries) {
       if (entry.expiresAt <= currentTime) {
-        entries.delete(key);
+        deleteEntry(key);
       }
     }
 
-    while (entries.size >= maxEntries) {
-      entries.delete(entries.keys().next().value);
+    while (entries.size >= maxEntries || totalBytes + requiredBytes > maxBytes) {
+      const oldestKey = entries.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      deleteEntry(oldestKey);
     }
   }
 
@@ -294,7 +313,7 @@ function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
       }
 
       if (cached.expiresAt <= now()) {
-        entries.delete(key);
+        deleteEntry(key);
         return null;
       }
 
@@ -304,11 +323,18 @@ function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
       if (isFailureResponse(value)) {
         return false;
       }
-      makeRoom();
+      const entrySize = Math.max(0, Number(sizeOf(value)) || 0);
+      if (entrySize > maxBytes) {
+        return false;
+      }
+      deleteEntry(key);
+      makeRoom(entrySize);
       entries.set(key, {
         value,
+        size: entrySize,
         expiresAt: now() + ttlMs
       });
+      totalBytes += entrySize;
       return true;
     }
   };
@@ -2039,6 +2065,11 @@ function validateHouseholdWastePaginationQuery(query) {
 function buildServer({ env = process.env, provider = null, now = () => new Date() } = {}) {
   const config = buildConfig(env);
   const cache = createMemoryCache({ maxEntries: config.cacheMaxEntries });
+  const vworldCache = createMemoryCache({
+    maxEntries: Math.min(config.cacheMaxEntries, 100),
+    maxBytes: 16 * 1024 * 1024,
+    sizeOf: (value) => Buffer.byteLength(String(value?.body || ""), "utf8")
+  });
   const rateLimit = buildRateLimiter(config);
   const app = Fastify({
     logger: true,
@@ -2127,8 +2158,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const cacheKey = makeCacheKey({ route: cacheRoute, ...normalized });
-    const cached = cache.get(cacheKey);
+    const credentialScope = crypto.createHash("sha256").update(apiKey).digest("hex");
+    const cacheKey = makeCacheKey({ route: cacheRoute, credentialScope, ...normalized });
+    const cached = vworldCache.get(cacheKey);
     if (cached) {
       reply.code(cached.statusCode);
       reply.header("content-type", cached.contentType);
@@ -2141,7 +2173,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       upstream.statusCode < 300 &&
       isVWorldSuccessBody(operation, upstream.body, normalized)
     ) {
-      cache.set(cacheKey, upstream, config.cacheTtlMs);
+      vworldCache.set(cacheKey, upstream, config.cacheTtlMs);
     }
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);

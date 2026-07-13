@@ -113,6 +113,21 @@ test("createMemoryCache stays bounded and evicts expired or oldest entries", () 
   assert.deepEqual(cache.get("last"), { value: 4 });
 });
 
+test("createMemoryCache enforces its byte budget", () => {
+  const cache = createMemoryCache({
+    maxEntries: 10,
+    maxBytes: 5,
+    sizeOf: (value) => value.length
+  });
+
+  assert.equal(cache.set("too-large", "123456", 60000), false);
+  assert.equal(cache.get("too-large"), null);
+  assert.equal(cache.set("first", "123", 60000), true);
+  assert.equal(cache.set("second", "456", 60000), true);
+  assert.equal(cache.get("first"), null);
+  assert.equal(cache.get("second"), "456");
+});
+
 test("rate limiter bounds tracked client IPs", () => {
   let currentTime = 1000;
   const limiter = buildRateLimiter({

@@ -105,7 +105,7 @@ test("forwards the header credential only to the fixed VWorld host and redacts e
   assert.equal(result.statusCode, 200);
   assert.doesNotMatch(result.body, new RegExp(secret));
   assert.doesNotMatch(result.body, new RegExp(encodeURIComponent(secret)));
-  assert.match(result.body, /\[REDACTED\]/);
+  assert.doesNotMatch(result.body, /echoedUrl/);
 });
 
 test("requires a credential and recognizes only semantic VWorld successes", async () => {
@@ -181,6 +181,21 @@ test("sanitizes VWorld response-body read failures", async () => {
       error.statusCode === 502 &&
       error.message === "VWorld upstream response body failed." &&
       !error.message.includes(secret)
+  );
+});
+
+test("rejects VWorld response bodies above the bounded streaming limit", async () => {
+  await assert.rejects(
+    proxyVWorldRequest({
+      operation: "search",
+      params: normalizeVWorldSearchQuery({ query: "강나루현대", type: "place" }),
+      apiKey: "synthetic-secret",
+      fetchImpl: async () => new Response("x".repeat(2 * 1024 * 1024 + 1))
+    }),
+    (error) =>
+      error.code === "upstream_error" &&
+      error.statusCode === 502 &&
+      error.message === "VWorld upstream response body failed."
   );
 });
 
@@ -337,13 +352,28 @@ test("VWorld apartment-price route does not cache a response for a different pag
   assert.equal(calls, 2, "a wrong-page response must not enter the successful-response cache");
 });
 
-test("encoded credentials never enter the shared successful-response cache", async (t) => {
+test("credential-scoped cache and projected responses reject reversible credential encodings", async (t) => {
   const originalFetch = global.fetch;
   let calls = 0;
   global.fetch = async (url) => {
     calls += 1;
+    const key = new URL(url).searchParams.get("key");
+    const unicodeEscaped = [...key]
+      .map((character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`)
+      .join("");
+    const repeatedlyEncoded = encodeURIComponent(encodeURIComponent(key));
     return Response.json({
-      response: { status: "OK", result: { items: [] }, echoedUrl: String(url) }
+      response: {
+        status: "OK",
+        result: {
+          items: [{
+            id: "1150010400104480001",
+            title: unicodeEscaped,
+            address: { parcel: repeatedlyEncoded, road: "서울 강서구" }
+          }]
+        },
+        echoedUrl: String(url)
+      }
     });
   };
   const app = buildServer({ env: { KSKILL_PROXY_CACHE_TTL_MS: "60000" } });
@@ -364,10 +394,12 @@ test("encoded credentials never enter the shared successful-response cache", asy
     headers: { "x-k-skill-vworld-api-key": "different-credential" }
   });
 
-  assert.equal(calls, 1);
+  assert.equal(calls, 2, "different credentials must not share a successful-response cache entry");
   for (const body of [first.body, second.body]) {
-    assert.doesNotMatch(body, new RegExp(encodeURIComponent(secret)));
-    assert.doesNotMatch(body, /synthetic\+\/=/);
-    assert.match(body, /\[REDACTED\]/);
+    const payload = JSON.parse(body);
+    assert.equal(payload.response.result.items[0].title, "[REDACTED]");
+    assert.equal(payload.response.result.items[0].address.parcel, "[REDACTED]");
+    assert.equal(payload.response.echoedUrl, undefined);
+    assert.doesNotMatch(body, new RegExp(encodeURIComponent(encodeURIComponent(secret))));
   }
 });

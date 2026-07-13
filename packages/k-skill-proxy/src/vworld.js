@@ -6,6 +6,7 @@ const MAX_PAGE = 10000;
 const MAX_SEARCH_SIZE = 100;
 const MAX_PRICE_ROWS = 1000;
 const MIN_PRICE_YEAR = 2005;
+const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 function trimOrNull(value) {
   if (value === undefined || value === null) {
@@ -188,6 +189,163 @@ function redactCredential(body, apiKey) {
   });
 }
 
+function containsCredentialEncoding(value, apiKey) {
+  let candidate = String(value);
+  for (let depth = 0; depth < 6; depth += 1) {
+    if (candidate.includes(apiKey)) {
+      return true;
+    }
+    const unicodeDecoded = candidate
+      .replace(/\\u([0-9a-f]{4})/giu, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+      .replace(/%u([0-9a-f]{4})/giu, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
+    let urlDecoded = unicodeDecoded;
+    try {
+      urlDecoded = decodeURIComponent(unicodeDecoded);
+    } catch {}
+    if (urlDecoded === candidate) {
+      return false;
+    }
+    candidate = urlDecoded;
+  }
+  return candidate.includes(apiKey);
+}
+
+function projectString(value, apiKey, maxLength) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  if (containsCredentialEncoding(value, apiKey)) {
+    return "[REDACTED]";
+  }
+  return [...redactCredential(value, apiKey)].slice(0, maxLength).join("");
+}
+
+function projectCode(value, fallback, { allowEmpty = false } = {}) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  if (allowEmpty && value === "") {
+    return "";
+  }
+  return /^[A-Z0-9_-]{1,64}$/i.test(value) ? value : fallback;
+}
+
+function projectVWorldBody(operation, body, apiKey) {
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    const error = new Error("VWorld upstream returned invalid JSON.");
+    error.code = "upstream_error";
+    error.statusCode = 502;
+    throw error;
+  }
+
+  if (operation === "search") {
+    const response = payload?.response;
+    if (response?.status !== "OK") {
+      return JSON.stringify({
+        response: {
+          status: projectCode(response?.status, "ERROR"),
+          error: {
+            code: projectCode(response?.error?.code, "UPSTREAM_ERROR"),
+            text: "VWorld search request failed."
+          }
+        }
+      });
+    }
+    if (!Array.isArray(response?.result?.items)) {
+      const error = new Error("VWorld upstream returned an invalid search payload.");
+      error.code = "upstream_error";
+      error.statusCode = 502;
+      throw error;
+    }
+    const items = response.result.items.slice(0, MAX_SEARCH_SIZE).map((item) => ({
+      id: projectString(item?.id, apiKey, 64),
+      title: projectString(item?.title, apiKey, 300),
+      address: {
+        parcel: projectString(item?.address?.parcel, apiKey, 300),
+        road: projectString(item?.address?.road, apiKey, 300)
+      }
+    }));
+    return JSON.stringify({ response: { status: "OK", result: { items } } });
+  }
+
+  if (operation === "prices") {
+    const prices = payload?.apartHousingPrices;
+    const resultCode = projectCode(prices?.resultCode, "UPSTREAM_ERROR", { allowEmpty: true });
+    if (resultCode !== "") {
+      return JSON.stringify({
+        apartHousingPrices: {
+          resultCode,
+          resultMsg: "VWorld apartment-price request failed."
+        }
+      });
+    }
+    if (!Array.isArray(prices?.field)) {
+      const error = new Error("VWorld upstream returned an invalid apartment-price payload.");
+      error.code = "upstream_error";
+      error.statusCode = 502;
+      throw error;
+    }
+    const field = prices.field.slice(0, MAX_PRICE_ROWS).map((record) => ({
+      pnu: projectString(record?.pnu, apiKey, 19),
+      stdrYear: projectString(record?.stdrYear, apiKey, 4),
+      aphusNm: projectString(record?.aphusNm, apiKey, 300),
+      dongNm: projectString(record?.dongNm, apiKey, 100),
+      hoNm: projectString(record?.hoNm, apiKey, 100),
+      floorNm: projectString(record?.floorNm, apiKey, 100),
+      prvuseAr: projectString(record?.prvuseAr, apiKey, 100),
+      pblntfPc: projectString(record?.pblntfPc, apiKey, 100),
+      lastUpdtDt: projectString(record?.lastUpdtDt, apiKey, 100)
+    }));
+    return JSON.stringify({
+      apartHousingPrices: {
+        resultCode: "",
+        resultMsg: "",
+        totalCount: projectString(prices?.totalCount, apiKey, 32),
+        pageNo: projectString(prices?.pageNo, apiKey, 32),
+        numOfRows: projectString(prices?.numOfRows, apiKey, 32),
+        field
+      }
+    });
+  }
+
+  const error = new Error("Unsupported VWorld operation.");
+  error.code = "proxy_error";
+  error.statusCode = 500;
+  throw error;
+}
+
+async function readBoundedResponseBody(response, maxBytes = MAX_RESPONSE_BYTES) {
+  if (!response.body || typeof response.body.getReader !== "function") {
+    const body = await response.text();
+    if (Buffer.byteLength(body, "utf8") > maxBytes) {
+      throw new Error("response_too_large");
+    }
+    return body;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let body = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      return body + decoder.decode();
+    }
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      try {
+        await reader.cancel();
+      } catch {}
+      throw new Error("response_too_large");
+    }
+    body += decoder.decode(value, { stream: true });
+  }
+}
+
 function isVWorldSuccessBody(operation, body, params = null) {
   let payload;
   try {
@@ -288,7 +446,7 @@ async function proxyVWorldRequest({
 
   let responseBody;
   try {
-    responseBody = await response.text();
+    responseBody = await readBoundedResponseBody(response);
   } catch {
     const error = new Error("VWorld upstream response body failed.");
     error.code = "upstream_error";
@@ -296,10 +454,10 @@ async function proxyVWorldRequest({
     throw error;
   }
 
-  const body = redactCredential(responseBody, credential);
+  const body = projectVWorldBody(operation, responseBody, credential);
   return {
     statusCode: response.status,
-    contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
+    contentType: "application/json; charset=utf-8",
     body
   };
 }
@@ -308,6 +466,7 @@ module.exports = {
   VWORLD_API_BASE_URL,
   VWORLD_CREDENTIAL_HEADER,
   buildVWorldUrl,
+  projectVWorldBody,
   isVWorldSuccessBody,
   normalizeVWorldPriceQuery,
   normalizeVWorldSearchQuery,

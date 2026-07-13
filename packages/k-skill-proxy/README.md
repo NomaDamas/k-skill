@@ -92,7 +92,7 @@
 
 기본 정책은 **무료 API 공개 프록시 = 무인증** 이다. 대신 endpoint scope 를 좁게 유지하고, cache + rate limit 으로 남용을 늦춘다.
 
-VWorld 라우트는 Cloudflare Worker와 VWorld 사이의 네트워크 호환 문제를 우회하기 위한 credential-delegation 예외다. 프록시는 VWorld 키를 저장하지 않으며, HTTPS 헤더로 받은 키를 고정된 `api.vworld.kr`의 두 allowlist 경로에만 전달한다. 쿼리스트링의 `key`는 거부하고, 키는 cache key·응답·오류 로그에 포함하지 않는다.
+VWorld 라우트는 Cloudflare Worker와 VWorld 사이의 네트워크 호환 문제를 우회하기 위한 credential-delegation 예외다. 프록시는 VWorld 키를 저장하지 않으며, HTTPS 헤더로 받은 키를 고정된 `api.vworld.kr`의 두 allowlist 경로에만 전달한다. 쿼리스트링의 `key`는 거부한다. 응답은 MCP에 필요한 필드만 새 JSON으로 투영하고 2 MiB에서 스트리밍을 중단한다. 캐시는 키 원문 대신 단방향 SHA-256 범위로 호출자를 분리하며 VWorld 전용 16 MiB 예산을 적용하므로, 키가 응답·공유 캐시·오류 로그에 포함되지 않는다.
 
 ## 로컬 실행
 

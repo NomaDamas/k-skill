@@ -91,7 +91,7 @@ client/skill -> k-skill-proxy -> upstream public API
 - 대신 read-only / allowlisted endpoint / cache / rate limit 을 유지한다.
 - 문제가 생기면 그때 인증이나 더 강한 방어를 덧붙인다.
 
-VWorld 두 경로는 Cloudflare Worker와 VWorld 사이의 네트워크 호환 문제를 우회하는 BYOK 예외다. 키는 프록시 환경에 저장하지 않고 호출자가 HTTPS 전용 헤더로 위임한다. 프록시는 키를 고정된 VWorld 두 경로에만 전달하며, 리다이렉트와 쿼리스트링 `key`를 거부하고 원문·URL 인코딩 형태 모두 응답 전에 제거한다. 캐시는 공개 공시가격 데이터만 저장하며 키는 cache key에 포함하지 않는다.
+VWorld 두 경로는 Cloudflare Worker와 VWorld 사이의 네트워크 호환 문제를 우회하는 BYOK 예외다. 키는 프록시 환경에 저장하지 않고 호출자가 HTTPS 전용 헤더로 위임한다. 프록시는 키를 고정된 VWorld 두 경로에만 전달하며, 리다이렉트와 쿼리스트링 `key`를 거부한다. 응답은 허용 필드만 새 JSON으로 투영하고 스트리밍 크기를 2 MiB로 제한한다. 캐시는 키 원문을 저장하지 않고 SHA-256 범위로 호출자를 분리하며 VWorld 전용 16 MiB 예산을 적용한다.
 
 ## 사용법
 
