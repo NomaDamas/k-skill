@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate / refresh a local Claude Code plugin manifest's `skills` list.
+ * Generate / refresh the Claude Code plugin manifest's `skills` list.
  *
  * This repo is a flat collection of `<skill-name>/SKILL.md` directories at the
  * repo root (NOT under a `skills/` folder), because the npm workspaces +
@@ -11,8 +11,12 @@
  *
  * Skill discovery mirrors scripts/validate-skills.sh and
  * scripts/build-manus-bundle.js. This script writes the sorted `skills` array
- * into an ignored `.claude-plugin/plugin.json` while preserving every other
- * field. The manifest is intentionally local-only and should not be committed.
+ * into `.claude-plugin/plugin.json` while preserving every other field.
+ *
+ * The manifest IS committed so that `/plugin marketplace add NomaDamas/k-skill`
+ * can install the bundle straight from GitHub (see README). The `--check` mode
+ * below is wired into `npm run ci`, so whenever a skill is added or removed this
+ * script must be re-run and the refreshed `plugin.json` committed.
  *
  * Usage:
  *   node scripts/generate-plugin-manifest.js           # write/update plugin.json

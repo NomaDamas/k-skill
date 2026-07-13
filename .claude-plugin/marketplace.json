@@ -1,0 +1,13 @@
+{
+  "name": "k-skill",
+  "owner": {
+    "name": "NomaDamas"
+  },
+  "plugins": [
+    {
+      "name": "k-skill",
+      "source": "./",
+      "description": "한국인을 위한 90+ Agent Skill 번들 — SRT/KTX/당근/쿠팡/카톡/정부24 등 한국 일상·업무 자동화"
+    }
+  ]
+}
