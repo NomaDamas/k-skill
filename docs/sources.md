@@ -284,3 +284,7 @@
 - 예비군 상훈: https://www.yebigun1.mil.kr/dmobis/rfh/rrm/reserveforce/ReserveForcePrzdcr.do
 - 예비군 사이트맵: https://www.yebigun1.mil.kr/dmobis/rfh/rgt/sitemap/sitemap.jsp
 - 병무청 디지털서비스개방 청년 동원훈련 일정조회(v1에서 비교 대상으로 시도하지 않음): https://openservice.go.kr/youthMilTrainSch
+- 국가유산청 국가유산 정보 Open API 안내: https://www.khs.go.kr/html/HtmlPage.do?mn=NS_04_04_03&pg=%2Fpublicinfo%2Fpbinfo3_0201.jsp — 국가유산 목록·상세·이미지·동영상·음성·행사 공개 endpoint를 안내한다.
+- 국가유산 목록 API: https://www.khs.go.kr/cha/SearchKindOpenapiList.do — `ccbaMnm1`, `ccbaCtcd`, `pageUnit`, `pageIndex`, `ccbaCncl` 기준 목록 조회. 2026-07-15 실측에서 `ccbaMnm1=경복궁`, `ccbaCtcd=11` 조건으로 XML 11건을 반환했다.
+- 국가유산 상세 API: https://www.khs.go.kr/cha/SearchKindOpenapiDt.do — `ccbaKdcd`, `ccbaAsno`, `ccbaCtcd`로 설명·주소·좌표·이미지를 조회한다. 2026-07-15 실측에서 서울 숭례문 상세 XML 응답을 확인했다.
+- 국가유산 행사 API: https://www.khs.go.kr/cha/openapi/selectEventListOpenapi.do — `searchYear`, `searchMonth`로 월별 국가유산 활용 행사를 조회한다. 2026-07-15 실측에서 2026년 7월 행사 XML 응답을 확인했다.
