@@ -50,6 +50,13 @@ DETAIL_XML = """<?xml version="1.0" encoding="utf-8"?>
     <content><![CDATA[조선시대 한양도성의 정문이다.]]></content>
   </item>
 </result>"""
+EMPTY_DETAIL_XML = """<?xml version="1.0" encoding="utf-8"?>
+<result>
+  <ccbaKdcd>11</ccbaKdcd>
+  <ccbaAsno>9999999999999</ccbaAsno>
+  <ccbaCtcd>11</ccbaCtcd>
+  <item />
+</result>"""
 
 EVENT_XML = """<?xml version="1.0" encoding="utf-8"?>
 <result>
@@ -96,6 +103,13 @@ class HeritageParsingTests(unittest.TestCase):
         self.assertEqual(detail["classification"], ["유적건조물", "정치국방", "성", "성곽시설"])
         self.assertEqual(detail["address"], "서울 중구 세종대로 40")
         self.assertEqual(detail["description"], "조선시대 한양도성의 정문이다.")
+    def test_parse_detail_result_rejects_empty_item_payload(self):
+        with self.assertRaises(korean_heritage_search.HeritageApiError):
+            korean_heritage_search.parse_detail_result(
+                ET.fromstring(EMPTY_DETAIL_XML),
+                url=korean_heritage_search.DETAIL_URL,
+                fetched_at="2026-07-15T00:00:00+00:00",
+            )
 
     def test_parse_events_strips_html_and_filters_region(self):
         events = korean_heritage_search.parse_event_result(

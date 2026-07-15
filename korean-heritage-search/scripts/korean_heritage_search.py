@@ -166,6 +166,10 @@ def parse_detail_result(root: ET.Element, *, url: str, fetched_at: str) -> dict[
     item = root.find("./item")
     if item is None:
         raise HeritageApiError("heritage detail was not found")
+    if not _child_text(item, "ccbaMnm1") or any(
+        not _child_text(root, field) for field in ("ccbaKdcd", "ccbaAsno", "ccbaCtcd")
+    ):
+        raise HeritageApiError("heritage detail was not found")
     return {
         "name": _child_text(item, "ccbaMnm1"),
         "name_hanja": _child_text(item, "ccbaMnm2"),
