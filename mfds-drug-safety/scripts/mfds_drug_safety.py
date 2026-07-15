@@ -13,6 +13,8 @@ from typing import Any
 
 PROXY_BASE_URL_ENV_VAR = "KSKILL_PROXY_BASE_URL"
 DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
+PROXY_DOWN_MSG = "설정된 k-skill-proxy 서버가 응답하지 않습니다. 잠시 후 재시도하거나 운영자에게 문의하세요."
+PROXY_KEY_NOT_CONFIGURED_MSG = "k-skill-proxy에 필요한 API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요."
 
 
 class ApiError(RuntimeError):
@@ -111,6 +113,8 @@ def read_json_response(request: urllib.request.Request | str) -> dict[str, Any]:
             payload = json.loads(body)
         except json.JSONDecodeError:
             payload = None
+        if error.code == 503 and isinstance(payload, dict) and payload.get("error") == "upstream_not_configured":
+            raise ApiError(PROXY_KEY_NOT_CONFIGURED_MSG, status_code=error.code, url=getattr(error, "url", None)) from error
 
         if isinstance(payload, dict) and payload.get("message"):
             raise ApiError(str(payload["message"]), status_code=error.code, url=getattr(error, "url", None)) from error
@@ -120,7 +124,7 @@ def read_json_response(request: urllib.request.Request | str) -> dict[str, Any]:
             url=getattr(error, "url", None),
         ) from error
     except urllib.error.URLError as error:
-        raise ApiError(f"MFDS drug proxy request failed: {error.reason}") from error
+        raise ApiError(f"{PROXY_DOWN_MSG} (상세: {error.reason})") from error
 
 
 def lookup_drugs(

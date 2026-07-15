@@ -62,9 +62,9 @@
 - 프록시 서버 테스트: `packages/k-skill-proxy/test/server.test.js`
 - 컨테이너 이미지 정의: `packages/k-skill-proxy/Dockerfile`
 - 로컬 테스트: 필요한 upstream 환경변수를 export한 상태에서 `node packages/k-skill-proxy/src/server.js`. 로컬에서 시크릿을 모아두는 표준 위치는 `~/.config/k-skill/secrets.env` 입니다.
-- 프로덕션 프록시는 **Google Cloud Run** (project `k-skill-proxy`, region `asia-northeast1`)에서 운영하며 `k-skill-proxy.nomadamas.org` 도메인에 매핑되어 있습니다.
-- `main` 브랜치에 머지되면 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증, Artifact Registry image build/push, Cloud Run 재배포, `/health` smoke test까지 자동 수행합니다.
-- 프로덕션 시크릿은 GCP Secret Manager에서 Cloud Run runtime에 주입됩니다. WIF/Secret Manager 셋업과 운영 점검 절차는 [`docs/deploy-k-skill-proxy.md`](docs/deploy-k-skill-proxy.md)에 정리되어 있습니다.
+- 프로덕션 프록시는 **gpu01**의 systemd user service에서 운영하며 Cloudflare Tunnel을 통해 `k-skill-proxy.nomadamas.org`에 노출됩니다.
+- `main` 브랜치에 머지되면 gpu01 cron이 `origin/main`을 감지해 테스트, 백업, systemd 재시작, local/public `/health` smoke test를 자동 수행합니다.
+- 프로덕션 시크릿은 gpu01 app directory의 `.env`에서 runtime에 주입됩니다. 자동 배포와 운영 점검 절차는 [`docs/deploy-k-skill-proxy.md`](docs/deploy-k-skill-proxy.md)에 정리되어 있습니다.
 - `dev`에서 route를 추가하거나 수정해도 `main`에 머지되기 전까지는 프로덕션 프록시에 반영되지 않습니다.
 
 ## 검증

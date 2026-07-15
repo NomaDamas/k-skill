@@ -199,9 +199,9 @@ test("repository publishes Korean contribution guidance for external contributor
   assert.match(contributing, /릴리스나 패키징 관련 변경은 `npm run ci`/);
   assert.match(contributing, /`~\/\.claude\/skills\/<skill-name>`/);
   assert.match(contributing, /`~\/\.agents\/skills\/<skill-name>`/);
-  assert.match(contributing, /Google Cloud Run/);
-  assert.match(contributing, /\.github\/workflows\/deploy-k-skill-proxy\.yml/);
-  assert.match(contributing, /GCP Secret Manager/);
+  assert.match(contributing, /gpu01/);
+  assert.match(contributing, /systemd/);
+  assert.match(contributing, /gpu01 app directory의 `\.env`/);
   assert.match(contributing, /`main`에 머지된 뒤에만 프로덕션에 반영/);
 });
 
@@ -652,8 +652,8 @@ test("hosted proxy docs keep self-host overrides inactive and demonstrate resolv
   }
 });
 
-test("proxy deployment workflow and docs stay aligned with Cloud Run automation", () => {
-  const workflow = read(path.join(".github", "workflows", "deploy-k-skill-proxy.yml"));
+test("proxy deployment script and docs stay aligned with gpu01 automation", () => {
+  const deployScript = read(path.join("scripts", "deploy-k-skill-proxy-gpu01.sh"));
   const agents = read("AGENTS.md");
   const deployDoc = read(path.join("docs", "deploy-k-skill-proxy.md"));
   const featureDoc = read(path.join("docs", "features", "k-skill-proxy.md"));
@@ -663,21 +663,13 @@ test("proxy deployment workflow and docs stay aligned with Cloud Run automation"
   const npmReleaseWorkflow = read(path.join(".github", "workflows", "release-npm.yml"));
   const proxyPackage = JSON.parse(read(path.join("packages", "k-skill-proxy", "package.json")));
 
-  assert.match(workflow, /^name: Deploy k-skill-proxy to Cloud Run$/m);
-  assert.match(workflow, /^\s+branches: \[main\]$/m);
-  assert.match(workflow, /^\s+if: github\.ref == 'refs\/heads\/main'$/m);
-  assert.match(workflow, /^\s+id-token: write$/m);
-  assert.match(workflow, /google-github-actions\/auth@v3/);
-  assert.match(workflow, /google-github-actions\/deploy-cloudrun@v3/);
-  assert.match(workflow, /ASSEMBLY_API_KEY=ASSEMBLY_API_KEY:latest/);
-  assert.match(workflow, /KOPIS_API_KEY=KOPIS_API_KEY:latest/);
-  assert.match(workflow, /^\s+tag: candidate$/m);
-  assert.match(workflow, /^\s+suffix: \$\{\{ github\.sha \}\}$/m);
-  assert.match(workflow, /^\s+no_traffic: true$/m);
-  assert.match(workflow, /Smoke test \/health on the new revision/);
-  assert.match(workflow, /gcloud run services update-traffic/);
-  assert.match(workflow, /--to-revisions "\$\{REVISION_NAME\}=100"/);
-  assert.doesNotMatch(workflow, /--to-latest/);
+  assert.match(deployScript, /DEPLOY_REF="\$\{KSKILL_PROXY_DEPLOY_REF:-origin\/main\}"/);
+  assert.match(deployScript, /npm --prefix "\$REPO_DIR" run test --workspace k-skill-proxy/);
+  assert.match(deployScript, /tar -C "\$APP_DIR" -czf "\$backup"/);
+  assert.match(deployScript, /systemctl --user restart "\$SERVICE_NAME"/);
+  assert.match(deployScript, /health_check http:\/\/127\.0\.0\.1:8080\/health/);
+  assert.match(deployScript, /health_check https:\/\/k-skill-proxy\.nomadamas\.org\/health/);
+  assert.match(deployScript, /printf '%s\\n' "\$target_sha" > "\$APP_DIR\/deployed-sha"/);
   assert.match(dockerfile, /COPY package\.json package-lock\.json/);
   assert.match(dockerfile, /npm ci --omit=dev --workspace k-skill-proxy/);
   assert.match(dockerignore, /^gha-creds-\*\.json$/m);
@@ -685,20 +677,15 @@ test("proxy deployment workflow and docs stay aligned with Cloud Run automation"
   assert.equal(proxyPackage.engines.node, ">=20");
 
   for (const doc of [agents, deployDoc, featureDoc, packageReadme]) {
-    assert.match(doc, /Cloud Run/i);
+    assert.match(doc, /gpu01/i);
     assert.match(doc, /main/i);
   }
 
-  assert.match(agents, /\.github\/workflows\/deploy-k-skill-proxy\.yml/);
-  assert.match(deployDoc, /Workload Identity Federation/);
-  assert.match(deployDoc, /GCP Secret Manager|Secret Manager/);
-  assert.match(deployDoc, /0% traffic/);
-  assert.match(deployDoc, /smoke test 통과 후 새 revision으로 production traffic/);
-  assert.match(deployDoc, /```bash\nset -euo pipefail\n/);
-  assert.match(deployDoc, /--revision-suffix="\$SHA"/);
-  assert.match(deployDoc, /--no-traffic/);
-  assert.match(deployDoc, /CANDIDATE_URL=/);
-  assert.match(deployDoc, /--to-revisions="\$\{REVISION_NAME\}=100"/);
+  assert.match(agents, /scripts\/deploy-k-skill-proxy-gpu01\.sh/);
+  assert.match(deployDoc, /systemd/i);
+  assert.match(deployDoc, /flock/);
+  assert.match(deployDoc, /rollback/i);
+  assert.match(deployDoc, /deployed-sha/);
 });
 
 test("kakaotalk-mac skill documents katok archive search usage", () => {

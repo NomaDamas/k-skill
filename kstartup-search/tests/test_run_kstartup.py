@@ -16,6 +16,17 @@ sys.path.insert(0, SCRIPT_DIR)
 import run_kstartup  # noqa: E402
 
 
+class ProxyErrorBodyTests(unittest.TestCase):
+    def test_only_upstream_not_configured_maps_to_key_message(self):
+        self.assertTrue(run_kstartup.is_proxy_not_configured_body(
+            '{"error":"upstream_not_configured","message":"missing key"}'
+        ))
+        self.assertFalse(run_kstartup.is_proxy_not_configured_body(
+            '{"error":"maintenance","message":"try later"}'
+        ))
+        self.assertFalse(run_kstartup.is_proxy_not_configured_body("temporarily unavailable"))
+
+
 def make_args(operation: str, **overrides):
     defaults = {
         "operation": operation,

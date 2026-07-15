@@ -1,0 +1,663 @@
+<!-- slim fixture -->
+p://data.nec.go.kr/open-data/info.do" class="lnb_depth2_link" title="새창열림" target="_blank" rel="noopener noreferrer"><span class="lnb_text">공공데이터 개방 안내</span></a></li>
+
+			<li class="lnb_depth2_item"><a href="/site/nec/ex/bbs/List.do?cbIdx=1070" class="lnb_depth2_link"><span class="lnb_text">세입·세출 현황</span></a></li>
+
+			<li class="lnb_depth2_item"><a href="/site/nec/ex/bbs/List.do?cbIdx=1307" class="lnb_depth2_link"><span class="lnb_text">공직자윤리위원회</span></a></li>
+
+			<li class="lnb_depth2_item"><a href="/site/nec/ex/bbs/List.do?cbIdx=1074" class="lnb_depth2_link"><span class="lnb_text">개인정보 보유현황</span></a></li>
+
+			<li class="lnb_depth2_item is-active"><a href="/site/nec/ex/bbs/List.do?cbIdx=1107" class="lnb_depth2_link is-active"><span class="lnb_text">공무국외출장보고서</span></a></li>
+
+		</ul>
+		</div>
+
+	</li>
+					
+
+	<li class="lnb_depth"><a href="/site/nec/ex/bbs/List.do?cbIdx=1298" class="lnb_depth_menu "><span class="lnb_text">선거이슈 및 사실확인</span></a>								
+
+		<div class="lnb_depth_detail">
+		<ul class="lnb_depth2_list">
+
+			<li class="lnb_depth2_item"><a href="/site/nec/ex/bbs/List.do?cbIdx=1298" class="lnb_depth2_link"><span class="lnb_text">사실관계 설명자료</span></a></li>
+
+			<li class="lnb_depth2_item"><a href="/site/nec/ex/bbs/List.do?cbIdx=2500" class="lnb_depth2_link"><span class="lnb_text">부정선거 팩트체크</span></a></li>
+
+			<li class="lnb_depth2_item"><a href="/site/nec/ex/bbs/List.do?cbIdx=1292" class="lnb_depth2_link"><span class="lnb_text">알기쉬운 선거정보</span></a></li>
+
+			<li class="lnb_depth2_item"><a href="/site/nec/ex/bbs/List.do?cbIdx=2502" class="lnb_depth2_link"><span class="lnb_text">공정선거참관단 활동상황</span></a></li>
+
+		</ul>
+		</div>
+
+	</li>
+
+</ul>
+</div>
+
+			</nav>
+			
+			<!-- //lnb info -->		
+			<!-- //lnb add VtWrap (2019.04.02) -->
+		</div>
+		<!-- //lnbWrap -->
+		
+		<div class="contents" id="subContentsWrap">
+		<div class="page_title">
+			<h3 class="page_title_text" id="con_move">공무국외출장보고서</h3>
+		</div>
+          <div id="subContents"  class="page_content">
+          	<!-- LEVEL4 -->
+          	
+				
+<!-- [[ ::include cdn check start ]] -->
+
+
+
+
+
+
+	
+
+
+	
+	
+	<!-- [[ ::include cdn check end ]] -->
+<style>
+.tableList ul li .etc{width: 15%;}
+</style>
+<script type="text/javascript" src="/js/bbs/bbs1074.js"></script>
+<script>
+var searchForm = document.bbsFVo;
+$(function(){
+	$(".btn_bbsWrite").click(function(e){
+		e.preventDefault();
+		searchForm.action = "/site/nec/ex/bbs/Regist.do?cbIdx=1107";
+		searchForm.mode.value = "C";
+		$(searchForm).submit();
+	});
+
+	$(".btn_bbsDetail").click(function(e){
+		/* var authResult = doBoardAuthorChk();
+		if(!authResult){
+			e.preventDefault();
+			alert("권한이 없습니다.");
+		} */
+
+		if( $(this).attr("sub_link_cont_yn") =='Y'){
+			doViewCountUpdate($(this).attr("data-info1"),$(this).attr("data-info2"));
+		}
+
+	});
+
+	$(".searchBtn").click(function(e){
+		$("#pageIndex").val("1");
+
+	});
+	
+	$(".btn_search2").click(function(e){
+		$("#pageIndex").val("1");
+
+	});
+});
+
+//권한 체크
+function doBoardAuthorChk(){
+	return false;
+ 	/* $.ajax({
+ 		type: "GET",
+ 		url: "/site/seocho/ex/bbs/BoardAuthorChkAx.do",
+ 		data : {"gbn" : readGbn},
+ 		dataType : "json",
+ 		success:function(data){
+ 			if(!data.flag){
+ 				if( data.msg != null && data.msg != "" ){
+ 					alert(data.msg);
+ 				}
+ 				if( data.returnUrl != null && data.returnUrl != "" ){
+ 					location.href = data.returnUrl;
+ 				}else{
+ 					return;
+ 				}
+ 			}
+ 		 },
+         error: function(xhr,status,error){
+         	alert(status);
+         }
+ 	 }); */
+}
+
+function doViewCountUpdate(bcIdx,cbIdx){
+
+	$.ajax({
+ 		type: "POST",
+ 		url: "/site/nec/ex/bbs/viewCntUpdateAx.do",
+ 		data : {"cbIdx" : cbIdx,"bcIdx" : bcIdx},
+ 		dataType : "json",
+ 		success:function(data){
+ 		 },
+         error: function(xhr,status,error){
+         }
+ 	 });
+}
+
+function doBbsContentFPag(pageIndex) {
+	$("#pageIndex").val(pageIndex);
+	$("#bbsFVo").attr("action", "/site/nec/ex/bbs/List.do?cbIdx=1107");
+	$("#bbsFVo").submit();
+}
+
+//검색
+function doSearch(){
+	document.bbsFVo.pageIndex.value = 1;
+	document.bbsFVo.submit();
+}
+</script>
+
+<form id="bbsFVo" name="bbsFVo" action="/site/nec/ex/bbs/List.do?cbIdx=1107&amp;pageIndex=2" method="post"><input id="pageIndex" name="pageIndex" type="hidden" value="2"/><input id="bcIdx" name="bcIdx" type="hidden" value="298755"/><input id="mode" name="mode" type="hidden" value=""/><!-- [S] 검색 영역 : 총 게시글 수 / 뷰모드 -->
+	<div class="bbs_board_top">
+		<div class="bbs_board_total">
+			<span class="bbs_total_txt">총 <em class="count">62건</em> [<em class="now">2</em>/5페이지]</span>
+		</div>
+</div>
+	<!-- //[E] 게시판 상단 : 총 게시글 수 / 뷰모드 -->
+	      <div class="tableList">
+	          <ul>
+				<li >
+
+		            <span class="num">
+		              	47</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=298755"
+										class="btn_bbsDetail"
+										data-info1="298755"
+										data-info2="1107">
+										2025년 노르웨이 의회의원선거 참관 국외출장보고서</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=298755&amp;cbIdx=1107&amp;streFileNm=bc79a7f6-f0d9-4423-8dd2-92696d5bef78.pdf" title="2025년_노르웨이_의회의원선거_참관_국외출장보고서_게시용.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=298755&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2026-01-08</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	46</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=298754"
+										class="btn_bbsDetail"
+										data-info1="298754"
+										data-info2="1107">
+										2025 세계 민주주의 포럼 국외출장보고서(프랑스)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=298754&amp;cbIdx=1107&amp;streFileNm=cdr_117ecb0c-52a5-4630-9145-0c04381e6360.pdf" title="2025_세계_민주주의_포럼_국외출장보고서(프랑스)_게시용.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=298754&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2026-01-08</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	45</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=298753"
+										class="btn_bbsDetail"
+										data-info1="298753"
+										data-info2="1107">
+										2025년 외국 선거·정치제도 연구 국외출장보고서(미국)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=298753&amp;cbIdx=1107&amp;streFileNm=b54cf53c-bfc4-4dc8-a3d9-655d9e410e53.pdf" title="2025년_외국_선거·정치제도_연구_국외출장보고서(미국)_게시용.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=298753&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2026-01-08</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	44</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=298752"
+										class="btn_bbsDetail"
+										data-info1="298752"
+										data-info2="1107">
+										2025년 외국 선거·정치제도 연구 국외출장보고서(독일)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=298752&amp;cbIdx=1107&amp;streFileNm=cdr_292f98eb-4511-4c7c-b4f7-3d8dea31c442.pdf" title="2025년_외국_선거·정치제도_연구_국외출장보고서(독일)_게시용.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=298752&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2026-01-08</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	43</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=295242"
+										class="btn_bbsDetail"
+										data-info1="295242"
+										data-info2="1107">
+										제13차 A-WEB 집행이사회 참석 국외출장보고서</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=295242&amp;cbIdx=1107&amp;streFileNm=04fcb348-fccc-41b6-96c8-9f5558500b06.pdf" title="제13차_A-WEB_집행이사회_참석_국외출장보고서_게시용.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=295242&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-09-11</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	42</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=295241"
+										class="btn_bbsDetail"
+										data-info1="295241"
+										data-info2="1107">
+										제6차 A-WEB 총회 참석 국외출장보고서</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=295241&amp;cbIdx=1107&amp;streFileNm=229346bb-45c2-4020-8ffc-775f1044eb14.pdf" title="제6차_A-WEB_총회_참석_국외출장보고서_게시용.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=295241&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-09-11</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	41</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=294556"
+										class="btn_bbsDetail"
+										data-info1="294556"
+										data-info2="1107">
+										제21대 대통령선거 재외투표 관리인력지원 국외출장보고서</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=294556&amp;cbIdx=1107&amp;streFileNm=e1f5ae0d-a2b3-46e4-8ef9-82cdc5a01b5a.pdf" title="1._제21대_대선_재외투표_관리인력지원_국외출장보고서(베트남)_게시용.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=294556&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-08-11</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	40</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=266937"
+										class="btn_bbsDetail"
+										data-info1="266937"
+										data-info2="1107">
+										해외 선거관리기관 교류 및 협력을 위한 국외출장보고서(독일, 에스토니아)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=266937&amp;cbIdx=1107&amp;streFileNm=f3504a86-c9da-4255-9864-e0a559b69e54.pdf" title="해외선거관리기관교류및협력을위한국외출장보고서(독일_에스토니아)_게시.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=266937&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-02-28</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	39</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=266936"
+										class="btn_bbsDetail"
+										data-info1="266936"
+										data-info2="1107">
+										제22대 국회의원 재외선거 평가 등 국외출장보고서(인도)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=266936&amp;cbIdx=1107&amp;streFileNm=9ecf1283-b0ac-4f1e-842c-68ae6fe3996e.pdf" title="제22대_국회의원_재외선거_평가_등_국외출장보고서(인도)_게시.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=266936&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-02-28</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	38</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=266935"
+										class="btn_bbsDetail"
+										data-info1="266935"
+										data-info2="1107">
+										AI 리터러시 워크숍 참석 국외출장보고서(말레이시아)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=266935&amp;cbIdx=1107&amp;streFileNm=2cb09044-fd70-4a29-9a54-01c164dec1f8.pdf" title="AI_리터러시_워크숍_참석_국외출장보고서(말레이시아)_게시.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=266935&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-02-28</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	37</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=266934"
+										class="btn_bbsDetail"
+										data-info1="266934"
+										data-info2="1107">
+										2024년 직원 역량강화 국외연수 출장보고서(영국)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=266934&amp;cbIdx=1107&amp;streFileNm=802033bd-2f76-4bfe-812f-834728332649.pdf" title="2024년_직원_역량강화_국외연수_출장보고서(영국)_게시.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=266934&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-02-28</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	36</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=266933"
+										class="btn_bbsDetail"
+										data-info1="266933"
+										data-info2="1107">
+										2024년 직원 역량강화 국외연수 출장보고서(미국)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=266933&amp;cbIdx=1107&amp;streFileNm=d11746e7-bf3e-45a9-b675-cccf11c8053a.pdf" title="2024년_직원_역량강화_국외연수_출장보고서(미국)_게시.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=266933&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-02-28</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	35</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=266932"
+										class="btn_bbsDetail"
+										data-info1="266932"
+										data-info2="1107">
+										2024년 외국 선거·정치제도 연구 국외출장보고서(캐나다)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=266932&amp;cbIdx=1107&amp;streFileNm=9738ef8d-ac64-4a77-b1c6-9dc90b78b903.pdf" title="2024년_외국_선거·정치제도_연구_국외출장보고서(캐나다)_게시.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=266932&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-02-28</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	34</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=266931"
+										class="btn_bbsDetail"
+										data-info1="266931"
+										data-info2="1107">
+										2024년 외국 선거·정치제도 연구 국외출장보고서(오스트리아, 헝가리)</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=266931&amp;cbIdx=1107&amp;streFileNm=2d5e5190-cc02-4477-af11-0e2e20605801.pdf" title="2024년_외국_선거·정치제도_연구_국외출장보고서(오스트리아_헝가리)_게시.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=266931&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-02-28</span>
+							<!-- END contMappList -->
+				</li>
+			<li >
+
+		            <span class="num">
+		              	33</span>
+
+	              	<span class="title">
+							<a
+										href="/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=266930"
+										class="btn_bbsDetail"
+										data-info1="266930"
+										data-info2="1107">
+										2024년 미국 대통령선거 참관 국외출장보고서</a>
+								</span>
+					<!-- 파일 다운로드 & 확장자 구분으로 이미지 뿌리기 시작-->
+						<span class="fileDown">
+								<a href="/common/board/Download.do?bcIdx=266930&amp;cbIdx=1107&amp;streFileNm=aae134f2-aba9-49f9-b1ac-0572c5552b4b.pdf" title="2024년_미국_대통령선거_참관_국외출장보고서_게시.pdf 파일다운로드">
+												<img src='/images/n21/sub/icon_file_pdf.gif' alt='PDF'/></a>
+										</span>
+								<!-- 빠른 보기 -->
+								<span class="quickView">
+								<a href="/cmm/dozen/view.do?cbIdx=1107&amp;bcIdx=266930&amp;fileNo=1" class="btn_quickView" target='_blank' title='새창열림' rel="noopener noreferrer" title="">
+														빠른보기
+													</a>
+												</span>
+								<!-- 날짜  -->
+								<span class="date">
+									2025-02-28</span>
+							<!-- END contMappList -->
+				</li>
+			<!-- END contentList -->
+          </ul>
+      </div>
+
+	 <div class="paging">
+	 	<a href="#" onclick="doBbsContentFPag(1);return false; " class="num">1</a>&#160;<a href="#" class="num active" tabindex="-1">2</a>&#160;<a href="#" onclick="doBbsContentFPag(3);return false; " class="num">3</a>&#160;<a href="#" onclick="doBbsContentFPag(4);return false; " class="num">4</a>&#160;<a href="#" onclick="doBbsContentFPag(5);return false; " class="num">5</a>&#160;
+<!-- //모바일 페이징 추가 -->
+        <div class="mobilePaging">
+	 		<a href="#" onclick="doBbsContentFPag(1);return false; " class="first">처음 페이지</a><a href="#" onclick="doBbsContentFPag(1);return false; " class="prev">이전 페이지</a><span class="mobileNum"><b class="active">2</b> / 5</span><a href="#" onclick="doBbsContentFPag(3);return false; " class="next">다음 페이지</a><a href="#" onclick="doBbsContentFPag(5);return false; " class="last">마지막 페이지</a>
+</div>
+	 </div>
+	 <!-- 검색 영역 시작 -->
+	<div class="bbsSearch ">
+			<div class="input_group">
+			<!--  bbsFVo.bbsTempletGbn:bbs_nec_basic_n24 -->
+			<input type="hidden" name="searchDateType" value="REG_DT" />
+				<select id="tgtTypeCd" name="tgtTypeCd" title="조건 선택" class="select_box w120"><!-- <option value="">선택하세요</option> -->
+							<option value="SUB_CONT">제목</option><option value="CLOB_CONT">내용</option><option value="3">제목+내용</option></select><!-- </div> -->
+					<input type="text" name="searchKey" id="searchKey" value="" maxlength="25" placeholder="검색어를 입력해주세요." title="검색어 입력" class="inp_text w250">
+					<button type="submit" class="btn_search2"><span class="blind">검색</span></button>
+				<!-- </div> END schBox type -->
+			</div>
+		</div>
+	<!-- 검색 영역 끝 -->
+
+      <!-- 실질적 Sub Body 끝 -->
+</form>
+
+
+
+
+<script type="text/javascript">
+function fn_update() {
+
+	var comchk = -1;
+	var comfrm = document.satisfactionFrm;
+	for(var c=0;c < comfrm.status.length; c++){
+
+		if(comfrm.status[c].checked) {
+		   comchk = c;
+		}
+	}
+
+	if(comchk == -1){
+		alert("만족도 값을 선택하세요");
+		return ;
+	} else {
+		if(comchk == 0) document.satisfactionFrm.status.value = 4;
+		if(comchk == 1) document.satisfactionFrm.status.value = 3;
+		if(comchk == 2) document.satisfactionFrm.status.value = 2;
+		if(comchk == 3) document.satisfactionFrm.status.value = 1;
+
+		document.satisfactionFrm.point.value = document.satisfactionFrm.status.value;
+
+		document.satisfactionFrm.submit();
+	}
+}
+
+</script>
+
+ 	<div class="satisfaction">
+		<div class="satis

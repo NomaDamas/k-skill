@@ -39,6 +39,13 @@ const {
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const {
+  VWORLD_CREDENTIAL_HEADER,
+  isVWorldSuccessBody,
+  normalizeVWorldPriceQuery,
+  normalizeVWorldSearchQuery,
+  proxyVWorldRequest
+} = require("./vworld");
+const {
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
   proxyNtsBusinessRequest
@@ -259,23 +266,42 @@ function isFailureResponse(value) {
   return false;
 }
 
-function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
+function createMemoryCache({
+  maxEntries = 1000,
+  maxBytes = Number.POSITIVE_INFINITY,
+  sizeOf = () => 0,
+  now = Date.now
+} = {}) {
   const entries = new Map();
+  let totalBytes = 0;
 
-  function makeRoom() {
-    if (entries.size < maxEntries) {
+  function deleteEntry(key) {
+    const entry = entries.get(key);
+    if (!entry) {
+      return;
+    }
+    totalBytes -= entry.size;
+    entries.delete(key);
+  }
+
+  function makeRoom(requiredBytes) {
+    if (entries.size < maxEntries && totalBytes + requiredBytes <= maxBytes) {
       return;
     }
 
     const currentTime = now();
     for (const [key, entry] of entries) {
       if (entry.expiresAt <= currentTime) {
-        entries.delete(key);
+        deleteEntry(key);
       }
     }
 
-    while (entries.size >= maxEntries) {
-      entries.delete(entries.keys().next().value);
+    while (entries.size >= maxEntries || totalBytes + requiredBytes > maxBytes) {
+      const oldestKey = entries.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      deleteEntry(oldestKey);
     }
   }
 
@@ -287,7 +313,7 @@ function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
       }
 
       if (cached.expiresAt <= now()) {
-        entries.delete(key);
+        deleteEntry(key);
         return null;
       }
 
@@ -297,11 +323,18 @@ function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
       if (isFailureResponse(value)) {
         return false;
       }
-      makeRoom();
+      const entrySize = Math.max(0, Number(sizeOf(value)) || 0);
+      if (entrySize > maxBytes) {
+        return false;
+      }
+      deleteEntry(key);
+      makeRoom(entrySize);
       entries.set(key, {
         value,
+        size: entrySize,
         expiresAt: now() + ttlMs
       });
+      totalBytes += entrySize;
       return true;
     }
   };
@@ -885,6 +918,94 @@ function normalizeKosisDataQuery(query) {
   }
 
   return normalized;
+}
+
+function normalizeKosisListQuery(query) {
+  const allowedViewCodes = new Set([
+    "MT_ZTITLE", "MT_OTITLE", "MT_GTITLE01", "MT_GTITLE02",
+    "MT_CHOSUN_TITLE", "MT_HANKUK_TITLE", "MT_STOP_TITLE",
+    "MT_RTITLE", "MT_BUKHAN", "MT_TM1_TITLE", "MT_TM2_TITLE", "MT_ETITLE"
+  ]);
+  const vwCd = (trimOrNull(query.vwCd ?? query.vw_cd) || "").toUpperCase();
+  if (!allowedViewCodes.has(vwCd)) {
+    throw new Error("Provide a supported vwCd service view code.");
+  }
+  return {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    vwCd,
+    parentListId: trimOrNull(query.parentListId ?? query.parent_list_id ?? query.parentId ?? query.parent_id) || ""
+  };
+}
+
+function normalizeKosisExplainQuery(query) {
+  const statId = trimOrNull(query.statId ?? query.stat_id);
+  const orgId = trimOrNull(query.orgId ?? query.org_id);
+  const tblId = trimOrNull(query.tblId ?? query.table_id ?? query.tbl_id);
+  const metaItm = trimOrNull(query.metaItm ?? query.meta_itm) || "All";
+  const allowedMetaItems = new Set([
+    "All", "statsNm", "statsKind", "statsEnd", "statsContinue", "basisLaw",
+    "writingPurps", "examinPd", "statsPeriod", "writingSystem", "writingTel",
+    "statsField", "examinObjrange", "examinObjArea", "josaUnit", "applyGroup",
+    "josaItm", "pubPeriod", "pubExtent", "pubDate", "publictMth", "examinTrgetPd",
+    "dataUserNote", "mainTermExpl", "dataCollectMth", "examinHistory", "confmNo", "confmDt"
+  ]);
+
+  if (!statId && !(orgId && tblId)) {
+    throw new Error("Provide statId or both orgId and tblId.");
+  }
+  if (!allowedMetaItems.has(metaItm)) {
+    throw new Error("metaItm must be All or one supported field name.");
+  }
+
+  const normalized = {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    metaItm
+  };
+  if (statId) {
+    normalized.statId = statId;
+  } else {
+    normalized.orgId = orgId;
+    normalized.tblId = tblId;
+  }
+  return normalized;
+}
+
+function normalizeKosisIndicatorQuery(query) {
+  const service = trimOrNull(query.service) || "1";
+  if (!["1", "2", "3"].includes(service)) {
+    throw new Error("service must be 1, 2, or 3.");
+  }
+  const jipyoId = trimOrNull(query.jipyoId ?? query.jipyo_id);
+  if (!jipyoId) {
+    throw new Error("Provide jipyoId.");
+  }
+
+  const serviceDetailMap = { "1": "pkNotion", "2": "pkCalcSource", "3": "pkAll" };
+
+  return {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    service,
+    serviceDetail: serviceDetailMap[service],
+    jipyoId,
+    pageNo: String(parseBoundedPositiveInteger(query.pageNo ?? query.page_no ?? query.page, {
+      defaultValue: 1,
+      min: 1,
+      max: 1000000,
+      label: "pageNo"
+    })),
+    numOfRows: String(parseBoundedPositiveInteger(query.numOfRows ?? query.num_of_rows ?? query.limit, {
+      defaultValue: 10,
+      min: 1,
+      max: 5000,
+      label: "numOfRows"
+    }))
+  };
 }
 
 function normalizeKakaoLocalGeocodeQuery(query) {
@@ -1592,7 +1713,10 @@ async function proxyKosisRequest({
   const paths = {
     search: "statisticsSearch.do",
     meta: "statisticsData.do",
-    data: "Param/statisticsParameterData.do"
+    data: "Param/statisticsParameterData.do",
+    list: "statisticsList.do",
+    explain: "statisticsExplData.do",
+    indicator: "pkNumberService.do"
   };
   const path = paths[operation];
 
@@ -1941,6 +2065,11 @@ function validateHouseholdWastePaginationQuery(query) {
 function buildServer({ env = process.env, provider = null, now = () => new Date() } = {}) {
   const config = buildConfig(env);
   const cache = createMemoryCache({ maxEntries: config.cacheMaxEntries });
+  const vworldCache = createMemoryCache({
+    maxEntries: Math.min(config.cacheMaxEntries, 100),
+    maxBytes: 16 * 1024 * 1024,
+    sizeOf: (value) => Buffer.byteLength(String(value?.body || ""), "utf8")
+  });
   const rateLimit = buildRateLimiter(config);
   const app = Fastify({
     logger: true,
@@ -1991,6 +2120,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
         naverNewsApiConfigured: naverSearchKeysPresent,
+        vworldRelayAvailable: true,
         ntsBusinessConfigured: Boolean(config.molitApiKey),
         kstartupConfigured: Boolean(config.molitApiKey),
         nhisCareConfigured: Boolean(config.molitApiKey),
@@ -2006,6 +2136,68 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       timestamp: new Date().toISOString()
     };
   });
+
+  async function handleVWorldRoute({ operation, normalize, cacheRoute, request, reply }) {
+    reply.header("cache-control", "private, no-store");
+    reply.header("vary", VWORLD_CREDENTIAL_HEADER);
+    let normalized;
+    try {
+      normalized = normalize(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const apiKey = trimOrNull(request.headers[VWORLD_CREDENTIAL_HEADER]);
+    if (!apiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: `Provide the VWorld credential in the ${VWORLD_CREDENTIAL_HEADER} header.`
+      };
+    }
+
+    const credentialScope = crypto.createHash("sha256").update(apiKey).digest("hex");
+    const cacheKey = makeCacheKey({ route: cacheRoute, credentialScope, ...normalized });
+    const cached = vworldCache.get(cacheKey);
+    if (cached) {
+      reply.code(cached.statusCode);
+      reply.header("content-type", cached.contentType);
+      return cached.body;
+    }
+
+    const upstream = await proxyVWorldRequest({ operation, params: normalized, apiKey });
+    if (
+      operation === "search" &&
+      upstream.statusCode >= 200 &&
+      upstream.statusCode < 300 &&
+      isVWorldSuccessBody(operation, upstream.body, normalized)
+    ) {
+      vworldCache.set(cacheKey, upstream, config.cacheTtlMs);
+    }
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+    return upstream.body;
+  }
+
+  app.get("/v1/vworld/search", async (request, reply) => handleVWorldRoute({
+    operation: "search",
+    normalize: normalizeVWorldSearchQuery,
+    cacheRoute: "vworld-search",
+    request,
+    reply
+  }));
+
+  app.get("/v1/vworld/apartment-prices", async (request, reply) => handleVWorldRoute({
+    operation: "prices",
+    normalize: normalizeVWorldPriceQuery,
+    cacheRoute: "vworld-apartment-prices",
+    request,
+    reply
+  }));
 
   app.get("/B552584/:service/:operation", async (request, reply) => {
     const { service, operation } = request.params;
@@ -2528,6 +2720,30 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     operation: "data",
     normalize: normalizeKosisDataQuery,
     cacheRoute: "kosis-data",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kosis/list", async (request, reply) => handleKosisRoute({
+    operation: "list",
+    normalize: normalizeKosisListQuery,
+    cacheRoute: "kosis-list",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kosis/explain", async (request, reply) => handleKosisRoute({
+    operation: "explain",
+    normalize: normalizeKosisExplainQuery,
+    cacheRoute: "kosis-explain",
+    request,
+    reply
+  }));
+
+  app.get("/v1/kosis/indicator", async (request, reply) => handleKosisRoute({
+    operation: "indicator",
+    normalize: normalizeKosisIndicatorQuery,
+    cacheRoute: "kosis-indicator",
     request,
     reply
   }));
@@ -5524,6 +5740,9 @@ module.exports = {
   normalizeKakaoMobilityDirectionsQuery,
   normalizeKmaForecastQuery,
   normalizeKosisDataQuery,
+  normalizeKosisExplainQuery,
+  normalizeKosisIndicatorQuery,
+  normalizeKosisListQuery,
   normalizeKosisMetaQuery,
   normalizeKosisSearchQuery,
   normalizeKoreanHolidayQuery,
@@ -5553,6 +5772,8 @@ module.exports = {
   normalizeSeoulBikePageQuery,
   normalizeSeoulCityDataQuery,
   normalizeSeoulSubwayQuery,
+  normalizeVWorldPriceQuery,
+  normalizeVWorldSearchQuery,
   proxyAirKoreaRequest,
   proxyAssemblyRequest,
   proxyData4LibraryRequest,
@@ -5576,6 +5797,7 @@ module.exports = {
   proxySeoulBikeStationsRequest,
   proxySeoulCityDataRequest,
   proxySeoulSubwayRequest,
+  proxyVWorldRequest,
   resolveLatestKmaForecastBase,
   startServer
 };

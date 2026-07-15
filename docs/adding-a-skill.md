@@ -146,9 +146,9 @@ upstream API 키를 사용자에게 노출하지 않으려면 `k-skill-proxy`를
 
 1. `packages/k-skill-proxy/src/server.js`에 새 read-only route 추가
 2. `SKILL.md` Workflow에 `curl $KSKILL_PROXY_BASE_URL/v1/...` 형태로 호출 작성
-3. upstream API 키는 GCP Secret Manager에 보관하고 Cloud Run runtime에 주입한다
+3. upstream API 키는 gpu01의 production `.env`에 보관하고 systemd runtime에 주입한다
 
-프록시 route 변경은 `main`에 merge되면 GitHub Actions를 통해 Cloud Run 프로덕션에 자동 배포된다 (`AGENTS.md`, `docs/deploy-k-skill-proxy.md` 참고).
+프록시 route 변경은 `main`에 merge되면 gpu01 cron을 통해 프로덕션에 자동 배포된다 (`AGENTS.md`, `docs/deploy-k-skill-proxy.md` 참고).
 
 ### D. Python 스크립트 스킬
 
@@ -249,7 +249,7 @@ npm run ci
 - [ ] `npm run ci` 통과 (`./scripts/validate-skills.sh` 포함)
 - [ ] npm 패키지라면 `packages/`에 구현체와 테스트 추가
 - [ ] npm 패키지라면 `.changeset/*.md` 파일 추가 (반드시 **기능 PR에서**, Version Packages PR에서 추가하지 말 것)
-- [ ] 프록시 경유라면 `k-skill-proxy/src/server.js`에 route 추가하고 `main` merge 시 Cloud Run workflow/Secret Manager 구성이 맞는지 확인
+- [ ] 프록시 경유라면 `k-skill-proxy/src/server.js`에 route 추가하고 gpu01 production `.env` 및 자동 배포 smoke 구성이 맞는지 확인
 - [ ] 크롤링/검색 스킬이라면 공개 접근 경로, fallback 순서, 차단/로그인/빈 결과 실패 모드 문서화
 - [ ] 시크릿이 있다면 `KSKILL_` 접두사 규칙 준수 및 `docs/setup.md` 업데이트
 - [ ] `docs/features/my-new-skill.md` 작성 (선택, 상세 가이드)

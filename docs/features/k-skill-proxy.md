@@ -46,6 +46,8 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/kr-whois/domain` (KISA WHOIS `.kr`/`.한국` 도메인 조회, `DATA_GO_KR_API_KEY`)
 - `GET /v1/kr-whois/ip` (KISA WHOIS IPv4/IPv6 조회, `DATA_GO_KR_API_KEY`)
 - `GET /v1/kr-whois/as` (KISA WHOIS AS 번호 조회, `DATA_GO_KR_API_KEY`)
+- `GET /v1/vworld/search` (VWorld 단지명·지번 검색, 호출자 `x-k-skill-vworld-api-key` 헤더 필요)
+- `GET /v1/vworld/apartment-prices` (VWorld 공동주택 공시가격 조회, 호출자 `x-k-skill-vworld-api-key` 헤더 필요)
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
 
 ## 권장 환경변수
@@ -72,16 +74,15 @@ client/skill -> k-skill-proxy -> upstream public API
 
 ## 프로덕션 배포 구조
 
-프로덕션 proxy 서버는 **Google Cloud Run**에서 운영한다.
+프로덕션 proxy 서버는 **gpu01**에서 운영한다.
 
-- GCP project: `k-skill-proxy`
-- Region: `asia-northeast1`
-- Cloud Run service: `k-skill-proxy`
+- systemd user service: `k-skill-proxy.service`
+- tunnel service: `k-skill-proxy-tunnel.service`
 - 공개 도메인: `k-skill-proxy.nomadamas.org`
-- 컨테이너 이미지 정의: `packages/k-skill-proxy/Dockerfile`
-- 시크릿: GCP Secret Manager에서 Cloud Run runtime에 주입
+- 자동 배포 스크립트: `scripts/deploy-k-skill-proxy-gpu01.sh`
+- 시크릿: gpu01 app directory의 `.env`에서 runtime에 주입
 
-`main` 브랜치에 push/merge되면 `.github/workflows/deploy-k-skill-proxy.yml`이 WIF로 GCP에 인증하고 Artifact Registry image build/push, Cloud Run 재배포, 새 revision 및 커스텀 도메인 `/health` smoke test를 수행한다. 운영 절차와 rollback 방법은 [`docs/deploy-k-skill-proxy.md`](../deploy-k-skill-proxy.md)에 정리되어 있다.
+`main` 브랜치에 push/merge되면 gpu01 cron이 `origin/main`을 감지하고 테스트, 백업, 파일 동기화, systemd 재시작, local/public `/health` smoke test를 수행한다. 운영 절차와 rollback 방법은 [`docs/deploy-k-skill-proxy.md`](../deploy-k-skill-proxy.md)에 정리되어 있다.
 
 ## 기본 공개 정책
 
@@ -90,9 +91,11 @@ client/skill -> k-skill-proxy -> upstream public API
 - 대신 read-only / allowlisted endpoint / cache / rate limit 을 유지한다.
 - 문제가 생기면 그때 인증이나 더 강한 방어를 덧붙인다.
 
+VWorld 두 경로는 Cloudflare Worker와 VWorld 사이의 네트워크 호환 문제를 우회하는 BYOK 예외다. 키는 프록시 환경에 저장하지 않고 호출자가 HTTPS 전용 헤더로 위임한다. 프록시는 키를 고정된 VWorld 두 경로에만 전달하며, 리다이렉트와 쿼리스트링 `key`를 거부한다. 응답은 허용 필드만 새 JSON으로 투영하고 스트리밍 크기를 2 MiB로 제한하며 `private, no-store`로 외부 캐시를 막는다. 단지 검색 성공만 키 원문 대신 SHA-256 범위로 분리된 VWorld 전용 16 MiB 내부 캐시를 사용하고, 공시가격 페이지는 다중 페이지 시점 일관성을 위해 캐시하지 않는다.
+
 ## 사용법
 
-추가 client API 레이어는 불필요합니다. 필요한 쿼리를 그대로 프록시에 넣으면 되고, 프록시가 upstream API key 만 서버에서 주입합니다.
+일반 경로는 필요한 쿼리를 그대로 프록시에 넣으면 프록시가 upstream API key를 서버에서 주입합니다. VWorld BYOK 경로만 호출자가 `x-k-skill-vworld-api-key` 헤더를 제공합니다.
 
 요약 endpoint:
 

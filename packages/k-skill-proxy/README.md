@@ -33,12 +33,17 @@
 - `GET /v1/kosis/search` — KOSIS 통계표 검색(`KOSIS_API_KEY`)
 - `GET /v1/kosis/meta` — KOSIS 통계표 메타데이터(`KOSIS_API_KEY`)
 - `GET /v1/kosis/data` — KOSIS 통계 데이터 셀 조회(`KOSIS_API_KEY`)
+- `GET /v1/kosis/list` — KOSIS 통계목록 트리 조회(`KOSIS_API_KEY`)
+- `GET /v1/kosis/explain` — KOSIS 통계설명 조회(`KOSIS_API_KEY`)
+- `GET /v1/kosis/indicator` — KOSIS 통계주요지표 조회(`KOSIS_API_KEY`)
 - `GET /v1/kstartup/business-info` — 창업진흥원 K-Startup 통합공고 지원사업 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/kstartup/announcements` — 창업진흥원 K-Startup 지원사업 공고 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/kstartup/contents` — 창업진흥원 K-Startup 창업 콘텐츠 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/kstartup/statistics` — 창업진흥원 K-Startup 통계보고서 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/naver-shopping/search` — 네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 네이버 쇼핑 공개 BFF JSON 기반 상품/가격 후보 조회
 - `GET /v1/naver-news/search` — 네이버 검색 Open API 뉴스 검색(`news.json`) 기반 최신 뉴스 기사 제목/요약/링크/발행시각 조회(`NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` 필요)
+- `GET /v1/vworld/search` — VWorld 단지명·지번 검색(호출자가 `x-k-skill-vworld-api-key` 헤더로 자기 키를 위임)
+- `GET /v1/vworld/apartment-prices` — VWorld 공동주택가격 속성 조회(면적별 범위·동호 조회용, 호출자가 `x-k-skill-vworld-api-key` 헤더로 자기 키를 위임)
 - `GET /v1/data4library/library-search` — 도서관 정보나루 정보공개 도서관 조회(`DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/book-search` — 도서관 정보나루 도서 검색(`DATA4LIBRARY_AUTH_KEY`)
 - `GET /v1/data4library/book-detail` — 도서관 정보나루 도서 상세 조회(`DATA4LIBRARY_AUTH_KEY`)
@@ -59,6 +64,7 @@
 - `naverShoppingConfigured` — 네이버 쇼핑 라우트는 공개 BFF JSON fallback 이 있어서 **항상 `true`** 다. 키가 없어도 public BFF 경로로 응답이 나간다.
 - `naverSearchApiConfigured` — 네이버 검색 Open API 키(`NAVER_SEARCH_CLIENT_ID` + `NAVER_SEARCH_CLIENT_SECRET`) 설정 여부. 네이버 쇼핑 라우트는 이 값이 `true` 면 공식 API 를 선호하고, `false` 면 BFF fallback 으로 자동 전환한다. 즉 이 플래그는 **쇼핑 쪽에서는 advisory** 다.
 - `naverNewsApiConfigured` — 네이버 뉴스 라우트의 **운영 가능 여부**. 뉴스에는 fallback 이 없어서 키가 없으면 뉴스 라우트는 `503 upstream_not_configured` 를 돌려준다.
+- `vworldRelayAvailable` — VWorld 읽기 전용 relay 라우트가 등록되었음을 뜻한다. 키는 서버에 저장하지 않고 매 요청의 `x-k-skill-vworld-api-key` 헤더로 받으므로 credential 설정 여부를 뜻하지 않는다.
 
 `naverSearchApiConfigured` 와 `naverNewsApiConfigured` 는 같은 환경변수에 의존하므로 현재 boolean 값은 항상 일치하지만, **의미(semantic contract)는 다르다**: 전자는 "공식 키가 있는지" 를, 후자는 "뉴스 라우트가 실제로 응답을 돌려줄 수 있는지" 를 보고한다. 향후 검색 키가 분리되거나 fallback 정책이 바뀌어도 이 두 플래그는 분리된 채 유지된다.
 
@@ -73,7 +79,7 @@
 - `FOODSAFETYKOREA_API_KEY` — 프록시 서버 쪽 식품안전나라 회수정보 live key (`mfds/food-safety/search`; 없으면 sample feed fallback)
 - `KAKAO_REST_API_KEY` — 프록시 서버 쪽 Kakao REST API 키 (`kakao-local/geocode`, `kakao-map/*`, `kakao-mobility/directions`)
 - `KRX_API_KEY` — 프록시 서버 쪽 KRX Open API upstream key
-- `KOSIS_API_KEY` 또는 `KSKILL_KOSIS_API_KEY` — 프록시 서버 쪽 KOSIS Open API upstream key (`kosis/search`, `kosis/meta`, `kosis/data`)
+- `KOSIS_API_KEY` 또는 `KSKILL_KOSIS_API_KEY` — 프록시 서버 쪽 KOSIS Open API upstream key (`kosis/search`, `kosis/meta`, `kosis/data`, `kosis/list`, `kosis/explain`, `kosis/indicator`)
 - `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 네이버 검색 Open API 키(`shop.json`, `news.json` 공통). 네이버 뉴스 route(`naver-news/search`)는 이 키가 **필수**이며 없으면 `503 upstream_not_configured` 를 돌려준다. 네이버 쇼핑 route(`naver-shopping/search`)는 **선택**이며 설정되면 공식 API 를 우선 사용하고, 없으면 공개 BFF JSON 파서로 fallback 한다. 공식 쇼핑 API 는 `review` 정렬을 지원하지 않아 `meta.sort_applied: "unsupported"`로 표시한다. no-key 쇼핑 fallback 은 `page`를 BFF에 전달해 해당 페이지를 고르고, `price_asc`/`price_dsc`/`review`는 선택 페이지 안에서 로컬 정렬하며, `date`는 `meta.sort_applied: "unsupported"`로 표시
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — local development listen port. Set it explicitly in your shell.
@@ -81,10 +87,12 @@
 - `KSKILL_PROXY_RATE_LIMIT_WINDOW_MS` — 기본 `60000`
 - `KSKILL_PROXY_RATE_LIMIT_MAX` — 기본 `60`
 - `KSKILL_PROXY_RATE_LIMIT_MAX_CLIENTS` — 메모리에 유지할 client rate-limit bucket 상한, 기본 `10000`
-- `KSKILL_PROXY_TRUST_PROXY_HOPS` — Fastify가 신뢰할 reverse-proxy hop 수, 기본 `0`. Cloud Run 배포는 GFE와 container ingress 두 hop 뒤의 client IP를 사용하도록 `2`로 고정하며, 직접 노출되는 로컬 서버에서는 설정하지 않는다.
+- `KSKILL_PROXY_TRUST_PROXY_HOPS` — Fastify가 신뢰할 reverse-proxy hop 수, 기본 `0`. 운영 reverse proxy(gpu01 등) 구조에 맞는 최소 hop 수만 설정하고 직접 노출되는 로컬 서버에서는 설정하지 않는다.
 - `DATA_GO_KR_API_KEY` - 공공데이터포털 에서 쓰이는 API 인증키 (`household-waste`, `parking-lots`, `real-estate`, `nts-business`, `mfds-drug-safety`, `mfds-food-safety`, `lh-notice`, `nhis/*`, `kr-whois/*`). 각 서비스는 공공데이터포털에서 별도 "활용신청" 승인이 필요하다. 키를 발급받은 뒤에는 [LH 임대공고문 정보](https://www.data.go.kr/data/15058530/openapi.do), [국민건강보험공단 장기요양기관 검색 서비스](https://www.data.go.kr/data/15059029/openapi.do), [국민건강보험공단 검진기관 찾기 조회](https://www.data.go.kr/data/15154419/openapi.do), WHOIS 도메인/IP 정보 API(서비스 `15094277`) 페이지에서도 활용신청을 눌러 동일 키를 활성화해야 해당 라우트가 성공한다. 미활성 상태에서는 upstream이 HTTP 403 Forbidden 또는 data.go.kr gateway 오류를 돌려주고 proxy는 upstream error로 변환한다.
 
 기본 정책은 **무료 API 공개 프록시 = 무인증** 이다. 대신 endpoint scope 를 좁게 유지하고, cache + rate limit 으로 남용을 늦춘다.
+
+VWorld 라우트는 Cloudflare Worker와 VWorld 사이의 네트워크 호환 문제를 우회하기 위한 credential-delegation 예외다. 프록시는 VWorld 키를 저장하지 않으며, HTTPS 헤더로 받은 키를 고정된 `api.vworld.kr`의 두 allowlist 경로에만 전달한다. 쿼리스트링의 `key`는 거부한다. 응답은 MCP에 필요한 필드만 새 JSON으로 투영하고 2 MiB에서 스트리밍을 중단하며 `private, no-store`로 외부 캐시를 막는다. 단지 검색 성공만 키 원문 대신 단방향 SHA-256 범위로 분리된 VWorld 전용 16 MiB 내부 캐시를 사용한다. 공시가격 페이지는 여러 페이지의 시점 일관성을 위해 캐시하지 않는다.
 
 ## 로컬 실행
 
@@ -137,6 +145,26 @@ curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/korea-weather/forecast" \
 ```bash
 curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/han-river/water-level" \
   --data-urlencode 'stationName=한강대교'
+```
+
+VWorld 공동주택 검색·공시가격 조회 예시 (`VWORLD_API_KEY`는 호출자 환경에만 존재):
+
+```bash
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/vworld/search" \
+  -H "x-k-skill-vworld-api-key: ${VWORLD_API_KEY}" \
+  --data-urlencode 'query=강나루현대' \
+  --data-urlencode 'type=place' \
+  --data-urlencode 'domain=apartment-price-mcp.warmjin.com'
+
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/vworld/apartment-prices" \
+  -H "x-k-skill-vworld-api-key: ${VWORLD_API_KEY}" \
+  --data-urlencode 'pnu=1150010400104480001' \
+  --data-urlencode 'stdrYear=2026' \
+  --data-urlencode 'pageNo=1' \
+  --data-urlencode 'numOfRows=1000' \
+  --data-urlencode 'dongNm=101' \
+  --data-urlencode 'hoNm=1601' \
+  --data-urlencode 'domain=apartment-price-mcp.warmjin.com'
 ```
 
 나이스 학교 검색·급식 식단 예시 (`KEDU_INFO_KEY` 필요). 급식은 교육청 코드(`ATPT_OFCDC_SC_CODE`)와 학교 코드(`SD_SCHUL_CODE`)가 필요하므로 보통 아래 순서로 호출한다.
@@ -286,9 +314,9 @@ curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kakao-local/geocode" \
 
 ## 프로덕션 배포
 
-프로덕션 프록시는 **Google Cloud Run** (`asia-northeast1`, GCP project `k-skill-proxy`)에서 운영되며, `k-skill-proxy.nomadamas.org` 도메인에 매핑되어 있습니다.
+프로덕션 프록시는 **gpu01**의 systemd user service로 운영되며, Cloudflare Tunnel을 통해 `k-skill-proxy.nomadamas.org`에 노출됩니다.
 
-- 컨테이너 이미지: `packages/k-skill-proxy/Dockerfile`
-- 자동 배포: `main` 브랜치 머지 시 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증 후 Artifact Registry로 이미지 빌드/푸시, Cloud Run 재배포, `/health` smoke test까지 수행합니다.
-- 시크릿: GCP Secret Manager에서 Cloud Run runtime에 주입됩니다.
+- 자동 배포: gpu01 cron이 `origin/main`을 감지해 테스트, 백업, systemd 재시작, local/public `/health` smoke test를 수행합니다.
+- 배포 스크립트: `scripts/deploy-k-skill-proxy-gpu01.sh`
+- 시크릿: gpu01의 app `.env` 파일에서 systemd runtime에 주입됩니다.
 - 운영자 셋업, 키 회전, 상태 확인, rollback 절차는 [`docs/deploy-k-skill-proxy.md`](../../docs/deploy-k-skill-proxy.md) 참고.

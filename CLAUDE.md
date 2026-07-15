@@ -15,9 +15,9 @@
 ## Proxy server development
 
 - 개발 repo: 이 디렉토리, `dev` 브랜치
-- 프로덕션 배포 대상: **Google Cloud Run** (project `k-skill-proxy`, region `asia-northeast1`, custom domain `k-skill-proxy.nomadamas.org`)
-- `main` 브랜치에 merge되면 `.github/workflows/deploy-k-skill-proxy.yml`이 Workload Identity Federation으로 GCP 인증하고 Artifact Registry image build/push, Cloud Run 재배포, `/health` smoke test를 수행한다.
-- 프로덕션 시크릿은 GCP Secret Manager에서 Cloud Run runtime에 주입된다. WIF/Secret Manager 셋업과 운영 절차는 `docs/deploy-k-skill-proxy.md` 참고.
+- 프로덕션 배포 대상: **gpu01**의 systemd user service (custom domain `k-skill-proxy.nomadamas.org`)
+- `main` 브랜치에 merge되면 gpu01 cron이 `origin/main`을 감지하고 테스트, 백업, systemd 재시작, local/public `/health` smoke test를 수행한다.
+- 프로덕션 시크릿은 gpu01 app directory의 `.env`에서 runtime에 주입된다. 자동 배포와 운영 절차는 `docs/deploy-k-skill-proxy.md` 참고.
 - 따라서 proxy route 변경은 **main에 merge되어야 프로덕션에 반영**된다. dev에서 코드를 바꿔도 프로덕션 proxy에는 영향 없음.
 - 로컬 테스트는 `node packages/k-skill-proxy/src/server.js` 로 직접 실행하거나 `node --test packages/k-skill-proxy/test/server.test.js` 로 확인.
 - **Proxy 편입 규칙**: k-skill-proxy에 route를 추가하려면 upstream이 API 키를 필요로 해야 한다. 공개 엔드포인트(키 불필요)는 skill 코드에서 직접 호출하고 프록시를 거치지 않는다.

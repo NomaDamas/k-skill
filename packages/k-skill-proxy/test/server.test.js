@@ -17,6 +17,9 @@ const {
   normalizeData4LibraryLibrarySearchQuery,
   normalizeKakaoLocalGeocodeQuery,
   normalizeKosisDataQuery,
+  normalizeKosisExplainQuery,
+  normalizeKosisIndicatorQuery,
+  normalizeKosisListQuery,
   normalizeKosisMetaQuery,
   normalizeKosisSearchQuery,
   normalizeKoreanHolidayQuery,
@@ -108,6 +111,21 @@ test("createMemoryCache stays bounded and evicts expired or oldest entries", () 
   assert.equal(cache.get("fresh"), null, "oldest live entry should be evicted at capacity");
   assert.deepEqual(cache.get("next"), { value: 3 });
   assert.deepEqual(cache.get("last"), { value: 4 });
+});
+
+test("createMemoryCache enforces its byte budget", () => {
+  const cache = createMemoryCache({
+    maxEntries: 10,
+    maxBytes: 5,
+    sizeOf: (value) => value.length
+  });
+
+  assert.equal(cache.set("too-large", "123456", 60000), false);
+  assert.equal(cache.get("too-large"), null);
+  assert.equal(cache.set("first", "123", 60000), true);
+  assert.equal(cache.set("second", "456", 60000), true);
+  assert.equal(cache.get("first"), null);
+  assert.equal(cache.get("second"), "456");
 });
 
 test("rate limiter bounds tracked client IPs", () => {
@@ -1314,6 +1332,37 @@ test("KOSIS normalizers map public query aliases to upstream params", () => {
     endPrdDe: "2024",
     objL2: "00"
   });
+
+  assert.deepEqual(normalizeKosisListQuery({ vw_cd: "MT_ZTITLE", parent_id: "A" }), {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    vwCd: "MT_ZTITLE",
+    parentListId: "A"
+  });
+
+  assert.deepEqual(normalizeKosisExplainQuery({ org_id: "101", table_id: "DT_1IN0001" }), {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    metaItm: "All",
+    orgId: "101",
+    tblId: "DT_1IN0001"
+  });
+
+  assert.deepEqual(normalizeKosisIndicatorQuery({ service: "2", jipyo_id: "160" }), {
+    method: "getList",
+    format: "json",
+    jsonVD: "Y",
+    service: "2",
+    serviceDetail: "pkCalcSource",
+    jipyoId: "160",
+    pageNo: "1",
+    numOfRows: "10"
+  });
+
+  assert.throws(() => normalizeKosisListQuery({ vwCd: "INVALID" }), /supported vwCd/);
+  assert.throws(() => normalizeKosisExplainQuery({ statId: "A", metaItm: "statsNm,statsKind" }), /one supported field/);
 });
 
 test("KOSIS proxy injects the server-side key without accepting client apiKey", async () => {
@@ -1345,6 +1394,31 @@ test("KOSIS proxy injects the server-side key without accepting client apiKey", 
   assert.equal(url.origin + url.pathname, "https://kosis.kr/openapi/statisticsSearch.do");
   assert.equal(url.searchParams.get("apiKey"), "server-kosis-key");
   assert.equal(url.searchParams.get("searchNm"), "인구");
+});
+
+test("KOSIS proxy routes the additional official operations", async () => {
+  const expectedPaths = new Map([
+    ["list", "/openapi/statisticsList.do"],
+    ["explain", "/openapi/statisticsExplData.do"],
+    ["indicator", "/openapi/pkNumberService.do"]
+  ]);
+
+  for (const [operation, expectedPath] of expectedPaths) {
+    const calls = [];
+    const upstream = await proxyKosisRequest({
+      operation,
+      apiKey: "server-kosis-key",
+      params: { method: "getList", format: "json", jsonVD: "Y" },
+      fetchImpl: async (url) => {
+        calls.push(new URL(String(url)));
+        return new Response("[]", { status: 200 });
+      }
+    });
+
+    assert.equal(upstream.statusCode, 200);
+    assert.equal(calls[0].pathname, expectedPath);
+    assert.equal(calls[0].searchParams.get("apiKey"), "server-kosis-key");
+  }
 });
 
 test("KOSIS search endpoint stays public and caches successful upstream responses", async (t) => {
@@ -2026,7 +2100,7 @@ test("korean stock search rate limit does not trust spoofed cf-connecting-ip on 
   assert.equal(second.json().error, "rate_limited");
 });
 
-test("rate limit separates Cloud Run clients behind two trusted proxy hops", async (t) => {
+test("rate limit separates clients behind two trusted proxy hops", async (t) => {
   const app = buildServer({
     env: {
       KSKILL_PROXY_RATE_LIMIT_MAX: "1",

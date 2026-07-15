@@ -18,6 +18,8 @@ import urllib.request
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
+PROXY_DOWN_MSG = "설정된 k-skill-proxy 서버가 응답하지 않습니다. 잠시 후 재시도하거나 운영자에게 문의하세요."
+PROXY_KEY_NOT_CONFIGURED_MSG = "k-skill-proxy에 필요한 API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요."
 KSTARTUP_UPSTREAM_BASE_URL = "https://apis.data.go.kr/B552735/kisedKstartupService01"
 DEFAULT_SECRETS_PATH = os.path.expanduser("~/.config/k-skill/secrets.env")
 
@@ -203,7 +205,15 @@ def build_url(operation: str, query: Dict[str, Any], *, direct: bool, api_key: O
     return f"{base}/v1/kstartup/{operation}?{encode_query(query)}"
 
 
-def http_get(url: str, *, timeout: int) -> Tuple[int, str, str]:
+def is_proxy_not_configured_body(body: str) -> bool:
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(payload, dict) and payload.get("error") == "upstream_not_configured"
+
+
+def http_get(url: str, *, timeout: int, via_proxy: bool = False) -> Tuple[int, str, str]:
     headers = {
         "accept": "application/json",
         "user-agent": "k-skill/kstartup-search",
@@ -216,9 +226,13 @@ def http_get(url: str, *, timeout: int) -> Tuple[int, str, str]:
             return response.status, response.headers.get("content-type", ""), body
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+        if exc.code == 503 and is_proxy_not_configured_body(body):
+            raise HelperError(PROXY_KEY_NOT_CONFIGURED_MSG) from exc
         return exc.code, exc.headers.get("content-type", "") if exc.headers else "", body
     except urllib.error.URLError as exc:
-        raise HelperError(f"network error: {exc.reason}") from exc
+        if not via_proxy:
+            raise HelperError(f"network error: {exc.reason}") from exc
+        raise HelperError(f"{PROXY_DOWN_MSG} (상세: {exc.reason})") from exc
 
 
 def _normalise_filter_token(field: str, token: str) -> str:
@@ -377,7 +391,7 @@ def run(argv: Optional[List[str]] = None) -> int:
         return 3
 
     try:
-        status, content_type, body = http_get(url, timeout=args.timeout)
+        status, content_type, body = http_get(url, timeout=args.timeout, via_proxy=not args.direct)
     except HelperError as exc:
         print(f"[error] {exc}", file=sys.stderr)
         return 4

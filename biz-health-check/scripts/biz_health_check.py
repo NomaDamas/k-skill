@@ -28,6 +28,8 @@ import sys
 from typing import Any, Callable
 
 KST = dt.timezone(dt.timedelta(hours=9))
+PROXY_DOWN_MSG = "설정된 k-skill-proxy 서버가 응답하지 않습니다. 잠시 후 재시도하거나 운영자에게 문의하세요."
+PROXY_KEY_NOT_CONFIGURED_MSG = "k-skill-proxy에 필요한 API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요."
 _REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
 # (섹션 키, 사람이 읽는 라벨, 단품 스킬 디렉토리, helper 파일명)

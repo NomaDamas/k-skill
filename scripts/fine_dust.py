@@ -16,6 +16,8 @@ MEASUREMENT_SERVICE_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc"
 SECRET_NAME = "AIR_KOREA_OPEN_API_KEY"
 PROXY_BASE_URL_NAME = "KSKILL_PROXY_BASE_URL"
 DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
+PROXY_DOWN_MSG = "설정된 k-skill-proxy 서버가 응답하지 않습니다. 잠시 후 재시도하거나 운영자에게 문의하세요."
+PROXY_KEY_NOT_CONFIGURED_MSG = "k-skill-proxy에 필요한 API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요."
 WGS84_A = 6378137.0
 WGS84_F = 1 / 298.257223563
 BESSEL_A = 6377397.155
@@ -370,6 +372,9 @@ def read_json_response(request: urllib.request.Request | str) -> dict:
         except json.JSONDecodeError:
             payload = None
 
+        if exc.code == 503 and isinstance(payload, dict) and payload.get("error") == "upstream_not_configured":
+            raise SystemExit(PROXY_KEY_NOT_CONFIGURED_MSG) from exc
+
         message = payload.get("message") if isinstance(payload, dict) else None
         if isinstance(payload, dict) and payload.get("error") == "ambiguous_location":
             candidates = payload.get("candidate_stations") or []
@@ -383,6 +388,8 @@ def read_json_response(request: urllib.request.Request | str) -> dict:
             raise SystemExit("\n".join(detail)) from exc
 
         raise SystemExit(message or f"요청이 실패했습니다: HTTP {exc.code}") from exc
+    except urllib.error.URLError as exc:
+        raise SystemExit(f"{PROXY_DOWN_MSG} (상세: {exc.reason})") from exc
 
 
 def fetch_json(url: str, params: dict[str, object]) -> dict:
