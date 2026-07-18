@@ -1180,6 +1180,23 @@ test("repository docs advertise the gangnamunni-clinic-search skill across insta
   assert.match(sources, /강남언니 공개 병원 페이지: https:\/\/www\.gangnamunni\.com\/hospitals\/<id>/);
 });
 
+test("repository docs advertise ev-subsidy-status across documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "ev-subsidy-status.md");
+  const skillPath = path.join(repoRoot, "ev-subsidy-status", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/ev-subsidy-status.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected ev-subsidy-status/SKILL.md to exist");
+  assert.match(readme, /\| 전기차 보조금 현황 조회 \| `ev-subsidy-status` \|/);
+  assert.match(readme, /\[전기차 보조금 현황 조회 가이드\]\(docs\/features\/ev-subsidy-status\.md\)/);
+  assert.match(install, /--skill ev-subsidy-status/);
+  assert.match(install, /npm install -g .*ev-subsidy-status/);
+  assert.match(sources, /환경부 무공해차 통합누리집 구매보조금 지급현황: https:\/\/ev\.or\.kr\/nportal\/buySupprt\/initSubsidyPaymentCheckAction\.do/);
+  assert.match(sources, /환경부 무공해차 통합누리집 모델별 보조금: https:\/\/ev\.or\.kr\/nportal\/buySupprt\/psPopupLocalCarModelPrice\.do/);
+});
+
 test("repository docs advertise the market-kurly-search skill across the documented surfaces", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));

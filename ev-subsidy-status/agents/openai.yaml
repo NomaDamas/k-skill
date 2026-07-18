@@ -1,0 +1,4 @@
+interface:
+  display_name: "전기차 보조금 현황"
+  short_description: "지역별 전기차 구매보조금 잔여 현황을 공식 자료로 조회합니다"
+  default_prompt: "Use $ev-subsidy-status to check the current EV subsidy availability for my Korean region."
