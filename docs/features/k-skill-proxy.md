@@ -24,6 +24,10 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/seoul-bike/nearby` (좌표 주변 따릉이 실시간 대여소 필터링, `SEOUL_OPEN_API_KEY`)
 - `GET /v1/han-river/water-level`
 - `GET /v1/household-waste/info` (생활쓰레기 배출정보, `DATA_GO_KR_API_KEY`; 쿼리 `pageNo`·`numOfRows` 필수, 값 `1`·`100`)
+- `GET /v1/ev-charger/info` (전기차 충전소 정보, `DATA_GO_KR_API_KEY`, 데이터셋 `15076352` 별도 활용신청)
+- `GET /v1/ev-charger/status` (전기차 충전기 상태, `DATA_GO_KR_API_KEY`, 데이터셋 `15076352` 별도 활용신청)
+- `GET /v1/building-register/title` (건축물대장 표제부, `DATA_GO_KR_API_KEY`, 데이터셋 `15134735` 별도 활용신청)
+- `GET /v1/keris-academic/search` (KERIS RISS 학술 메타데이터 검색, `KSKILL_RISS_API_KEY`, compatibility `RISS_API_KEY`, XML upstream)
 - `GET /v1/mfds/drug-safety/lookup` (식약처 의약품개요정보 + 안전상비의약품 정보, `DATA_GO_KR_API_KEY`)
 - `GET /v1/mfds/food-safety/search` (식약처 부적합 식품 + 식품안전나라 회수 정보, `DATA_GO_KR_API_KEY`, 선택적 `FOODSAFETYKOREA_API_KEY`)
 - `GET /v1/korean-stock/search`
@@ -46,6 +50,8 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/kr-whois/domain` (KISA WHOIS `.kr`/`.한국` 도메인 조회, `DATA_GO_KR_API_KEY`)
 - `GET /v1/kr-whois/ip` (KISA WHOIS IPv4/IPv6 조회, `DATA_GO_KR_API_KEY`)
 - `GET /v1/kr-whois/as` (KISA WHOIS AS 번호 조회, `DATA_GO_KR_API_KEY`)
+- `GET /v1/vworld/search` (VWorld 단지명·지번 검색, 호출자 `x-k-skill-vworld-api-key` 헤더 필요)
+- `GET /v1/vworld/apartment-prices` (VWorld 공동주택 공시가격 조회, 호출자 `x-k-skill-vworld-api-key` 헤더 필요)
 - `GET /B552584/:service/:operation` (허용된 AirKorea route passthrough)
 
 ## 권장 환경변수
@@ -62,7 +68,8 @@ client/skill -> k-skill-proxy -> upstream public API
 - `SEOUL_OPEN_API_KEY=...`
 - `HRFCO_OPEN_API_KEY=...`
 - `OPINET_API_KEY=...`
-- `DATA_GO_KR_API_KEY=...` (WHOIS route는 공공데이터포털 서비스 `15094277` 활용신청 승인 필요)
+- `DATA_GO_KR_API_KEY=...` (WHOIS `15094277`, EV 충전소 `15076352`, 건축물대장 `15134735` 등 route별 공공데이터포털 활용신청 승인 필요)
+- `KSKILL_RISS_API_KEY=...` (RISS API 센터 검색 API key; compatibility `RISS_API_KEY`, `DATA_GO_KR_API_KEY`와 별개)
 - `FOODSAFETYKOREA_API_KEY=...` (선택: 식품안전나라 회수 live 결과, 없으면 sample fallback)
 - `KEDU_INFO_KEY=...` (나이스 교육정보 개방 포털 Open API 인증키)
 - `DATA4LIBRARY_AUTH_KEY=...` (도서관 정보나루 Open API 인증키)
@@ -89,9 +96,11 @@ client/skill -> k-skill-proxy -> upstream public API
 - 대신 read-only / allowlisted endpoint / cache / rate limit 을 유지한다.
 - 문제가 생기면 그때 인증이나 더 강한 방어를 덧붙인다.
 
+VWorld 두 경로는 Cloudflare Worker와 VWorld 사이의 네트워크 호환 문제를 우회하는 BYOK 예외다. 키는 프록시 환경에 저장하지 않고 호출자가 HTTPS 전용 헤더로 위임한다. 프록시는 키를 고정된 VWorld 두 경로에만 전달하며, 리다이렉트와 쿼리스트링 `key`를 거부한다. 응답은 허용 필드만 새 JSON으로 투영하고 스트리밍 크기를 2 MiB로 제한하며 `private, no-store`로 외부 캐시를 막는다. 단지 검색 성공만 키 원문 대신 SHA-256 범위로 분리된 VWorld 전용 16 MiB 내부 캐시를 사용하고, 공시가격 페이지는 다중 페이지 시점 일관성을 위해 캐시하지 않는다.
+
 ## 사용법
 
-추가 client API 레이어는 불필요합니다. 필요한 쿼리를 그대로 프록시에 넣으면 되고, 프록시가 upstream API key 만 서버에서 주입합니다.
+일반 경로는 필요한 쿼리를 그대로 프록시에 넣으면 프록시가 upstream API key를 서버에서 주입합니다. VWorld BYOK 경로만 호출자가 `x-k-skill-vworld-api-key` 헤더를 제공합니다.
 
 요약 endpoint:
 
@@ -179,6 +188,42 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/household-waste/info' \
   --data-urlencode 'cond[SGG_NM::LIKE]=강남구' \
   --data-urlencode 'pageNo=1' \
   --data-urlencode 'numOfRows=100'
+```
+
+전기차 충전소 정보·상태 endpoint. `serviceKey`와 `dataType`은 caller가 지정할 수 없고, 서버가 `DATA_GO_KR_API_KEY`와 `dataType=JSON`을 주입한다. `pageNo` 기본값은 1, `numOfRows` 기본값은 10이고 최대 100이다.
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/ev-charger/info' \
+  --data-urlencode 'location=서울 강남구' \
+  --data-urlencode 'numOfRows=10'
+
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/ev-charger/status' \
+  --data-urlencode 'statId=ME000001' \
+  --data-urlencode 'limitYn=Y' \
+  --data-urlencode 'period=10'
+```
+
+공공데이터포털 인증키를 이미 갖고 있어도 데이터셋 `15076352` 활용신청은 별도로 필요하다. 자동승인 대상이지만 활성화 전에는 `502 upstream_forbidden`이 반환된다. `/health`의 `evChargerConfigured`는 서버 키 설정 여부를 나타낸다.
+
+건축물대장 표제부 endpoint. 19자리 `pnu` 또는 `sigunguCd`, `bjdongCd`, `platGbCd`, `bun`, 선택 `ji`를 받는다. `bun`/`ji`는 4자리로 정규화되며 `serviceKey` override는 거부한다. upstream XML 성공 payload만 캐시한다.
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/building-register/title' \
+  --data-urlencode 'pnu=1168010100101230004'
+```
+
+PNU의 11번째 자리는 토지구분으로 `1`은 일반 토지, `2`는 산이다. proxy는 이를 건축물대장 API의 `platGbCd=0`, `platGbCd=1`로 각각 변환한다.
+
+데이터셋 `15134735` 활용신청은 별도로 필요하며 자동승인 후에도 활성화 전에는 `502 upstream_forbidden`이 반환될 수 있다. `/health`의 `buildingRegisterConfigured`는 서버 키 설정 여부만 나타낸다.
+
+KERIS/RISS 학술자료 검색:
+
+```bash
+curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/keris-academic/search' \
+  --data-urlencode 'keyword=인공지능 교육' \
+  --data-urlencode 'resourceType=A' \
+  --data-urlencode 'page=1' \
+  --data-urlencode 'pageSize=10'
 ```
 
 의약품 안전 체크 endpoint:

@@ -113,6 +113,21 @@ test("createMemoryCache stays bounded and evicts expired or oldest entries", () 
   assert.deepEqual(cache.get("last"), { value: 4 });
 });
 
+test("createMemoryCache enforces its byte budget", () => {
+  const cache = createMemoryCache({
+    maxEntries: 10,
+    maxBytes: 5,
+    sizeOf: (value) => value.length
+  });
+
+  assert.equal(cache.set("too-large", "123456", 60000), false);
+  assert.equal(cache.get("too-large"), null);
+  assert.equal(cache.set("first", "123", 60000), true);
+  assert.equal(cache.set("second", "456", 60000), true);
+  assert.equal(cache.get("first"), null);
+  assert.equal(cache.get("second"), "456");
+});
+
 test("rate limiter bounds tracked client IPs", () => {
   let currentTime = 1000;
   const limiter = buildRateLimiter({
@@ -7004,4 +7019,34 @@ test("health endpoint reports koreanLawConfigured from LAW_OC", async (t) => {
 
   assert.equal(offBody.upstreams.koreanLawConfigured, false);
   assert.equal(onBody.upstreams.koreanLawConfigured, true);
+});
+
+test("health endpoint reports evChargerConfigured from DATA_GO_KR_API_KEY", async (t) => {
+  const off = buildServer({ env: {} });
+  const on = buildServer({ env: { DATA_GO_KR_API_KEY: "server-key" } });
+  t.after(async () => {
+    await off.close();
+    await on.close();
+  });
+
+  const offBody = (await off.inject({ method: "GET", url: "/health" })).json();
+  const onBody = (await on.inject({ method: "GET", url: "/health" })).json();
+
+  assert.equal(offBody.upstreams.evChargerConfigured, false);
+  assert.equal(onBody.upstreams.evChargerConfigured, true);
+});
+
+test("health endpoint reports buildingRegisterConfigured from DATA_GO_KR_API_KEY", async (t) => {
+  const off = buildServer({ env: {} });
+  const on = buildServer({ env: { DATA_GO_KR_API_KEY: "server-key" } });
+  t.after(async () => {
+    await off.close();
+    await on.close();
+  });
+
+  const offBody = (await off.inject({ method: "GET", url: "/health" })).json();
+  const onBody = (await on.inject({ method: "GET", url: "/health" })).json();
+
+  assert.equal(offBody.upstreams.buildingRegisterConfigured, false);
+  assert.equal(onBody.upstreams.buildingRegisterConfigured, true);
 });

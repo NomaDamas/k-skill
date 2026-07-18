@@ -64,6 +64,7 @@ npx --yes skills add <owner/repo> \
   --skill popbill \
   --skill corporate-registration-consulting \
   --skill iros-registry-automation \
+  --skill building-register-search \
   --skill real-estate-search \
   --skill korean-scholarship-search \
   --skill korean-stock-search \
@@ -72,10 +73,13 @@ npx --yes skills add <owner/repo> \
   --skill mfds-drug-safety \
   --skill mfds-food-safety \
   --skill joseon-sillok-search \
+  --skill korean-heritage-search \
   --skill korean-patent-search \
   --skill korea-weather \
   --skill cheap-gas-nearby \
   --skill public-restroom-nearby \
+  --skill ev-charger-nearby \
+  --skill ev-subsidy-status \
   --skill emergency-room-beds \
   --skill fine-dust-location \
   --skill han-river-water-level \
@@ -96,6 +100,7 @@ npx --yes skills add <owner/repo> \
   --skill used-car-price-search \
   --skill korean-spell-check \
   --skill library-book-search \
+  --skill keris-academic-search \
   --skill k-schoollunch-menu \
   --skill korean-character-count \
   --skill court-auction-notice-search \
@@ -148,6 +153,12 @@ npx --yes skills add <owner/repo> \
 `korean-stock-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `KRX_API_KEY` 가 불필요하다. 원본 참고: `https://github.com/jjlabsio/korea-stock-mcp`. 자세한 사용법은 [한국 주식 정보 조회 가이드](features/korean-stock-search.md)를 본다.
 
 `household-waste-info` 는 별도 설치 없이 `k-skill-proxy`의 `/v1/household-waste/info` 라우트를 호출하고, `serviceKey`(`DATA_GO_KR_API_KEY`)는 proxy 서버에서만 원본 API(`apis.data.go.kr/1741000/household_waste_info/info`)로 주입한다. 사용자 쪽 `DATA_GO_KR_API_KEY` 가 불필요하다. 자세한 사용법은 [생활쓰레기 배출정보 조회 가이드](features/household-waste-info.md)를 본다.
+
+`ev-charger-nearby` 는 stdlib Python helper로 기본 hosted proxy의 `/v1/ev-charger/info`·`/v1/ev-charger/status`를 호출하므로 사용자 키가 필요 없다. `--direct`에서만 `KSKILL_EV_CHARGER_API_KEY` 또는 `DATA_GO_KR_API_KEY`를 사용하며, 기존 공공데이터포털 키가 있어도 데이터셋 `15076352` 활용신청은 별도로 필요하다. 자세한 사용법은 [전기차 충전소 위치·상태 조회 가이드](features/ev-charger-nearby.md)를 본다.
+
+`building-register-search` 는 주소를 hosted Kakao geocode로 법정동 코드·필지로 바꾼 뒤 `/v1/building-register/title`을 호출하거나 PNU를 바로 조회한다. hosted 사용자는 키가 필요 없다. `--direct`는 PNU/개별 필지만 지원하고 `KSKILL_BUILDING_REGISTER_API_KEY` 또는 `DATA_GO_KR_API_KEY`를 사용하며, 데이터셋 `15134735` 활용신청은 별도로 필요하다. 건축물대장은 권리관계 자료가 아니므로 소유권·근저당 확인은 `iros-registry-automation`을 사용한다. 자세한 사용법은 [건축물대장 표제부 조회 가이드](features/building-register-search.md)를 본다.
+
+`keris-academic-search` 는 hosted `/v1/keris-academic/search`로 RISS 학술 메타데이터를 조회한다. 일반 사용자는 키가 필요 없고 `--direct`에서만 `KSKILL_RISS_API_KEY` 또는 compatibility `RISS_API_KEY`를 사용한다. `DATA_GO_KR_API_KEY`는 RISS 검색 키가 아니다.
 
 `library-book-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `DATA4LIBRARY_AUTH_KEY` 는 불필요하고, self-host proxy 운영자만 프록시 서버 환경변수로 설정한다. 자세한 사용법은 [도서관 도서 조회 가이드](features/library-book-search.md)를 본다.
 
@@ -317,7 +328,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search gongsijiga-search donation-place-search gangnamunni-clinic-search
+npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search gongsijiga-search donation-place-search gangnamunni-clinic-search ev-subsidy-status
 export NODE_PATH="$(npm root -g)"
 ```
 

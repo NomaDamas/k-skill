@@ -10,6 +10,12 @@
 - KOSIS Open API endpoint host: https://kosis.kr/openapi/ — 일반 helper 호출은 `k-skill-proxy`의 `/v1/kosis/search`, `/v1/kosis/meta`, `/v1/kosis/data`가 이 host의 `/statisticsSearch.do`, `/statisticsData.do`, `/Param/statisticsParameterData.do` 로 중계한다. `bigdata`/`--direct`는 `/statisticsBigData.do` 등을 직접 호출한다 (HTTPS 전용, 2026-03-05 시행)
 - Kakao Local API endpoint host: https://dapi.kakao.com/v2/local/ — `k-skill-proxy`의 `/v1/kakao-local/geocode`가 `/search/address.json` → empty result 시 `/search/keyword.json` 순서로 중계한다. 같은 host의 `/search/keyword.json`, `/search/category.json`, `/geo/coord2address.json`, `/geo/coord2regioncode.json` 은 `kakao-map` 스킬용 `/v1/kakao-map/*` 라우트가 직접 중계한다.
 - Kakao Mobility Directions endpoint: https://apis-navi.kakaomobility.com/v1/directions — `k-skill-proxy`의 `/v1/kakao-mobility/directions`가 운영자 `KAKAO_REST_API_KEY`를 `Authorization: KakaoAK ...` 헤더로 주입해 자동차 길찾기를 중계한다.
+- 공공데이터포털 전기자동차 충전소 정보 API: https://www.data.go.kr/data/15076352/openapi.do — `k-skill-proxy`의 `/v1/ev-charger/info`와 `/v1/ev-charger/status`가 `getChargerInfo`, `getChargerStatus`를 중계한다. 기존 공공데이터포털 키와 별개로 데이터셋 활용신청이 필요하며 자동승인 대상이다.
+- 환경부 무공해차 통합누리집 구매보조금 지급현황: https://ev.or.kr/nportal/buySupprt/initSubsidyPaymentCheckAction.do — 로그인 없는 공개 POST 응답에서 지자체별 민간공고·접수·출고·출고잔여 대수와 비고를 제공한다. `pnp4web` 보호 응답은 공개 문자표만 파싱해 복원하며 원격 코드를 실행하지 않는다.
+- 환경부 무공해차 통합누리집 모델별 보조금: https://ev.or.kr/nportal/buySupprt/psPopupLocalCarModelPrice.do — `year`, `local_cd`, `car_type`을 받는 로그인 없는 공개 POST 표면으로 모델별 국비·지방비·합계와 전환지원금을 제공한다.
+- 공공데이터포털 건축물대장정보 서비스: https://www.data.go.kr/data/15134735/openapi.do — 공식 `https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo` XML을 `/v1/building-register/title`이 파싱한다. 주소 입력은 `/v1/kakao-local/geocode`의 10자리 법정동 `b_code`와 필지 번호를 먼저 사용한다. 기존 키와 별개로 데이터셋 활용신청이 필요하며 자동승인 대상이다.
+- RISS 검색 API 센터: https://www.riss.kr/apicenter/apiSearchThesis.do 및 자료유형별 API 정보 — `https://www.riss.kr/openApi`의 `key`, `version=1.0`, type별 XML, `rsnum`, `rowcount(최대100)` 계약을 `/v1/keris-academic/search`가 사용한다. 공공데이터포털 `15071949`는 관련 정적 종합목록/카탈로그 데이터로만 기록하며 논문 검색에 사용하지 않는다.
+- 전국전기차충전소표준데이터: https://www.data.go.kr/data/15013115/standard.do — live API 실패 시 포털에서 사용자가 직접 내려받은 CSV를 정적/수동 fallback으로만 사용한다. 문서화되지 않은 CSV URL은 추측하지 않는다.
 - 숲나들e 공식 사이트: https://foresttrip.go.kr/index.jsp
 - 숲나들e 로그인: https://www.foresttrip.go.kr/com/login.do
 - 숲나들e 월별예약조회 화면: https://www.foresttrip.go.kr/rep/or/sssn/monthRsrvtSmplStatus.do
@@ -17,6 +23,25 @@
 - `kbo-game`: https://github.com/vkehfdl1/kbo-game
 - KBL 일정/결과 API: https://api.kbl.or.kr/match/list
 - KBL 팀 순위 API: https://api.kbl.or.kr/league/rank/team
+- 중앙선거관리위원회 공무국외출장보고서 게시판: https://www.nec.go.kr/site/nec/ex/bbs/List.do?cbIdx=1107 — 인증 불필요, 서버 렌더 HTML 게시글 + 첨부 PDF/HWP/HWPX 등 제공, read-only 직접 조회. 상세는 `/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=<게시글ID>`, 첨부는 `/common/board/Download.do?bcIdx=<게시글ID>&cbIdx=1107&streFileNm=<서버파일명>` 패턴을 사용한다. 2026-07-08 실측에서 목록 62건의 첨부가 모두 PDF였고, `bcIdx=303199` PDF 첨부는 `kordoc` JSON 추출에 성공했다. 2026-07-14 재실측에서는 목록 **GET `pageIndex`** 로 1..5페이지 유니크 62건을 수집했고, 같은 날 문서에 적혀 있던 POST `pageIndex` 예시는 서버 오류 페이지를 반환했다. 직접 HTTP timeout도 환경에 따라 날 수 있어 Aside Browser fallback은 유지한다. Aside 경로에서 목록 62건/5페이지와 상세·첨부 링크가 정상 노출되는 경로가 확인되었다. 원본 파일은 레포에 저장하지 않고, 요청 간 지연과 세션 호출 수 제한으로 과도한 요청을 피한다.
+- 중앙선거관리위원회 몰디브 대통령선거 참관 국외출장 보고서: https://www.nec.go.kr/site/nec/ex/bbs/View.do?cbIdx=1107&bcIdx=194497 — 2026-07-08 실측에서 공식 게시판 4페이지에 `몰디브 대통령선거 참관 국외출장 보고서`와 PDF 첨부 `몰디브_대통령선거_참관_결과보고서(게시).pdf`가 확인되었다. 첨부 다운로드 URL은 `https://www.nec.go.kr/common/board/Download.do?bcIdx=194497&cbIdx=1107&streFileNm=bbe8597a-c81d-4e6f-8d18-f2fcfb9b5cde.pdf`이며, `kordoc` JSON 추출 결과 `success: true`, `fileType: "pdf"`, Markdown 28,149자로 확인되었다. 비용·일정·휴양지 맥락을 원문 인용 기반 검토 신호와 맥락 플래그로 분리하는 실측 샘플로만 사용하고, 원본 파일은 레포에 저장하지 않는다.
+- 국민권익위원회 국외출장 현황(사전정보공개): https://www.acrc.go.kr/board.es?mid=a10502060000&bid=1000 — 로그인 없이 list_no 기반 목록/상세와 `boardDownload.es` 첨부(주로 HWPX). 2026-07-14 live에서 nPage 페이징 확인.
+- 정보공개포털 사전정보 검색: https://www.open.go.kr/othicInfo/infoList/infoList.do?mustKeyword=국외출장 — HTML 내 `var result = {rtnList:...}` JSON 메타. 다수 교육청·지자체 문서 제목/기관/일자를 반환. 원문 파일 직접 URL은 제한적.
+- 대구광역시의회 공무국외출장: https://council.daegu.go.kr/kr/bbs?bbs_id=overseas — 단따옴표 href 목록, 상세 첨부 `/attach/bbs/overseas/*.pdf` 및 `/kr/bbs/download`. 2026-07-14 PDF 다운로드 확인.
+- 대전광역시의회 공무국외출장: https://council.daejeon.go.kr/svc/inf/TrainingReportList.do — `TrainingReportView.do?bbsSn=` 상세, 첨부 `/bbs/FileDownLoadProc.do?flSn=`. 2026-07-14 PDF 응답 확인.
+- 경기도의회 국외훈련결과보고서: https://www.ggc.go.kr/site/main/board/training_resrep/list — 상세 `/site/main/board/training_resrep/<id>`, 첨부 `/site/main/file/download/uu/<id>`.
+- 경상북도의회 공지(출장계획 공개): https://council.gb.go.kr/kr/bbs?bbs_id=notice — 제목 키워드 `출장` 필터. 계획서 hwp/pdf 첨부.
+- 국외출장연수정보시스템(BTIS): https://btis.mpm.go.kr/ — 공개 unauth bulk list/API 없음(login wall). **스킬 provider에서 제외**. 제도 배경은 인사혁신처 안내 페이지만 사용.
+- 인사혁신처 공무국외출장 안내: https://www.mpm.go.kr/mpm/info/infoService/BizService08/ — 심사기준으로 출장의 필요성, 방문국과 방문기관의 타당성, 출장자의 적합성, 출장시기의 적시성, 출장경비의 적정성을 제시한다. 보고서는 귀국 후 30일 이내 제출하고, 소속장관은 제출받은 날부터 15일 이내 국외출장연수정보시스템에 등록해야 한다고 안내한다.
+- 공무원 여비 규정: https://www.law.go.kr/lsInfoP.do?lsiSeq=282471 — 국외 항공운임은 제12조 및 별표 3 기준을 참고한다. 고비용 좌석 검토 신호는 최종 위법·낭비 판정이 아니라 원문과 공식 기준 대조가 필요한 항목을 표시하는 용도로만 사용한다.
+- 공무원 여비 규정 별표 3 국외 항공운임 지급 기준표: https://www.law.go.kr/LSW/flDownload.do?bylClsCd=110201&flSeq=160162321&gubun= — 별표 1 제1호 공무원은 실비(1등석), 별표 1 제2호 공무원은 실비(2등석) 기준으로 안내된다.
+- 인사혁신처 여비 FAQ: https://www.mpm.go.kr/mpm/info/hrFAQ/?boardId=bbs_0000000000000125&category=cat3&mode=list — 여비 지급구분표 제2호의 이코노미 탑승 대상자는 이코노미 컴포트·프리미엄 이코노미 등 추가 비용이 소요되는 좌석을 이용할 수 없다고 안내한다.
+- 행정안전부/정책브리핑 지방의회의원 외유성 출장 방지 사전·사후관리 강화: https://www.korea.kr/news/policyNewsView.do?newsId=148938493 — 출장계획서 사전공개, 방문기관·직원명단·비용 통합 심사, 사후 적법·적정성 심의, 심사결과서 공개, 예산 지출 제한, 1일 1기관 방문 권고, 수행인원 최소화 등을 공개·미공개 항목과 원문 인용 기반 검토 신호의 참고 기준으로 사용한다.
+- 행정안전부 지방의회 임기 만료 전 단순 외유성 출장 방지 보도자료: https://www.mois.go.kr/frt/bbs/type010/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000008&nttId=122031 — 단순 외유성 공무국외출장 방지와 규칙 표준 개정 권고를 참고한다.
+- 행정안전부 지방의원 임기만료 전 외유성 공무국외출장 방지 대책 브리핑: https://www.korea.kr/briefing/policyBriefingView.do?newsId=156731524 — 권익위 실태점검의 항공권 위·변조, 특정 경비 부풀리기 지적을 배경으로 1일 1기관 방문, 출장계획서 사전공개, 출장 후 심의 의무화, 임기말 일반 출장 제한, 긴급성·인원 최소성·결과 활용 가능성 검토를 강화한다고 설명한다.
+- 국민권익위원회 지방의회 국외출장 실태 보도자료: https://www.acrc.go.kr/board.es?act=view&bid=4A&list_no=83269&mid=a10402010000 — 항공료 조작, 외유성 논란 등은 단건 공개 보고서에서 단정하지 않고, 외부 감사자료 대조가 필요한 별도 확장 항목의 참고 사례로 사용한다.
+- 국민권익위원회 실태점검 정책브리핑: https://www.korea.kr/news/policyNewsView.do?newsId=148937518 — 243개 지방의회 실태점검에서 항공권 조작, 여비 허위청구, 관광 목적 비용 부풀리기, 과도한 수행인원, 출장 중 부적절 물품 구매 등이 드러났다고 설명한다. 이 자료의 문제 유형은 공개 문서에서 원문 인용으로 확인 가능한 검토 신호와 외부 감사자료 없이는 판단 불가한 항목으로 분리해 사용한다.
+- 한겨레 선관위 몰디브·코타키나발루 출장 보도: https://www.hani.co.kr/arti/politics/politics_general/1263881.html — 최근 5년 선관위 직원 국외출장 107회, 461명, 총 예산 24억5255만원 및 몰디브·코타키나발루 등 휴양지 논란을 보도했다. 이 보도는 최근 논란 맥락을 설명하는 보조 자료일 뿐 감사·법적 판단 근거로 사용하지 않는다.
 - tossinvest-cli: https://github.com/JungHoonGhae/tossinvest-cli
 - 토스증권 공식 Open API 문서: https://developers.tossinvest.com/docs
 - 토스증권 공식 Open API OpenAPI JSON (source of truth): https://openapi.tossinvest.com/openapi-docs/latest/openapi.json
@@ -261,3 +286,7 @@
 - 예비군 상훈: https://www.yebigun1.mil.kr/dmobis/rfh/rrm/reserveforce/ReserveForcePrzdcr.do
 - 예비군 사이트맵: https://www.yebigun1.mil.kr/dmobis/rfh/rgt/sitemap/sitemap.jsp
 - 병무청 디지털서비스개방 청년 동원훈련 일정조회(v1에서 비교 대상으로 시도하지 않음): https://openservice.go.kr/youthMilTrainSch
+- 국가유산청 국가유산 정보 Open API 안내: https://www.khs.go.kr/html/HtmlPage.do?mn=NS_04_04_03&pg=%2Fpublicinfo%2Fpbinfo3_0201.jsp — 국가유산 목록·상세·이미지·동영상·음성·행사 공개 endpoint를 안내한다.
+- 국가유산 목록 API: https://www.khs.go.kr/cha/SearchKindOpenapiList.do — `ccbaMnm1`, `ccbaCtcd`, `pageUnit`, `pageIndex`, `ccbaCncl` 기준 목록 조회. 2026-07-15 실측에서 `ccbaMnm1=경복궁`, `ccbaCtcd=11` 조건으로 XML 11건을 반환했다.
+- 국가유산 상세 API: https://www.khs.go.kr/cha/SearchKindOpenapiDt.do — `ccbaKdcd`, `ccbaAsno`, `ccbaCtcd`로 설명·주소·좌표·이미지를 조회한다. 2026-07-15 실측에서 서울 숭례문 상세 XML 응답을 확인했다.
+- 국가유산 행사 API: https://www.khs.go.kr/cha/openapi/selectEventListOpenapi.do — `searchYear`, `searchMonth`로 월별 국가유산 활용 행사를 조회한다. 2026-07-15 실측에서 2026년 7월 행사 XML 응답을 확인했다.

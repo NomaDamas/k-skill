@@ -1180,6 +1180,23 @@ test("repository docs advertise the gangnamunni-clinic-search skill across insta
   assert.match(sources, /강남언니 공개 병원 페이지: https:\/\/www\.gangnamunni\.com\/hospitals\/<id>/);
 });
 
+test("repository docs advertise ev-subsidy-status across documented surfaces", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "ev-subsidy-status.md");
+  const skillPath = path.join(repoRoot, "ev-subsidy-status", "SKILL.md");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/ev-subsidy-status.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected ev-subsidy-status/SKILL.md to exist");
+  assert.match(readme, /\| 전기차 보조금 현황 조회 \| `ev-subsidy-status` \|/);
+  assert.match(readme, /\[전기차 보조금 현황 조회 가이드\]\(docs\/features\/ev-subsidy-status\.md\)/);
+  assert.match(install, /--skill ev-subsidy-status/);
+  assert.match(install, /npm install -g .*ev-subsidy-status/);
+  assert.match(sources, /환경부 무공해차 통합누리집 구매보조금 지급현황: https:\/\/ev\.or\.kr\/nportal\/buySupprt\/initSubsidyPaymentCheckAction\.do/);
+  assert.match(sources, /환경부 무공해차 통합누리집 모델별 보조금: https:\/\/ev\.or\.kr\/nportal\/buySupprt\/psPopupLocalCarModelPrice\.do/);
+});
+
 test("repository docs advertise the market-kurly-search skill across the documented surfaces", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
@@ -2239,6 +2256,53 @@ test("joseon-sillok-search install payload includes the documented helper comman
   }
 });
 
+test("repository docs advertise the korean-heritage-search skill and official API", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-heritage-search.md");
+  const featureDoc = read(path.join("docs", "features", "korean-heritage-search.md"));
+  const skillPath = path.join(repoRoot, "korean-heritage-search", "SKILL.md");
+  const skill = read(path.join("korean-heritage-search", "SKILL.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+
+  assert.ok(fs.existsSync(featureDocPath), "expected heritage feature documentation to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-heritage-search/SKILL.md to exist");
+  assert.match(readme, /\| 국가유산 검색·행사 조회 \|/);
+  assert.match(readme, /\[한국 국가유산 검색 가이드\]\(docs\/features\/korean-heritage-search\.md\)/);
+  assert.match(install, /--skill korean-heritage-search/);
+  assert.match(skill, /SearchKindOpenapiList\.do/);
+  assert.match(skill, /SearchKindOpenapiDt\.do/);
+  assert.match(skill, /selectEventListOpenapi\.do/);
+  assert.match(featureDoc, /ccbaMnm1/);
+  assert.match(featureDoc, /ccbaKdcd/);
+  assert.match(sources, /https:\/\/www\.khs\.go\.kr\/cha\/SearchKindOpenapiList\.do/);
+  assert.match(roadmap, /한국 국가유산 검색·행사 조회 스킬 출시/);
+});
+
+test("korean-heritage-search install payload includes the documented helper commands", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "korean-heritage-"));
+  const installedSkillPath = path.join(tempRoot, "korean-heritage-search");
+  const bundledHelperPath = path.join(installedSkillPath, "scripts", "korean_heritage_search.py");
+
+  try {
+    fs.cpSync(path.join(repoRoot, "korean-heritage-search"), installedSkillPath, { recursive: true });
+    assert.ok(fs.existsSync(bundledHelperPath), "expected bundled heritage helper to exist");
+    const pythonCommand = process.platform === "win32" ? "python" : "python3";
+    const helpText = childProcess.execFileSync(pythonCommand, ["scripts/korean_heritage_search.py", "--help"], {
+
+      cwd: installedSkillPath,
+      encoding: "utf8",
+    });
+
+    assert.match(helpText, /Search official Korean heritage records and events/);
+    assert.match(helpText, /search/);
+    assert.match(helpText, /detail/);
+    assert.match(helpText, /events/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
 test("repository docs advertise the korean-patent-search skill and official KIPRIS Plus API setup", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
@@ -4105,6 +4169,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["한국 주식 정보 조회", "korean-stock-search"],
   ["금감원 DART 전자공시 조회", "k-dart"],
   ["조선왕조실록 검색", "joseon-sillok-search"],
+  ["국가유산 검색·행사 조회", "korean-heritage-search"],
   ["한국 특허 정보 검색", "korean-patent-search"],
   ["근처 가장 싼 주유소 찾기", "cheap-gas-nearby"],
   ["근처 공중화장실 찾기", "public-restroom-nearby"],
@@ -4292,4 +4357,22 @@ test("court auction pending changeset does not publish stale fallback or pageSiz
       "Changeset should document the exact PGJ151 pageSize allowlist",
     );
   }
+});
+
+test("building register public docs use standard PNU land-category digits", () => {
+  const docs = [
+    ["feature guide", read(path.join("docs", "features", "building-register-search.md"))],
+    ["proxy feature guide", read(path.join("docs", "features", "k-skill-proxy.md"))],
+    ["proxy package README", read(path.join("packages", "k-skill-proxy", "README.md"))],
+  ];
+
+  for (const [label, doc] of docs) {
+    assert.doesNotMatch(doc, /1168010100001230004/, `${label} should not publish a PNU with land category 0`);
+    assert.match(doc, /1168010100101230004/, `${label} should publish a valid normal-land PNU example`);
+  }
+
+  const featureGuide = docs[0][1];
+  assert.match(featureGuide, /토지구분\(1\)/);
+  assert.match(featureGuide, /`1`\(일반 토지\)[\s\S]*`platGbCd=0`/);
+  assert.match(featureGuide, /`2`\(산\)[\s\S]*`platGbCd=1`/);
 });

@@ -30,6 +30,12 @@ KSKILL_FORESTTRIP_PASSWORD=replace-me
 KSKILL_KOSIS_API_KEY=replace-me
 # 창업진흥원 K-Startup 일반 조회는 hosted proxy 사용. --direct 때만 채운다.
 KSKILL_KSTARTUP_API_KEY=replace-me
+# EV 충전소 일반 조회는 hosted proxy 사용. --direct 때만 채운다.
+KSKILL_EV_CHARGER_API_KEY=replace-me
+# 건축물대장 일반 조회는 hosted proxy 사용. --direct 때만 채운다.
+KSKILL_BUILDING_REGISTER_API_KEY=replace-me
+# RISS 학술자료 일반 조회는 hosted proxy 사용. --direct/self-host 때만 채운다.
+KSKILL_RISS_API_KEY=replace-me
 LAW_OC=replace-me
 KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
@@ -47,7 +53,13 @@ chmod 0600 ~/.config/k-skill/secrets.env
 
 실제 값을 채운다.
 
-서울 지하철 도착정보, 서울 실시간 혼잡도 조회, 서울 따릉이 실시간 대여소 조회, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. KOSIS 일반 조회와 Kakao Local geocoding도 같은 기본 hosted path를 쓴다. 별도 self-host proxy를 쓸 때만 `KSKILL_PROXY_BASE_URL` 을 채운다.
+서울 지하철 도착정보, 서울 실시간 혼잡도 조회, 서울 따릉이 실시간 대여소 조회, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. 전기차 충전소와 건축물대장 표제부 조회도 같은 기본 hosted path를 쓴다. KOSIS 일반 조회와 Kakao Local geocoding도 같은 기본 hosted path를 쓴다. 별도 self-host proxy를 쓸 때만 `KSKILL_PROXY_BASE_URL` 을 채운다.
+
+전기차 충전소 일반 조회는 hosted proxy를 사용하므로 사용자 키가 필요 없다. `--direct`에서만 `KSKILL_EV_CHARGER_API_KEY` 또는 `DATA_GO_KR_API_KEY`를 사용하며, 기존 키가 있어도 데이터셋 `15076352` 활용신청은 별도로 해야 한다(자동승인).
+
+건축물대장 표제부 일반 조회는 hosted proxy를 사용하므로 사용자 키가 필요 없다. 주소 입력도 hosted Kakao geocode를 사용한다. `--direct`에서는 주소를 받지 않고 `KSKILL_BUILDING_REGISTER_API_KEY` 또는 `DATA_GO_KR_API_KEY`를 사용하며, 데이터셋 `15134735` 활용신청은 별도로 해야 한다(자동승인).
+
+KERIS/RISS 학술자료 일반 조회는 hosted proxy를 사용하므로 사용자 키가 필요 없다. `--direct` 또는 self-host proxy 운영 시 `KSKILL_RISS_API_KEY`를 사용하고, 호환 목적으로 `RISS_API_KEY`도 허용한다. RISS 검색에는 `DATA_GO_KR_API_KEY`를 사용하지 않는다.
 
 한국 법령 검색은 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)의 `/v1/korean-law/...` endpoint를 경유하므로 사용자 쪽 `LAW_OC` 가 불필요하다. self-host proxy 운영자만 서버 환경변수 `LAW_OC` 를 채운다(무료 발급: `https://open.law.go.kr`).
 
@@ -115,6 +127,9 @@ bash scripts/check-setup.sh
 | 의약품 안전 체크 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`가 설정된 hosted/self-host 사용) |
 | 식품 안전 체크 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`와 선택적 `FOODSAFETYKOREA_API_KEY`가 설정된 hosted/self-host 사용) |
 | 창업진흥원 K-Startup 조회 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`가 설정된 hosted/self-host 사용; `--direct` 호출 때만 `KSKILL_KSTARTUP_API_KEY`) |
+| 전기차 충전소 위치·상태 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct` 때만 `KSKILL_EV_CHARGER_API_KEY` 또는 `DATA_GO_KR_API_KEY`, 데이터셋 `15076352` 별도 활용신청) |
+| 건축물대장 표제부 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct` 때만 `KSKILL_BUILDING_REGISTER_API_KEY` 또는 `DATA_GO_KR_API_KEY`, 데이터셋 `15134735` 별도 활용신청) |
+| KERIS/RISS 학술자료 검색 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct`/self-host 때만 `KSKILL_RISS_API_KEY`, 호환 `RISS_API_KEY`) |
 
 ## 다음에 볼 문서
 
@@ -141,6 +156,9 @@ bash scripts/check-setup.sh
 - [의약품 안전 체크 가이드](features/mfds-drug-safety.md)
 - [식품 안전 체크 가이드](features/mfds-food-safety.md)
 - [창업진흥원 K-Startup 조회 가이드](features/kstartup-search.md)
+- [전기차 충전소 위치·상태 조회 가이드](features/ev-charger-nearby.md)
+- [건축물대장 표제부 조회 가이드](features/building-register-search.md)
+- [KERIS/RISS 학술자료 검색 가이드](features/keris-academic-search.md)
 - [팝빌 all-service API helper](features/popbill.md)
 - [지방선거 후보자 조회 가이드](features/local-election-candidate-search.md)
 - [보안/시크릿 정책](security-and-secrets.md)

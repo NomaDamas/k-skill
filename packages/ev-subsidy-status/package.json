@@ -1,0 +1,37 @@
+{
+  "name": "ev-subsidy-status",
+  "version": "0.1.0",
+  "description": "Korean regional electric-vehicle subsidy availability lookup",
+  "license": "MIT",
+  "main": "src/index.js",
+  "bin": {
+    "ev-subsidy-status": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "electric-vehicle",
+    "subsidy"
+  ],
+  "scripts": {
+    "lint": "node --check src/index.js src/cli.js src/browser.js src/http.js src/pnp.js src/constants.js src/errors.js src/parse.js src/availability.js src/estimate.js test/index.test.js test/browser.test.js test/http.test.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "k-skill-browser-runtime": "^0.2.0"
+  }
+}

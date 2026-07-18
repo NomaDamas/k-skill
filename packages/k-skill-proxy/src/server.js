@@ -39,6 +39,13 @@ const {
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const {
+  VWORLD_CREDENTIAL_HEADER,
+  isVWorldSuccessBody,
+  normalizeVWorldPriceQuery,
+  normalizeVWorldSearchQuery,
+  proxyVWorldRequest
+} = require("./vworld");
+const {
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
   proxyNtsBusinessRequest
@@ -55,6 +62,9 @@ const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require
 const { normalizeFscCorpQuery, fetchFscCorpOutline } = require("./fsc-corp");
 const { normalizeG2bSanctionQuery, fetchG2bSanctions } = require("./g2b-sanction");
 const { normalizeG2bOrderPlanQuery, fetchG2bOrderPlans } = require("./g2b-order-plan");
+const { fetchEvCharger, normalizeEvChargerQuery } = require("./ev-charger");
+const { fetchBuildingRegisterTitle, normalizeBuildingRegisterQuery } = require("./building-register");
+const { fetchKerisAcademicSearch, normalizeKerisAcademicQuery } = require("./keris-academic");
 const {
   normalizeKoreanLawDetailQuery,
   normalizeKoreanLawSearchQuery,
@@ -211,6 +221,9 @@ function buildConfig(env = process.env) {
     hrfcoApiKey: trimOrNull(env.HRFCO_OPEN_API_KEY),
     opinetApiKey: trimOrNull(env.OPINET_API_KEY),
     molitApiKey: trimOrNull(env.DATA_GO_KR_API_KEY),
+    evChargerApiKey: trimOrNull(env.DATA_GO_KR_API_KEY),
+    buildingRegisterApiKey: trimOrNull(env.DATA_GO_KR_API_KEY),
+    rissApiKey: trimOrNull(env.KSKILL_RISS_API_KEY) || trimOrNull(env.RISS_API_KEY),
     data4libraryAuthKey: trimOrNull(env.DATA4LIBRARY_AUTH_KEY),
     foodsafetyKoreaApiKey: trimOrNull(env.FOODSAFETYKOREA_API_KEY),
     kakaoRestApiKey: trimOrNull(env.KAKAO_REST_API_KEY),
@@ -259,23 +272,42 @@ function isFailureResponse(value) {
   return false;
 }
 
-function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
+function createMemoryCache({
+  maxEntries = 1000,
+  maxBytes = Number.POSITIVE_INFINITY,
+  sizeOf = () => 0,
+  now = Date.now
+} = {}) {
   const entries = new Map();
+  let totalBytes = 0;
 
-  function makeRoom() {
-    if (entries.size < maxEntries) {
+  function deleteEntry(key) {
+    const entry = entries.get(key);
+    if (!entry) {
+      return;
+    }
+    totalBytes -= entry.size;
+    entries.delete(key);
+  }
+
+  function makeRoom(requiredBytes) {
+    if (entries.size < maxEntries && totalBytes + requiredBytes <= maxBytes) {
       return;
     }
 
     const currentTime = now();
     for (const [key, entry] of entries) {
       if (entry.expiresAt <= currentTime) {
-        entries.delete(key);
+        deleteEntry(key);
       }
     }
 
-    while (entries.size >= maxEntries) {
-      entries.delete(entries.keys().next().value);
+    while (entries.size >= maxEntries || totalBytes + requiredBytes > maxBytes) {
+      const oldestKey = entries.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      deleteEntry(oldestKey);
     }
   }
 
@@ -287,7 +319,7 @@ function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
       }
 
       if (cached.expiresAt <= now()) {
-        entries.delete(key);
+        deleteEntry(key);
         return null;
       }
 
@@ -297,11 +329,18 @@ function createMemoryCache({ maxEntries = 1000, now = Date.now } = {}) {
       if (isFailureResponse(value)) {
         return false;
       }
-      makeRoom();
+      const entrySize = Math.max(0, Number(sizeOf(value)) || 0);
+      if (entrySize > maxBytes) {
+        return false;
+      }
+      deleteEntry(key);
+      makeRoom(entrySize);
       entries.set(key, {
         value,
+        size: entrySize,
         expiresAt: now() + ttlMs
       });
+      totalBytes += entrySize;
       return true;
     }
   };
@@ -326,7 +365,14 @@ function buildRateLimiter(config, { now = Date.now } = {}) {
     }
   }
 
-  return function rateLimit(request, reply) {
+  return function rateLimit(request, reply, cost = 1) {
+    if (!Number.isInteger(cost) || cost < 0) {
+      throw new Error("Rate-limit cost must be a non-negative integer.");
+    }
+    if (cost === 0) {
+      return true;
+    }
+
     const key = request.ip || "unknown";
     const currentTime = now();
     const current = state.get(key);
@@ -335,14 +381,22 @@ function buildRateLimiter(config, { now = Date.now } = {}) {
       if (!current) {
         makeRoom(currentTime);
       }
+      if (cost > config.rateLimitMax) {
+        reply.code(429).send({
+          error: "rate_limited",
+          message: "Too many requests.",
+          retry_after_ms: config.rateLimitWindowMs
+        });
+        return false;
+      }
       state.set(key, {
-        count: 1,
+        count: cost,
         resetAt: currentTime + config.rateLimitWindowMs
       });
       return true;
     }
 
-    if (current.count >= config.rateLimitMax) {
+    if (current.count + cost > config.rateLimitMax) {
       reply.code(429).send({
         error: "rate_limited",
         message: "Too many requests.",
@@ -351,7 +405,7 @@ function buildRateLimiter(config, { now = Date.now } = {}) {
       return false;
     }
 
-    current.count += 1;
+    current.count += cost;
     return true;
   };
 }
@@ -2032,6 +2086,11 @@ function validateHouseholdWastePaginationQuery(query) {
 function buildServer({ env = process.env, provider = null, now = () => new Date() } = {}) {
   const config = buildConfig(env);
   const cache = createMemoryCache({ maxEntries: config.cacheMaxEntries });
+  const vworldCache = createMemoryCache({
+    maxEntries: Math.min(config.cacheMaxEntries, 100),
+    maxBytes: 16 * 1024 * 1024,
+    sizeOf: (value) => Buffer.byteLength(String(value?.body || ""), "utf8")
+  });
   const rateLimit = buildRateLimiter(config);
   const app = Fastify({
     logger: true,
@@ -2082,6 +2141,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
         naverNewsApiConfigured: naverSearchKeysPresent,
+        vworldRelayAvailable: true,
         ntsBusinessConfigured: Boolean(config.molitApiKey),
         kstartupConfigured: Boolean(config.molitApiKey),
         nhisCareConfigured: Boolean(config.molitApiKey),
@@ -2089,6 +2149,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         nationalPensionConfigured: Boolean(config.molitApiKey),
         fscCorpConfigured: Boolean(config.molitApiKey),
         g2bSanctionConfigured: Boolean(config.molitApiKey),
+        evChargerConfigured: Boolean(config.evChargerApiKey),
+        buildingRegisterConfigured: Boolean(config.buildingRegisterApiKey),
+        kerisAcademicConfigured: Boolean(config.rissApiKey),
         koreanLawConfigured: Boolean(config.lawOc)
       },
       auth: {
@@ -2097,6 +2160,68 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       timestamp: new Date().toISOString()
     };
   });
+
+  async function handleVWorldRoute({ operation, normalize, cacheRoute, request, reply }) {
+    reply.header("cache-control", "private, no-store");
+    reply.header("vary", VWORLD_CREDENTIAL_HEADER);
+    let normalized;
+    try {
+      normalized = normalize(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return {
+        error: "bad_request",
+        message: error.message
+      };
+    }
+
+    const apiKey = trimOrNull(request.headers[VWORLD_CREDENTIAL_HEADER]);
+    if (!apiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: `Provide the VWorld credential in the ${VWORLD_CREDENTIAL_HEADER} header.`
+      };
+    }
+
+    const credentialScope = crypto.createHash("sha256").update(apiKey).digest("hex");
+    const cacheKey = makeCacheKey({ route: cacheRoute, credentialScope, ...normalized });
+    const cached = vworldCache.get(cacheKey);
+    if (cached) {
+      reply.code(cached.statusCode);
+      reply.header("content-type", cached.contentType);
+      return cached.body;
+    }
+
+    const upstream = await proxyVWorldRequest({ operation, params: normalized, apiKey });
+    if (
+      operation === "search" &&
+      upstream.statusCode >= 200 &&
+      upstream.statusCode < 300 &&
+      isVWorldSuccessBody(operation, upstream.body, normalized)
+    ) {
+      vworldCache.set(cacheKey, upstream, config.cacheTtlMs);
+    }
+    reply.code(upstream.statusCode);
+    reply.header("content-type", upstream.contentType);
+    return upstream.body;
+  }
+
+  app.get("/v1/vworld/search", async (request, reply) => handleVWorldRoute({
+    operation: "search",
+    normalize: normalizeVWorldSearchQuery,
+    cacheRoute: "vworld-search",
+    request,
+    reply
+  }));
+
+  app.get("/v1/vworld/apartment-prices", async (request, reply) => handleVWorldRoute({
+    operation: "prices",
+    normalize: normalizeVWorldPriceQuery,
+    cacheRoute: "vworld-apartment-prices",
+    request,
+    reply
+  }));
 
   app.get("/B552584/:service/:operation", async (request, reply) => {
     const { service, operation } = request.params;
@@ -2925,6 +3050,111 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);
     return upstream.body;
+  });
+
+  async function handleEvChargerRoute(operation, request, reply) {
+    let normalized;
+    try {
+      normalized = normalizeEvChargerQuery(operation, request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return { error: "bad_request", message: error.message };
+    }
+
+    const cacheKey = makeCacheKey({ route: `ev-charger-${operation}`, ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: { ...cached.proxy, cache: { hit: true, ttl_ms: config.cacheTtlMs } }
+      };
+    }
+
+    const result = await fetchEvCharger({
+      params: normalized,
+      serviceKey: config.evChargerApiKey
+    });
+    if (result.error) {
+      reply.code(result.status_code || 502);
+      return result;
+    }
+    const payload = {
+      ...result,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  }
+
+  app.get("/v1/ev-charger/info", async (request, reply) => handleEvChargerRoute("info", request, reply));
+  app.get("/v1/ev-charger/status", async (request, reply) => handleEvChargerRoute("status", request, reply));
+
+  app.get("/v1/building-register/title", async (request, reply) => {
+    let normalized;
+    try {
+      normalized = normalizeBuildingRegisterQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return { error: "bad_request", message: error.message };
+    }
+
+    const cacheKey = makeCacheKey({ route: "building-register-title", ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: { ...cached.proxy, cache: { hit: true, ttl_ms: config.cacheTtlMs } }
+      };
+    }
+
+    const result = await fetchBuildingRegisterTitle({
+      params: normalized,
+      serviceKey: config.buildingRegisterApiKey
+    });
+    if (result.error) {
+      reply.code(result.status_code || 502);
+      return result;
+    }
+    const payload = {
+      ...result,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
+  app.get("/v1/keris-academic/search", async (request, reply) => {
+    let normalized;
+    try {
+      normalized = normalizeKerisAcademicQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return { error: "bad_request", message: error.message };
+    }
+    const cacheKey = makeCacheKey({ route: "keris-academic-search", ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) return { ...cached, proxy: { ...cached.proxy, cache: { hit: true, ttl_ms: config.cacheTtlMs } } };
+    const extraCost = normalized.upstreamTypes.length - 1;
+    if (extraCost > 0 && !rateLimit(request, reply, extraCost)) return reply;
+    const result = await fetchKerisAcademicSearch({ params: normalized, apiKey: config.rissApiKey });
+    if (result.error) {
+      reply.code(result.status_code || 502);
+      return result;
+    }
+    const payload = {
+      ...result,
+      proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }, requested_at: new Date().toISOString() }
+    };
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
   });
 
   app.get("/v1/nhis/long-term-care", async (request, reply) => {
@@ -5671,6 +5901,8 @@ module.exports = {
   normalizeSeoulBikePageQuery,
   normalizeSeoulCityDataQuery,
   normalizeSeoulSubwayQuery,
+  normalizeVWorldPriceQuery,
+  normalizeVWorldSearchQuery,
   proxyAirKoreaRequest,
   proxyAssemblyRequest,
   proxyData4LibraryRequest,
@@ -5694,6 +5926,7 @@ module.exports = {
   proxySeoulBikeStationsRequest,
   proxySeoulCityDataRequest,
   proxySeoulSubwayRequest,
+  proxyVWorldRequest,
   resolveLatestKmaForecastBase,
   startServer
 };
