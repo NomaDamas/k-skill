@@ -71,10 +71,10 @@ test("model subsidy parser treats plain official amounts as 만원", () => {
   const parsed = parseModelSubsidyRows({
     headers: ["구분", "제조사", "모델", "국비(만원)", "지방비(만원)", "합계(만원)"],
     rows: [
-      ["승용", "현대", "아이오닉 5", "300", "120", "420"],
-      ["승용", "기아", "EV6", "290", "116", "406"]
+      ["승용", "제조사 A", "테스트 모델 A", "300", "120", "420"],
+      ["승용", "제조사 B", "테스트 모델 B", "290", "116", "406"]
     ]
-  }, { model: "아이오닉 5" })
+  }, { model: "테스트 모델 A" })
 
   assert.equal(parsed.items.length, 1)
   assert.equal(parsed.items[0].national_subsidy_krw, 3000000)
@@ -154,15 +154,15 @@ test("human output lists multiple matching model variants", () => {
     source: { fetched_at: "2026-07-18T20:00:00+09:00", url: "https://ev.or.kr/" },
     availability: { label: "open" },
     model_subsidy_candidates: [{
-      manufacturer: "기아",
-      model: "EV3 롱레인지",
+      manufacturer: "제조사",
+      model: "테스트 모델 세부형",
       total_subsidy_krw: 7400000,
       remaining_equivalent_estimate_krw: 666000000
     }],
     warnings: []
   })
 
-  assert.match(text, /EV3 롱레인지/)
+  assert.match(text, /테스트 모델 세부형/)
   assert.match(text, /7,400,000원/)
   assert.match(text, /666,000,000원/)
 })

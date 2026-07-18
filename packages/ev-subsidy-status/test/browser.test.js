@@ -97,7 +97,7 @@ test("browser workflow requests domcontentloaded and returns status plus model e
       if (operation === "model-table") {
         return {
           headers: ["구분", "제조사", "모델", "국비(만원)", "지방비(만원)", "합계(만원)"],
-          rows: [["승용", "현대", "아이오닉 5", "300", "120", "420"]]
+          rows: [["승용", "제조사", "테스트 모델", "300", "120", "420"]]
         }
       }
       throw new Error(`Unexpected operation: ${operation}`)
@@ -109,7 +109,7 @@ test("browser workflow requests domcontentloaded and returns status plus model e
     region: "경기 성남시",
     vehicleType: "passenger",
     year: 2026,
-    model: "아이오닉 5",
+    model: "테스트 모델",
     timeoutMs: 100
   })
 

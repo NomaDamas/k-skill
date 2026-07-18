@@ -60,7 +60,7 @@ test("direct HTML parser extracts the official model subsidy table", () => {
       </thead>
       <tbody>
         <tr>
-          <td>일반승용</td><td>기아</td><td>EV3 롱레인지 2WD 17인치</td>
+          <td>일반승용</td><td>제조사</td><td>테스트 모델 세부형 A</td>
           <td>555</td><td>185</td><td>740</td><td>100</td><td>33</td>
         </tr>
       </tbody>
@@ -79,8 +79,8 @@ test("direct HTML parser extracts the official model subsidy table", () => {
     ],
     rows: [[
       "일반승용",
-      "기아",
-      "EV3 롱레인지 2WD 17인치",
+      "제조사",
+      "테스트 모델 세부형 A",
       "555",
       "185",
       "740",
@@ -114,8 +114,8 @@ test("direct HTTP lookup returns all matching model variants without a browser",
         <th>국비 (만원)</th><th>지방비 (만원)</th><th>보조금 (만원)</th>
       </tr></thead>
       <tbody>
-        <tr><td>일반승용</td><td>기아</td><td>EV3 GT</td><td>248</td><td>82</td><td>330</td></tr>
-        <tr><td>일반승용</td><td>기아</td><td>EV3 롱레인지</td><td>555</td><td>185</td><td>740</td></tr>
+        <tr><td>일반승용</td><td>제조사</td><td>테스트 모델 세부형 A</td><td>248</td><td>82</td><td>330</td></tr>
+        <tr><td>일반승용</td><td>제조사</td><td>테스트 모델 세부형 B</td><td>555</td><td>185</td><td>740</td></tr>
       </tbody>
     </table>`
   const requests = []
@@ -134,7 +134,7 @@ test("direct HTTP lookup returns all matching model variants without a browser",
     region: "경기도 화성시 동탄",
     vehicleType: "passenger",
     year: 2026,
-    model: "EV3",
+    model: "테스트 모델",
     fetch
   })
 

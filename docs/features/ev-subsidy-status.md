@@ -26,7 +26,7 @@ npm install -g ev-subsidy-status
 npx ev-subsidy-status status \
   --region "경기도 화성시 동탄" \
   --vehicle passenger \
-  --model "EV3" \
+  --model "모델명" \
   --year 2026
 ```
 
@@ -60,7 +60,7 @@ npx ev-subsidy-status regions --query "중구"
 - `model_subsidy_candidates`: 입력한 모델명과 일치하는 세부 모델별 국비·지방비·합계
 - `remaining_equivalent_estimate_krw`: 공식 출고잔여대수에 해당 세부 모델의 1대당 보조금을 곱한 환산치
 
-`EV3`처럼 여러 트림과 일치하는 이름을 입력하면 한 모델을 임의로 고르지 않고 모든 일치 후보를 반환합니다.
+입력한 이름이 여러 세부 모델과 일치하면 한 모델을 임의로 고르지 않고 모든 일치 후보를 반환합니다.
 
 ## 정확한 예산 잔액과의 차이
 

@@ -98,11 +98,11 @@ npx ev-subsidy-status status \
 npx ev-subsidy-status status \
   --region "서울 강남구" \
   --vehicle passenger \
-  --model "아이오닉 5" \
+  --model "모델명" \
   --json
 ```
 
-직접 HTTP 경로에서도 공식 모델별 보조금 POST 표면을 조회한다. `EV3`처럼 여러 세부 모델과 일치하면 임의로 하나를 고르지 않고 `model_subsidy_candidates`에 모든 후보와 후보별 환산치를 반환한다. 정확한 세부 모델과 하나만 일치할 때는 `model_subsidy`와 `remaining_budget.model_equivalent_estimate_krw`도 함께 반환한다.
+직접 HTTP 경로에서도 공식 모델별 보조금 POST 표면을 조회한다. 입력한 이름이 여러 세부 모델과 일치하면 임의로 하나를 고르지 않고 `model_subsidy_candidates`에 모든 후보와 후보별 환산치를 반환한다. 정확한 세부 모델과 하나만 일치할 때는 `model_subsidy`와 `remaining_budget.model_equivalent_estimate_krw`도 함께 반환한다.
 
 `remaining_budget.model_equivalent_estimate_krw`는 다음 가정의 환산치다.
 

@@ -4,7 +4,7 @@
 
 ```bash
 npx ev-subsidy-status status --region "경기 성남시" --vehicle passenger --year 2026
-npx ev-subsidy-status status --region "서울 강남구" --model "아이오닉 5" --json
+npx ev-subsidy-status status --region "서울 강남구" --model "모델명" --json
 npx ev-subsidy-status regions --query "중구"
 ```
 
@@ -22,5 +22,5 @@ BrowserOS 또는 Chrome CDP 세션에 연결하며 기존 프로필이나 탭을
 
 공식 화면은 원화 잔액이 아니라 공고·접수·출고·출고잔여 대수를 제공한다.
 모델을 지정하면 직접 HTTP 경로에서도 모델별 국비·지방비·합계와 잔여 환산치를 조회한다.
-`EV3`처럼 여러 트림과 일치하면 모든 후보를 반환하며 한 트림을 임의로 선택하지 않는다.
+입력한 이름이 여러 세부 모델과 일치하면 모든 후보를 반환하며 한 세부 모델을 임의로 선택하지 않는다.
 환산치는 정확한 가용 예산 잔액이 아니다.
