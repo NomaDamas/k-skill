@@ -73,6 +73,7 @@ npx --yes skills add <owner/repo> \
   --skill mfds-drug-safety \
   --skill mfds-food-safety \
   --skill joseon-sillok-search \
+  --skill korean-heritage-search \
   --skill korean-patent-search \
   --skill korea-weather \
   --skill cheap-gas-nearby \

@@ -32,6 +32,6 @@
     "test": "node --test"
   },
   "dependencies": {
-    "k-skill-browser-runtime": "^0.3.0"
+    "k-skill-browser-runtime": "^0.2.0"
   }
 }

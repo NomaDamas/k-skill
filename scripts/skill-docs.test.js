@@ -2256,6 +2256,53 @@ test("joseon-sillok-search install payload includes the documented helper comman
   }
 });
 
+test("repository docs advertise the korean-heritage-search skill and official API", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const featureDocPath = path.join(repoRoot, "docs", "features", "korean-heritage-search.md");
+  const featureDoc = read(path.join("docs", "features", "korean-heritage-search.md"));
+  const skillPath = path.join(repoRoot, "korean-heritage-search", "SKILL.md");
+  const skill = read(path.join("korean-heritage-search", "SKILL.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const roadmap = read(path.join("docs", "roadmap.md"));
+
+  assert.ok(fs.existsSync(featureDocPath), "expected heritage feature documentation to exist");
+  assert.ok(fs.existsSync(skillPath), "expected korean-heritage-search/SKILL.md to exist");
+  assert.match(readme, /\| 국가유산 검색·행사 조회 \|/);
+  assert.match(readme, /\[한국 국가유산 검색 가이드\]\(docs\/features\/korean-heritage-search\.md\)/);
+  assert.match(install, /--skill korean-heritage-search/);
+  assert.match(skill, /SearchKindOpenapiList\.do/);
+  assert.match(skill, /SearchKindOpenapiDt\.do/);
+  assert.match(skill, /selectEventListOpenapi\.do/);
+  assert.match(featureDoc, /ccbaMnm1/);
+  assert.match(featureDoc, /ccbaKdcd/);
+  assert.match(sources, /https:\/\/www\.khs\.go\.kr\/cha\/SearchKindOpenapiList\.do/);
+  assert.match(roadmap, /한국 국가유산 검색·행사 조회 스킬 출시/);
+});
+
+test("korean-heritage-search install payload includes the documented helper commands", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "korean-heritage-"));
+  const installedSkillPath = path.join(tempRoot, "korean-heritage-search");
+  const bundledHelperPath = path.join(installedSkillPath, "scripts", "korean_heritage_search.py");
+
+  try {
+    fs.cpSync(path.join(repoRoot, "korean-heritage-search"), installedSkillPath, { recursive: true });
+    assert.ok(fs.existsSync(bundledHelperPath), "expected bundled heritage helper to exist");
+    const pythonCommand = process.platform === "win32" ? "python" : "python3";
+    const helpText = childProcess.execFileSync(pythonCommand, ["scripts/korean_heritage_search.py", "--help"], {
+
+      cwd: installedSkillPath,
+      encoding: "utf8",
+    });
+
+    assert.match(helpText, /Search official Korean heritage records and events/);
+    assert.match(helpText, /search/);
+    assert.match(helpText, /detail/);
+    assert.match(helpText, /events/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
 test("repository docs advertise the korean-patent-search skill and official KIPRIS Plus API setup", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
@@ -4122,6 +4169,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["한국 주식 정보 조회", "korean-stock-search"],
   ["금감원 DART 전자공시 조회", "k-dart"],
   ["조선왕조실록 검색", "joseon-sillok-search"],
+  ["국가유산 검색·행사 조회", "korean-heritage-search"],
   ["한국 특허 정보 검색", "korean-patent-search"],
   ["근처 가장 싼 주유소 찾기", "cheap-gas-nearby"],
   ["근처 공중화장실 찾기", "public-restroom-nearby"],
