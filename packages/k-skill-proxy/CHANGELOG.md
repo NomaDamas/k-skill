@@ -1,5 +1,12 @@
 # k-skill-proxy
 
+## 0.9.0
+
+### Minor Changes
+
+- aac715a: Add KISA WHOIS IP and AS lookups, and prefer Aside Browser first for automatic browser selection on macOS.
+- 1e82436: VWorld 단지 검색과 공동주택 공시가격 조회를 위한 두 개의 좁은 읽기 전용 relay 경로를 추가합니다. 호출자 키는 전용 HTTPS 헤더로만 위임하며 쿼리, 캐시, 응답, 로그에는 남기지 않습니다.
+
 ## 0.8.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # court-auction-notice-search
 
+## 0.3.3
+
+### Patch Changes
+
+- aac715a: Add KISA WHOIS IP and AS lookups, and prefer Aside Browser first for automatic browser selection on macOS.
+- Updated dependencies [aac715a]
+  - k-skill-browser-runtime@0.4.0
+
 ## 0.3.2
 
 ### Patch Changes
