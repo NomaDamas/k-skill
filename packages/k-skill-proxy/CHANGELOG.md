@@ -1,5 +1,13 @@
 # k-skill-proxy
 
+## 0.10.0
+
+### Minor Changes
+
+- af1c1f0: Add the hosted building-register title route and `building-register-search` stdlib helper.
+- 0ff844a: Add hosted EV charger information and status routes plus the `ev-charger-nearby` stdlib helper.
+- 8c8ef1d: Remove the KERIS/RISS academic search proxy route. RISS Open API keys are only issued to non-profit institutions/universities, so the `keris-academic-search` skill now calls the RISS upstream directly with the user's own `KSKILL_RISS_API_KEY` instead of routing through the hosted proxy.
+
 ## 0.9.0
 
 ### Minor Changes

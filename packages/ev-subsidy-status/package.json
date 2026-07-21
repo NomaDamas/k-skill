@@ -1,6 +1,6 @@
 {
   "name": "ev-subsidy-status",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Korean regional electric-vehicle subsidy availability lookup",
   "license": "MIT",
   "main": "src/index.js",
