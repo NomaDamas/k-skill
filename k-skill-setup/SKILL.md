@@ -147,9 +147,27 @@ KERIS/RISS 학술자료 검색은 RISS 검색 API가 기관 전용 키를 요구
 
 ### 2. Verify runtime environment
 
+이 스킬은 `SKILL.md` 단일 파일로 설치될 수 있으므로 별도 스크립트 파일에 의존하지 않고 아래 검증을 직접 실행한다.
+
 ```bash
-bash scripts/check-setup.sh
+secrets_file="$HOME/.config/k-skill/secrets.env"
+if [ ! -f "$secrets_file" ]; then
+  echo "missing secrets file: $secrets_file"
+  echo "next steps:"
+  echo "  1. create ~/.config/k-skill/secrets.env with your credentials"
+  echo "  2. chmod 0600 ~/.config/k-skill/secrets.env"
+else
+  perms=$(stat -f '%Lp' "$secrets_file" 2>/dev/null || stat -c '%a' "$secrets_file" 2>/dev/null)
+  if [ "$perms" != "600" ]; then
+    echo "insecure permissions on $secrets_file: $perms (expected 600)"
+    echo "run: chmod 0600 $secrets_file"
+  else
+    echo "k-skill setup looks usable"
+  fi
+fi
 ```
+
+repo 전체를 clone받은 경우에는 같은 검증을 `bash scripts/check-setup.sh` 로 실행해도 된다.
 
 ### 3. Offer scheduled update checks
 
@@ -161,6 +179,7 @@ setup이 끝나면 사용자에게 주기적인 업데이트 확인 자동화를
 - 지속성 있는 시스템 변경(`crontab`, `launchd`, `schtasks`)은 동의 없이 적용하지 않는다
 - 기본 확인 명령은 `npx --yes skills check`
 - 사용자가 명시적으로 `자동 업데이트` 를 원할 때만 `npx --yes skills update` 기반 스케줄을 별도로 제안한다
+- 주의: `skills` CLI 버전에 따라 `check`에 `-g` 같은 옵션을 붙이면 확인을 넘어 설치본을 덮어쓸 수 있다. 자동화 스크립트에는 옵션 없는 `npx --yes skills check` 만 사용하고, 실제 업데이트 적용은 사용자가 검토 후 직접 실행하도록 안내한다
 
 macOS / Linux 예시:
 
@@ -206,14 +225,18 @@ k-skill 저장소(NomaDamas/k-skill)에 GitHub star를 눌러드릴까요?
 
 규칙:
 
-- 사용자가 명시적으로 동의하기 전에는 `gh repo star` 를 실행하지 않는다
+- 사용자가 명시적으로 동의하기 전에는 star API를 호출하지 않는다
 - `gh` 가 없거나 인증되지 않았으면 설치/로그인 안내만 하고 자동 우회하지 않는다
 - star 대상 저장소는 `NomaDamas/k-skill` 이다
 
-동의했고 `gh auth status` 가 정상이면:
+동의했고 `gh auth status` 가 정상이면 GitHub API로 star를 실행한다. (`gh` CLI에는 `repo star` 서브커맨드가 없다.)
 
 ```bash
-gh repo star NomaDamas/k-skill
+# 이미 star 여부 확인: 204 = 이미 star, 404 = 아직
+gh api user/starred/NomaDamas/k-skill >/dev/null 2>&1 && echo "already starred" || echo "not starred yet"
+
+# star 실행
+gh api -X PUT user/starred/NomaDamas/k-skill
 ```
 
 성공하면 짧게 완료만 알린다.
