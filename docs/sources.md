@@ -290,3 +290,5 @@
 - 국가유산 목록 API: https://www.khs.go.kr/cha/SearchKindOpenapiList.do — `ccbaMnm1`, `ccbaCtcd`, `pageUnit`, `pageIndex`, `ccbaCncl` 기준 목록 조회. 2026-07-15 실측에서 `ccbaMnm1=경복궁`, `ccbaCtcd=11` 조건으로 XML 11건을 반환했다.
 - 국가유산 상세 API: https://www.khs.go.kr/cha/SearchKindOpenapiDt.do — `ccbaKdcd`, `ccbaAsno`, `ccbaCtcd`로 설명·주소·좌표·이미지를 조회한다. 2026-07-15 실측에서 서울 숭례문 상세 XML 응답을 확인했다.
 - 국가유산 행사 API: https://www.khs.go.kr/cha/openapi/selectEventListOpenapi.do — `searchYear`, `searchMonth`로 월별 국가유산 활용 행사를 조회한다. 2026-07-15 실측에서 2026년 7월 행사 XML 응답을 확인했다.
+- 한국도로공사 공공데이터포털 실시간 교통량: https://data.ex.co.kr/openapi/odtraffic/trafficAmountByRealtime — 공개 데모 키 `test`로 무가입 호출 가능(2026-07-21 확인), 잘못된 키는 HTTP 200 + `{"code":"ERROR"}` 반환
+- 국가교통정보센터 ITS CCTV 정보: https://openapi.its.go.kr:9443/cctvInfo — 공개 데모 키 `test`로 무가입 호출 가능, `getType=json`이어도 성공 응답은 XML, 잘못된 키는 HTTP 401 resultCode 4005
