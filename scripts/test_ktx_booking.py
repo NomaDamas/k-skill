@@ -325,7 +325,7 @@ class KtxBookingTests(unittest.TestCase):
         self.assertEqual(ktx_booking.power_outlet_match("2A"), "none")
         self.assertEqual(ktx_booking.power_outlet_match("bad"), "none")
 
-    def test_booking_priority_sorts_middle_cars_before_end_cars(self):
+    def test_booking_priority_puts_car_five_first(self):
         cars = [
             {"car_no": 1},
             {"car_no": 8},
@@ -339,7 +339,58 @@ class KtxBookingTests(unittest.TestCase):
 
         sorted_cars = ktx_booking.sort_cars_for_booking(cars)
 
-        self.assertEqual([car["car_no"] for car in sorted_cars], [4, 5, 3, 6, 2, 7, 1, 8])
+        self.assertEqual([car["car_no"] for car in sorted_cars], [5, 4, 6, 3, 7, 2, 8, 1])
+
+    def test_booking_priority_without_car_five_uses_distance_then_lower_car_no(self):
+        cars = [{"car_no": no} for no in (2, 4, 1, 3)]
+
+        sorted_cars = ktx_booking.sort_cars_for_booking(cars)
+
+        self.assertEqual([car["car_no"] for car in sorted_cars], [4, 3, 2, 1])
+
+    def test_booking_priority_breaks_distance_ties_with_lower_car_no(self):
+        cars = [{"car_no": no} for no in (7, 3, 6, 4)]
+
+        sorted_cars = ktx_booking.sort_cars_for_booking(cars)
+
+        self.assertEqual([car["car_no"] for car in sorted_cars], [4, 6, 3, 7])
+
+    def test_classify_train_formation_by_name(self):
+        self.assertEqual(ktx_booking.classify_train_formation({"h_trn_clsf_nm": "KTX"}), "ktx")
+        self.assertEqual(ktx_booking.classify_train_formation({"h_trn_clsf_nm": "KTX-산천"}), "ktx-sancheon")
+        self.assertEqual(ktx_booking.classify_train_formation({"h_trn_clsf_nm": "KTX-청룡"}), "ktx-cheongryong")
+
+    def test_classify_train_formation_by_code_treats_07_and_10_as_sancheon(self):
+        self.assertEqual(ktx_booking.classify_train_formation({"h_trn_clsf_cd": "00"}), "ktx")
+        self.assertEqual(ktx_booking.classify_train_formation({"h_trn_clsf_cd": "07"}), "ktx-sancheon")
+        self.assertEqual(ktx_booking.classify_train_formation({"h_trn_clsf_cd": "10"}), "ktx-sancheon")
+        self.assertEqual(ktx_booking.classify_train_formation({"h_trn_clsf_cd": "19"}), "ktx-cheongryong")
+        self.assertIsNone(ktx_booking.classify_train_formation({}))
+
+    def test_sancheon_codes_share_identical_car_ordering(self):
+        cars = [{"car_no": no} for no in (1, 2, 3, 4, 5, 6, 7, 8)]
+
+        ordered_07 = ktx_booking.sort_cars_for_booking(cars, raw_train={"h_trn_clsf_cd": "07"})
+        ordered_10 = ktx_booking.sort_cars_for_booking(cars, raw_train={"h_trn_clsf_cd": "10"})
+
+        self.assertEqual(
+            [car["car_no"] for car in ordered_07],
+            [car["car_no"] for car in ordered_10],
+        )
+        self.assertEqual([car["car_no"] for car in ordered_07], [5, 4, 6, 3, 7, 2, 8, 1])
+
+    def test_all_formations_apply_car_five_first_rule(self):
+        cars = [{"car_no": no} for no in (1, 2, 3, 4, 5, 6, 7, 8)]
+
+        for raw_train in (
+            {"h_trn_clsf_nm": "KTX", "h_trn_clsf_cd": "00"},
+            {"h_trn_clsf_nm": "KTX-산천", "h_trn_clsf_cd": "07"},
+            {"h_trn_clsf_nm": "KTX-산천", "h_trn_clsf_cd": "10"},
+            {"h_trn_clsf_nm": "KTX-청룡", "h_trn_clsf_cd": "19"},
+        ):
+            with self.subTest(raw_train=raw_train):
+                ordered = ktx_booking.sort_cars_for_booking(cars, raw_train=raw_train)
+                self.assertEqual([car["car_no"] for car in ordered], [5, 4, 6, 3, 7, 2, 8, 1])
 
     def test_booking_priority_sorts_power_outlet_before_forward_direction(self):
         seats = [
@@ -563,7 +614,7 @@ class KtxBookingTests(unittest.TestCase):
         self.assertEqual(client.train_car_calls[-1]["room_class"], "1")
         self.assertEqual(client.car_seat_calls[-1]["car_no"], "05")
 
-    def test_command_seats_explores_middle_cars_first(self):
+    def test_command_seats_explores_car_five_first(self):
         selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")
         raw_train = {"h_trn_no": "009", "h_dpt_dt": "20260328"}
         train_id = ktx_booking.normalize_train(selected, index=1)["train_id"]
@@ -605,8 +656,8 @@ class KtxBookingTests(unittest.TestCase):
                 ktx_booking.command_seats(args)
 
         result = json.loads(output.getvalue())
-        self.assertEqual([car["car_no"] for car in result["cars"]], [4, 5, 1, 8])
-        self.assertEqual([call["car_no"] for call in client.car_seat_calls], ["04", "05", "01", "08"])
+        self.assertEqual([car["car_no"] for car in result["cars"]], [5, 4, 8, 1])
+        self.assertEqual([call["car_no"] for call in client.car_seat_calls], ["05", "04", "08", "01"])
 
     def test_command_seats_outputs_available_seats_by_booking_preference(self):
         selected = FakeTrain(train_no="009", dep_time="090000", arr_time="113000", label="selected")

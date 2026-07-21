@@ -816,17 +816,63 @@ def normalize_car(raw_car: object) -> dict[str, object]:
     }
 
 
-def car_center_priority(car: dict[str, object], car_numbers: list[int]) -> tuple[float, int]:
+DEFAULT_PREFERRED_CAR_NO = 5
+
+# 상세 조회 raw_train의 편성 분류. 산천은 분류 코드가 07/10 두 값으로 관측되어
+# 모두 같은 편성으로 처리한다. 명칭(h_trn_clsf_nm)을 먼저 보고 코드(h_trn_clsf_cd)로
+# 보완한다.
+TRAIN_FORMATION_BY_NAME = {
+    "KTX": "ktx",
+    "KTX-산천": "ktx-sancheon",
+    "KTX-청룡": "ktx-cheongryong",
+}
+TRAIN_FORMATION_BY_CODE = {
+    "00": "ktx",
+    "07": "ktx-sancheon",
+    "10": "ktx-sancheon",
+    "19": "ktx-cheongryong",
+}
+
+
+# 편성별 기본 탐색 시작 호차. 현재는 모든 편성이 5호차 최우선이며,
+# 편성별로 다른 규칙이 필요해지면 이 테이블만 바꾼다.
+PREFERRED_CAR_BY_FORMATION = {
+    "ktx": 5,
+    "ktx-sancheon": 5,
+    "ktx-cheongryong": 5,
+}
+
+
+def classify_train_formation(raw_train: dict[str, object] | None) -> str | None:
+    if not isinstance(raw_train, dict):
+        return None
+    name = str(raw_train.get("h_trn_clsf_nm", ""))
+    if name in TRAIN_FORMATION_BY_NAME:
+        return TRAIN_FORMATION_BY_NAME[name]
+    code = str(raw_train.get("h_trn_clsf_cd", ""))
+    if code in TRAIN_FORMATION_BY_CODE:
+        return TRAIN_FORMATION_BY_CODE[code]
+    return None
+
+
+def preferred_car_no_for(raw_train: dict[str, object] | None) -> int:
+    formation = classify_train_formation(raw_train)
+    return PREFERRED_CAR_BY_FORMATION.get(formation, DEFAULT_PREFERRED_CAR_NO)
+
+
+def car_priority(car: dict[str, object], preferred_car_no: int) -> tuple[int, int]:
     car_no = int(car["car_no"])
-    if not car_numbers:
-        return (0.0, car_no)
-    center = (min(car_numbers) + max(car_numbers)) / 2
-    return (abs(car_no - center), car_no)
+    return (abs(car_no - preferred_car_no), car_no)
 
 
-def sort_cars_for_booking(cars: list[dict[str, object]]) -> list[dict[str, object]]:
-    car_numbers = [int(car["car_no"]) for car in cars]
-    return sorted(cars, key=lambda car: car_center_priority(car, car_numbers))
+def sort_cars_for_booking(
+    cars: list[dict[str, object]],
+    raw_train: dict[str, object] | None = None,
+) -> list[dict[str, object]]:
+    # 5호차(편성별 preferred car)를 최우선으로 두고, 없으면 5호차와의 거리,
+    # 같은 거리에서는 낮은 호차 번호 순으로 결정적으로 정렬한다.
+    preferred = preferred_car_no_for(raw_train)
+    return sorted(cars, key=lambda car: car_priority(car, preferred))
 
 
 def seat_preference_key(seat: dict[str, object]) -> tuple[int, int, int, str]:
@@ -943,7 +989,7 @@ def command_seats(args: argparse.Namespace) -> None:
         if not cars:
             raise SystemExit(f"car_no {args.car_no} is not available for {args.room}")
     else:
-        cars = sort_cars_for_booking(cars)
+        cars = sort_cars_for_booking(cars, raw_train=raw_train)
 
     car_payloads: list[dict[str, object]] = []
     for car in cars:
