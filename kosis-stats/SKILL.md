@@ -53,6 +53,26 @@ metadata:
 python3 kosis-stats/scripts/run_kosis_stats.py --help
 ```
 
+### Supporting files (단일 SKILL.md 설치 복구)
+
+이 스킬은 `SKILL.md` 외에 helper(`scripts/run_kosis_stats.py`)와 레퍼런스 문서(`references/kosis-openapi-guide.md`)에 의존하는 **디렉터리 패키지형 스킬**이다. raw `SKILL.md` URL만 받는 설치 도구(Hermes 등)로 설치하면 `scripts/`·`references/`가 누락되어 helper 실행이 실패한다.
+
+helper 실행 전에 파일 존재를 확인하고, 없으면 아래로 복구한다. `<skill-dir>`은 이 `SKILL.md`가 설치된 디렉터리다.
+
+```bash
+skill_dir="<skill-dir>"   # 예: ~/.hermes/skills/kosis-stats, ~/.claude/skills/kosis-stats
+if [ ! -f "$skill_dir/scripts/run_kosis_stats.py" ]; then
+  mkdir -p "$skill_dir/scripts" "$skill_dir/references"
+  curl -fsSL https://raw.githubusercontent.com/NomaDamas/k-skill/main/kosis-stats/scripts/run_kosis_stats.py \
+    -o "$skill_dir/scripts/run_kosis_stats.py"
+  curl -fsSL https://raw.githubusercontent.com/NomaDamas/k-skill/main/kosis-stats/references/kosis-openapi-guide.md \
+    -o "$skill_dir/references/kosis-openapi-guide.md"
+fi
+python3 "$skill_dir/scripts/run_kosis_stats.py" --help
+```
+
+근본적으로는 디렉터리 단위로 설치하는 방식(`npx --yes skills add NomaDamas/k-skill --skill kosis-stats -g` 또는 repo clone)을 권장한다.
+
 ## Required environment variables
 
 - 일반 `search`/`meta`/`data`/`list`/`explain`/`indicator`: 없음. 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.
