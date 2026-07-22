@@ -2671,6 +2671,60 @@ test("real-estate-search skill uses proxy endpoints not MCP self-host", () => {
   }
 });
 
+test("repository docs advertise the housing-official-price skill and public direct realtyprice workflow", () => {
+  const readme = read("README.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "housing-official-price.md");
+  const featureDoc = read(path.join("docs", "features", "housing-official-price.md"));
+  const skillPath = path.join(repoRoot, "housing-official-price", "SKILL.md");
+  const skill = read(path.join("housing-official-price", "SKILL.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const packageReadme = read(path.join("packages", "housing-official-price", "README.md"));
+  const packageJson = readJson(path.join("packages", "housing-official-price", "package.json"));
+  const rootPackageJson = readJson("package.json");
+  const realLookingFixturePattern = new RegExp([
+    "\\uB798\\uBBF8\\uC548",
+    "\\uB204\\uC0C1\\uB3D9",
+    ["119", "98121"].join(""),
+    ["11110", "10900"].join(""),
+  ].join("|"), "u");
+
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/housing-official-price.md to exist");
+  assert.ok(fs.existsSync(skillPath), "expected housing-official-price/SKILL.md to exist");
+
+  assert.match(readme, /\| 한국 주택 공시가격 조회 \| `housing-official-price` \|/);
+  assert.match(readme, /\[한국 주택 공시가격 조회 가이드\]\(docs\/features\/housing-official-price\.md\)/);
+
+  assert.equal(packageJson.name, "housing-official-price");
+  assert.equal(packageJson.license, "MIT");
+  assert.ok(packageJson.files.includes("src"), "package should ship runtime src");
+  assert.ok(packageJson.files.includes("README.md"), "package should ship README");
+  assert.match(rootPackageJson.scripts["pack:dry-run"], /--workspace housing-official-price/);
+
+  for (const doc of [skill, featureDoc, packageReadme]) {
+    assert.match(doc, /realtyprice\.kr/);
+    assert.match(doc, /public web data surface|공개 웹 데이터 표면/);
+    assert.match(doc, /not a documented OpenAPI|공식 문서화된 OpenAPI가 아님/);
+    assert.match(doc, /lookupIndividualHousePriceByPnu/);
+    assert.match(doc, /searchApartmentCandidates/);
+    assert.match(doc, /lookupApartmentOfficialPrice/);
+    assert.match(doc, /modelMap/);
+    assert.match(doc, /UPSTREAM_TIMEOUT/);
+    assert.match(doc, /UPSTREAM_AMBIGUOUS_EMPTY/);
+    assert.match(doc, /9999999999199999999/);
+    assert.doesNotMatch(doc, /k-skill-proxy\.nomadamas\.org/);
+    assert.doesNotMatch(doc, realLookingFixturePattern);
+  }
+
+  for (const doc of [skill, featureDoc]) {
+    assert.match(doc, /gongsijiga-search[\s\S]*land official price|gongsijiga-search[\s\S]*개별공시지가/u);
+    assert.match(doc, /real-estate-search[\s\S]*transaction data|real-estate-search[\s\S]*실거래/u);
+    assert.match(doc, /building-register-search[\s\S]*register metadata|building-register-search[\s\S]*대장/u);
+  }
+
+  assert.match(sources, /realtyprice\.kr[\s\S]*hpindividual\/search\.htm/);
+  assert.match(sources, /realtyprice\.kr[\s\S]*m\/town\/search\.do/);
+});
+
 test("repository docs advertise the korean-stock-search skill and proxy-backed KRX approach", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
@@ -4159,6 +4213,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["법인등기 신청 컨설팅", "corporate-registration-consulting"],
   ["한국 개인정보처리방침·이용약관 자동 생성", "korean-privacy-terms"],
   ["한국 부동산 실거래가 조회", "real-estate-search"],
+  ["한국 주택 공시가격 조회", "housing-official-price"],
   ["LH 청약 공고문 조회", "lh-notice-search"],
   ["장학금 검색 및 조회", "korean-scholarship-search"],
   ["생활쓰레기 배출정보 조회", "household-waste-info"],

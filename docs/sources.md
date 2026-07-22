@@ -91,6 +91,8 @@
 - 국가법령정보센터 지방세법/지방세법 시행령/상법/상업등기법/조세특례제한법: https://www.law.go.kr
 - 국세청 창업중소기업 세액감면 안내: https://www.nts.go.kr
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
+- realtyprice.kr 개별주택가격 검색 화면: https://www.realtyprice.kr/notice/hpindividual/search.htm — `housing-official-price`가 공개 read-only web data surface로 관측한 개별주택가격 진입점. 가격 목록 JSON은 browser-visible `https://www.realtyprice.kr/notice/search/hpiSearchListApi.search` 형태를 직접 호출하며, 공식 문서화된 OpenAPI 계약으로 취급하지 않는다.
+- realtyprice.kr 공동주택가격 모바일 검색 화면: https://www.realtyprice.kr/notice/m/town/search.do — `housing-official-price`가 공개 read-only web data surface로 관측한 공동주택가격 진입점. 후보/상세/동/호/가격 이력은 `/notice/m/town/getApt.do`, `/notice/m/town/detail.do`, `/notice/m/town/getHo.do`, `/notice/m/town/getPriceYear.do` 흐름으로 직접 호출하며, 응답은 `model.list` 또는 `modelMap.list` 형태가 모두 가능하다.
 - 한국장학재단 학자금 지원구간 산정절차: https://www.kosaf.go.kr/ko/tuition.do?pg=tuition04_09_01&type=tuition
 - 한국장학재단 학자금 지원구간 경곗값 확인: https://www.kosaf.go.kr/ko/tuition.do?naviParam=JH%2C01%2C01%2C03&pg=tuition04_09_07
 - 한국장학재단 푸른등대 기부장학금: https://www.kosaf.go.kr/ko/scholar.do?pg=scholarship05_11_01
