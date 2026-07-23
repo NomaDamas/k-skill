@@ -1,0 +1,9 @@
+{
+  "name": "korean-marathon-schedule",
+  "description": "고러닝과 대한철인3종협회 공개 표면으로 한국 마라톤·철인3종 경기 일정, 장소, 신청 마감일, 종목을 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "action:booking"
+  ],
+  "frontmatter": "name: korean-marathon-schedule\ndescription: 고러닝과 대한철인3종협회 공개 표면으로 한국 마라톤·철인3종 경기 일정, 장소, 신청 마감일, 종목을 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: sports\n  locale: ko-KR\n  phase: v1"
+}

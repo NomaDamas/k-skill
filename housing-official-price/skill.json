@@ -1,0 +1,10 @@
+{
+  "name": "housing-official-price",
+  "description": "|",
+  "profiles": [
+    "proxy",
+    "browser",
+    "lookup"
+  ],
+  "frontmatter": "name: housing-official-price\ndescription: |\n  Korean apartment and individual-house official price lookup through the public\n  realtyprice.kr web data surface. Use when the user asks for 공동주택가격,\n  개별주택가격, 아파트 공시가격, 단독주택 공시가격, or housing official price\n  history. This is not land official price, transaction price, or building\n  register metadata.\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1"
+}

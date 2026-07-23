@@ -1,0 +1,9 @@
+{
+  "name": "kbl-results",
+  "description": "KBL 한국프로농구 경기 결과와 현재 팀 순위를 날짜/팀 기준으로 조회한다. 공식 JSON 엔드포인트와 kbl-results npm 패키지를 사용한다.",
+  "profiles": [
+    "browser",
+    "lookup"
+  ],
+  "frontmatter": "name: kbl-results\ndescription: KBL 한국프로농구 경기 결과와 현재 팀 순위를 날짜/팀 기준으로 조회한다. 공식 JSON 엔드포인트와 kbl-results npm 패키지를 사용한다.\nlicense: MIT\nmetadata:\n  category: sports\n  locale: ko-KR\n  phase: v1"
+}

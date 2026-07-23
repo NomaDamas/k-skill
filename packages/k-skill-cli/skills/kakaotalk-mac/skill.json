@@ -1,0 +1,8 @@
+{
+  "name": "kakaotalk-mac",
+  "description": "Search local KakaoTalk archives on Apple Silicon macOS through the katok CLI. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "action:communication"
+  ],
+  "frontmatter": "name: kakaotalk-mac\ndescription: Search local KakaoTalk archives on Apple Silicon macOS through the katok CLI. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: messaging\n  locale: ko-KR\n  phase: v2"
+}

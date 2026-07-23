@@ -1,0 +1,9 @@
+{
+  "name": "donation-place-search",
+  "description": "Use when the user asks where to donate, 기부처 조회, or donation place recommendations by Korean location and category. Recommend recipients with best-effort 1365 verification-assist links and never execute donations. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "action:submission"
+  ],
+  "frontmatter": "name: donation-place-search\ndescription: Use when the user asks where to donate, 기부처 조회, or donation place recommendations by Korean location and category. Recommend recipients with best-effort 1365 verification-assist links and never execute donations. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}

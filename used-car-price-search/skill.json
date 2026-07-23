@@ -1,0 +1,8 @@
+{
+  "name": "used-car-price-search",
+  "description": "주요 한국 렌터카 업체를 비교한 뒤 SK렌터카 다이렉트 타고BUY inventory snapshot 으로 중고차 가격/인수가를 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "action:commerce"
+  ],
+  "frontmatter": "name: used-car-price-search\ndescription: 주요 한국 렌터카 업체를 비교한 뒤 SK렌터카 다이렉트 타고BUY inventory snapshot 으로 중고차 가격/인수가를 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: automotive\n  locale: ko-KR\n  phase: v1"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "court-auction-notice-search",
+  "description": "Browse 대법원경매정보(courtauction.go.kr) 부동산 매각공고 by 매각기일·법원·기일/기간 입찰, expand each notice into 사건번호·용도·주소·감정평가액·최저매각가, search property items by free conditions(지역·용도·가격·면적·유찰횟수), and look up a case directly by 법원+사건번호. Read-only, slow-by-design (~2s/call) to avoid IP blocks. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+  "profiles": [
+    "browser",
+    "hard-boundary"
+  ],
+  "frontmatter": "name: court-auction-notice-search\ndescription: Browse 대법원경매정보(courtauction.go.kr) 부동산 매각공고 by 매각기일·법원·기일/기간 입찰, expand each notice into 사건번호·용도·주소·감정평가액·최저매각가, search property items by free conditions(지역·용도·가격·면적·유찰횟수), and look up a case directly by 법원+사건번호. Read-only, slow-by-design (~2s/call) to avoid IP blocks. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1"
+}

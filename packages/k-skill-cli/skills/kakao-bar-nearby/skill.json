@@ -1,0 +1,8 @@
+{
+  "name": "kakao-bar-nearby",
+  "description": "Use when the user asks for nearby bars or 근처 술집. Always ask the user's current location first, then use Kakao Map search + place detail panels to find open-now bars with menu, seating, and phone hints. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "action:booking"
+  ],
+  "frontmatter": "name: kakao-bar-nearby\ndescription: Use when the user asks for nearby bars or 근처 술집. Always ask the user's current location first, then use Kakao Map search + place detail panels to find open-now bars with menu, seating, and phone hints. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: food\n  locale: ko-KR\n  phase: v1"
+}

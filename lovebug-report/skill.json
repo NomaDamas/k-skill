@@ -1,0 +1,9 @@
+{
+  "name": "lovebug-report",
+  "description": "러브버그.com 공개 지도 표면으로 수도권 시·구별 러브버그 출몰 지수·동네별 제보 현황을 조회하고, 사용자가 제공한 현재 좌표로 익명 러브버그 제보를 제출한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "action:submission"
+  ],
+  "frontmatter": "name: lovebug-report\ndescription: 러브버그.com 공개 지도 표면으로 수도권 시·구별 러브버그 출몰 지수·동네별 제보 현황을 조회하고, 사용자가 제공한 현재 좌표로 익명 러브버그 제보를 제출한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: local-info\n  locale: ko-KR\n  phase: v1"
+}

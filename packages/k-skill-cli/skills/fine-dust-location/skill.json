@@ -1,0 +1,9 @@
+{
+  "name": "fine-dust-location",
+  "description": "에어코리아 기반 미세먼지/초미세먼지를 지역명 또는 위치 힌트로 조회한다. 기본 경로는 k-skill-proxy의 report endpoint다.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: fine-dust-location\ndescription: 에어코리아 기반 미세먼지/초미세먼지를 지역명 또는 위치 힌트로 조회한다. 기본 경로는 k-skill-proxy의 report endpoint다.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}

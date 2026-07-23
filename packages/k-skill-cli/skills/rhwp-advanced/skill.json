@@ -1,0 +1,8 @@
+{
+  "name": "rhwp-advanced",
+  "description": "Debug HWP layout, dump document IR, compare versions, extract thumbnails, and unlock read-only HWPs with the upstream rhwp Rust CLI (export-svg/dump/dump-pages/ir-diff/thumbnail/convert).",
+  "profiles": [
+    "local"
+  ],
+  "frontmatter": "name: rhwp-advanced\ndescription: Debug HWP layout, dump document IR, compare versions, extract thumbnails, and unlock read-only HWPs with the upstream rhwp Rust CLI (export-svg/dump/dump-pages/ir-diff/thumbnail/convert).\nlicense: MIT\nmetadata:\n  category: documents\n  locale: ko-KR\n  phase: v1.5"
+}

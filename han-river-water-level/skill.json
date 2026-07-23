@@ -1,0 +1,10 @@
+{
+  "name": "han-river-water-level",
+  "description": "한강홍수통제소 기반 현재 수위/유량을 관측소명 또는 관측소코드로 조회한다. 기본 경로는 k-skill-proxy의 han-river water-level endpoint다.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: han-river-water-level\ndescription: 한강홍수통제소 기반 현재 수위/유량을 관측소명 또는 관측소코드로 조회한다. 기본 경로는 k-skill-proxy의 han-river water-level endpoint다.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}

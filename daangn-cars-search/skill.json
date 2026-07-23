@@ -1,0 +1,9 @@
+{
+  "name": "daangn-cars-search",
+  "description": "당근중고차 공개 웹 데이터로 차량을 검색하고, 돌쇠에서는 공식 계정 표면에서 문의·찜·거래 준비까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "action:commerce"
+  ],
+  "frontmatter": "name: daangn-cars-search\ndescription: 당근중고차 공개 웹 데이터로 차량을 검색하고, 돌쇠에서는 공식 계정 표면에서 문의·찜·거래 준비까지 진행한다.\nlicense: MIT\nmetadata:\n  category: automotive\n  locale: ko-KR\n  phase: v1"
+}

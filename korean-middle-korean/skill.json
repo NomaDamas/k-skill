@@ -1,0 +1,8 @@
+{
+  "name": "korean-middle-korean",
+  "description": "Convert incoming Korean text into a deterministic Korean Middle Korean-style rewrite with archaic particles, endings, Hanja hints, and tone-mark flavor.",
+  "profiles": [
+    "local"
+  ],
+  "frontmatter": "name: korean-middle-korean\ndescription: Convert incoming Korean text into a deterministic Korean Middle Korean-style rewrite with archaic particles, endings, Hanja hints, and tone-mark flavor.\nlicense: MIT\nmetadata:\n  category: writing\n  locale: ko-KR\n  phase: v1"
+}

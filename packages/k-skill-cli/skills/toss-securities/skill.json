@@ -1,0 +1,9 @@
+{
+  "name": "toss-securities",
+  "description": "토스증권 조회형 질문을 공식 Open API(OAuth2)로 우선 처리하고, 공식 credentials가 없으면 tossinvest-cli의 tossctl을 fallback으로 써서 계좌, 보유주식, 시세/종목/시장정보, 주문조회를 안전한 read-only 흐름으로 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "vault",
+    "action:account"
+  ],
+  "frontmatter": "name: toss-securities\ndescription: 토스증권 조회형 질문을 공식 Open API(OAuth2)로 우선 처리하고, 공식 credentials가 없으면 tossinvest-cli의 tossctl을 fallback으로 써서 계좌, 보유주식, 시세/종목/시장정보, 주문조회를 안전한 read-only 흐름으로 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: finance\n  locale: ko-KR\n  phase: v1"
+}

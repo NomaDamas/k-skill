@@ -1,0 +1,8 @@
+{
+  "name": "rhwp-edit",
+  "description": "Edit HWP documents — insert/delete text, replace-all, create tables, set cell text — with the k-skill-rhwp CLI that wraps the @rhwp/core WASM engine (rhwp by Edward Kim).",
+  "profiles": [
+    "local"
+  ],
+  "frontmatter": "name: rhwp-edit\ndescription: Edit HWP documents — insert/delete text, replace-all, create tables, set cell text — with the k-skill-rhwp CLI that wraps the @rhwp/core WASM engine (rhwp by Edward Kim).\nlicense: MIT\nmetadata:\n  category: documents\n  locale: ko-KR\n  phase: v1.5"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "parking-lot-search",
+  "description": "Use when the user asks for nearby parking lots or 근처 주차장/공영주차장. Always ask the user's current location first, then use official Data.go.kr public parking data through k-skill-proxy or the parking-lot-search package.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: parking-lot-search\ndescription: Use when the user asks for nearby parking lots or 근처 주차장/공영주차장. Always ask the user's current location first, then use official Data.go.kr public parking data through k-skill-proxy or the parking-lot-search package.\nlicense: MIT\nmetadata:\n  category: convenience\n  locale: ko-KR\n  phase: v1"
+}

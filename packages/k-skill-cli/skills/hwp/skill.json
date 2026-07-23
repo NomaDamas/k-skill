@@ -1,0 +1,8 @@
+{
+  "name": "hwp",
+  "description": "Use kordoc for agent-native HWP/HWPX document parsing, JSON extraction, diffing, form-field extraction, and Markdown→HWPX reverse conversion (read/convert only — for binary editing use rhwp-edit).",
+  "profiles": [
+    "local"
+  ],
+  "frontmatter": "name: hwp\ndescription: Use kordoc for agent-native HWP/HWPX document parsing, JSON extraction, diffing, form-field extraction, and Markdown→HWPX reverse conversion (read/convert only — for binary editing use rhwp-edit).\nlicense: MIT\nmetadata:\n  category: documents\n  locale: ko-KR\n  phase: v1"
+}

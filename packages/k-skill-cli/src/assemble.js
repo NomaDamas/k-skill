@@ -19,6 +19,7 @@ const KNOWN_PROFILES = [
   "action:account",
   "hard-boundary",
   "lookup",
+  "local",
 ];
 
 function profileTemplatePath(profile) {

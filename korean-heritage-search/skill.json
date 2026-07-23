@@ -1,0 +1,8 @@
+{
+  "name": "korean-heritage-search",
+  "description": "Search official Korean national heritage records, details, locations, and monthly heritage events from the Korea Heritage Service Open API.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: korean-heritage-search\ndescription: Search official Korean national heritage records, details, locations, and monthly heritage events from the Korea Heritage Service Open API.\nlicense: MIT\nmetadata:\n  category: history\n  locale: ko-KR\n  phase: v1"
+}

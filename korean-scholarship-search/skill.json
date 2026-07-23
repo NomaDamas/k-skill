@@ -1,0 +1,8 @@
+{
+  "name": "korean-scholarship-search",
+  "description": "Search Korean scholarship announcements across official KOSAF, university, foundation, company, and public-sector sources, extract amount and eligibility, and filter results by school, income band, student level, and organization type. Users may invoke it with the phrase 장학금 검색 및 조회. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "action:submission"
+  ],
+  "frontmatter": "name: korean-scholarship-search\ndescription: Search Korean scholarship announcements across official KOSAF, university, foundation, company, and public-sector sources, extract amount and eligibility, and filter results by school, income band, student level, and organization type. Users may invoke it with the phrase 장학금 검색 및 조회. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: education\n  locale: ko-KR\n  phase: v1"
+}

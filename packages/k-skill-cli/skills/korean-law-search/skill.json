@@ -1,0 +1,10 @@
+{
+  "name": "korean-law-search",
+  "description": "Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy. Use when the user asks for Korean law/article/precedent lookups.",
+  "profiles": [
+    "proxy",
+    "browser",
+    "lookup"
+  ],
+  "frontmatter": "name: korean-law-search\ndescription: Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy. Use when the user asks for Korean law/article/precedent lookups.\nlicense: MIT\nmetadata:\n  category: legal\n  locale: ko-KR\n  phase: v1"
+}

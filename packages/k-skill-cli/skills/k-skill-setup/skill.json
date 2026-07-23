@@ -1,0 +1,11 @@
+{
+  "name": "k-skill-setup",
+  "description": "After installing the full k-skill bundle, configure and verify the shared cross-platform setup, then optionally wire update checks and GitHub starring with explicit user consent.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "browser",
+    "local"
+  ],
+  "frontmatter": "name: k-skill-setup\ndescription: After installing the full k-skill bundle, configure and verify the shared cross-platform setup, then optionally wire update checks and GitHub starring with explicit user consent.\nlicense: MIT\nmetadata:\n  category: setup\n  locale: ko-KR\n  phase: v1"
+}

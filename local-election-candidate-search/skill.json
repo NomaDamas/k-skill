@@ -1,0 +1,8 @@
+{
+  "name": "local-election-candidate-search",
+  "description": "중앙선거관리위원회 선거통계시스템 공개 통합검색으로 한국 지방선거 후보자 정보를 이름/선거종류/지역 기준으로 조회한다.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: local-election-candidate-search\ndescription: 중앙선거관리위원회 선거통계시스템 공개 통합검색으로 한국 지방선거 후보자 정보를 이름/선거종류/지역 기준으로 조회한다.\nlicense: MIT\nmetadata:\n  category: civic\n  locale: ko-KR\n  phase: v1"
+}

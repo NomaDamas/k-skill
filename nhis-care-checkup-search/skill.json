@@ -1,0 +1,10 @@
+{
+  "name": "nhis-care-checkup-search",
+  "description": "국민건강보험공단 장기요양기관·건강검진기관을 조회하고, 돌쇠에서는 공식 연락·예약 가능 표면까지 이어간다.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "action:booking"
+  ],
+  "frontmatter": "name: nhis-care-checkup-search\ndescription: 국민건강보험공단 장기요양기관·건강검진기관을 조회하고, 돌쇠에서는 공식 연락·예약 가능 표면까지 이어간다.\nlicense: MIT\nmetadata:\n  category: healthcare\n  locale: ko-KR\n  phase: v1"
+}

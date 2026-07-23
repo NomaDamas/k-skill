@@ -1,0 +1,9 @@
+{
+  "name": "public-restroom-nearby",
+  "description": "Use when the user asks for nearby public/open restrooms or 근처 화장실. Always ask the user's current location first, then use the official nationwide public-restroom standard dataset plus Kakao anchor resolution.",
+  "profiles": [
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: public-restroom-nearby\ndescription: Use when the user asks for nearby public/open restrooms or 근처 화장실. Always ask the user's current location first, then use the official nationwide public-restroom standard dataset plus Kakao anchor resolution.\nlicense: MIT\nmetadata:\n  category: convenience\n  locale: ko-KR\n  phase: v1"
+}

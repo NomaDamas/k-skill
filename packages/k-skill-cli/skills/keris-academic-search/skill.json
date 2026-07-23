@@ -1,0 +1,10 @@
+{
+  "name": "keris-academic-search",
+  "description": "Use when the user asks to search Korean theses, academic articles, research reports, journals, or university-library catalog metadata through KERIS RISS. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "action:booking"
+  ],
+  "frontmatter": "name: keris-academic-search\ndescription: Use when the user asks to search Korean theses, academic articles, research reports, journals, or university-library catalog metadata through KERIS RISS. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: research\n  locale: ko-KR\n  phase: v1"
+}

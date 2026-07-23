@@ -1,0 +1,10 @@
+{
+  "name": "hipass-receipt",
+  "description": "공식 하이패스 홈페이지에서 사용자가 직접 로그인한 Chrome 세션을 재사용해 사용내역 조회와 영수증 팝업 진입을 돕는다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "vault",
+    "browser",
+    "action:account"
+  ],
+  "frontmatter": "name: hipass-receipt\ndescription: 공식 하이패스 홈페이지에서 사용자가 직접 로그인한 Chrome 세션을 재사용해 사용내역 조회와 영수증 팝업 진입을 돕는다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: transport\n  locale: ko-KR\n  phase: v1"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "delivery-tracking",
+  "description": "Track CJ대한통운 and 우체국 parcels by invoice number with official carrier endpoints, and structure the workflow around a carrier adapter that can grow to more couriers later.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: delivery-tracking\ndescription: Track CJ대한통운 and 우체국 parcels by invoice number with official carrier endpoints, and structure the workflow around a carrier adapter that can grow to more couriers later.\nlicense: MIT\nmetadata:\n  category: logistics\n  locale: ko-KR\n  phase: v1"
+}

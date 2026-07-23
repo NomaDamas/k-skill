@@ -1,0 +1,10 @@
+{
+  "name": "korean-stock-search",
+  "description": "Use k-skill-proxy to search Korean listed stocks, inspect KRX base information, and fetch daily trade snapshots without asking the user to issue a KRX API key.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: korean-stock-search\ndescription: Use k-skill-proxy to search Korean listed stocks, inspect KRX base information, and fetch daily trade snapshots without asking the user to issue a KRX API key.\nlicense: MIT\nmetadata:\n  category: finance\n  locale: ko-KR\n  phase: v1"
+}

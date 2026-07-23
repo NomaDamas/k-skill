@@ -1,0 +1,9 @@
+{
+  "name": "k-schoollunch-menu",
+  "description": "Use when the user asks for Korean school meal menus (급식 식단) by natural-language education office and school name, via k-skill-proxy NEIS school-search and school-meal routes.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: k-schoollunch-menu\ndescription: Use when the user asks for Korean school meal menus (급식 식단) by natural-language education office and school name, via k-skill-proxy NEIS school-search and school-meal routes.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}

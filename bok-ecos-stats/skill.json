@@ -1,0 +1,10 @@
+{
+  "name": "bok-ecos-stats",
+  "description": "한국은행 ECOS Open API로 기준금리, 환율, 소비자물가지수, 통화량 등 중앙은행 경제통계 시계열과 100대 핵심지표를 조회한다. Use when the user asks 기준금리, 환율 추이, 물가지수, M2, 국고채 금리, 거시경제 통계. Not for 주식 시세(korean-stock-search) or KOSIS 일반 통계(kosis-stats).",
+  "profiles": [
+    "proxy",
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: bok-ecos-stats\ndescription: 한국은행 ECOS Open API로 기준금리, 환율, 소비자물가지수, 통화량 등 중앙은행 경제통계 시계열과 100대 핵심지표를 조회한다. Use when the user asks 기준금리, 환율 추이, 물가지수, M2, 국고채 금리, 거시경제 통계. Not for 주식 시세(korean-stock-search) or KOSIS 일반 통계(kosis-stats).\nlicense: MIT\nmetadata:\n  category: data\n  locale: ko-KR\n  phase: v1"
+}

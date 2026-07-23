@@ -1,0 +1,9 @@
+{
+  "name": "library-book-search",
+  "description": "Use when the user asks to search Korean library books, book details, library holdings, or whether a Korean public library owns a book via k-skill-proxy Data4Library routes. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "action:booking"
+  ],
+  "frontmatter": "name: library-book-search\ndescription: Use when the user asks to search Korean library books, book details, library holdings, or whether a Korean public library owns a book via k-skill-proxy Data4Library routes. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}

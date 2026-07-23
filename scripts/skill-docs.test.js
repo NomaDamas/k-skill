@@ -9,6 +9,23 @@ const childProcess = require("node:child_process");
 const repoRoot = path.join(__dirname, "..");
 
 function read(relativePath) {
+  // CLI-managed skills keep their authored content in skill.json (frontmatter)
+  // + instruction.md; the committed SKILL.md is a generated CLI stub. Content
+  // tests keep asserting against the logical document.
+  const skillMatch = relativePath.match(/^([a-z0-9-]+)[\\/]SKILL\.md$/);
+  if (skillMatch) {
+    const manifestPath = path.join(repoRoot, skillMatch[1], "skill.json");
+    if (fs.existsSync(manifestPath)) {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      const instruction = fs.readFileSync(path.join(repoRoot, skillMatch[1], "instruction.md"), "utf8");
+      return `---\n${manifest.frontmatter.trim()}\n---\n\n${instruction}`;
+    }
+  }
+
+  return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
+}
+
+function readRaw(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
@@ -189,7 +206,7 @@ test("every top-level skill embeds the canonical portable runtime contract or a 
   assert.equal(skillDirs.length, 122);
 
   for (const skillName of skillDirs) {
-    const skill = read(path.join(skillName, "SKILL.md"));
+    const skill = readRaw(path.join(skillName, "SKILL.md"));
 
     if (cliManaged.has(skillName)) {
       assert.match(skill, /k-skill:cli-stub/, `${skillName} must be a generated CLI stub`);
@@ -218,7 +235,7 @@ test("CLI-managed skills keep source, stub safety floor, and bundled copies alig
   const { SAFETY_FLOOR } = require("./generate-skill-stubs.js");
 
   for (const skillName of cliManaged) {
-    const stub = read(path.join(skillName, "SKILL.md"));
+    const stub = readRaw(path.join(skillName, "SKILL.md"));
     const manifest = readJson(path.join(skillName, "skill.json"));
 
     assert.equal(manifest.name, skillName, `${skillName}/skill.json name must match the directory`);
@@ -230,8 +247,8 @@ test("CLI-managed skills keep source, stub safety floor, and bundled copies alig
     assert.match(stub, /clarify|approval/, `${skillName} stub must state the approval boundary`);
 
     for (const relative of ["skill.json", "instruction.md"]) {
-      const source = read(path.join(skillName, relative));
-      const bundled = read(path.join("packages", "k-skill-cli", "skills", skillName, relative));
+      const source = readRaw(path.join(skillName, relative));
+      const bundled = readRaw(path.join("packages", "k-skill-cli", "skills", skillName, relative));
 
       assert.equal(bundled, source, `packages/k-skill-cli/skills/${skillName}/${relative} must match the source`);
     }
@@ -3750,8 +3767,8 @@ test("korean-jangbu-for installer registers upstream subskills for Claude and ag
     );
     assert.match(
       fs.readFileSync(path.join(skillRoot, "korean-jangbu-for", "SKILL.md"), "utf8"),
-      /@kimlawtech/,
-      `${root} should keep the korean-jangbu-for wrapper policy at the top level`,
+      /@kimlawtech|k-skill:cli-stub/,
+      `${root} should keep the korean-jangbu-for wrapper policy (or CLI stub) at the top level`,
     );
     assert.ok(
       !fs.lstatSync(path.join(skillRoot, "korean-jangbu-for")).isSymbolicLink(),

@@ -1,0 +1,9 @@
+{
+  "name": "sh-notice-search",
+  "description": "서울주택도시개발공사(SH) 공개 공고/공지 게시판에서 청약·주택 공고 목록, 상세 본문, 첨부 미리보기 메타데이터를 직접 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "action:submission"
+  ],
+  "frontmatter": "name: sh-notice-search\ndescription: 서울주택도시개발공사(SH) 공개 공고/공지 게시판에서 청약·주택 공고 목록, 상세 본문, 첨부 미리보기 메타데이터를 직접 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: housing\n  locale: ko-KR\n  phase: v1"
+}

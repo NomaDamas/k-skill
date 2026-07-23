@@ -1,0 +1,8 @@
+{
+  "name": "korean-cinema-search",
+  "description": "CGV, 메가박스, 롯데시네마 영화관 검색, 상영작, 시간표, 잔여석 조회가 필요할 때 사용한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "action:booking"
+  ],
+  "frontmatter": "name: korean-cinema-search\ndescription: CGV, 메가박스, 롯데시네마 영화관 검색, 상영작, 시간표, 잔여석 조회가 필요할 때 사용한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: entertainment\n  locale: ko-KR\n  phase: v1"
+}

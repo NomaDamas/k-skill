@@ -1,0 +1,10 @@
+{
+  "name": "ktx-booking",
+  "description": "Search, reserve, inspect, and cancel KTX or Korail tickets in Korea with the korail2 + pycryptodome Python packages. Use when the user asks for KTX seats, Korail bookings, train changes, reservation status, remaining seat numbers, car-by-car seats, or power-outlet/good-seat tips. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "vault",
+    "browser",
+    "action:booking"
+  ],
+  "frontmatter": "name: ktx-booking\ndescription: Search, reserve, inspect, and cancel KTX or Korail tickets in Korea with the korail2 + pycryptodome Python packages. Use when the user asks for KTX seats, Korail bookings, train changes, reservation status, remaining seat numbers, car-by-car seats, or power-outlet/good-seat tips. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
+}

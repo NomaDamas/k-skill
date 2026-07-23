@@ -1,0 +1,8 @@
+{
+  "name": "joseon-sillok-search",
+  "description": "Search Joseon Dynasty Annals records from the official sillok.history.go.kr site with keyword search plus optional king/year narrowing.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: joseon-sillok-search\ndescription: Search Joseon Dynasty Annals records from the official sillok.history.go.kr site with keyword search plus optional king/year narrowing.\nlicense: MIT\nmetadata:\n  category: history\n  locale: ko-KR\n  phase: v1"
+}

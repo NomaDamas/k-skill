@@ -1,0 +1,8 @@
+{
+  "name": "intercity-bus-booking",
+  "description": "Search and assist Korean 시외버스/Tmoney bookings using official HTTP/API-first flows; use for 시외버스 예매, 시간표, 좌석/요금 조회, and official checkout-entry handoff. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "action:booking"
+  ],
+  "frontmatter": "name: intercity-bus-booking\ndescription: Search and assist Korean 시외버스/Tmoney bookings using official HTTP/API-first flows; use for 시외버스 예매, 시간표, 좌석/요금 조회, and official checkout-entry handoff. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
+}

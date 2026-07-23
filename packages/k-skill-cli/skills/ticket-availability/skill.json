@@ -1,0 +1,9 @@
+{
+  "name": "ticket-availability",
+  "description": "YES24 / 인터파크 공연의 공개 일정 + 등급별 잔여석을 단일 HTTP 호출로 조회 (조회 전용, 예매·결제 없음). 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+  "profiles": [
+    "browser",
+    "hard-boundary"
+  ],
+  "frontmatter": "name: ticket-availability\ndescription: YES24 / 인터파크 공연의 공개 일정 + 등급별 잔여석을 단일 HTTP 호출로 조회 (조회 전용, 예매·결제 없음). 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.\nlicense: MIT\nmetadata:\n  category: lifestyle\n  subcategory: ticket\n  locale: ko-KR\n  phase: v1"
+}

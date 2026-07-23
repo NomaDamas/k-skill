@@ -1,0 +1,10 @@
+{
+  "name": "daishin-report-search",
+  "description": "대신증권 리포트 GitHub Pages 미러에서 최신 HTML 리포트 목록과 원문/설명 페이지를 조회한다.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: daishin-report-search\ndescription: 대신증권 리포트 GitHub Pages 미러에서 최신 HTML 리포트 목록과 원문/설명 페이지를 조회한다.\nlicense: MIT\nmetadata:\n  category: finance\n  locale: ko-KR\n  phase: v1"
+}

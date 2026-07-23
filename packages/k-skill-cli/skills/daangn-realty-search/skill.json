@@ -1,0 +1,8 @@
+{
+  "name": "daangn-realty-search",
+  "description": "당근부동산 공개 웹 데이터로 매물을 검색하고, 돌쇠에서는 공식 계정 표면에서 문의·방문예약·계약 준비까지 진행한다.",
+  "profiles": [
+    "action:commerce"
+  ],
+  "frontmatter": "name: daangn-realty-search\ndescription: 당근부동산 공개 웹 데이터로 매물을 검색하고, 돌쇠에서는 공식 계정 표면에서 문의·방문예약·계약 준비까지 진행한다.\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1.5"
+}

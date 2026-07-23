@@ -1,0 +1,10 @@
+{
+  "name": "korea-weather",
+  "description": "한국 날씨를 기상청 단기예보 조회서비스와 프록시 경유로 조회해 요약한다.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: korea-weather\ndescription: 한국 날씨를 기상청 단기예보 조회서비스와 프록시 경유로 조회해 요약한다.\nlicense: MIT\nmetadata:\n  category: weather\n  locale: ko-KR\n  phase: v1"
+}

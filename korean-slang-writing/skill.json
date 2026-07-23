@@ -1,0 +1,8 @@
+{
+  "name": "korean-slang-writing",
+  "description": "Use curated Korean trending-slang candidates plus best-effort Namu Wiki lookups to write witty Korean text with up-to-date slang, with conservative safety and freshness guardrails.",
+  "profiles": [
+    "local"
+  ],
+  "frontmatter": "name: korean-slang-writing\ndescription: Use curated Korean trending-slang candidates plus best-effort Namu Wiki lookups to write witty Korean text with up-to-date slang, with conservative safety and freshness guardrails.\nlicense: MIT\nmetadata:\n  category: writing\n  locale: ko-KR\n  phase: v1"
+}

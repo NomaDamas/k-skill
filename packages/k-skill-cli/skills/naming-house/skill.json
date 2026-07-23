@@ -1,0 +1,8 @@
+{
+  "name": "naming-house",
+  "description": "생년월일시와 성씨·후보 이름을 바탕으로 사주 오행과 성명학 점수를 참고해 어울리는 한국 이름을 추천한다.",
+  "profiles": [
+    "local"
+  ],
+  "frontmatter": "name: naming-house\ndescription: 생년월일시와 성씨·후보 이름을 바탕으로 사주 오행과 성명학 점수를 참고해 어울리는 한국 이름을 추천한다.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}
