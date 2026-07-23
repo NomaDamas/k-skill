@@ -24,9 +24,8 @@ bash /data/home/jeffrey/apps/k-skill-proxy-dashboard/setup-gpu01.sh
 The script:
 
 1. downloads Grafana/Loki/Promtail binaries into `bin/`;
-2. creates `grafana.env` (mode 600) with a **random admin password printed
-   once** — store it; the file is never overwritten and must never be
-   committed to git;
+2. creates `grafana.env` (mode 600) with a random admin password; the file is
+   never overwritten and must never be committed to git;
 3. rewrites provisioning paths into `data/provisioning`;
 4. installs and starts `k-skill-proxy-{loki,promtail,grafana}.service`
    (Grafana on `127.0.0.1:3200`).

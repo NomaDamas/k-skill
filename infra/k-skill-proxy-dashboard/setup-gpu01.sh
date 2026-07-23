@@ -72,15 +72,17 @@ GF_PATHS_PROVISIONING=${APP_DIR}/data/provisioning
 EOF
   chmod 600 "$env_file"
   log "wrote $env_file (mode 600)"
-  log "GRAFANA ADMIN PASSWORD (store it now, it is only shown once): ${password}"
+  log "Grafana admin credentials are stored in $env_file"
 }
 
 prepare_provisioning() {
   # The repo provisioning references container paths; rewrite them for the
   # binary layout into a runtime copy so the repo files stay docker-ready.
   mkdir -p "$APP_DIR/data/provisioning/datasources" "$APP_DIR/data/provisioning/dashboards"
-  cp "$APP_DIR/grafana/provisioning/datasources/loki.yml" "$APP_DIR/data/provisioning/datasources/"
-  sed "s|url: http://loki:3100|url: http://127.0.0.1:3100|; s|/var/lib/grafana/dashboards|${APP_DIR}/grafana/dashboards|" \
+  sed "s|url: http://loki:3100|url: http://127.0.0.1:3100|" \
+    "$APP_DIR/grafana/provisioning/datasources/loki.yml" \
+    > "$APP_DIR/data/provisioning/datasources/loki.yml"
+  sed "s|/var/lib/grafana/dashboards|${APP_DIR}/grafana/dashboards|" \
     "$APP_DIR/grafana/provisioning/dashboards/dashboards.yml" \
     > "$APP_DIR/data/provisioning/dashboards/dashboards.yml"
 }

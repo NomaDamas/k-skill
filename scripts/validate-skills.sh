@@ -58,6 +58,7 @@ done < <(
     ! -name python-packages \
     ! -name scripts \
     ! -name examples \
+    ! -name infra \
     ! -name tools \
     -print0
 )
