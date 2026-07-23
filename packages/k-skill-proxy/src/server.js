@@ -2118,11 +2118,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   const routeUsageStats = new Map();
   app.decorate("routeUsageStats", routeUsageStats);
   app.addHook("onResponse", async (request, reply) => {
-    if (request.url === "/health") {
+    const matchedRoute = request.routeOptions && request.routeOptions.url;
+    if (matchedRoute === "/health") {
       return;
     }
-    const route = (request.routeOptions && request.routeOptions.url)
-      || String(request.raw.url || "").split("?")[0];
+    // Aggregate all unmatched requests under one key. Using the raw 404 path
+    // here would let arbitrary input grow the in-memory map and Loki labels
+    // without bound.
+    const route = matchedRoute || "__unmatched__";
     routeUsageStats.set(route, (routeUsageStats.get(route) || 0) + 1);
     app.log.info({ routeUsage: true, route, statusCode: reply.statusCode }, "route usage");
   });

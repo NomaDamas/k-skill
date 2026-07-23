@@ -152,7 +152,7 @@ test("route usage stats count endpoint calls by route pattern and skip /health",
     await app.close();
   });
 
-  const health = await app.inject({ method: "GET", url: "/health" });
+  const health = await app.inject({ method: "GET", url: "/health?source=monitor" });
   assert.equal(health.statusCode, 200);
   assert.equal(app.routeUsageStats.size, 0, "health checks must not be counted as usage");
 
@@ -164,7 +164,8 @@ test("route usage stats count endpoint calls by route pattern and skip /health",
 
   const notFound = await app.inject({ method: "GET", url: "/v1/no-such-route?x=1" });
   assert.equal(notFound.statusCode, 404);
-  assert.equal(app.routeUsageStats.get("/v1/no-such-route"), 1, "unmatched paths fall back to the raw path without query string");
+  await app.inject({ method: "GET", url: "/another/arbitrary/missing/path" });
+  assert.equal(app.routeUsageStats.get("__unmatched__"), 2, "unmatched paths must use one bounded aggregation key");
 });
 
 test("Korean holiday normalizer validates operation and solar year/month", () => {
