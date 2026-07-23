@@ -3,7 +3,7 @@
   "version": "0.9.0",
   "private": true,
   "description": "Fastify proxy for k-skill upstream APIs",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "main": "src/server.js",
   "engines": {
     "node": ">=20"
