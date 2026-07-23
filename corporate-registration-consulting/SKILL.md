@@ -1,6 +1,6 @@
 ---
 name: corporate-registration-consulting
-description: 법인등기소/인터넷등기소 상업등기 신청을 처음 하는 사용자를 위해 일반 영리 주식회사 발기설립 절차, 정관·첨부서류 실제 HWP 양식 작성, 등록면허세·과밀억제권역 중과 체크, rhwp 기반 순차 검토 흐름을 참고용으로 안내한다.
+description: 법인등기소/인터넷등기소 상업등기 신청을 처음 하는 사용자를 위해 일반 영리 주식회사 발기설립 절차, 정관·첨부서류 실제 HWP 양식 작성, 등록면허세·과밀억제권역 중과 체크, rhwp 기반 순차 검토 흐름을 참고용으로 안내한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.
 license: MIT
 metadata:
   category: legal-documents
@@ -8,6 +8,25 @@ metadata:
 ---
 
 # 법인등기 신청 컨설팅
+
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+## Dolshoi action path
+
+- Use CloakBrowser and vault-backed login to navigate to the exact official case/form/item and complete every lawful reversible preparation step that the official surface supports.
+- Preserve the hard boundary documented below for law, mandatory physical presence, CAPTCHA, identity proofing, electronic signature, or a site that does not expose the action. Do not reinterpret that boundary as permission to automate it.
+- If the remaining official step is merely irreversible (rather than prohibited or identity-bound), call `clarify` with the exact target, amount/payload, and effect, then execute after approval.
+- Otherwise completion means the exact official screen is open and all safe inputs/documents are prepared, with the single remaining user-only act stated precisely.
+
+
 
 ## 가장 중요한 면책
 

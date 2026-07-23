@@ -10,6 +10,17 @@ metadata:
 
 # Korean Humanizer: AI 한국어 글 흔적 지우기
 
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+
 당신은 AI가 생성한 한국어 글에서 "기계가 쓴 티"를 찾아 자연스러운 사람의 글로 되돌리는 편집자다. 한국어 AI 글의 가장 큰 두 정체는 (1) 영어를 직역한 듯한 **번역체**와 (2) 격식 있어 보이려고 의미 없이 부풀린 **상투어**다. 이 둘을 1순위로 잡는다.
 
 이 스킬은 **프롬프트/지식 기반**이다. 외부 API나 스크립트 없이, 아래 4대 철칙 → 심각도 분류 → 탐지·윤문·감사·등급 루프와 패턴 카탈로그만으로 동작한다. 전체 A~J 분류 체계와 처방 표는 [`references/ai-tell-taxonomy.md`](references/ai-tell-taxonomy.md)에 있다.

@@ -10,6 +10,17 @@ metadata:
 
 # KOSIS Stats
 
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+
 ## What this skill does
 
 국가데이터처(구 통계청)가 운영하는 KOSIS(국가통계포털) Open API `https://kosis.kr/openapi/` 로 한국 공식 통계 자료를 조회 자동화한다.
@@ -83,12 +94,10 @@ python3 "$skill_dir/scripts/run_kosis_stats.py" --help
 
 ### Credential resolution order (`bigdata` 또는 `--direct` 전용)
 
-1. **이미 환경변수에 있으면** 그대로 사용한다.
-2. **에이전트가 자체 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)를 사용 중이면** 거기서 꺼내 환경변수로 주입해도 된다.
-3. **`~/.config/k-skill/secrets.env`** (기본 fallback) — plain dotenv 파일, 퍼미션 `0600`.
-4. **아무것도 없으면** 유저에게 물어서 2 또는 3에 저장한다.
+1. 돌쇠 credential mode에서는 provisioned `vault-run` capability를 사용하고, 없으면 `request_vault_credential`로 KOSIS API key 입력 UI를 호출한다.
+2. 그 밖의 환경에서는 이미 주입된 환경변수 → host vault → `~/.config/k-skill/secrets.env` (`0600`) 순서로 사용한다.
+3. generic fallback에서 값이 없으면 호스트의 가장 안전한 입력 표면으로 받아 vault 또는 dotenv에 저장한다.
 
-기본 경로에 저장하는 것은 fallback일 뿐, 강제가 아니다.
 일반 조회 helper는 proxy URL만 읽고, KOSIS 인증키는 proxy 서버에서만 주입한다. `bigdata`/`--direct` 호출만 `KSKILL_KOSIS_API_KEY` 환경변수와 위 secrets 파일을 읽는다.
 `list`/`explain`/`indicator`는 `search`/`meta`/`data`와 마찬가지로 proxy 경유로 동작한다.
 

@@ -1,6 +1,6 @@
 ---
 name: hipass-receipt
-description: 공식 하이패스 홈페이지에서 사용자가 직접 로그인한 Chrome 세션을 재사용해 사용내역 조회와 영수증 팝업 진입을 돕는다.
+description: 공식 하이패스 홈페이지에서 사용자가 직접 로그인한 Chrome 세션을 재사용해 사용내역 조회와 영수증 팝업 진입을 돕는다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.
 license: MIT
 metadata:
   category: transport
@@ -9,6 +9,25 @@ metadata:
 ---
 
 # 하이패스 영수증 발급
+
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+## Dolshoi action path
+
+- Use the documented API/CLI path for discovery and read-only account data, then move to the official account surface when the requested outcome requires an account action.
+- In Dolshoi, use CloakBrowser or an available `vault-run` capability with vault-backed login and perform reversible export, draft, filter, or configuration steps.
+- Immediately before a paid, destructive, externally visible, or otherwise irreversible mutation, call `clarify` with the exact account, target, amount/payload, and effect. After approval, execute and verify the new state.
+- Do not invent unsupported trading, payment, or account controls; where the official/installed surface is read-only, report that concrete boundary after completing all supported steps.
+
+
 
 ## What this skill does
 

@@ -1,6 +1,6 @@
 ---
 name: coupang-product-search
-description: retention-corp/coupang_partners의 로컬 Coupang MCP 호환 레이어로 쿠팡 상품 검색, 로켓배송 필터, 가격대 검색, 상품 비교, 베스트 상품, 골드박스 특가를 조회한다.
+description: retention-corp/coupang_partners의 로컬 Coupang MCP 호환 레이어로 쿠팡 상품 검색, 로켓배송 필터, 가격대 검색, 상품 비교, 베스트 상품, 골드박스 특가를 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.
 license: MIT
 metadata:
   category: retail
@@ -9,6 +9,25 @@ metadata:
 ---
 
 # Coupang Product Search
+
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+## Dolshoi action path
+
+- Use the documented search/API path to identify the exact product, option, seller, quantity, price, and official URL.
+- When the user asks to buy, cart, or transact, continue in CloakBrowser on the official surface, use vault-backed login, select the requested option/quantity, and complete reversible cart or checkout preparation.
+- Immediately before the final order or payment, call `clarify` with merchant, item/options, quantity, delivery destination summary, and total amount. After approval, submit and verify the order result.
+- Any later read-only, no-login, no-cart, or no-purchase wording applies to the generic fallback; it does not cancel this Dolshoi path.
+
+
 
 ## What this skill does
 
@@ -78,8 +97,8 @@ local://coupang-mcp
 
 ## When not to use
 
-- 로그인, 장바구니, 결제 자동화가 필요한 경우
-- 쿠팡 계정/session 접근이 필요한 경우
+- 돌쇠가 아니며 로그인, 장바구니, 결제 자동화가 필요한 경우
+- 돌쇠가 아니며 쿠팡 계정/session 접근이 필요한 경우
 - 실시간 재고/품절 여부를 100% 보장해야 하는 경우 (hosted fallback과 Partners API 모두 캐시·지연이 있을 수 있다)
 
 ## Workflow
@@ -141,6 +160,19 @@ python3 coupang-product-search/scripts/coupang_partners_mcp.py goldbox
 export OPENCLAW_SHOPPING_FORCE_HOSTED=1
 python3 coupang-product-search/scripts/coupang_partners_mcp.py search "에어팟"
 ```
+
+### 5. Continue from discovery to cart and checkout in Dolshoi
+
+사용자가 구매나 장바구니 담기를 요청했고 CloakBrowser mode라면 MCP 결과 링크에서 멈추지 않는다.
+
+1. 선택한 상품의 공식 쿠팡 URL을 CloakBrowser로 연다.
+2. 현재 상품명, 판매자, 옵션, 수량, 로켓배송 여부, 실시간 가격과 품절 여부를 다시 확인한다.
+3. 로그인이 필요하면 provisioned vault capability를 사용하고, 없으면 `request_vault_credential`로 쿠팡 login을 저장한 뒤 같은 turn에 재개한다.
+4. 옵션과 수량을 선택해 장바구니에 담는다. 장바구니 담기는 가역적이므로 별도 승인 없이 수행하고 실제 담김 상태를 확인한다.
+5. 구매 요청이면 배송지/쿠폰/결제수단 적용 후 최종 주문 직전까지 진행한다.
+6. `clarify`로 상품·옵션·수량·배송지 요약·최종 금액을 승인받고, 승인되면 주문/결제를 실행해 주문번호와 상태를 확인한다.
+
+CloakBrowser를 사용할 수 없는 generic runtime에서는 기존 검색/링크 제공 범위를 유지한다.
 
 ## Available tools
 
@@ -212,3 +244,5 @@ upstream CLI는 JSON을 출력한다. `data.result` 안의 상품 배열 또는 
 - 사용자 니즈에 맞는 추천 TOP 3이 제시되었다.
 - 가격/배송 정보와 변동 가능성 안내가 포함되었다.
 - affiliate 고지(disclosure)가 답변에 포함되었다.
+- 돌쇠의 장바구니 요청이면 선택 옵션/수량이 실제 장바구니에 담긴 것을 확인했다.
+- 돌쇠의 구매 요청이면 `clarify` 승인 후 주문번호와 결제 상태를 확인했다.

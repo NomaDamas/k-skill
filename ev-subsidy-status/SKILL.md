@@ -1,6 +1,6 @@
 ---
 name: ev-subsidy-status
-description: 한국 지자체별 전기차 구매보조금 민간공고·접수·출고·출고잔여 대수와 공고 상태를 환경부 무공해차 통합누리집에서 조회한다. 사용자가 사는 지역의 전기승용·전기화물·전기승합 보조금 잔여 현황, 접수 가능 여부, 마감·소진·추경 예정, 특정 모델 기준 보조금 환산치를 물을 때 사용한다.
+description: 한국 지자체별 전기차 구매보조금 민간공고·접수·출고·출고잔여 대수와 공고 상태를 환경부 무공해차 통합누리집에서 조회한다. 사용자가 사는 지역의 전기승용·전기화물·전기승합 보조금 잔여 현황, 접수 가능 여부, 마감·소진·추경 예정, 특정 모델 기준 보조금 환산치를 물을 때 사용한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.
 license: MIT
 metadata:
   category: local-info
@@ -9,6 +9,25 @@ metadata:
 ---
 
 # EV Subsidy Status
+
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+## Dolshoi action path
+
+- Use the documented data/lookup path to gather the exact eligibility, recipient, amount, evidence, and official form inputs.
+- In Dolshoi, open the official surface in CloakBrowser, use vault-backed login, and populate/upload all reversible fields and documents instead of ending with a checklist or link.
+- Immediately before payment, donation, filing, final submission, cancellation, or another irreversible account mutation, call `clarify` with the exact recipient, amount/payload, and effect. After approval, submit and verify the official result.
+- Keep CAPTCHA, identity proofing, electronic signature, legal judgment, and unsupported official surfaces as hard boundaries; otherwise later read-only wording is generic fallback only.
+
+
 
 환경부 무공해차 통합누리집의 공개 지급현황을 로그인이나 사용자 실행 브라우저 없이 직접 읽는다. 조회만 수행하고 보조금 신청이나 로그인 흐름은 자동화하지 않는다.
 
