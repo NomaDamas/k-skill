@@ -165,8 +165,20 @@ test("root npm test script includes the skill docs regression suite", () => {
   assert.match(packageJson.scripts.test, /node --test scripts\/skill-docs\.test\.js/);
 });
 
-test("every top-level skill embeds the canonical portable runtime contract", () => {
+// Skills that have migrated to the @nomadamas/k-skill CLI adapter keep their
+// source in skill.json/instruction.md and publish a generated stub SKILL.md.
+function cliManagedSkills() {
+  return fs
+    .readdirSync(repoRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => fs.existsSync(path.join(repoRoot, name, "skill.json")))
+    .sort();
+}
+
+test("every top-level skill embeds the canonical portable runtime contract or a CLI stub", () => {
   const canonical = findSection(read("docs/adding-a-skill.md"), "## Runtime contract (required)").trim();
+  const cliManaged = new Set(cliManagedSkills());
   const skillDirs = fs
     .readdirSync(repoRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -179,6 +191,16 @@ test("every top-level skill embeds the canonical portable runtime contract", () 
   for (const skillName of skillDirs) {
     const skill = read(path.join(skillName, "SKILL.md"));
 
+    if (cliManaged.has(skillName)) {
+      assert.match(skill, /k-skill:cli-stub/, `${skillName} must be a generated CLI stub`);
+      assert.match(
+        skill,
+        new RegExp(`npx -y @nomadamas/k-skill@0 instruct ${escapeRegex(skillName)}`),
+        `${skillName} stub must invoke the pinned-major CLI`,
+      );
+      continue;
+    }
+
     assert.ok(skill.includes(canonical), `${skillName} must embed the canonical portable runtime contract`);
     assert.equal(
       (skill.match(/^## Runtime contract \(required\)$/gm) ?? []).length,
@@ -188,7 +210,40 @@ test("every top-level skill embeds the canonical portable runtime contract", () 
   }
 });
 
+test("CLI-managed skills keep source, stub safety floor, and bundled copies aligned", () => {
+  const cliManaged = cliManagedSkills();
+
+  assert.ok(cliManaged.length >= 5, "expected at least the five pilot skills to be CLI-managed");
+
+  const { SAFETY_FLOOR } = require("./generate-skill-stubs.js");
+
+  for (const skillName of cliManaged) {
+    const stub = read(path.join(skillName, "SKILL.md"));
+    const manifest = readJson(path.join(skillName, "skill.json"));
+
+    assert.equal(manifest.name, skillName, `${skillName}/skill.json name must match the directory`);
+    assert.ok(
+      fs.existsSync(path.join(repoRoot, skillName, "instruction.md")),
+      `${skillName} must keep its instruction.md source`,
+    );
+    assert.ok(stub.includes(SAFETY_FLOOR), `${skillName} stub must keep the static safety floor`);
+    assert.match(stub, /clarify|approval/, `${skillName} stub must state the approval boundary`);
+
+    for (const relative of ["skill.json", "instruction.md"]) {
+      const source = read(path.join(skillName, relative));
+      const bundled = read(path.join("packages", "k-skill-cli", "skills", skillName, relative));
+
+      assert.equal(bundled, source, `packages/k-skill-cli/skills/${skillName}/${relative} must match the source`);
+    }
+  }
+
+  // Staleness gates: regenerating and re-syncing must be no-ops.
+  childProcess.execFileSync("node", [path.join(__dirname, "generate-skill-stubs.js"), "--check"], { cwd: repoRoot });
+  childProcess.execFileSync("node", [path.join(__dirname, "sync-cli-skills.js"), "--check"], { cwd: repoRoot });
+});
+
 test("actionable skills publish a Dolshoi action path", () => {
+  const cliManaged = new Set(cliManagedSkills());
   const actionableSkills = [
     "bunjang-search",
     "catchtable-sniper",
@@ -254,6 +309,8 @@ test("actionable skills publish a Dolshoi action path", () => {
   ];
 
   for (const skillName of actionableSkills) {
+    if (cliManaged.has(skillName)) continue; // action path now lives in the CLI-assembled instructions
+
     const skill = read(path.join(skillName, "SKILL.md"));
 
     assert.match(skill, /^## Dolshoi action path$/m, `${skillName} should document its Dolshoi action path`);
