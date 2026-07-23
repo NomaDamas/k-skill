@@ -25,9 +25,9 @@
 ### Credential resolution order
 
 1. **이미 환경변수에 있으면** 그대로 사용한다.
-2. **에이전트가 자체 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)를 사용 중이면** 거기서 꺼내 환경변수로 주입해도 된다.
-3. **`~/.config/k-skill/secrets.env`** (기본 fallback) — plain dotenv 파일, 퍼미션 `0600`.
-4. **아무것도 없으면** 유저에게 물어서 2 또는 3에 저장한다.
+2. **돌쇠 credential mode이면** provisioned `vault-run` capability를 사용하고, 없으면 `request_vault_credential`로 앱 vault 입력 UI를 호출한다.
+3. **그 밖의 host vault가 있으면** 모델에 평문을 노출하지 않는 방식으로 주입한다.
+4. **generic fallback이면** `~/.config/k-skill/secrets.env`를 퍼미션 `0600`으로 사용한다.
 
 ## 입력값
 
@@ -89,5 +89,7 @@ python3 scripts/srt_booking.py seats 수서 부산 20260328 080000 \
 
 - credential은 환경변수로 주입합니다.
 - 상세 좌석 확인은 SRT 웹 좌석선택 페이지의 공개 HTML을 조회 전용으로 파싱합니다.
-- 결제 완료까지 자동화하는 문서는 아닙니다.
+- 예약번호, 운임, 구입기한이 반환되면 **좌석 확보는 완료**되었다고 안내합니다.
+- 돌쇠에서 사용자가 예매 완료를 요청하면 CloakBrowser의 공식 SRT 결제 화면에서 같은 예약을 확인하고, 결제 직전 `clarify`로 열차·승객·좌석 등급·총액을 승인받은 뒤 결제를 실행해 결제 완료 상태와 영수증을 확인합니다.
+- generic runtime에서는 예약번호와 구입기한을 제공하고 결제를 handoff합니다.
 - 매진 시 공격적인 재시도 루프는 피합니다.

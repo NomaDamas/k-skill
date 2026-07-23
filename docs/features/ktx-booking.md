@@ -25,9 +25,9 @@
 ### Credential resolution order
 
 1. **이미 환경변수에 있으면** 그대로 사용한다.
-2. **에이전트가 자체 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)를 사용 중이면** 거기서 꺼내 환경변수로 주입해도 된다.
-3. **`~/.config/k-skill/secrets.env`** (기본 fallback) — plain dotenv 파일, 퍼미션 `0600`.
-4. **아무것도 없으면** 유저에게 물어서 2 또는 3에 저장한다.
+2. **돌쇠 credential mode이면** provisioned `vault-run` capability를 사용하고, 없으면 `request_vault_credential`로 앱 vault 입력 UI를 호출한다.
+3. **그 밖의 host vault가 있으면** 모델에 평문을 노출하지 않는 방식으로 주입한다.
+4. **generic fallback이면** `~/.config/k-skill/secrets.env`를 퍼미션 `0600`으로 사용한다.
 
 ## 입력값
 
@@ -130,11 +130,13 @@ python3 scripts/ktx_booking.py reservations
 python3 scripts/ktx_booking.py cancel <reservation_id>
 ```
 
-응답은 JSON 으로 나오며 예약번호, 구입기한, 운임 확인에 바로 쓸 수 있다. **결제는 제외** 하고 예약까지만 자동화한다.
+응답은 JSON 으로 나오며 예약번호, 구입기한, 운임 확인에 바로 쓸 수 있다. 이 시점에 **좌석 확보는 완료**되었음을 안내한다.
+
+돌쇠에서 사용자가 예매 완료를 요청하면 CloakBrowser의 공식 Korail 결제 화면에서 같은 예약번호를 확인하고 계속 진행한다. 결제 버튼 직전에 `clarify`로 열차·승객·좌석·할인·총액을 승인받고, 승인 후 결제를 실행해 결제 완료 상태와 영수증을 확인한다. generic runtime에서는 예약번호와 구입기한을 제공하고 결제를 handoff한다.
 
 ## 주의할 점
 
 - SRT 예매와는 별도 표면이므로 혼용하지 않는다.
 - credential은 환경변수로 주입한다.
-- 결제 완료까지 자동화하는 범위는 아니다.
+- 돌쇠에서는 `clarify` 승인 후 공식 결제 표면까지 완료하고, generic runtime에서는 예약까지만 자동화한다.
 - Korail anti-bot 규칙이 다시 바뀌면 helper 도 함께 점검해야 한다.

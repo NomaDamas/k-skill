@@ -4,14 +4,15 @@
 
 ## Credential resolution order
 
-모든 credential-bearing 스킬은 아래 우선순위를 따른다.
+모든 credential-bearing 스킬은 먼저 실행 capability를 감지한다.
 
-1. **이미 환경변수에 있으면** 그대로 사용한다.
-2. **에이전트가 자체 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)를 사용 중이면** 거기서 꺼내 환경변수로 주입해도 된다.
-3. **`~/.config/k-skill/secrets.env`** (기본 fallback) — plain dotenv 파일, 퍼미션 `0600`.
-4. **아무것도 없으면** 유저에게 물어서 2 또는 3에 저장한다.
+1. **Dolshoi credential mode**: `DOLSHOI_ACTION_BROKER_URL`이 설정되고 `vault-run`이 실행 가능하면 provisioned capability를 사용한다.
+2. **Dolshoi missing credential**: capability가 없으면 평문을 묻지 말고 `request_vault_credential`로 앱 vault 입력 UI를 호출한다.
+3. **Generic injected secret**: 이미 환경변수 또는 host vault injection이 있으면 그대로 사용한다.
+4. **Generic fallback**: host vault → `~/.config/k-skill/secrets.env` (`0600`) 순서로 사용한다.
+5. **Generic missing secret**: 호스트가 제공하는 가장 안전한 입력 표면으로 받아 vault 또는 dotenv에 저장한다.
 
-에이전트가 자체 vault를 사용 중이라면 기본 경로 설정을 건너뛰어도 된다.
+돌쇠 또는 다른 host vault를 사용 중이라면 기본 경로 설정을 건너뛴다.
 
 ## 기본 경로로 설정하기
 
@@ -73,9 +74,11 @@ KERIS/RISS 학술자료 검색은 RISS 검색 API가 기관 전용 키를 요구
 
 한국 특허 정보 검색의 KIPRIS Plus 경로용 `KIPRIS_PLUS_API_KEY` 는 helper가 읽는 표준 변수명이다. 실제 HTTP 요청에서는 같은 값을 `ServiceKey` 쿼리 파라미터로 보낸다. 공공데이터포털에서 복사한 percent-encoded key도 helper가 한 번 정규화해서 그대로 쓸 수 있다.
 
-## 브라우저 런타임 (BrowserOS)
+## 브라우저 런타임
 
-브라우저 세션이 필요한 스킬(`hipass-receipt`, `court-auction-notice-search`, `court-payment-order-assistant`)은 `k-skill-browser-runtime`을 기본 런타임으로 쓴다. 기본 `auto` 순서는 macOS에서 Aside Browser REPL → BrowserOS CDP → Chrome/Chromium CDP, 기타 플랫폼에서 BrowserOS CDP → Aside Browser REPL → Chrome/Chromium CDP다. 런타임은 BrowserOS를 launch하거나 headless로 띄우지 않고, Aside는 공개 `aside repl` 표면만 쓴다. 자세한 작성 가이드는 [브라우저 런타임 문서](browser-runtime.md)와 [새 스킬 추가 가이드](adding-a-skill.md)를 참고.
+돌쇠에서는 내장 browser tool의 CloakBrowser를 최우선으로 쓴다. 내장 tool이 CloakBrowser를 제공하거나 `CLOAKBROWSER_PEEK_TOKEN`이 있으면 `k-skill-browser-runtime`보다 먼저 사용한다.
+
+돌쇠가 아니거나 CloakBrowser를 사용할 수 없을 때는 `k-skill-browser-runtime`을 portable fallback으로 쓴다. 기본 `auto` 순서는 macOS에서 Aside Browser REPL → BrowserOS CDP → Chrome/Chromium CDP, 기타 플랫폼에서 BrowserOS CDP → Aside Browser REPL → Chrome/Chromium CDP다. 런타임은 BrowserOS를 launch하거나 headless로 띄우지 않고, Aside는 공개 `aside repl` 표면만 쓴다. 자세한 작성 가이드는 [브라우저 런타임 문서](browser-runtime.md), [돌쇠 런타임 계약](dolshoi-runtime.md), [새 스킬 추가 가이드](adding-a-skill.md)를 참고.
 
 | 변수 | 기본값 | 설명 |
 | --- | --- | --- |
@@ -84,7 +87,7 @@ KERIS/RISS 학술자료 검색은 RISS 검색 API가 기관 전용 키를 요구
 | `KSKILL_CHROME_CDP_URL` | `http://127.0.0.1:9222` | Chrome/Chromium CDP 엔드포인트 |
 | `KSKILL_ASIDE_COMMAND` | `aside` | Aside CLI 명령 이름 또는 경로 |
 
-브라우저가 필요한 스킬은 로그인/인증/CAPTCHA/결제/전자서명/되돌릴 수 없는 제출을 자동화하지 않고, 해당 경계에서 typed stop rule로 멈춰 사용자에게 수동 handoff한다. 공개 데이터는 직접 HTTP를 먼저 쓴다.
+돌쇠에서는 vault-backed login으로 인증을 재개하고, 결제·전송·최종 제출 직전에 `clarify` 승인을 받은 뒤 공식 표면에서 계속 진행한다. CAPTCHA, 본인인증, 전자서명, 법률상 금지 경계는 우회하지 않는다. generic runtime은 typed stop rule과 수동 handoff를 유지한다. 공개 데이터 조회는 직접 HTTP를 먼저 쓴다.
 
 ## 확인
 
@@ -96,8 +99,8 @@ bash scripts/check-setup.sh
 
 인증이 필요한 스킬에서 값이 비어 있으면 credential resolution order에 따라 확보한다.
 
-- 어떤 값이 필요한지 정확한 변수 이름으로 알려주기
-- resolution order에 따라 유저에게 확보 방법 안내하기
+- 돌쇠에서는 `request_vault_credential`로 필요한 service/field 입력 UI를 호출하고 평문 값을 채팅으로 요구하지 않기
+- generic runtime에서는 어떤 값이 필요한지 정확한 변수 이름으로 알려주고 안전한 host input/vault/dotenv 순서 안내하기
 
 ## 기능별로 필요한 값
 
@@ -105,8 +108,8 @@ bash scripts/check-setup.sh
 | --- | --- |
 | SRT 예매 | `KSKILL_SRT_ID`, `KSKILL_SRT_PASSWORD` |
 | KTX 예매 | `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD` |
-| 고속버스 예매 | 사용자 시크릿 불필요 (조회·좌석 단계는 공식 KOBUS HTTP 흐름 사용, 결제는 공식 페이지에서 수동 진행) |
-| 시외버스 예매 | 사용자 시크릿 불필요 (조회·좌석 단계는 공식 티머니 HTTP 흐름 사용, 결제는 공식 페이지에서 수동 진행) |
+| 고속버스 예매 | 사용자 시크릿 불필요 (조회·좌석 단계는 공식 KOBUS HTTP 흐름, 돌쇠는 `clarify` 승인 후 공식 결제까지, generic은 수동 handoff) |
+| 시외버스 예매 | 사용자 시크릿 불필요 (조회·좌석 단계는 공식 티머니 HTTP 흐름, 돌쇠는 `clarify` 승인 후 공식 결제까지, generic은 수동 handoff) |
 | 자연휴양림 빈 객실 조회 | `KSKILL_FORESTTRIP_ID`, `KSKILL_FORESTTRIP_PASSWORD` |
 | 한국 법령 검색 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `LAW_OC`) |
 | 한국 부동산 실거래가 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |

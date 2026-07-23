@@ -1,6 +1,6 @@
 ---
 name: nhis-care-checkup-search
-description: 국민건강보험공단 장기요양기관과 건강검진기관 검색 API를 k-skill-proxy 경유로 조회한다. 조회 전용.
+description: 국민건강보험공단 장기요양기관·건강검진기관을 조회하고, 돌쇠에서는 공식 연락·예약 가능 표면까지 이어간다.
 license: MIT
 metadata:
   category: healthcare
@@ -9,6 +9,25 @@ metadata:
 ---
 
 # NHIS Care And Checkup Search
+
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+## Dolshoi action path
+
+- Use the documented lookup path to identify the exact date, time, venue/route, party, seat or option, price, and official booking surface.
+- When booking is requested, continue in CloakBrowser or an available `vault-run` action, use vault-backed login, select the requested option, and complete reversible reservation/hold steps instead of stopping at a link.
+- A successful reversible reservation or seat hold is a completed booking step: report the confirmation and purchase deadline. If payment is required, call `clarify` with the exact itinerary/slot, passengers/party, seat/option, and total, then pay after approval and verify the receipt.
+- Any later read-only or manual-checkout wording applies only to generic fallback unless it states a hard legal, identity-proofing, CAPTCHA, or electronic-signature boundary.
+
+
 
 ## What this skill does
 

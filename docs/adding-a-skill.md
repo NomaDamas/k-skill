@@ -56,6 +56,16 @@ metadata:
 
 # My New Skill
 
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
 ## What this skill does
 
 이 스킬이 무엇을 하는지 한두 문단으로 설명한다.
@@ -107,6 +117,15 @@ metadata:
 | `metadata.category` | ✅ | `utility` / `transit` / `travel` / `messaging` / `legal` / `setup` 등 |
 | `metadata.locale` | ✅ | `ko-KR` |
 | `metadata.phase` | ✅ | `v1` (안정) / `v1.5` (기능 추가 중) |
+
+### Portable runtime block
+
+위 `## Runtime contract (required)` 블록은 모든 top-level 스킬에 **원문 그대로** 포함한다. 설명을 줄이기 위해 링크로 대체하면 안 된다.
+
+- Vercel `skills add --skill <name>`은 선택한 스킬 디렉터리만 설치할 수 있다.
+- Dolshoi도 checkout에서 top-level `SKILL.md` 디렉터리만 `<HERMES_HOME>/skills/k-skill/`로 projection하고 `docs/`는 포함하지 않는다.
+- 따라서 스킬이 단독 설치되어도 vault, browser, action, approval, fallback 계약을 이해할 수 있어야 한다.
+- 공통 계약의 이유와 감지 근거는 `docs/dolshoi-runtime.md`에서 관리하고, 각 스킬에는 이 블록과 해당 사이트의 구체적인 액션 경로만 둔다.
 
 ---
 
@@ -174,7 +193,7 @@ upstream API 키를 사용자에게 노출하지 않으려면 `k-skill-proxy`를
 3. **안정적인 경로를 우선하기**: 화면 선택자보다 공개 데이터 호출, 문서화된 endpoint, RSS/sitemap처럼 구조가 덜 흔들리는 경로를 선호한다.
 4. **차단과 빈 응답을 실패로 분리하기**: HTTP 성공만으로 완료로 보지 말고, 실제 결과 본문이 있는지 확인한다. 로그인벽, 봇 검사, 빈 껍데기 페이지는 별도 실패 모드로 적는다.
 5. **site-dependent 방법을 명시적으로 패키징하기**: 탐색 과정에서 확인한 검색 URL, 필수 파라미터, 결과 해석 규칙, fallback 순서를 `SKILL.md`와 패키지 코드에 좁고 명확하게 기록한다.
-6. **권한 경계를 지키기**: 인증, 결제, CAPTCHA, 약관상 제한이 필요한 경로는 자동화하지 말고 사용자 개입 또는 실패 모드로 처리한다.
+6. **권한 경계를 지키기**: 돌쇠에서는 vault/CloakBrowser/`clarify` 계약을 이용해 지원되는 로그인·결제·제출을 수행한다. CAPTCHA, 본인인증, 전자서명, 법률상 제한, 사이트가 지원하지 않는 흐름은 우회하지 않는다.
 
 `SKILL.md`에는 최소한 아래 내용을 남긴다.
 
@@ -192,11 +211,12 @@ upstream API 키를 사용자에게 노출하지 않으려면 `k-skill-proxy`를
 
 로그인된 브라우저 세션이나 렌더링 의존 화면이 필요한 스킬은 `k-skill-browser-runtime`을 기본 런타임으로 쓴다 ([브라우저 런타임 문서](browser-runtime.md) 참고).
 
-1. **런타임을 선호한다**: 인라인 CDP/Playwright 연결 로직을 새로 짜지 말고 런타임의 `connect()`/`runJob()`과 typed stop rule을 쓴다.
-2. **semver 의존성**: `package.json`의 `dependencies`는 `"k-skill-browser-runtime": "^0.1.0"` 처럼 semver로 고정한다. `workspace:` 프로토콜은 npm publish를 깨뜨리므로 쓰지 않는다.
-3. **typed stop rule 노출**: 인증·CAPTCHA·결제·전자서명·되돌릴 수 없는 제출 경계에서 멈추고 수동 handoff로 넘긴다. 런타임이 BrowserOS를 launch하거나 headless로 띄우지 않는다.
-4. **사이트별 로직은 스킬 안에**: navigation, selector, 파싱, fallback 순서는 각 스킬의 `SKILL.md`와 패키지 코드에 좁고 명확하게 기록한다.
-5. **공개/직접 HTTP 우선**: 브라우저 없이 잡히는 공개 endpoint(RSS/sitemap/공개 JSON/문서화된 API)를 먼저 쓰고, 브라우저는 로그인이 필요한 화면이나 렌더링 의존 화면에만 쓴다.
+1. **돌쇠에서는 CloakBrowser가 우선이다**: 내장 browser tool이 CloakBrowser를 제공하거나 `CLOAKBROWSER_PEEK_TOKEN`이 있으면 그 표면을 먼저 쓴다.
+2. **portable fallback은 런타임을 선호한다**: 돌쇠가 아니거나 CloakBrowser를 사용할 수 없으면 인라인 CDP/Playwright 연결 로직을 새로 짜지 말고 런타임의 `connect()`/`runJob()`과 typed stop rule을 쓴다.
+3. **semver 의존성**: `package.json`의 `dependencies`는 `"k-skill-browser-runtime": "^0.1.0"` 처럼 semver로 고정한다. `workspace:` 프로토콜은 npm publish를 깨뜨리므로 쓰지 않는다.
+4. **typed stop rule 노출**: portable fallback은 인증·CAPTCHA·결제·전자서명·되돌릴 수 없는 제출 경계를 typed stop으로 노출한다. 돌쇠에서는 인증은 vault action으로 재개하고, 결제·최종 제출은 `clarify` 승인 후 재개하되 CAPTCHA·본인인증·전자서명은 우회하지 않는다.
+5. **사이트별 로직은 스킬 안에**: navigation, selector, 파싱, fallback 순서와 실제 action path는 각 스킬의 `SKILL.md`와 패키지 코드에 좁고 명확하게 기록한다.
+6. **공개/직접 HTTP 우선**: 브라우저 없이 잡히는 공개 endpoint(RSS/sitemap/공개 JSON/문서화된 API)를 조회에 먼저 쓰고, 계정 액션이 필요하면 같은 결과를 CloakBrowser/공식 브라우저 흐름으로 이어간다.
 
 기본 환경변수: `KSKILL_BROWSER_PROVIDER`(기본 `auto` — macOS는 Aside → BrowserOS → Chrome CDP, 기타 플랫폼은 BrowserOS → Aside → Chrome CDP), `KSKILL_BROWSEROS_CDP_URL`(기본 `http://127.0.0.1:9100`), `KSKILL_CHROME_CDP_URL`(기본 `http://127.0.0.1:9222`), `KSKILL_ASIDE_COMMAND`(기본 `aside`). Aside는 공개 `aside repl` 표면만 쓰고 비공개 CDP/daemon port에 의존하지 않는다. CAPTCHA/로그인/결제/전자서명/되돌릴 수 없는 제출 자동화 우회는 하지 않는다.
 
@@ -224,12 +244,12 @@ npm run ci
 
 ## 시크릿이 필요한 스킬
 
-인증이 필요한 스킬은 아래 우선순위로 credential을 확보한다.
+인증이 필요한 스킬은 먼저 portable runtime block의 돌쇠 credential mode를 적용한다.
 
-1. 이미 환경변수에 있으면 → 그대로 사용
-2. 에이전트 vault(1Password, Bitwarden, macOS Keychain) → 주입
-3. 개인 dotenv 파일 → 파일에서 읽기
-4. 아무것도 없으면 → 사용자에게 물어보고 개인 dotenv 파일에 저장
+1. `DOLSHOI_ACTION_BROKER_URL` + `vault-run`이면 provisioned capability 사용
+2. 돌쇠에서 capability가 없으면 `request_vault_credential`로 앱 vault 입력 UI 호출
+3. 그 외 환경은 이미 주입된 환경변수 → 에이전트 vault → 개인 dotenv 순서
+4. 아무것도 없으면 호스트가 제공하는 가장 안전한 입력 방식으로 받고 개인 vault/dotenv에 저장
 
 시크릿 변수 이름 규칙: `KSKILL_<서비스명>_<항목>` (예: `KSKILL_SRT_ID`)
 
@@ -245,6 +265,7 @@ npm run ci
 새 스킬을 PR 올리기 전에 확인한다.
 
 - [ ] `my-new-skill/SKILL.md` 작성 완료
+- [ ] 정확한 `## Runtime contract (required)` 블록을 원문 그대로 포함
 - [ ] frontmatter `name`이 디렉토리 이름과 일치
 - [ ] `npm run ci` 통과 (`./scripts/validate-skills.sh` 포함)
 - [ ] npm 패키지라면 `packages/`에 구현체와 테스트 추가
@@ -253,7 +274,8 @@ npm run ci
 - [ ] 크롤링/검색 스킬이라면 공개 접근 경로, fallback 순서, 차단/로그인/빈 결과 실패 모드 문서화
 - [ ] 시크릿이 있다면 `KSKILL_` 접두사 규칙 준수 및 `docs/setup.md` 업데이트
 - [ ] `docs/features/my-new-skill.md` 작성 (선택, 상세 가이드)
-- [ ] 브라우저가 필요한 스킬이라면 `k-skill-browser-runtime` semver 의존성, typed stop rule, 직접 HTTP 우선, `workspace:` 미사용 확인 ([브라우저 런타임 문서](browser-runtime.md))
+- [ ] 브라우저가 필요한 스킬이라면 돌쇠 CloakBrowser 우선, `k-skill-browser-runtime` semver fallback, typed stop rule, 직접 HTTP 우선, `workspace:` 미사용 확인 ([브라우저 런타임 문서](browser-runtime.md))
+- [ ] 액션 가능한 스킬이라면 돌쇠에서 조회 뒤 실제 액션 경로와 `clarify` 비가역 승인 경계를 문서화
 
 ---
 
@@ -263,3 +285,5 @@ npm run ci
 - [릴리스와 자동 배포](releasing.md) — npm 패키지 배포 흐름
 - [보안/시크릿 정책](security-and-secrets.md) — 인증 정보 취급 원칙
 - [브라우저 런타임](browser-runtime.md) — BrowserOS CDP 런타임과 stop rule
+- [돌쇠 런타임 계약](dolshoi-runtime.md) — vault, CloakBrowser, action, approval, fallback 계약
+- [전체 런타임 액션 감사표](runtime-action-audit.md) — 122개 스킬의 action mode와 완료 목표

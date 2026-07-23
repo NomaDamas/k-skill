@@ -1,6 +1,6 @@
 ---
 name: kstartup-search
-description: 공공데이터포털 창업진흥원 K-Startup Open API(15125364)로 통합 공고 사업 정보·지원사업 공고·창업 콘텐츠·통계보고서를 k-skill-proxy 경유로 조회한다. 검색 전용.
+description: 공공데이터포털 창업진흥원 K-Startup Open API(15125364)로 통합 공고 사업 정보·지원사업 공고·창업 콘텐츠·통계보고서를 k-skill-proxy 경유로 조회한다. 검색 전용. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.
 license: MIT
 metadata:
   category: business
@@ -9,6 +9,25 @@ metadata:
 ---
 
 # 창업진흥원 K-Startup 조회
+
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+## Dolshoi action path
+
+- Use the documented data/lookup path to gather the exact eligibility, recipient, amount, evidence, and official form inputs.
+- In Dolshoi, open the official surface in CloakBrowser, use vault-backed login, and populate/upload all reversible fields and documents instead of ending with a checklist or link.
+- Immediately before payment, donation, filing, final submission, cancellation, or another irreversible account mutation, call `clarify` with the exact recipient, amount/payload, and effect. After approval, submit and verify the official result.
+- Keep CAPTCHA, identity proofing, electronic signature, legal judgment, and unsupported official surfaces as hard boundaries; otherwise later read-only wording is generic fallback only.
+
+
 
 ## What this skill does
 
@@ -19,7 +38,7 @@ metadata:
 - `contents` → `getContentInformation01` : 창업관련 콘텐츠 (공지·뉴스·우수사례 등)
 - `statistics` → `getStatisticalInformation01` : 창업관련 통계보고서
 
-조회 전용 스킬이다. 사업 신청·지원금 청구·콘텐츠 게시 같은 쓰기 동작은 다루지 않는다.
+API helper는 조회 전용이다. 돌쇠에서 사용자가 사업 신청을 요청하면 조회 결과를 위 `Dolshoi action path`의 공식 CloakBrowser 신청 흐름으로 이어간다.
 
 ## When to use
 
@@ -30,7 +49,7 @@ metadata:
 
 ## When not to use
 
-- 사업 신청·결제·자동 지원·계좌 연계 같은 쓰기 동작 (지원 화면은 사용자가 K-Startup 웹에서 직접 진행한다)
+- 돌쇠가 아니며 사업 신청·결제·자동 지원·계좌 연계 같은 쓰기 동작이 필요한 경우
 - K-Startup 외부 사이트(중기부, 창조경제혁신센터, 지자체 단독 공고) 조회 — 통합공고에 등록된 일부만 K-Startup API로 노출된다
 - 마감일·모집 상태를 분 단위로 추적해야 하는 작업 — 데이터 갱신은 공식 서비스설계서 기준 **일 1회**다 (공공데이터포털 dataset 메타데이터에는 "실시간"으로 표기되지만 두 표면이 일치하지 않는다)
 
@@ -50,10 +69,9 @@ metadata:
 
 ### Credential resolution order (`--direct` 전용)
 
-1. 이미 환경변수에 있으면 그대로 사용한다.
-2. 에이전트 vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)에서 꺼내 환경변수로 주입.
-3. `~/.config/k-skill/secrets.env` (plain dotenv, 권한 `0600`).
-4. 아무것도 없으면 사용자에게 묻고 2 또는 3에 저장.
+1. 돌쇠 credential mode에서는 provisioned `vault-run` capability를 사용하고, 없으면 `request_vault_credential`로 K-Startup API key 입력 UI를 호출한다.
+2. 그 밖의 환경에서는 이미 주입된 환경변수 → host vault → `~/.config/k-skill/secrets.env` (`0600`) 순서로 사용한다.
+3. generic fallback에서 값이 없으면 호스트의 가장 안전한 입력 표면으로 받아 vault 또는 dotenv에 저장한다.
 
 일반 조회 helper는 proxy URL만 읽고, K-Startup 인증키는 프록시 서버에서만 주입한다. `--direct` 호출에서만 `KSKILL_KSTARTUP_API_KEY`를 읽는다.
 

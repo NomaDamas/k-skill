@@ -1,6 +1,6 @@
 ---
 name: ktx-booking
-description: Search, reserve, inspect, and cancel KTX or Korail tickets in Korea with the korail2 + pycryptodome Python packages. Use when the user asks for KTX seats, Korail bookings, train changes, reservation status, remaining seat numbers, car-by-car seats, or power-outlet/good-seat tips.
+description: Search, reserve, inspect, and cancel KTX or Korail tickets in Korea with the korail2 + pycryptodome Python packages. Use when the user asks for KTX seats, Korail bookings, train changes, reservation status, remaining seat numbers, car-by-car seats, or power-outlet/good-seat tips. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.
 license: MIT
 metadata:
   category: travel
@@ -9,6 +9,25 @@ metadata:
 ---
 
 # KTX Booking
+
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
+## Dolshoi action path
+
+- Use the documented lookup path to identify the exact date, time, venue/route, party, seat or option, price, and official booking surface.
+- When booking is requested, continue in CloakBrowser or an available `vault-run` action, use vault-backed login, select the requested option, and complete reversible reservation/hold steps instead of stopping at a link.
+- A successful reversible reservation or seat hold is a completed booking step: report the confirmation and purchase deadline. If payment is required, call `clarify` with the exact itinerary/slot, passengers/party, seat/option, and total, then pay after approval and verify the receipt.
+- Any later read-only or manual-checkout wording applies only to generic fallback unless it states a hard legal, identity-proofing, CAPTCHA, or electronic-signature boundary.
+
+
 
 ## What this skill does
 
@@ -33,7 +52,7 @@ metadata:
 ## When not to use
 
 - SRT 예매인 경우
-- 실결제 확정까지 자동화해야 하는 경우
+- 돌쇠가 아니며 실결제 확정까지 자동화해야 하는 경우
 - credential 을 평문으로 넣으려는 경우
 
 ## Prerequisites
@@ -46,14 +65,10 @@ metadata:
 - `KSKILL_KTX_ID`
 - `KSKILL_KTX_PASSWORD`
 
-### Credential resolution order
+### Credential handling
 
-1. **이미 환경변수에 있으면** 그대로 사용한다.
-2. **에이전트가 자체 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)를 사용 중이면** 거기서 꺼내 환경변수로 주입해도 된다.
-3. **`~/.config/k-skill/secrets.env`** (기본 fallback) — plain dotenv 파일, 퍼미션 `0600`.
-4. **아무것도 없으면** 유저에게 물어서 2 또는 3에 저장한다.
-
-기본 경로에 저장하는 것은 fallback일 뿐, 강제가 아니다.
+- 돌쇠 credential mode에서는 `vault-run` capability를 사용하고, 없으면 `request_vault_credential`을 호출한다. ID/PW 원문을 채팅이나 shell에 넣지 않는다.
+- 그 밖의 환경에서는 이미 주입된 환경변수 → host vault → `~/.config/k-skill/secrets.env` 순서로 사용한다.
 
 ## Inputs
 
@@ -78,7 +93,7 @@ python3 -m pip install korail2-ncard pycryptodome
 
 ### 1. Ensure credentials are available
 
-`KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD` 환경변수가 설정되어 있는지 확인한다. 없으면 위 credential resolution order에 따라 확보한다.
+돌쇠 credential mode에서는 `vault-run`의 Korail capability를 확인하고, 없으면 `request_vault_credential`로 앱 vault 입력 UI를 호출한다. generic fallback에서만 `KSKILL_KTX_ID`, `KSKILL_KTX_PASSWORD` 환경변수를 확인한다.
 
 시크릿이 없다는 이유로 웹사이트를 직접 긁거나 다른 비공식 경로를 찾지 않는다.
 
@@ -182,7 +197,7 @@ ITX 등 KTX 외 노선을 search 단계에서 골랐다면 reserve 에도 똑같
 python3 scripts/ktx_booking.py reserve 남춘천 용산 20260503 150000 --train-id <train_id> --train-type itx-cheongchun --seat-option general-first
 ```
 
-응답에는 예약번호, 운임, 구입기한이 포함된다. **결제는 자동화하지 않는다.**
+응답에는 예약번호, 운임, 구입기한이 포함된다. 이 시점에 **좌석 확보는 완료되었다**고 안내한다. generic fallback에서는 결제를 handoff하고, 돌쇠에서는 아래 결제 단계로 계속 진행한다.
 좌석이 없을 때는 조회 단계에서 `--include-waiting-list` 를 켜고 예약 단계에서 `--try-waiting` 으로 예약 대기까지 시도할 수 있다.
 
 ### 5-1. N-card discounted reservation
@@ -207,17 +222,30 @@ python3 scripts/ktx_booking.py reserve 대전 서울 20260512 100000 \
   --ncard-index 1
 ```
 
-`--ncard-index` 를 지정하면 `--adults` 등 승객 옵션은 무시되고 N카드 승객 1명으로 처리된다. `--ncard-no` 직접 입력도 지원하지만 셸 히스토리에 남을 수 있어 권장하지 않는다. **결제는 자동화하지 않는다.**
+`--ncard-index` 를 지정하면 `--adults` 등 승객 옵션은 무시되고 N카드 승객 1명으로 처리된다. `--ncard-no` 직접 입력도 지원하지만 셸 히스토리에 남을 수 있어 권장하지 않는다. generic fallback에서는 결제를 handoff하고, 돌쇠에서는 아래 결제 단계로 계속 진행한다.
 
 N카드 기능은 `korail2-ncard` 패키지가 필요하다. 없으면 해당 커맨드 실행 시 설치 안내가 출력된다.
 
-### 6. Inspect or cancel
+### 6. Continue to payment in Dolshoi
+
+돌쇠에서 사용자가 예매 완료를 요청했다면 예약 성공에서 멈추지 않는다.
+
+1. CloakBrowser의 공식 Korail 예약/결제 화면에서 방금 만든 예약번호를 다시 식별한다.
+2. vault-backed login을 사용하고 N카드/할인, 승객, 좌석, 결제수단을 확인한다.
+3. 실제 결제 버튼 직전에 `clarify`로 열차, 날짜·시각, 승객, 좌석 등급, 할인, 총액을 보여주고 승인받는다.
+4. 승인되면 결제를 실행하고 결제 완료 화면, 예약번호, 영수증/결제 상태를 확인한다.
+
+돌쇠가 아니거나 공식 결제 표면을 사용할 수 없으면 예약번호와 구입기한을 제공하고 generic handoff로 종료한다.
+
+### 7. Inspect or cancel
 
 취소는 대상 예약을 다시 조회해 식별한 뒤에만 진행한다.
 
 ```bash
 python3 scripts/ktx_booking.py reservations
 ```
+
+취소 실행 직전에 `clarify`로 예약번호, 열차, 날짜·시각, 승객, 환불/위약금 정보를 확인하고 승인받는다.
 
 ```bash
 python3 scripts/ktx_booking.py cancel <reservation_id>
@@ -227,7 +255,8 @@ python3 scripts/ktx_booking.py cancel <reservation_id>
 
 - 조회면 열차 후보가 정리되어 있다
 - 좌석 상세 확인이면 호차별 남은 좌석번호와 필요한 꿀팁 조건이 정리되어 있다
-- 예약이면 예약 결과와 제한 시간이 확인되어 있다
+- 예약이면 예약 결과와 제한 시간이 확인되어 좌석 확보 완료를 안내했다
+- 돌쇠의 예매 완료 요청이면 `clarify` 승인 후 결제 완료 상태와 영수증/예약번호를 확인했다
 - 취소면 어떤 예약을 취소했는지 남아 있다
 
 ## Failure modes
@@ -240,5 +269,5 @@ python3 scripts/ktx_booking.py cancel <reservation_id>
 
 - `scripts/ktx_booking.py` 는 upstream `korail2` anti-bot 회귀를 보완하는 helper 다
 - `korail2` 는 KTX/Korail 전용 표면이라 train type 과 passenger model 이 분명하다
-- 결제 완료까지는 자동화하지 않는다
+- 결제 자동화 금지는 generic fallback에만 적용한다. 돌쇠에서는 `clarify` 승인 후 공식 결제 표면으로 완료한다
 - aggressive polling 은 피한다

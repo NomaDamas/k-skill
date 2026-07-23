@@ -165,6 +165,118 @@ test("root npm test script includes the skill docs regression suite", () => {
   assert.match(packageJson.scripts.test, /node --test scripts\/skill-docs\.test\.js/);
 });
 
+test("every top-level skill embeds the canonical portable runtime contract", () => {
+  const canonical = findSection(read("docs/adding-a-skill.md"), "## Runtime contract (required)").trim();
+  const skillDirs = fs
+    .readdirSync(repoRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => fs.existsSync(path.join(repoRoot, name, "SKILL.md")))
+    .sort();
+
+  assert.equal(skillDirs.length, 122);
+
+  for (const skillName of skillDirs) {
+    const skill = read(path.join(skillName, "SKILL.md"));
+
+    assert.ok(skill.includes(canonical), `${skillName} must embed the canonical portable runtime contract`);
+    assert.equal(
+      (skill.match(/^## Runtime contract \(required\)$/gm) ?? []).length,
+      1,
+      `${skillName} must contain exactly one portable runtime contract`,
+    );
+  }
+});
+
+test("actionable skills publish a Dolshoi action path", () => {
+  const actionableSkills = [
+    "bunjang-search",
+    "catchtable-sniper",
+    "corporate-registration-consulting",
+    "coupang-product-search",
+    "court-auction-notice-search",
+    "court-payment-order-assistant",
+    "d2b-notice-search",
+    "daangn-cars-search",
+    "daangn-jobs-search",
+    "daangn-realty-search",
+    "daangn-used-goods-search",
+    "daiso-product-search",
+    "danawa-price-search",
+    "donation-place-search",
+    "ev-charger-nearby",
+    "ev-subsidy-status",
+    "express-bus-booking",
+    "flight-ticket-search",
+    "foresttrip-vacancy",
+    "g2b-order-plan-search",
+    "gangnamunni-clinic-search",
+    "hipass-receipt",
+    "hola-poke-yeoksam",
+    "intercity-bus-booking",
+    "iros-registry-automation",
+    "job-posting-match",
+    "jobkorea-talent-search",
+    "kakao-bar-nearby",
+    "kakao-map",
+    "kakaotalk-mac",
+    "keris-academic-search",
+    "kopis-performance-search",
+    "korean-cinema-search",
+    "korean-jangbu-for",
+    "korean-marathon-schedule",
+    "korean-scholarship-search",
+    "kr-whois-lookup",
+    "kstartup-search",
+    "ktx-booking",
+    "lh-notice-search",
+    "library-book-search",
+    "lovebug-report",
+    "market-kurly-search",
+    "myrealtrip-search",
+    "naver-ad-performance",
+    "naver-shopping-search",
+    "nhis-care-checkup-search",
+    "nts-business-registration",
+    "nts-tax-delinquency",
+    "ohou-today-deal",
+    "olive-young-search",
+    "popbill",
+    "s2b-notice-search",
+    "saramin-talent-search",
+    "sh-notice-search",
+    "srt-booking",
+    "subway-lost-property",
+    "ticket-availability",
+    "toss-securities",
+    "used-car-price-search",
+    "yebigun-training",
+  ];
+
+  for (const skillName of actionableSkills) {
+    const skill = read(path.join(skillName, "SKILL.md"));
+
+    assert.match(skill, /^## Dolshoi action path$/m, `${skillName} should document its Dolshoi action path`);
+    assert.match(skill, /clarify/, `${skillName} should document irreversible-action approval`);
+  }
+});
+
+test("runtime action audit covers every top-level skill exactly once", () => {
+  const audit = read("docs/runtime-action-audit.md");
+  const skillDirs = fs
+    .readdirSync(repoRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => fs.existsSync(path.join(repoRoot, name, "SKILL.md")))
+    .sort();
+
+  for (const skillName of skillDirs) {
+    const matches = audit.match(new RegExp(`^\\| \\\`${escapeRegex(skillName)}\\\` \\|`, "gm")) ?? [];
+
+    assert.equal(matches.length, 1, `${skillName} must appear exactly once in the runtime action audit`);
+  }
+});
+
 test("README advertises OpenClaw among the supported coding agents", () => {
   const readme = read("README.md");
 
@@ -765,7 +877,10 @@ test("ktx-booking docs document the helper-based live Korail workflow", () => {
     assert.match(doc, /--try-waiting/);
     assert.match(doc, /credential resolution order|KSKILL_KTX_ID/);
     assert.match(doc, /anti-bot|Dynapath|x-dynapath-m-token/i);
-    assert.match(doc, /결제(까지)?는 자동화하지 않는다|결제는 제외/);
+    assert.match(doc, /좌석 확보는 완료|예약번호.*구입기한|예약번호, 구입기한/);
+    assert.match(doc, /돌쇠|Dolshoi/);
+    assert.match(doc, /clarify/);
+    assert.match(doc, /결제 완료|결제 상태/);
     assert.doesNotMatch(doc, /예약 시 선택할 `--train-index`/);
   }
 

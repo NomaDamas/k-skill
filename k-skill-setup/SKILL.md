@@ -10,6 +10,16 @@ metadata:
 
 # k-skill Setup
 
+## Runtime contract (required)
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
+- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
+
 ## Purpose
 
 전체 `k-skill` 설치가 끝난 뒤, 공통 후속 작업을 처리한다.
@@ -27,9 +37,20 @@ metadata:
 - `cron`, `launchd`, `schtasks`, `gh` 같은 지속성/외부 상태 변경은 자동으로 하지 말고 먼저 사용자 동의를 받는다
 - GitHub star는 사용자가 명시적으로 동의했을 때만 실행한다
 
-## Credential resolution order
+## Dolshoi-first runtime policy
 
-모든 credential-bearing 스킬은 아래 우선순위를 따른다.
+돌쇠는 credential, browser, action을 서로 독립적인 capability로 감지한다.
+
+1. `DOLSHOI_ACTION_BROKER_URL`과 실행 가능한 `vault-run`이 모두 있으면 credential action mode다.
+2. 필요한 login capability가 이미 provision되어 있으면 `vault-run <capability_id> <action> [args...]`를 사용한다.
+3. capability가 없으면 username/password/key를 채팅으로 묻지 말고 `request_vault_credential` tool로 앱 vault 입력 UI를 호출한다.
+4. 내장 browser tool이 CloakBrowser를 제공하거나 `CLOAKBROWSER_PEEK_TOKEN`이 있으면 browser action은 CloakBrowser를 우선한다.
+5. 조회 결과가 실제 action의 입력이면 공식 표면에서 장바구니, 예약, 신청서 작성, 연락 초안 등 가역적 단계를 이어서 수행한다.
+6. 결제, 실제 메시지/메일 전송, 최종 제출, 취소 같은 비가역 효과 직전에만 `clarify`로 대상·금액/payload·효과를 승인받고, 승인되면 같은 turn에 실행한다.
+
+## Generic credential resolution order
+
+돌쇠 credential mode가 아닐 때만 아래 portable fallback을 따른다.
 
 1. **이미 환경변수에 있으면** 그대로 사용한다.
 2. **에이전트가 자체 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)를 사용 중이면** 거기서 꺼내 환경변수로 주입해도 된다.
@@ -56,9 +77,9 @@ npx --yes skills add <owner/repo> --all -g
 
 ## Setup steps
 
-### 1. Create the default secrets file (if no vault is in use)
+### 1. Create the default secrets file (generic fallback only)
 
-에이전트가 자체 vault를 쓰지 않는 경우, 기본 fallback 파일을 만든다.
+돌쇠 credential mode나 다른 host vault를 쓰지 않는 경우에만 기본 fallback 파일을 만든다.
 
 ```bash
 mkdir -p ~/.config/k-skill
@@ -80,7 +101,7 @@ EOF
 chmod 0600 ~/.config/k-skill/secrets.env
 ```
 
-유저에게 물어서 실제 값을 채운다.
+호스트가 제공하는 가장 안전한 입력 표면으로 실제 값을 받아 채운다. 돌쇠에서는 이 파일을 만들거나 평문 값을 묻지 않는다.
 
 서울 지하철 도착정보, 서울 실시간 혼잡도 조회, 서울 따릉이 실시간 대여소 조회, 한국 날씨, 미세먼지, 한강 수위, 주유소 가격, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 `KSKILL_PROXY_BASE_URL` 을 비워 두면 기본 hosted path(`k-skill-proxy.nomadamas.org`)를 그대로 쓴다. 전기차 충전소와 건축물대장 표제부 조회도 같은 기본 hosted path를 쓴다. 별도 self-host proxy를 쓸 때만 `KSKILL_PROXY_BASE_URL` 을 채운다.
 
