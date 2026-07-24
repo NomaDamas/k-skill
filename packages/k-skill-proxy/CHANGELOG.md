@@ -1,5 +1,12 @@
 # k-skill-proxy
 
+## 0.10.1
+
+### Patch Changes
+
+- 0f077cf: Add per-endpoint usage logging (route pattern + status code) so daily/weekly/monthly call statistics can be derived from server logs. `/health` checks are excluded from the counts.
+- 0eebea8: Relicense the k-skill-proxy package from MIT to AGPL-3.0-only (repository default remains MIT).
+
 ## 0.10.0
 
 ### Minor Changes

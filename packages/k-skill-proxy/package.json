@@ -1,6 +1,6 @@
 {
   "name": "k-skill-proxy",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "private": true,
   "description": "Fastify proxy for k-skill upstream APIs",
   "license": "AGPL-3.0-only",

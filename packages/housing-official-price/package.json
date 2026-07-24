@@ -1,6 +1,6 @@
 {
   "name": "housing-official-price",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Client-side helpers for Korean official housing prices from realtyprice.kr",
   "license": "MIT",
   "main": "src/index.js",
