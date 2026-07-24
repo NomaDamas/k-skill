@@ -1,0 +1,9 @@
+{
+  "name": "myrealtrip-search",
+  "description": "마이리얼트립 공식 Streamable HTTP MCP 서버로 항공권, 숙소, 투어/티켓/액티비티를 검색하고 상세·가격·예약 링크를 확인한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "browser",
+    "action:booking"
+  ],
+  "frontmatter": "name: myrealtrip-search\ndescription: 마이리얼트립 공식 Streamable HTTP MCP 서버로 항공권, 숙소, 투어/티켓/액티비티를 검색하고 상세·가격·예약 링크를 확인한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
+}

@@ -1,0 +1,113 @@
+# korean-transit-route
+
+## When to use
+
+- "강남에서 잠실 지하철로 어떻게 가?"
+- "서울역 → 인천공항 대중교통 경로"
+- "환승 가장 적은 경로", "최소 시간 경로"
+
+## Credentials
+
+- 환경변수 `ODSAY_API_KEY` 가 있으면 사용. 없으면 `~/.config/k-skill/secrets.env` 에서 로드.
+- ODsay Server 키는 호출 IP 화이트리스트 등록 필수. 발급은 https://lab.odsay.com
+- Kakao Local geocoding은 기본 hosted `k-skill-proxy` 경유로 호출하므로 사용자 쪽 `KAKAO_REST_API_KEY` 는 불필요하다. self-host proxy 운영자만 `KAKAO_REST_API_KEY` 를 서버에 설정한다.
+
+## Inputs
+
+자연어 입력에서 출발/도착을 추출. 좌표가 없으면 **반드시 geocoding 먼저** (ODsay는 좌표만 받음).
+
+### Geocoding (필수 선행 단계)
+
+기본 hosted proxy를 사용한다. Proxy가 Kakao Local REST API 키를 서버에서만 주입하고, caller `apiKey` 는 무시한다.
+
+1. `https://k-skill-proxy.nomadamas.org/v1/kakao-local/geocode?q=<주소/장소명>`
+2. proxy 내부 fallback: Kakao Local `address.json` → 결과 없으면 `keyword.json`
+
+응답 `documents[0].x`(경도), `.y`(위도) 사용.
+
+```python
+import os, urllib.parse, urllib.request, json
+PROXY=os.environ.get('KSKILL_PROXY_BASE_URL','https://k-skill-proxy.nomadamas.org').rstrip('/')
+def geocode(q):
+    url=PROXY+'/v1/kakao-local/geocode?q='+urllib.parse.quote(q)
+    with urllib.request.urlopen(url,timeout=10) as resp:
+        d=json.loads(resp.read())
+    if d.get('documents'):
+        doc=d['documents'][0]
+        return float(doc['x']), float(doc['y']), doc.get('place_name') or doc.get('address_name')
+    return None
+```
+
+지하철역명만 정확히 알 때는 ODsay `searchStation` 도 OK 하지만, 도어투도어 결과를 원하면 **실제 출발지/도착지 좌표**를 써야 첫/끝 도보 구간이 계산됨.
+
+## Core call
+
+```bash
+set -a; . ~/.config/k-skill/secrets.env; set +a
+KEY=$(python3 -c "import os,urllib.parse;print(urllib.parse.quote(os.environ['ODSAY_API_KEY'],safe=''))")
+curl -s "https://api.odsay.com/v1/api/searchPubTransPathT?apiKey=${KEY}&SX=${SX}&SY=${SY}&EX=${EX}&EY=${EY}&OPT=0&SearchPathType=${TYPE}"
+```
+
+Parameters:
+- `SX,SY` 출발 경도/위도, `EX,EY` 도착 경도/위도 (WGS84)
+- `OPT`: `0` 추천순(기본), `4` 최소시간, `5` 최소환승
+- `SearchPathType`: `0` 지하철+버스, `1` 지하철만, `2` 버스만
+
+## Response shape
+
+`result.path[]` 배열, 각 path:
+- `pathType`: 1=지하철, 2=버스, 3=지하철+버스
+- `info.totalTime`(분), `info.payment`(원), `info.subwayTransitCount`, `info.busTransitCount`, `info.totalWalk`(m), `info.firstStartStation`, `info.lastEndStation`
+- `subPath[]`: 구간별. `trafficType` 1=지하철 2=버스 3=도보. 지하철이면 `lane[0].name`, `startName`, `endName`, `passStopList.stations[]`(경유역)
+
+## Recommended output (door-to-door)
+
+`subPath` 의 각 구간을 `trafficType` 별로 표시. 첫/끝 도보 구간은 출발지·도착지에서 역까지 실제 도보를 의미하므로 **반드시 포함**.
+
+```
+🚇 범안로95번길 32 → SKT타워
+경로 1: 54분 · 1,950원 · 환승 2회 · 도보 688m
+  🚶 도보 1분
+  🚌 19번 부천범박힐스테이트 → 역곡역 (9분)
+  🚶 도보 2분
+  🚇 1호선 역곡 → 종각 (15정거장, 35분)
+  🚶 도보 7분
+```
+
+3개 이내 경로 비교 권장. `OPT=4`(최소시간) / `OPT=5`(최소환승) 옵션을 사용자가 선호 표시하면 그쪽으로 호출.
+
+## Done when
+
+- 출발지와 도착지가 geocoding 되었거나, 좌표/역명이 명확히 확인되었다.
+- ODsay 응답에서 1개 이상 경로가 정리되었다.
+- 각 경로의 총 소요시간, 요금, 환승 횟수, 총 도보 거리가 포함되었다.
+- 첫/끝 도보 구간이 포함된 door-to-door 요약을 보여줬다.
+- upstream API 키가 응답에 노출되지 않았다.
+
+## Helpers
+
+좌표 모르고 역명만 아는 경우 — `searchStation` 으로 변환:
+
+```bash
+curl -s "https://api.odsay.com/v1/api/searchStation?apiKey=${KEY}&stationName=강남&CID=1000"
+```
+
+`CID=1000` = 수도권. 결과 `result.station[].x,y` 가 좌표.
+
+## Limits
+
+- 현재 ODsay 공식 Basic 상품 기준 무료 체험은 일 1,000건(6개월)이다. `searchPubTransPathT` + `searchStation` 호출이 합산되니 한 질문당 호출 최소화.
+- 응답에 `error` 키 있으면 즉시 사용자에게 표시(ApiKey/IP 문제 진단에 유용).
+- 한국 외 좌표는 지원 안 함.
+
+## Failure modes
+
+- ODsay `error` 응답: `msg` 필드를 그대로 사용자에게 표시하고, ApiKey 미등록 또는 IP 화이트리스트 누락 가능성을 안내한다.
+- Kakao geocoding 결과 없음: 주소/장소명을 다시 확인하거나 더 구체적인 표현을 요청한다.
+- 좌표는 있으나 ODsay 경로 없음: 대중교통 미개통 지역, 도보 가능 거리, 또는 해상/공항 구간일 수 있다. 사용자에게 확인한다.
+- quota 초과: 일일 한도 도달 시 추가 호출을 중단하고 사용자에게 알린다.
+
+## Don'ts
+
+- 카카오맵/네이버지도 directions API로 대중교통 라우팅 시도하지 말 것 (둘 다 운전·도보만 공개).
+- 키를 절대 응답에 노출하지 말 것.

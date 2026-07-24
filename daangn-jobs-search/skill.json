@@ -1,0 +1,11 @@
+{
+  "name": "daangn-jobs-search",
+  "description": "당근알바 공개 웹 데이터로 공고를 검색하고, 돌쇠에서는 공식 계정 표면에서 지원서 작성·채팅·승인 기반 전송까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "browser",
+    "action:submission"
+  ],
+  "frontmatter": "name: daangn-jobs-search\ndescription: 당근알바 공개 웹 데이터로 공고를 검색하고, 돌쇠에서는 공식 계정 표면에서 지원서 작성·채팅·승인 기반 전송까지 진행한다.\nlicense: MIT\nmetadata:\n  category: jobs\n  locale: ko-KR\n  phase: v1"
+}

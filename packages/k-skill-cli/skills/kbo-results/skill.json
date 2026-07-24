@@ -1,0 +1,8 @@
+{
+  "name": "kbo-results",
+  "description": "Fetch KBO game schedules and results for a specific date with the kbo-game npm package. Use when the user asks for today's KBO games, yesterday's scores, or a date-specific scoreboard.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: kbo-results\ndescription: Fetch KBO game schedules and results for a specific date with the kbo-game npm package. Use when the user asks for today's KBO games, yesterday's scores, or a date-specific scoreboard.\nlicense: MIT\nmetadata:\n  category: sports\n  locale: ko-KR\n  phase: v1"
+}

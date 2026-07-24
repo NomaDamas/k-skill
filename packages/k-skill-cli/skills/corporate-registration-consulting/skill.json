@@ -1,0 +1,10 @@
+{
+  "name": "corporate-registration-consulting",
+  "description": "법인등기소/인터넷등기소 상업등기 신청을 처음 하는 사용자를 위해 일반 영리 주식회사 발기설립 절차, 정관·첨부서류 실제 HWP 양식 작성, 등록면허세·과밀억제권역 중과 체크, rhwp 기반 순차 검토 흐름을 참고용으로 안내한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+  "profiles": [
+    "vault",
+    "browser",
+    "legal"
+  ],
+  "frontmatter": "name: corporate-registration-consulting\ndescription: 법인등기소/인터넷등기소 상업등기 신청을 처음 하는 사용자를 위해 일반 영리 주식회사 발기설립 절차, 정관·첨부서류 실제 HWP 양식 작성, 등록면허세·과밀억제권역 중과 체크, rhwp 기반 순차 검토 흐름을 참고용으로 안내한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.\nlicense: MIT\nmetadata:\n  category: legal-documents\n  locale: ko-KR"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "zipcode-search",
+  "description": "Look up a Korean postcode and official English address from a known address with the official ePost integrated search page.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: zipcode-search\ndescription: Look up a Korean postcode and official English address from a known address with the official ePost integrated search page.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v2"
+}

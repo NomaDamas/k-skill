@@ -4,9 +4,10 @@
 
 권장 순서는 아래와 같다.
 
-1. `k-skill` 전체 스킬을 먼저 설치한다.
-2. 설치가 끝나면 `k-skill-setup` 스킬을 사용해 공통 설정을 마친다.
-3. 그 다음 필요한 기능 스킬을 호출한다.
+1. Node.js 18 이상과 `npx`가 사용 가능한지 확인한다.
+2. `k-skill` 전체 스킬을 먼저 설치한다.
+3. 설치가 끝나면 `k-skill-setup` 스킬을 사용해 공통 설정을 마친다.
+4. 그 다음 필요한 기능 스킬을 호출한다.
 
 인증이 필요한 기능만 따로 설치 흐름을 분기하지 않는다. 일단 전체 스킬을 설치해 두고, 실제 시크릿/환경 준비는 `k-skill-setup` 에 맡기는 것을 기본으로 한다.
 
@@ -23,15 +24,15 @@ Codex나 Claude Code에 아래 문장을 그대로 붙여 넣으면 된다.
 `skills` 설치 명령은 아래 셋 중 하나만 있으면 된다.
 
 ```bash
-npx --yes skills add <owner/repo> --list
-pnpm dlx skills add <owner/repo> --list
-bunx skills add <owner/repo> --list
+npx --yes skills add NomaDamas/k-skill --list
+pnpm dlx skills add NomaDamas/k-skill --list
+bunx skills add NomaDamas/k-skill --list
 ```
 
 권장: 전체 스킬 먼저 설치
 
 ```bash
-npx --yes skills add <owner/repo> --all -g
+npx --yes skills add NomaDamas/k-skill --all -g
 ```
 
 설치 후 `k-skill-setup` 을 호출해 공통 설정을 진행한다.
@@ -43,7 +44,7 @@ k-skill-setup 스킬을 사용해서 공통 설정을 진행해줘.
 선택 설치가 꼭 필요할 때만(예: 조회형만 먼저 테스트):
 
 ```bash
-npx --yes skills add <owner/repo> \
+npx --yes skills add NomaDamas/k-skill \
   --skill hwp \
   --skill rhwp-edit \
   --skill rhwp-advanced \
@@ -112,7 +113,7 @@ npx --yes skills add <owner/repo> \
 인증이 필요한 기능만 부분 설치할 때도 `k-skill-setup` 은 같이 넣는다.
 
 ```bash
-npx --yes skills add <owner/repo> \
+npx --yes skills add NomaDamas/k-skill \
   --skill k-skill-setup \
   --skill srt-booking \
   --skill ktx-booking \
@@ -135,6 +136,50 @@ npx --yes skills add <owner/repo> \
   --skill geeknews-search \
   --skill korea-weather \
   --skill fine-dust-location
+```
+
+## 통합 CLI와 SKILL.md 어댑터
+
+설치되는 각 `SKILL.md`는 스킬 선택에 필요한 frontmatter와 최소 안전 규칙을
+유지하지만, 전체 instruction은 `@nomadamas/k-skill` CLI가 런타임에 조립한다.
+
+```bash
+npx -y @nomadamas/k-skill@0 instruct <skill-name>
+```
+
+스킬 설치 후 CLI를 별도로 설치할 필요는 없다. 에이전트가 `SKILL.md`에 적힌
+명령을 실행하면 `npx`가 호환되는 최신 `0.x` 버전을 가져온다.
+
+```bash
+# 배포된 스킬 목록
+npx -y @nomadamas/k-skill@0 list
+
+# 현재 환경에 맞는 instruction 확인
+npx -y @nomadamas/k-skill@0 instruct srt-booking
+
+# npm 패키지에 동봉된 helper 파일 경로 확인
+npx -y @nomadamas/k-skill@0 files kosis-stats
+```
+
+CLI는 Dolshoi capability가 있으면 vault/CloakBrowser/action profile을
+Dolshoi 방식으로 조립하고, 그 밖의 환경에서는 generic instruction만
+출력한다. `scripts/`와 `references/`는 CLI npm 패키지에도 동봉되므로
+`SKILL.md`만 설치되는 환경에서도 helper가 누락되지 않는다.
+
+npm 접근이 제한되거나 반복 호출 비용을 피해야 하면 선택적으로 전역
+설치한다.
+
+```bash
+npm install -g @nomadamas/k-skill@0
+k-skill list
+k-skill instruct srt-booking
+```
+
+전역 설치는 필수가 아니다. 전역 설치를 사용하면 최신 호환 버전으로
+갱신할 때 다음 명령을 다시 실행한다.
+
+```bash
+npm install -g @nomadamas/k-skill@0
 ```
 
 `naming-house` 는 작명소 스킬이다. 시크릿은 필요 없고, npm 배포 후 반복 사용 시 `npm install -g naming-house` 로 package를 설치한다. 저장소 개발 중에는 루트 `npm install` 후 로컬 workspace package를 사용한다.

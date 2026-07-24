@@ -1,0 +1,9 @@
+{
+  "name": "gongsijiga-search",
+  "description": "|",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: gongsijiga-search\ndescription: |\n  대한민국 국토교통부가 매년 공시하는 \"개별공시지가\"(원/㎡) 조회.\n  지번 단위 토지의 정부 공시 단가로, 재산세·종부세·양도세 등\n  세금 산정의 법적 기준이다. **시세/실거래가가 아니다.**\n  Use when the user asks for 공시지가, 개별공시지가, 토지 공시단가,\n  세무 계산용 토지 단가, or \"이 땅 공시지가 얼마야\".\n  Do NOT use for 시세, 실거래가, 매매가, 호가, 공동주택가격\n  (those need a different data source).\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1"
+}

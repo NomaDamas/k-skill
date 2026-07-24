@@ -1,0 +1,8 @@
+{
+  "name": "k-skill-cleaner",
+  "description": "Interview the user and inspect coding-agent skill trigger counts to recommend unused K-skills for removal.",
+  "profiles": [
+    "local"
+  ],
+  "frontmatter": "name: k-skill-cleaner\ndescription: Interview the user and inspect coding-agent skill trigger counts to recommend unused K-skills for removal."
+}

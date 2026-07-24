@@ -1,0 +1,10 @@
+{
+  "name": "express-bus-booking",
+  "description": "Search and assist Korean 고속버스/KOBUS bookings using official HTTP/API-first flows; use for 고속버스 예매, 시간표, 좌석 조회, 임시 선점, and official checkout-entry handoff. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "vault",
+    "browser",
+    "action:booking"
+  ],
+  "frontmatter": "name: express-bus-booking\ndescription: Search and assist Korean 고속버스/KOBUS bookings using official HTTP/API-first flows; use for 고속버스 예매, 시간표, 좌석 조회, 임시 선점, and official checkout-entry handoff. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
+}

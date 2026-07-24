@@ -1,0 +1,8 @@
+{
+  "name": "korean-character-count",
+  "description": "Count Korean text deterministically with exact grapheme, line, and byte contracts for self-intros and form limits.",
+  "profiles": [
+    "local"
+  ],
+  "frontmatter": "name: korean-character-count\ndescription: Count Korean text deterministically with exact grapheme, line, and byte contracts for self-intros and form limits.\nlicense: MIT\nmetadata:\n  category: writing\n  locale: ko-KR\n  phase: v1"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "mfds-drug-safety",
+  "description": "식약처 공공 OpenAPI를 k-skill-proxy 경유로 조회하기 전에 증상·복용상황을 반드시 되묻는 인터뷰형 의약품 안전 체크 스킬.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: mfds-drug-safety\ndescription: 식약처 공공 OpenAPI를 k-skill-proxy 경유로 조회하기 전에 증상·복용상황을 반드시 되묻는 인터뷰형 의약품 안전 체크 스킬.\nlicense: MIT\nmetadata:\n  category: public-health\n  locale: ko-KR\n  phase: v1"
+}

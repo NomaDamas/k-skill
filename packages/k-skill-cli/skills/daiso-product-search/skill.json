@@ -1,0 +1,8 @@
+{
+  "name": "daiso-product-search",
+  "description": "Look up Daiso products by store name and product keyword using official Daiso Mall store/search/stock surfaces. Use when the user wants to know whether a product is available at a specific Daiso store. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "action:commerce"
+  ],
+  "frontmatter": "name: daiso-product-search\ndescription: Look up Daiso products by store name and product keyword using official Daiso Mall store/search/stock surfaces. Use when the user wants to know whether a product is available at a specific Daiso store. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: retail\n  locale: ko-KR\n  phase: v1"
+}

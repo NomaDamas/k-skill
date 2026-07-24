@@ -1,0 +1,8 @@
+{
+  "name": "geeknews-search",
+  "description": "GeekNews public RSS/Atom feed로 긱뉴스 게시물을 조회, 검색, 상세 확인하는 읽기 전용 스킬.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: geeknews-search\ndescription: GeekNews public RSS/Atom feed로 긱뉴스 게시물을 조회, 검색, 상세 확인하는 읽기 전용 스킬.\nlicense: MIT\nmetadata:\n  category: news\n  locale: ko-KR\n  source: geeknews-rss"
+}

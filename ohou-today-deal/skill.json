@@ -1,0 +1,9 @@
+{
+  "name": "ohou-today-deal",
+  "description": "오늘의집 공개 오늘의딜 페이지에서 로그인 없이 특가 상품을 조회하고 할인율, 가격, 리뷰, 링크를 정리하는 읽기 전용 스킬. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "browser",
+    "action:commerce"
+  ],
+  "frontmatter": "name: ohou-today-deal\ndescription: 오늘의집 공개 오늘의딜 페이지에서 로그인 없이 특가 상품을 조회하고 할인율, 가격, 리뷰, 링크를 정리하는 읽기 전용 스킬. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: retail\n  locale: ko-KR\n  phase: v1"
+}

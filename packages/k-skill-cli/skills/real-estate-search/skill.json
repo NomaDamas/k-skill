@@ -1,0 +1,9 @@
+{
+  "name": "real-estate-search",
+  "description": "Korean apartment/officetel/villa/single-house real transaction price and rent lookups via k-skill-proxy. Based on tae0y's real-estate-mcp and MOLIT public data APIs.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: real-estate-search\ndescription: Korean apartment/officetel/villa/single-house real transaction price and rent lookups via k-skill-proxy. Based on tae0y's real-estate-mcp and MOLIT public data APIs.\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1"
+}

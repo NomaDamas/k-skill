@@ -1,0 +1,10 @@
+{
+  "name": "bunjang-search",
+  "description": "번개장터 검색, 상세조회, 찜, 채팅, 대량 수집, AI TOON export를 bunjang-cli로 안내한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "vault",
+    "browser",
+    "action:commerce"
+  ],
+  "frontmatter": "name: bunjang-search\ndescription: 번개장터 검색, 상세조회, 찜, 채팅, 대량 수집, AI TOON export를 bunjang-cli로 안내한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: marketplace\n  locale: ko-KR\n  phase: v1"
+}

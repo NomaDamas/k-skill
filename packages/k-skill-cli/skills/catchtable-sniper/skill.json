@@ -1,0 +1,9 @@
+{
+  "name": "catchtable-sniper",
+  "description": "Monitor Catchtable for open reservation slots and attempt booking using a logged-in Chrome session. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "browser",
+    "action:booking"
+  ],
+  "frontmatter": "name: catchtable-sniper\ndescription: Monitor Catchtable for open reservation slots and attempt booking using a logged-in Chrome session. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: lifestyle\n  subcategory: food\n  locale: ko-KR\n  phase: v1\n  requires:\n    - Chrome MCP\n    - Logged-in Catchtable Chrome session"
+}

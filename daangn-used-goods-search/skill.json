@@ -1,0 +1,9 @@
+{
+  "name": "daangn-used-goods-search",
+  "description": "당근 중고거래 공개 웹 데이터로 매물을 검색하고, 돌쇠에서는 공식 계정 표면에서 찜·채팅·거래 준비까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "action:commerce"
+  ],
+  "frontmatter": "name: daangn-used-goods-search\ndescription: 당근 중고거래 공개 웹 데이터로 매물을 검색하고, 돌쇠에서는 공식 계정 표면에서 찜·채팅·거래 준비까지 진행한다.\nlicense: MIT\nmetadata:\n  category: marketplace\n  locale: ko-KR\n  phase: v1"
+}

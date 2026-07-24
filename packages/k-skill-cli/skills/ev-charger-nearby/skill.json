@@ -1,0 +1,9 @@
+{
+  "name": "ev-charger-nearby",
+  "description": "Use when the user asks for Korean EV charging-station locations, charger types, or current charger status by region, station, or location text. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: ev-charger-nearby\ndescription: Use when the user asks for Korean EV charging-station locations, charger types, or current charger status by region, station, or location text. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: transit\n  locale: ko-KR\n  phase: v1"
+}

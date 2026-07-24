@@ -1,0 +1,9 @@
+{
+  "name": "seoul-density",
+  "description": "서울 주요 121개 핫스팟 장소의 실시간 혼잡도와 인구 현황을 조회한다. 지금 강남역이 얼마나 붐비는지, 홍대 인파가 얼마나 되는지 물어볼 때 사용한다.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: seoul-density\ndescription: 서울 주요 121개 핫스팟 장소의 실시간 혼잡도와 인구 현황을 조회한다. 지금 강남역이 얼마나 붐비는지, 홍대 인파가 얼마나 되는지 물어볼 때 사용한다.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}

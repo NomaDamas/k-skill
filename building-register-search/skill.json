@@ -1,0 +1,9 @@
+{
+  "name": "building-register-search",
+  "description": "Use when the user asks to look up a Korean building-register title record by address, PNU, legal-dong code, or parcel number.",
+  "profiles": [
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: building-register-search\ndescription: Use when the user asks to look up a Korean building-register title record by address, PNU, legal-dong code, or parcel number.\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1"
+}

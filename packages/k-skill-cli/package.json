@@ -1,0 +1,37 @@
+{
+  "name": "@nomadamas/k-skill",
+  "version": "0.1.0",
+  "description": "k-skill unified CLI: assembles runtime-aware skill instructions and ships bundled helper files",
+  "license": "MIT",
+  "bin": {
+    "k-skill": "bin/k-skill.js"
+  },
+  "main": "src/assemble.js",
+  "files": [
+    "bin",
+    "src",
+    "templates",
+    "skills",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NomaDamas/k-skill.git"
+  },
+  "keywords": [
+    "k-skill",
+    "korea",
+    "agent-skills",
+    "cli"
+  ],
+  "scripts": {
+    "lint": "node --check bin/k-skill.js && node --check src/assemble.js && node --check src/detect.js && node --check test/cli.test.js",
+    "test": "node --test"
+  }
+}

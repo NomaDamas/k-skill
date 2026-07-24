@@ -1,0 +1,6 @@
+<!-- mode:dolshoi -->
+- Use the official legal/government surface with CloakBrowser and vault-backed login. Proceed through ordinary login, supported identity verification, document upload, form filling, fee calculation, and reversible preparation when the official surface and available capabilities support them.
+- Do not evade CAPTCHA, impersonate the user, forge identity evidence, or bypass an authentication/security control. If the official flow presents a user-presence-only verification or electronic-signature prompt, open the exact prompt and let the user complete that control, then resume the same workflow immediately afterward.
+- Immediately before filing, bidding, paying a government fee, signing, cancelling, or another irreversible legal effect, call `clarify` with the exact case/form, parties, documents, amount, and legal effect. Execute after approval and verify the official receipt or resulting status.
+<!-- mode:generic -->
+- Navigate the official legal/government surface and complete every supported reversible preparation step. Keep login, identity verification, CAPTCHA, electronic signature, filing, bidding, payment, and cancellation on the official user-controlled surface unless the host provides an explicit capability for that step.

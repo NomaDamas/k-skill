@@ -1,0 +1,10 @@
+{
+  "name": "kopis-performance-search",
+  "description": "KOPIS 공연 목록·상세·시설을 조회하고, 돌쇠에서는 공식 예매처의 좌석·예약·승인 기반 결제까지 이어간다.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "action:booking"
+  ],
+  "frontmatter": "name: kopis-performance-search\ndescription: KOPIS 공연 목록·상세·시설을 조회하고, 돌쇠에서는 공식 예매처의 좌석·예약·승인 기반 결제까지 이어간다.\nlicense: MIT\nmetadata:\n  category: culture\n  locale: ko-KR\n  phase: v1"
+}

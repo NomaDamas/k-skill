@@ -3,12 +3,13 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const skillPath = path.join(__dirname, "..", "saju-fortune", "SKILL.md");
+const skillDir = path.join(__dirname, "..", "saju-fortune");
 
 test("saju-fortune skill instructs interview-first fortune reading", () => {
-  const text = fs.readFileSync(skillPath, "utf8");
+  const manifest = JSON.parse(fs.readFileSync(path.join(skillDir, "skill.json"), "utf8"));
+  const text = fs.readFileSync(path.join(skillDir, "instruction.md"), "utf8");
 
-  assert.match(text, /^name: saju-fortune$/m);
+  assert.match(manifest.frontmatter, /^name: saju-fortune$/m);
   assert.match(text, /인터뷰/);
   assert.match(text, /연애운/);
   assert.match(text, /재물운/);

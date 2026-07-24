@@ -1,0 +1,9 @@
+{
+  "name": "korean-patent-search",
+  "description": "Search Korean patent and utility-model publications through the official KIPRIS Plus Open API with keyword search plus application-number detail lookup.",
+  "profiles": [
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: korean-patent-search\ndescription: Search Korean patent and utility-model publications through the official KIPRIS Plus Open API with keyword search plus application-number detail lookup.\nlicense: MIT\nmetadata:\n  category: ip\n  locale: ko-KR\n  phase: v1"
+}

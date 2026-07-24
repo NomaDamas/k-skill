@@ -1,0 +1,9 @@
+{
+  "name": "seoul-bike",
+  "description": "서울 따릉이 실시간 대여소의 대여 가능 자전거와 빈 거치대를 좌표 주변 또는 대여소 이름으로 조회한다.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: seoul-bike\ndescription: 서울 따릉이 실시간 대여소의 대여 가능 자전거와 빈 거치대를 좌표 주변 또는 대여소 이름으로 조회한다.\nlicense: MIT\nmetadata:\n  category: transit\n  locale: ko-KR\n  phase: v1"
+}

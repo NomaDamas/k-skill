@@ -1,0 +1,9 @@
+{
+  "name": "gangnamunni-clinic-search",
+  "description": "강남언니 공개 검색 페이지에서 성형외과·피부과 병원 후보, 평점, 리뷰 수, 지원 언어, 공개 병원 링크를 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "action:booking"
+  ],
+  "frontmatter": "name: gangnamunni-clinic-search\ndescription: 강남언니 공개 검색 페이지에서 성형외과·피부과 병원 후보, 평점, 리뷰 수, 지원 언어, 공개 병원 링크를 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: beauty\n  locale: ko-KR\n  phase: v1"
+}

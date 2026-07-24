@@ -1,0 +1,8 @@
+{
+  "name": "kleague-results",
+  "description": "케이리그 경기 결과와 현재 순위를 날짜/팀 기준으로 조회한다. 공식 JSON 엔드포인트와 kleague-results npm 패키지를 사용한다.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: kleague-results\ndescription: 케이리그 경기 결과와 현재 순위를 날짜/팀 기준으로 조회한다. 공식 JSON 엔드포인트와 kleague-results npm 패키지를 사용한다.\nlicense: MIT\nmetadata:\n  category: sports\n  locale: ko-KR\n  phase: v1"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "lotto-results",
+  "description": "Check Korean Lotto draw results, latest rounds, and ticket matches with the k-lotto npm package. Use when the user asks for winning numbers, payout details, or whether their numbers matched.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: lotto-results\ndescription: Check Korean Lotto draw results, latest rounds, and ticket matches with the k-lotto npm package. Use when the user asks for winning numbers, payout details, or whether their numbers matched.\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}

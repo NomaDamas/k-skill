@@ -18,9 +18,10 @@
 
 스킬을 추가하거나 변경할 때는 관련 기능 문서와 `README.md`의 표를 포함해 코드와 문서를 함께 갱신합니다.
 
-- 모든 top-level `SKILL.md`에는 [`docs/adding-a-skill.md`](docs/adding-a-skill.md)의 정확한 `## Runtime contract (required)` 블록을 넣습니다.
-- 이 블록은 링크만 남기거나 축약하지 않습니다. Vercel `skills add --skill <name>`과 Dolshoi는 개별 스킬 디렉터리만 설치할 수 있어 `docs/`, `AGENTS.md`, `CLAUDE.md`, `k-skill-setup`이 함께 존재한다고 가정할 수 없습니다.
-- 공통 블록은 모든 스킬에서 동일하게 유지하고, 상세 설명은 [`docs/dolshoi-runtime.md`](docs/dolshoi-runtime.md), 사이트별 navigation/action/failure 정보는 해당 `SKILL.md`에 둡니다.
+- top-level 스킬의 source of truth는 `skill.json`과 `instruction.md`입니다. `skill.json`에는 name, description, frontmatter, profiles를 두고 `instruction.md`에는 사이트별 workflow만 둡니다.
+- `SKILL.md`는 `scripts/generate-skill-stubs.js`가 생성하는 CLI adapter stub입니다. 직접 수정하지 않습니다.
+- 공통 runtime 규칙은 `packages/k-skill-cli/templates/*.md`에서 profile 단위로 관리합니다. vault/browser/action/legal/operations 규칙을 각 `instruction.md`에 복제하지 않습니다.
+- source를 수정한 뒤 `npm run generate:skill-stubs`와 `npm run sync:cli-skills`를 실행하고 두 명령의 `--check`가 통과하는지 확인합니다.
 - 액션이 가능한 스킬은 돌쇠에서 조회 링크만 반환하지 말고 공식 표면을 이용해 장바구니, 예약, 초안, 연락 준비 등 가역적 단계까지 실행합니다. 결제, 메시지 전송, 최종 제출, 취소 같은 비가역 외부 효과 직전에는 `clarify` 승인을 받습니다.
 - 법률상 금지, 현장 방문 필수, CAPTCHA, 본인인증, 전자서명, 공식 사이트 미지원 경계는 제거하지 않습니다. 이런 경우에는 가능한 가장 가까운 합법적 공식 단계까지 수행하도록 완료 기준을 씁니다.
 - 관련 기능 문서(`docs/features/<skill-name>.md`)를 추가하거나 업데이트합니다.
@@ -75,7 +76,7 @@
 ## 검증
 
 - 문서만 바꿔도 관련 문서 테스트를 먼저 추가하거나 업데이트하고, 실패를 확인한 뒤 구현하는 TDD 흐름을 권장합니다.
-- `npm run lint`가 모든 top-level 스킬의 portable runtime block 존재와 동일성을 검증하는지 확인합니다.
+- `npm run lint`가 모든 top-level 스킬의 stub/source/bundle 정합성과 profile 유효성을 검증하는지 확인합니다.
 - 일반 변경은 가능한 한 `npm run lint`, `npm run typecheck`, `npm test`를 실행합니다.
 - 릴리스나 패키징 관련 변경은 `npm run ci`를 실행합니다.
 - 변경 범위가 작더라도 최종 보고에는 어떤 명령을 실행했고 어떤 결과가 나왔는지 적습니다.

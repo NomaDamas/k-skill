@@ -1,0 +1,9 @@
+{
+  "name": "seoul-subway-arrival",
+  "description": "Look up Seoul real-time subway arrival information with the official Seoul Open Data API. Use when the user asks when a train arrives, which trains are approaching a station, or how crowded Seoul subway timing looks right now.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: seoul-subway-arrival\ndescription: Look up Seoul real-time subway arrival information with the official Seoul Open Data API. Use when the user asks when a train arrives, which trains are approaching a station, or how crowded Seoul subway timing looks right now.\nlicense: MIT\nmetadata:\n  category: transit\n  locale: ko-KR\n  phase: v1"
+}

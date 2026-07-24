@@ -40,7 +40,7 @@ test("converter leaves unrecognized names and numbers unchanged while archaising
 
 test("documentation and skill describe proper-noun preservation as best effort", () => {
   const docs = fs.readFileSync(path.join(__dirname, "..", "docs", "features", "korean-middle-korean.md"), "utf8");
-  const skill = fs.readFileSync(path.join(__dirname, "..", "korean-middle-korean", "SKILL.md"), "utf8");
+  const skill = fs.readFileSync(path.join(__dirname, "..", "korean-middle-korean", "instruction.md"), "utf8");
 
   assert.match(docs, /인명·숫자·고유명사는 완전 보존이 아니라/i);
   assert.match(docs, /넓은 전역 치환/i);

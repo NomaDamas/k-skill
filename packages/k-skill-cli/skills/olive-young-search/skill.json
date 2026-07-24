@@ -1,0 +1,8 @@
+{
+  "name": "olive-young-search",
+  "description": "upstream daiso CLI를 사용해 올리브영 매장 검색, 상품 검색, 재고 확인을 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "action:commerce"
+  ],
+  "frontmatter": "name: olive-young-search\ndescription: upstream daiso CLI를 사용해 올리브영 매장 검색, 상품 검색, 재고 확인을 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: retail\n  locale: ko-KR\n  phase: v1"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "naver-blog-research",
+  "description": "Search Naver blogs, read full post content, and download images using only python3 stdlib — no API key required.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: naver-blog-research\ndescription: Search Naver blogs, read full post content, and download images using only python3 stdlib — no API key required.\nlicense: MIT\nmetadata:\n  category: research\n  locale: ko-KR\n  phase: v1"
+}

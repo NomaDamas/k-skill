@@ -1,0 +1,10 @@
+{
+  "name": "lh-notice-search",
+  "description": "Search official LH 청약 (Korea Land & Housing Corporation lease/subscription) 공고 lists through k-skill-proxy. Use when a user asks about 청년/행복/영구/국민/매입/전세임대, 분양주택, 신혼희망타운 공고 marketed on apply.lh.or.kr. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+  "profiles": [
+    "proxy",
+    "vault",
+    "action:submission"
+  ],
+  "frontmatter": "name: lh-notice-search\ndescription: Search official LH 청약 (Korea Land & Housing Corporation lease/subscription) 공고 lists through k-skill-proxy. Use when a user asks about 청년/행복/영구/국민/매입/전세임대, 분양주택, 신혼희망타운 공고 marketed on apply.lh.or.kr. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1"
+}

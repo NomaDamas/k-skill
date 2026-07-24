@@ -1,0 +1,106 @@
+# korea-weather — assembled instructions
+
+Runtime mode: generic
+
+## Runtime rules
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Plain lookups go through the hosted `k-skill-proxy` (`https://k-skill-proxy.nomadamas.org`) by default; no user API key is needed. Set `KSKILL_PROXY_BASE_URL` only for a self-hosted or alternate proxy. Direct upstream calls require the skill-documented API key.
+- This skill is lookup-oriented. Completion means the requested data is retrieved, summarized with its source (table/endpoint, period, unit), and any requested follow-up action is connected to the official surface that supports it.
+
+# Korea Weather
+
+## What this skill does
+
+기상청 단기예보 조회서비스를 `k-skill-proxy` 경유로 조회해서 한국 날씨를 요약한다.
+사용자는 개인 OpenAPI key를 직접 발급할 필요가 없고, proxy 서버에만 `KMA_OPEN_API_KEY` 를 둔다.
+
+## When to use
+
+- "서울 시청 근처 지금 날씨 어때?"
+- "부산 날씨 알려줘"
+- "위도/경도 기준으로 한국 단기예보 보고 싶어"
+
+## Prerequisites
+
+- optional: `jq`
+- optional: `KSKILL_PROXY_BASE_URL` (self-host·별도 프록시를 쓸 때만 설정. 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.)
+
+## Required environment variables
+
+- 없음. `KSKILL_PROXY_BASE_URL` 은 선택 사항이며, 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` 를 사용한다.
+
+사용자가 공공데이터포털 기상청 API key를 직접 다룰 필요는 없다. `/v1/korea-weather/forecast` route는 기본 hosted proxy에서 호출하고, upstream `KMA_OPEN_API_KEY` 는 proxy 서버에서만 관리한다. 별도 proxy를 쓰는 경우에만 `KSKILL_PROXY_BASE_URL` 을 설정한다.
+
+## Inputs
+
+- 격자 좌표: `nx`, `ny`
+- 또는 위도/경도: `lat`, `lon`
+- 선택 사항: `baseDate`, `baseTime`
+
+`baseDate` / `baseTime` 을 생략하면 proxy 가 KST 기준 최신 단기예보 발표 시각을 자동으로 고른다.
+
+## Workflow
+
+### 1. Resolve the proxy base URL
+
+`KSKILL_PROXY_BASE_URL` 이 있으면 그 값을 사용하고, 없거나 비어 있으면 기본 hosted proxy `https://k-skill-proxy.nomadamas.org` 를 사용한다.
+
+### 2. Query the short-term forecast endpoint
+
+격자 좌표가 이미 있으면 그대로 넣고, 위도/경도만 있으면 proxy 에 그대로 넘긴다.
+
+```bash
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
+  --data-urlencode 'lat=37.5665' \
+  --data-urlencode 'lon=126.9780'
+```
+
+격자 좌표 예시:
+
+```bash
+BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
+curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
+  --data-urlencode 'nx=60' \
+  --data-urlencode 'ny=127' \
+  --data-urlencode 'baseDate=20260405' \
+  --data-urlencode 'baseTime=0500'
+```
+
+### 3. Summarize the response conservatively
+
+가능하면 아래 항목만 먼저 요약한다.
+
+- `TMP`: 기온
+- `SKY`: 하늘상태
+- `PTY`: 강수형태
+- `POP`: 강수확률
+- `PCP`: 강수량
+- `SNO`: 적설
+- `REH`: 습도
+- `WSD`: 풍속
+
+응답에는 조회 시점과 `baseDate` / `baseTime` 도 함께 적는다.
+
+## Done when
+
+- 요청 위치의 단기예보 응답이 정리되어 있다
+- 조회 시점과 예보 발표 시각이 명시되어 있다
+- upstream key가 클라이언트에 노출되지 않았다
+
+## Failure modes
+
+- proxy upstream key 미설정 또는 hosted/self-host route 장애
+- `nx` / `ny` 또는 `lat` / `lon` 이 불완전한 경우
+- 기상청 quota 초과 또는 upstream 장애
+- 선택한 발표 시각에 아직 예보가 준비되지 않은 경우
+
+## Notes
+
+- 공식 API는 `nx` / `ny` 격자를 쓰지만, proxy 는 `lat` / `lon` 도 받아 내부에서 격자로 변환한다.
+- 단기예보 category 는 `TMP`, `SKY`, `PTY`, `POP`, `PCP`, `SNO`, `REH`, `WSD` 등을 중심으로 본다.
+- proxy 운영/환경변수 설정은 `docs/features/k-skill-proxy.md` 를 참고한다.

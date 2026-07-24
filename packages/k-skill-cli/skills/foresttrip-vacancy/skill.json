@@ -1,0 +1,10 @@
+{
+  "name": "foresttrip-vacancy",
+  "description": "Look up available Korean national forest recreation lodging or camping slots on foresttrip.go.kr and, in Dolshoi, continue into the official booking flow with approval-gated payment.",
+  "profiles": [
+    "vault",
+    "browser",
+    "action:booking"
+  ],
+  "frontmatter": "name: foresttrip-vacancy\ndescription: Look up available Korean national forest recreation lodging or camping slots on foresttrip.go.kr and, in Dolshoi, continue into the official booking flow with approval-gated payment.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1.5"
+}
