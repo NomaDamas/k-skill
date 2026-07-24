@@ -48,16 +48,17 @@ packages/k-skill-cli/
 
 | profile | 의미 | 주입되는 블록 |
 |---|---|---|
-| `core` | (항상) | 능력 기반 런타임 감지, lookup 너머 실행 계속, `clarify` 승인 경계, hard boundary 원칙 |
+| `core` | (항상) | 능력 기반 런타임 감지, lookup 너머 실행 계속, `clarify` 승인 경계, 보안 통제 우회 금지 |
 | `proxy` | k-skill-proxy 필요 | hosted 기본 URL, `KSKILL_PROXY_BASE_URL`, self-host 안내 |
 | `browser` | browser-use 동반 | 돌쇠: CloakBrowser 우선 / generic: k-skill-browser-runtime → Aside/BrowserOS/CDP |
 | `vault` | 로그인/secret 필수 | 돌쇠: vault-run → request_vault_credential / generic: env → host vault → secrets.env |
 | `action:booking` | 예약·좌석·결제 | 좌석 확보=완수 보고, 결제는 `clarify` 후 진행 |
 | `action:commerce` | 장바구니·주문·결제 | 장바구니 가역 단계, 주문 직전 `clarify` |
-| `action:communication` | 메시지·문의 전송 | draft 준비, 전송 직전 `clarify` |
 | `action:submission` | 신청·신고·제출 | 폼/첨부 준비, 제출 직전 `clarify` |
 | `action:account` | 계정 상태 변경 | 공식 표면이 지원하는 범위만 |
-| `hard-boundary` | 법률·본인인증 경계 | 합법 최대 지점까지 준비, 최종 단계는 사용자 |
+| `action:recruiting` | 기업 인재검색 | shortlist, 유료 열람/제안 직전 `clarify` |
+| `legal` | 법률·정부 공식 절차 | 로그인·인증·서류 준비, 법적 효과 직전 `clarify` |
+| `operations` | k-skill 운영 | 설치·업데이트·복구·런타임 연결 후 검증 |
 | `lookup` | 조회 전용 | 조회 완수 기준, 후속 행동은 공식 표면 연결 |
 
 블록 내부는 `<<always>>` / `<<dolshoi>>` / `<<generic>>` 마커로 분기하고,
@@ -80,18 +81,11 @@ stub은 major 버전 고정(`@0`)으로 CLI를 호출한다. breaking 변경은 
 - CI: 조립 스냅샷 테스트로 릴리스마다 최종 instruction diff가 리뷰에 노출됨
 - staleness 검증: `generate-skill-stubs.js --check`, `sync-skills.js --check`를 CI에서 실행
 
-## 파일럿 범위
+## 전환 범위
 
-| 스킬 | profiles |
-|---|---|
-| `srt-booking` | vault, browser, action:booking |
-| `kosis-stats` | proxy, lookup (+ bigdata/direct 한정 vault 규칙은 instruction.md에 유지) |
-| `catchtable-sniper` | browser, action:booking |
-| `korean-holiday-calendar` | proxy, lookup |
-| `yebigun-training` | browser, hard-boundary |
-
-나머지 117개는 기존 embedded contract 방식을 유지한다 (테스트에서 파일럿만 제외).
-파일럿 검증 통과 후 일괄 전환 + npm 배포 파이프라인은 후속 PR로 진행한다.
+122개 top-level 스킬 전체가 `skill.json` + `instruction.md` source와 생성된
+`SKILL.md` CLI stub 구조를 사용한다. 유형별 profile과 completion target은
+`docs/runtime-action-audit.md`에서 관리한다.
 
 ## 검증 계획
 

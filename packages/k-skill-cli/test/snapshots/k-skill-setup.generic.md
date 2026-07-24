@@ -11,7 +11,8 @@ Runtime mode: generic
 - Plain lookups go through the hosted `k-skill-proxy` (`https://k-skill-proxy.nomadamas.org`) by default; no user API key is needed. Set `KSKILL_PROXY_BASE_URL` only for a self-hosted or alternate proxy. Direct upstream calls require the skill-documented API key.
 - Resolve credentials in this order: already-injected environment variables, then the host vault, then `~/.config/k-skill/secrets.env` (mode `0600`). If the value is missing, request it through the safest input surface the host provides and store it in the vault or dotenv; never echo it back.
 - Use `k-skill-browser-runtime` (provider `auto`: BrowserOS CDP, then Aside CLI, then user-launched Chrome CDP) for logged-in or rendered-page automation. Do not launch or close the user's browser, and never solve CAPTCHA, identity proofing, or e-signature flows.
-- This skill produces local artifacts (documents, conversions, corrections, generated text). Completion means the requested artifact is actually created/edited and its location or content is reported. No external side effects are involved unless explicitly documented.
+- This skill operates or configures the k-skill installation itself. Inspect current state, apply the requested reversible setup/update/repair operation, and verify the installed CLI, skill directories, browser runtime, proxy connectivity, and credential-provider integration that the request covers.
+- Do not change unrelated user configuration. Before deleting data, replacing user-managed files, changing persistent update automation, or performing another irreversible operation, call `clarify` with the exact paths and effect.
 
 # k-skill Setup
 

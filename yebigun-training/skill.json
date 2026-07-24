@@ -2,8 +2,9 @@
   "name": "yebigun-training",
   "description": "사용자가 직접 로그인한 예비군 홈페이지(yebigun1.mil.kr) Chrome 세션을 재사용해 이번 훈련 일정/장소를 조회하고, 작년 이전 기록과 비교해 무엇이 달라졌는지 알려준다. 조회 전용이며 로그인이나 연기·보류 신청은 절대 자동화하지 않는다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
   "profiles": [
+    "vault",
     "browser",
-    "hard-boundary"
+    "legal"
   ],
   "frontmatter": "name: yebigun-training\ndescription: 사용자가 직접 로그인한 예비군 홈페이지(yebigun1.mil.kr) Chrome 세션을 재사용해 이번 훈련 일정/장소를 조회하고, 작년 이전 기록과 비교해 무엇이 달라졌는지 알려준다. 조회 전용이며 로그인이나 연기·보류 신청은 절대 자동화하지 않는다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.\nlicense: MIT\nmetadata:\n  category: legal\n  locale: ko-KR\n  phase: v1"
 }

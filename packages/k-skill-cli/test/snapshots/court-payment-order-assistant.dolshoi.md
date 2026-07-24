@@ -10,8 +10,9 @@ Runtime mode: dolshoi (CloakBrowser available)
 - Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
 - Never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
 - Use the built-in browser tool backed by CloakBrowser first. Fall back to `k-skill-browser-runtime` providers only when CloakBrowser is unavailable.
-- This skill has a hard boundary (law, mandatory physical presence, CAPTCHA, identity proofing, or electronic signature). Navigate to the exact official case/form/item, complete every lawful reversible preparation step, and prefill all safe fields — but never automate the bounded final step. Completion means the exact official screen is open, safe inputs are prepared, and the single user-only step is stated precisely.
-- If the remaining official step is merely irreversible (not identity-bound or prohibited), call `clarify` with the exact target and effect, then execute after approval.
+- Use the official legal/government surface with CloakBrowser and vault-backed login. Proceed through ordinary login, supported identity verification, document upload, form filling, fee calculation, and reversible preparation when the official surface and available capabilities support them.
+- Do not evade CAPTCHA, impersonate the user, forge identity evidence, or bypass an authentication/security control. If the official flow presents a user-presence-only verification or electronic-signature prompt, open the exact prompt and let the user complete that control, then resume the same workflow immediately afterward.
+- Immediately before filing, bidding, paying a government fee, signing, cancelling, or another irreversible legal effect, call `clarify` with the exact case/form, parties, documents, amount, and legal effect. Execute after approval and verify the official receipt or resulting status.
 
 # Court Payment Order Assistant
 

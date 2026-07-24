@@ -2,7 +2,6 @@
   "name": "korean-spell-check",
   "description": "Use Nara/PNU Korean spell-check surfaces conservatively to proofread Korean text, chunk long input, and return change-focused correction suggestions.",
   "profiles": [
-    "browser",
     "local"
   ],
   "frontmatter": "name: korean-spell-check\ndescription: Use Nara/PNU Korean spell-check surfaces conservatively to proofread Korean text, chunk long input, and return change-focused correction suggestions.\nlicense: MIT\nmetadata:\n  category: writing\n  locale: ko-KR\n  phase: v1"

@@ -3,7 +3,6 @@
   "description": "Use when the user asks for nearby cheapest gas stations or 근처 가장 싼 주유소. Always ask the user's current location first, then use Kakao Map anchor resolution plus official Opinet fuel-price APIs.",
   "profiles": [
     "proxy",
-    "vault",
     "lookup"
   ],
   "frontmatter": "name: cheap-gas-nearby\ndescription: Use when the user asks for nearby cheapest gas stations or 근처 가장 싼 주유소. Always ask the user's current location first, then use Kakao Map anchor resolution plus official Opinet fuel-price APIs.\nlicense: MIT\nmetadata:\n  category: transport\n  locale: ko-KR\n  phase: v1"

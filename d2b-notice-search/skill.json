@@ -3,8 +3,9 @@
   "description": "국방전자조달시스템(D2B) 공개 입찰공고 검색 화면에서 공고건명·공고구분·공고/개찰일·G2B공고번호·발주기관 조건으로 공고를 조회한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
   "profiles": [
     "proxy",
+    "vault",
     "browser",
-    "hard-boundary"
+    "legal"
   ],
   "frontmatter": "name: d2b-notice-search\ndescription: 국방전자조달시스템(D2B) 공개 입찰공고 검색 화면에서 공고건명·공고구분·공고/개찰일·G2B공고번호·발주기관 조건으로 공고를 조회한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.\nlicense: MIT\nmetadata:\n  category: procurement\n  locale: ko-KR\n  phase: v1"
 }

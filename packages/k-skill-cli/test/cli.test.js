@@ -71,10 +71,12 @@ test("dolshoi and generic runtime rules differ for vault/browser skills", () => 
   assert.doesNotMatch(dolshoi, /Do not automate payment here/);
 });
 
-test("hard-boundary skill keeps its boundary in dolshoi mode", () => {
+test("legal skill advances official auth but never bypasses controls", () => {
   const dolshoi = assemble("yebigun-training", DOLSHOI);
 
-  assert.match(dolshoi, /never automate the bounded final step/);
+  assert.match(dolshoi, /supported identity verification/);
+  assert.match(dolshoi, /Do not evade CAPTCHA/);
+  assert.match(dolshoi, /legal effect/);
 });
 
 test("bundledFiles lists helper files for directory-package skills", () => {

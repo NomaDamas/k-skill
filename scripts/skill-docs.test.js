@@ -336,7 +336,7 @@ test("actionable skills publish a Dolshoi action path", () => {
 });
 
 test("runtime action audit covers every top-level skill exactly once", () => {
-  const audit = read("docs/runtime-action-audit.md");
+  const audit = findSection(read("docs/runtime-action-audit.md"), "## Complete catalog");
   const skillDirs = fs
     .readdirSync(repoRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())

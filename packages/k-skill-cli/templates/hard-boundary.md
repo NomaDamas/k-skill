@@ -1,3 +1,0 @@
-<!-- mode:always -->
-- This skill has a hard boundary (law, mandatory physical presence, CAPTCHA, identity proofing, or electronic signature). Navigate to the exact official case/form/item, complete every lawful reversible preparation step, and prefill all safe fields — but never automate the bounded final step. Completion means the exact official screen is open, safe inputs are prepared, and the single user-only step is stated precisely.
-- If the remaining official step is merely irreversible (not identity-bound or prohibited), call `clarify` with the exact target and effect, then execute after approval.

@@ -10,8 +10,8 @@ Runtime mode: generic
 - Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
 - Plain lookups go through the hosted `k-skill-proxy` (`https://k-skill-proxy.nomadamas.org`) by default; no user API key is needed. Set `KSKILL_PROXY_BASE_URL` only for a self-hosted or alternate proxy. Direct upstream calls require the skill-documented API key.
 - Resolve credentials in this order: already-injected environment variables, then the host vault, then `~/.config/k-skill/secrets.env` (mode `0600`). If the value is missing, request it through the safest input surface the host provides and store it in the vault or dotenv; never echo it back.
-- This skill has a hard boundary (law, mandatory physical presence, CAPTCHA, identity proofing, or electronic signature). Navigate to the exact official case/form/item, complete every lawful reversible preparation step, and prefill all safe fields — but never automate the bounded final step. Completion means the exact official screen is open, safe inputs are prepared, and the single user-only step is stated precisely.
-- If the remaining official step is merely irreversible (not identity-bound or prohibited), call `clarify` with the exact target and effect, then execute after approval.
+- Use `k-skill-browser-runtime` (provider `auto`: BrowserOS CDP, then Aside CLI, then user-launched Chrome CDP) for logged-in or rendered-page automation. Do not launch or close the user's browser, and never solve CAPTCHA, identity proofing, or e-signature flows.
+- Navigate the official legal/government surface and complete every supported reversible preparation step. Keep login, identity verification, CAPTCHA, electronic signature, filing, bidding, payment, and cancellation on the official user-controlled surface unless the host provides an explicit capability for that step.
 
 # 나라장터 발주계획 검색
 

@@ -14,12 +14,13 @@ const KNOWN_PROFILES = [
   "vault",
   "action:booking",
   "action:commerce",
-  "action:communication",
   "action:submission",
   "action:account",
-  "hard-boundary",
+  "action:recruiting",
+  "legal",
   "lookup",
   "local",
+  "operations",
 ];
 
 function profileTemplatePath(profile) {

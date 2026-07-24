@@ -3,7 +3,6 @@
   "description": "Korean door-to-door public transit routing (subway + bus + walking) via ODsay LIVE API with Kakao geocoding for address-to-address queries. Use when the user asks for 지하철/버스/대중교통 길찾기, 환승 경로, 소요시간, or transit directions between two places in Korea.",
   "profiles": [
     "proxy",
-    "vault",
     "lookup"
   ],
   "frontmatter": "name: korean-transit-route\ndescription: Korean door-to-door public transit routing (subway + bus + walking) via ODsay LIVE API with Kakao geocoding for address-to-address queries. Use when the user asks for 지하철/버스/대중교통 길찾기, 환승 경로, 소요시간, or transit directions between two places in Korea.\nlicense: MIT\nmetadata:\n  category: transit\n  locale: ko-KR\n  phase: v1"

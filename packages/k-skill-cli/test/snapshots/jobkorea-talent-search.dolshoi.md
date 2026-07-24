@@ -8,9 +8,10 @@ Runtime mode: dolshoi (CloakBrowser available)
 - When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
 - Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
 - Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
 - Use the built-in browser tool backed by CloakBrowser first. Fall back to `k-skill-browser-runtime` providers only when CloakBrowser is unavailable.
-- When sending is requested, continue past lookup: identify the exact recipient and payload, prepare the draft on the official surface, and keep it unsent.
-- Immediately before actual delivery (message, application, inquiry), call `clarify` with the exact recipient and full payload. After approval, send and verify the sent state.
+- Use the official employer account surface to search and compare candidates, keeping masked/private data protected until the requested candidate is fixed.
+- Paid resume unlocks, contact-detail reveals, credit use, proposal delivery, shortlist mutation, and candidate-status changes are separate external effects. Immediately before each such action, call `clarify` with the candidate, cost/credit impact, disclosed data, message payload, and resulting state; execute only the approved action and verify it.
 
 # jobkorea-talent-search
 
