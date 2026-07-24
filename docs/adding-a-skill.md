@@ -6,13 +6,16 @@
 
 ## 스킬이란
 
-스킬은 AI 에이전트(Claude Code 등)가 특정 작업을 수행하는 방법을 정의한 문서+코드 묶음이다. 에이전트는 `SKILL.md`를 읽고 거기 적힌 워크플로우를 따라 실행한다.
+스킬은 AI 에이전트(Claude Code 등)가 특정 작업을 수행하는 방법을 정의한
+문서+코드 묶음이다. 에이전트는 생성된 `SKILL.md` 어댑터를 통해
+`@nomadamas/k-skill` CLI를 실행하고, CLI가 현재 런타임에 맞는 공통 profile과
+스킬 고유 `instruction.md`를 조립해 출력한다.
 
 스킬에는 네 가지 구현 유형이 있다.
 
 | 유형 | 설명 | 예시 |
 |------|------|------|
-| **SKILL.md 전용** | 문서만으로 동작 (에이전트가 bash/python 직접 실행) | `kakaotalk-mac`, `srt-booking` |
+| **instruction 전용** | `instruction.md`의 명령만으로 동작 | `kakaotalk-mac`, `srt-booking` |
 | **npm 패키지** | `packages/` 아래 Node.js 라이브러리로 구현 | `k-lotto`, `daiso-product-search` |
 | **프록시 경유** | `k-skill-proxy`가 upstream API 키를 보관하고 HTTP로 중계 | `seoul-subway-arrival`, `fine-dust-location` |
 | **Python 스크립트** | `scripts/`의 Python 파일 직접 실행 | `korean-spell-check`, `sillok-search` |
@@ -26,8 +29,14 @@
 ```
 k-skill/
 ├── my-new-skill/          ← 스킬 디렉토리 (이름 = 스킬 이름)
-│   ├── SKILL.md           ← 필수. 에이전트가 읽는 핵심 파일
-│   └── (지원 파일들)       ← 선택. 스크립트, 데이터 등
+│   ├── skill.json         ← 필수. frontmatter + profile 선언
+│   ├── instruction.md     ← 필수. 사이트별 고유 workflow
+│   ├── SKILL.md           ← 생성물. CLI adapter stub
+│   ├── scripts/           ← 선택. helper
+│   └── references/        ← 선택. 레퍼런스
+├── packages/k-skill-cli/
+│   ├── templates/         ← 공통 runtime/profile instruction
+│   └── skills/            ← npm에 동봉되는 sync 결과
 ├── packages/              ← npm 패키지 유형일 때만
 │   └── my-new-skill/
 │       ├── package.json
@@ -39,111 +48,92 @@ k-skill/
 
 ---
 
-## SKILL.md 형식
+## skill.json 형식
 
-`SKILL.md`는 YAML frontmatter + Markdown 본문으로 구성된다.
+`skill.json`이 frontmatter와 profile의 단일 원본이다.
+
+```json
+{
+  "name": "my-new-skill",
+  "description": "한 문장으로 이 스킬이 무엇을 하는지 설명한다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: my-new-skill\ndescription: ...\nlicense: MIT\nmetadata:\n  category: utility\n  locale: ko-KR\n  phase: v1"
+}
+```
+
+profile은 `docs/runtime-action-audit.md`와
+`packages/k-skill-cli/src/assemble.js`의 목록을 따른다.
+
+## instruction.md 형식
+
+공통 vault/browser/proxy/action 규칙을 반복하지 않고 사이트별 내용만 작성한다.
 
 ```markdown
----
-name: my-new-skill
-description: 한 문장으로 이 스킬이 무엇을 하는지 설명한다. 에이전트 UI에 표시된다.
-license: MIT
-metadata:
-  category: utility
-  locale: ko-KR
-  phase: v1
----
-
 # My New Skill
-
-## Runtime contract (required)
-
-- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
-- In Dolshoi credential mode, never ask for, print, read, or store plaintext secrets in chat or files. Use a provisioned `vault-run` capability; if the needed credential is missing, call `request_vault_credential` and retry the intended action in the same turn when provisioned.
-- In CloakBrowser mode, use the built-in browser tool backed by CloakBrowser first. Use `k-skill-browser-runtime`, Aside, BrowserOS, Chrome CDP, or manual handoff only as non-Dolshoi or unavailable-provider fallbacks.
-- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
-- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
-- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
-- Outside Dolshoi, preserve the skill's existing portable workflow: use declared environment variables or `~/.config/k-skill/secrets.env`, use the documented generic browser/runtime path, and request sensitive values through the safest mechanism the host provides instead of exposing them unnecessarily.
 
 ## What this skill does
 
-이 스킬이 무엇을 하는지 한두 문단으로 설명한다.
+이 스킬이 무엇을 하는지 설명한다.
 
 ## When to use
 
-- "사용자가 이런 말을 할 때"
-- "또는 이런 상황일 때"
-
-## Prerequisites
-
-- Node.js 18+ (필요하면)
-- 패키지 설치 명령
+- 사용 예시
 
 ## Workflow
 
-### 1. 첫 번째 단계
-
-설명과 실행할 코드를 적는다.
-
-```bash
-# 실행할 명령어
-```
-
-### 2. 두 번째 단계
-
-...
+사이트별 접근 경로와 실행 명령을 적는다.
 
 ## Done when
 
-- 이런 조건이 만족되면 완료다
+- 실제 완료 조건
 
 ## Failure modes
 
-- 예상 가능한 실패 상황
-
-## Notes
-
-- 특이사항, 보안 정책 등
+- 명시적 실패 모드
 ```
 
-### frontmatter 필드
+### skill.json 필드
 
 | 필드 | 필수 | 설명 |
 |------|------|------|
 | `name` | ✅ | **디렉토리 이름과 정확히 일치**해야 한다 |
 | `description` | ✅ | 에이전트 UI 표시용 한 줄 설명 |
-| `license` | ✅ | 항상 `MIT` |
-| `metadata.category` | ✅ | `utility` / `transit` / `travel` / `messaging` / `legal` / `setup` 등 |
-| `metadata.locale` | ✅ | `ko-KR` |
-| `metadata.phase` | ✅ | `v1` (안정) / `v1.5` (기능 추가 중) |
+| `profiles` | ✅ | 조립할 공통 capability/action profile 목록 |
+| `frontmatter` | ✅ | 생성될 `SKILL.md`의 YAML frontmatter 원문 |
 
-### Portable runtime block
+### 생성과 동기화
 
-위 `## Runtime contract (required)` 블록은 모든 top-level 스킬에 **원문 그대로** 포함한다. 설명을 줄이기 위해 링크로 대체하면 안 된다.
+source를 수정한 뒤 반드시 실행한다.
 
-- Vercel `skills add --skill <name>`은 선택한 스킬 디렉터리만 설치할 수 있다.
-- Dolshoi도 checkout에서 top-level `SKILL.md` 디렉터리만 `<HERMES_HOME>/skills/k-skill/`로 projection하고 `docs/`는 포함하지 않는다.
-- 따라서 스킬이 단독 설치되어도 vault, browser, action, approval, fallback 계약을 이해할 수 있어야 한다.
-- 공통 계약의 이유와 감지 근거는 `docs/dolshoi-runtime.md`에서 관리하고, 각 스킬에는 이 블록과 해당 사이트의 구체적인 액션 경로만 둔다.
+```bash
+npm run generate:skill-stubs
+npm run sync:cli-skills
+node scripts/generate-skill-stubs.js --check
+node scripts/sync-cli-skills.js --check
+```
+
+`SKILL.md`와 `packages/k-skill-cli/skills/`는 생성/sync 결과이므로 직접 수정하지
+않는다.
 
 ---
 
 ## 유형별 구현 방법
 
-### A. SKILL.md 전용 스킬
+### A. instruction 전용 스킬
 
-에이전트가 `SKILL.md` 안의 bash/python 코드를 직접 실행한다.
+에이전트가 조립된 instruction 안의 bash/python 코드를 직접 실행한다.
 
 1. 디렉토리 생성: `mkdir my-new-skill`
-2. `my-new-skill/SKILL.md` 작성
-3. Workflow 섹션에 에이전트가 따를 단계별 명령어를 적는다
+2. `my-new-skill/skill.json` 작성
+3. `my-new-skill/instruction.md` 작성
+4. stub 생성과 CLI bundle sync 실행
 
 외부 라이브러리나 서버 없이 동작해야 한다.
 
 ### B. npm 패키지 스킬
 
-`packages/my-new-skill/`에 Node.js 구현체를 만들고, 루트 디렉토리 `my-new-skill/SKILL.md`에서 `require('my-new-skill')`로 호출한다.
+`packages/my-new-skill/`에 Node.js 구현체를 만들고, 루트 디렉토리
+`my-new-skill/instruction.md`에서 공개 CLI/API를 호출한다.
 
 ```
 packages/my-new-skill/
@@ -164,14 +154,15 @@ npm에 배포하려면 `.changeset/` 파일을 추가한다 (`docs/releasing.md`
 upstream API 키를 사용자에게 노출하지 않으려면 `k-skill-proxy`를 경유한다.
 
 1. `packages/k-skill-proxy/src/server.js`에 새 read-only route 추가
-2. `SKILL.md` Workflow에 `curl $KSKILL_PROXY_BASE_URL/v1/...` 형태로 호출 작성
+2. `instruction.md` Workflow에 `curl $KSKILL_PROXY_BASE_URL/v1/...` 형태로 호출 작성
 3. upstream API 키는 gpu01의 production `.env`에 보관하고 systemd runtime에 주입한다
 
 프록시 route 변경은 `main`에 merge되면 gpu01 cron을 통해 프로덕션에 자동 배포된다 (`AGENTS.md`, `docs/deploy-k-skill-proxy.md` 참고).
 
 ### D. Python 스크립트 스킬
 
-`scripts/my_skill.py`를 만들고 `SKILL.md`에서 `python3 scripts/my_skill.py`로 호출한다.
+스킬 디렉토리의 `scripts/my_skill.py`를 만들고 `instruction.md`에서 helper를
+호출한다. `npm run sync:cli-skills`가 helper를 통합 CLI 패키지에도 동봉한다.
 
 ---
 
@@ -244,7 +235,8 @@ npm run ci
 
 ## 시크릿이 필요한 스킬
 
-인증이 필요한 스킬은 먼저 portable runtime block의 돌쇠 credential mode를 적용한다.
+인증이 필요한 스킬은 `skill.json`에 `vault` profile을 선언한다. CLI가 현재
+런타임에 맞는 credential instruction을 조립한다.
 
 1. `DOLSHOI_ACTION_BROKER_URL` + `vault-run`이면 provisioned capability 사용
 2. 돌쇠에서 capability가 없으면 `request_vault_credential`로 앱 vault 입력 UI 호출

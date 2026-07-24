@@ -29,16 +29,18 @@ These rules are repo-specific and apply to everything under this directory.
 - Respect existing home-directory indirection such as symlinks when syncing `~/.agents/skills`.
 - Do **not** create repo-local `.claude` or `.agents` directories for skill installation unless the user explicitly asks for a repository-local test fixture.
 
-## Portable runtime instruction rules
+## Unified CLI skill instruction rules
 
-- Every top-level `SKILL.md` must contain the exact self-contained `## Runtime contract (required)` block documented in `docs/adding-a-skill.md`.
-- Do not replace that block with a link to `docs/`, `AGENTS.md`, `CLAUDE.md`, or another skill. Vercel `skills add --skill <name>` and Dolshoi both install/project one skill directory independently, so repository-level references may be absent at runtime.
-- Keep the portable block short and identical across skills. Put explanations, rationale, and maintenance notes in `docs/dolshoi-runtime.md`; put only site-specific execution details in the individual skill.
+- Every top-level skill uses `skill.json` (frontmatter + profiles) and `instruction.md` (site-specific workflow) as its source of truth.
+- Top-level `SKILL.md` files are generated CLI adapter stubs. Do not edit them directly; run `npm run generate:skill-stubs` after changing `skill.json`.
+- Run `npm run sync:cli-skills` after changing `skill.json`, `instruction.md`, `scripts/`, or `references/` so `packages/k-skill-cli/skills/` stays aligned.
+- Shared runtime behavior belongs in `packages/k-skill-cli/templates/*.md`, selected by profiles such as `proxy`, `vault`, `browser`, `action:booking`, `action:commerce`, `legal`, `operations`, `local`, and `lookup`.
+- Do not duplicate shared runtime blocks in `instruction.md`. Keep only the skill's site-dependent navigation, commands, inputs/outputs, action details, and failure modes there.
 - Runtime detection is capability-based. Credential action mode requires both `DOLSHOI_ACTION_BROKER_URL` and a usable `vault-run`; CloakBrowser mode is detected independently through the bundled browser tool or `CLOAKBROWSER_PEEK_TOKEN`.
 - In Dolshoi credential mode, never ask for or reveal plaintext credentials. Use provisioned `vault-run` capabilities and call `request_vault_credential` when the required credential is missing.
 - In Dolshoi browser mode, the built-in browser tool backed by CloakBrowser is the first browser path. Generic `k-skill-browser-runtime` providers remain the fallback outside Dolshoi or when CloakBrowser is unavailable.
 - If the user asks for an action and the official surface supports it lawfully, continue past lookup through reversible preparation and execution. Immediately before payment, message delivery, final submission, cancellation, or another irreversible external side effect, use the `clarify` tool with the exact target and effect, then execute only after approval.
-- Do not erase legal, physical-presence, CAPTCHA, identity-proofing, electronic-signature, or unsupported-site boundaries. For those skills, completion means carrying out the furthest lawful supported action and opening/preparing the exact next official step.
+- Do not bypass CAPTCHA, identity-proofing, electronic-signature, or official authentication controls. Legal profiles proceed through supported official authentication and resume after user-presence-only controls.
 
 ## Crawling/search skill authoring
 
