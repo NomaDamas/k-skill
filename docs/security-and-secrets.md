@@ -2,6 +2,41 @@
 
 `k-skill`은 **필요한 환경변수 이름만 선언**하고, 그 값을 어떻게 공급하느냐는 에이전트의 자유에 맡긴다.
 
+## Credential broker (default path)
+
+Dolshoi Cloud(`apps/cloud-api`)에서 스킬이 실행될 때, 기본적으로 credential 평문 값은 에이전트에게 **전달되지 않는다**. 대신 cloud-api 가 값을 복호화해 in-process 에 보관하고, 에이전트에게는 불투명(opaque) capability 핸들만 넘긴다.
+
+- 핸들에 들어가는 건 오직 `{capabilityId, envName, allowedHosts}` 세 필드다. credential 값은 어디에도 노출되지 않는다.
+- 허용된 호스트에 HTTPS 요청을 보낼 때, 에이전트는 capability id 와 함께 cloud-api 의 loopback route 를 호출한다. cloud-api 가 `Authorization: Bearer <value>` 헤더를 **서버 사이드에서 주입**하고, upstream 응답만 에이전트에게 돌려준다. 에이전트는 값을 절대 못 본다.
+- 허용 호스트 목록은 SKILL.md 의 `broker_allowed_hosts` 블록에서 읽는다 (YAML list, exact hostname 만 허용, 와일드카드·포트·scheme 불가). 누락 또는 빈 리스트면 이 스킬의 credential은 capability가 **아예 프로비전되지 않는다**. fail-closed.
+- capability 는 `(accountId, container)` 에 scoped 되고, per-turn TTL(5분) 과 최대 5회 사용 한도를 갖는다. turn 이 끝나면 broker key 와 capability 가 함께 폐기된다.
+
+이 경로는 저장소 compromis(ciphertext at rest)와 Hermes 모델 compromis(평문이 stream/handle에 없음)를 막는다. 다만 cloud-api 호스트 전체 compromis는 방어하지 못한다. 호스트가 털리면 decrypted 값이 process memory 에서 읽힐 수 있다. 이것은 honest residual risk 로 받아들인다.
+
+신뢰 경계 세부 사항과 broker route 주소는 cloud-api 의 `apps/cloud-api/docker/README.md` 와 `docs/internal/bitwarden-credential-engine.md` (Pattern B) 를 참고한다.
+
+### Structured credential fields
+
+Dolshoi Cloud stores the environment-variable bindings for a credential as a
+structured object with optional `username`, `password`, and `value` fields.
+The names are metadata; the secret values stay encrypted in cloud-api.
+
+- `login` uses the username/password pair only when the skill explicitly opts
+  into `legacy_env_injection: true`. Login credentials are not sent through the
+  scalar Bearer broker.
+- `api_key` uses the `value` field through the broker. A legacy `envName` is
+  treated as the `value` binding during migration.
+- `note` is never injected into an agent turn.
+
+Skills should declare only the environment-variable names they need. The
+broker handle remains opaque and contains no field values.
+
+## Legacy plaintext env (opt-in)
+
+아래 섹션들이 설명하는 `~/.config/k-skill/secrets.env` 평문 경로는 기본값이 아니다. 이 경로를 켜려면 SKILL.md frontmatter 에 `legacy_env_injection: true` 를 **명시적으로** 적어야 한다 (YAML `yes`/`on` 등은 무시되고 리터럴 `true` 만 인정). 새 스킬은 기본값(`false`)을 그대로 써서 broker 경로를 타는 것을 권장한다.
+
+평문 주입이 켜진 스킬은 turn 종료 후 `secrets.env` 가 즉시 정리되고, 모든 읽기/쓰기가 audit log 에 기록된다. 다만 값이 에이전트 컨테이너 filesystem 에 잠깐이라도 평문으로 존재하므로 broker 경로보다 신뢰 폭이 넓다. 필요한 경우에만 켠다.
+
 ## Credential resolution order
 
 모든 credential-bearing 스킬은 아래 우선순위를 따른다.

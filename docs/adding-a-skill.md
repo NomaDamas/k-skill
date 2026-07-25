@@ -107,6 +107,19 @@ metadata:
 | `metadata.category` | ✅ | `utility` / `transit` / `travel` / `messaging` / `legal` / `setup` 등 |
 | `metadata.locale` | ✅ | `ko-KR` |
 | `metadata.phase` | ✅ | `v1` (안정) / `v1.5` (기능 추가 중) |
+| `broker_allowed_hosts` | ❌ (기본 fail-closed) | cloud-api 가 브로커 경로로 허용할 **exact hostname** 블록 목록 (YAML list). 와일드카드·포트·scheme 불가. 누락 또는 빈 리스트면 이 스킬의 credential은 브로커 capability가 **아예 프로비전되지 않는다** (fail-closed). 값은 cloud-api 호스트에서만 검증되며, agent/model 입력은 신뢰하지 않는다. |
+| `legacy_env_injection` | ❌ (기본 `false`) | `true` 일 때만 평문 `secrets.env` 경로로 폴백한다. 리터럴 `true` 만 opt-in으로 인정한다 (YAML `yes`/`on` 등은 무시). 누락하면 자동으로 불투명 브로커 capability 핸들 경로를 탄다. 평문 주입은 turn 종료 후 즉시 정리되는 audited residual risk이므로 새 스킬은 기본값(`false`)을 그대로 쓴다. |
+
+`broker_allowed_hosts` YAML 형태:
+
+```yaml
+broker_allowed_hosts:
+  - api.example.com
+  - api.partner.com
+legacy_env_injection: false
+```
+
+자격증명 경로와 평문 주입의 신뢰 경계는 [보안/시크릿 정책](security-and-secrets.md) 의 "Credential broker (default path)" 와 "Legacy plaintext env (opt-in)" 섹션을 본다.
 
 ---
 

@@ -42,12 +42,21 @@ metadata:
 
 ### Credential resolution order
 
-1. **이미 환경변수에 있으면** 그대로 사용한다.
-2. **에이전트가 자체 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)를 사용 중이면** 거기서 꺼내 환경변수로 주입해도 된다.
-3. **`~/.config/k-skill/secrets.env`** (기본 fallback) — plain dotenv 파일, 퍼미션 `0600`.
-4. **아무것도 없으면** 유저에게 물어서 2 또는 3에 저장한다.
+1. **시스템 프롬프트의 `# Credential Actions` 섹션에 SRT capability가 있으면** 그것을 사용한다.
+   서비스 액션(`vault-run <capability_id> search|seats|reserve|cancel|list`)이 있으면 그걸 우선 쓰고,
+   이 레시피의 스크립트를 직접 돌릴 때는 `vault-run <capability_id> get`으로 값을 가져와
+   `KSKILL_SRT_ID`/`KSKILL_SRT_PASSWORD`를 **명령 접두 env**로 전달한다:
 
-기본 경로에 저장하는 것은 fallback일 뿐, 강제가 아니다.
+   ```bash
+   CREDS=$(DOLSHOI_ACTION_BROKER_URL=<프롬프트 값> DOLSHOI_ACTION_BROKER_KEY=<프롬프트 값> vault-run <capability_id> get)
+   KSKILL_SRT_ID=$(printf '%s' "$CREDS" | python3 -c 'import json,sys;print(json.load(sys.stdin)["username"])') \
+   KSKILL_SRT_PASSWORD=$(printf '%s' "$CREDS" | python3 -c 'import json,sys;print(json.load(sys.stdin)["password"])') \
+   python3 scripts/srt_booking.py ...
+   ```
+
+2. **이미 환경변수에 있으면** 그대로 사용한다.
+3. **둘 다 없으면** 유저에게 볼트(자격증명 탭)에 SRT 로그인을 저장해 달라고 안내하고 멈춘다.
+   비밀번호를 채팅으로 받지 않는다.
 
 ## Inputs
 
