@@ -54,20 +54,21 @@ metadata:
      unset CREDS
      [ -n "$SRT_ID" ] && [ -n "$SRT_PASSWORD" ] || { unset SRT_ID SRT_PASSWORD; exit 1; }
      KSKILL_SRT_ID="$SRT_ID" KSKILL_SRT_PASSWORD="$SRT_PASSWORD" python3 scripts/srt_booking.py ...
+     SRT_STATUS=$?
      unset SRT_ID SRT_PASSWORD
+     exit "$SRT_STATUS"
    )
    ```
 
-2. **이미 환경변수에 있으면** 그대로 사용한다.
-3. **Cloud가 아닌 generic/local/self-hosted runtime이면** host vault(1Password CLI, Bitwarden CLI, macOS Keychain 등), 그다음 `~/.config/k-skill/secrets.env`(`0600`)에서 현재 명령에만 주입할 수 있다.
-4. **Dolshoi Cloud에서 capability와 환경변수가 모두 없으면** 아래 명령으로 SRT login 입력 폼을 띄우고 멈춘다. 비밀번호를 채팅으로 받지 않는다.
+2. **Cloud가 아닌 generic/local/self-hosted runtime이면** 이미 설정된 환경변수를 먼저 사용한다. 없으면 host vault(1Password CLI, Bitwarden CLI, macOS Keychain 등), 그다음 `~/.config/k-skill/secrets.env`(`0600`)에서 현재 명령에만 주입할 수 있다.
+3. **Dolshoi Cloud에서 SRT capability가 없으면** 아래 명령으로 SRT login 입력 폼을 띄우고 멈춘다. 비밀번호를 채팅으로 받지 않는다.
 
    ```bash
    DOLSHOI_ACTION_BROKER_URL=<프롬프트 값> DOLSHOI_ACTION_BROKER_KEY=<프롬프트 값> \
      vault-run credential-request request SRT login
    ```
 
-5. **generic/local/self-hosted runtime에도 credential이 없으면** 사용자에게 host vault 또는 `secrets.env` 설정을 요청하고 멈춘다. 비밀번호를 채팅으로 받지 않는다.
+4. **generic/local/self-hosted runtime에도 credential이 없으면** 사용자에게 host vault 또는 `secrets.env` 설정을 요청하고 멈춘다. 비밀번호를 채팅으로 받지 않는다.
 
 ## Inputs
 
