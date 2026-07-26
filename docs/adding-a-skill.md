@@ -107,8 +107,7 @@ metadata:
 | `metadata.category` | ✅ | `utility` / `transit` / `travel` / `messaging` / `legal` / `setup` 등 |
 | `metadata.locale` | ✅ | `ko-KR` |
 | `metadata.phase` | ✅ | `v1` (안정) / `v1.5` (기능 추가 중) |
-| `broker_allowed_hosts` | ❌ (기본 fail-closed) | cloud-api 가 브로커 경로로 허용할 **exact hostname** 블록 목록 (YAML list). 와일드카드·포트·scheme 불가. 누락 또는 빈 리스트면 이 스킬의 credential은 브로커 capability가 **아예 프로비전되지 않는다** (fail-closed). 값은 cloud-api 호스트에서만 검증되며, agent/model 입력은 신뢰하지 않는다. |
-| `legacy_env_injection` | ❌ (기본 `false`) | `true` 일 때만 평문 `secrets.env` 경로로 폴백한다. 리터럴 `true` 만 opt-in으로 인정한다 (YAML `yes`/`on` 등은 무시). 누락하면 자동으로 불투명 브로커 capability 핸들 경로를 탄다. 평문 주입은 turn 종료 후 즉시 정리되는 audited residual risk이므로 새 스킬은 기본값(`false`)을 그대로 쓴다. |
+| `broker_allowed_hosts` | ❌ (기본 fail-closed) | Dolshoi Cloud가 **scalar API-key broker**로 허용할 exact hostname 목록 (YAML list). 와일드카드·포트·scheme 불가. 누락 또는 빈 리스트면 이 스킬의 API-key broker capability가 프로비전되지 않는다. 값은 cloud-api 호스트에서만 검증하며 agent/model 입력은 신뢰하지 않는다. Login credential과 note에는 이 경로를 쓰지 않는다. |
 
 `broker_allowed_hosts` YAML 형태:
 
@@ -116,10 +115,11 @@ metadata:
 broker_allowed_hosts:
   - api.example.com
   - api.partner.com
-legacy_env_injection: false
 ```
 
-자격증명 경로와 평문 주입의 신뢰 경계는 [보안/시크릿 정책](security-and-secrets.md) 의 "Credential broker (default path)" 와 "Legacy plaintext env (opt-in)" 섹션을 본다.
+Dolshoi Cloud에는 스킬 파일이나 환경변수로 credential 평문을 자동 주입하는 경로가 없다. API key를 값 비노출 상태로 HTTPS 요청에 쓰려면 위 scalar broker를 사용한다. Login 등 구조화 credential은 `vault-run` Credential Actions를 사용하고, 서비스별 blind action이 있으면 값을 보지 않는 그 action을 우선한다. 직접 실행에 값이 꼭 필요할 때만 audited `vault-run <capability_id> get`으로 현재 프로세스에 가져오며, 채팅·로그·파일에 남기지 않는다.
+
+자격증명 경로별 신뢰 경계와 generic/local runtime의 환경변수·host vault·`secrets.env` fallback은 [보안/시크릿 정책](security-and-secrets.md)을 본다.
 
 ---
 
@@ -237,12 +237,14 @@ npm run ci
 
 ## 시크릿이 필요한 스킬
 
-인증이 필요한 스킬은 아래 우선순위로 credential을 확보한다.
+Dolshoi Cloud에서는 scalar API-key broker 또는 Credential Actions를 사용한다. 저장된 credential이 없으면 `vault-run credential-request request <항목이름> <login|api_key|note>`로 입력 폼을 띄우고, 값을 채팅으로 받지 않는다. Cloud runtime은 `secrets.env`를 읽어 agent 환경에 평문 주입하지 않는다.
 
-1. 이미 환경변수에 있으면 → 그대로 사용
-2. 에이전트 vault(1Password, Bitwarden, macOS Keychain) → 주입
-3. 개인 dotenv 파일 → 파일에서 읽기
-4. 아무것도 없으면 → 사용자에게 물어보고 개인 dotenv 파일에 저장
+Cloud가 아닌 generic/local/self-hosted runtime은 아래 우선순위로 credential을 확보한다.
+
+1. 이미 환경변수에 있으면 그대로 사용
+2. host의 secret vault(1Password CLI, Bitwarden CLI, macOS Keychain 등)에서 현재 명령에만 주입
+3. 개인 dotenv 파일(예: `~/.config/k-skill/secrets.env`, `0600`)에서 읽기
+4. 아무것도 없으면 사용자에게 로컬 secret store 설정을 요청하고 멈추기
 
 시크릿 변수 이름 규칙: `KSKILL_<서비스명>_<항목>` (예: `KSKILL_SRT_ID`)
 
