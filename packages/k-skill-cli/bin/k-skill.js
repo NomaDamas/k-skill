@@ -10,6 +10,12 @@ const {
 } = require("../src/assemble");
 const { runBundledScript } = require("../src/execute");
 const { detectRuntime } = require("../src/detect");
+const {
+  PACKAGE_NAME,
+  installLatestGlobal,
+  maybePrintUpdateNotice,
+} = require("../src/update-check");
+const { version: currentVersion } = require("../package.json");
 
 function usage() {
   return [
@@ -22,6 +28,7 @@ function usage() {
     "  read <skill> <file> Read a bundled references/ or text scripts/ asset",
     "  path <skill> <file> Print the absolute path of a bundled asset",
     "  files <skill>      Print local paths of the skill's bundled helper files",
+    "  update             Install the newest compatible release for global users",
     "  list               List bundled skills",
     "",
     "Runtime detection: DOLSHOI_ACTION_BROKER_URL enables Dolshoi mode;",
@@ -35,6 +42,11 @@ function main() {
   if (!command || command === "--help" || command === "-h") {
     console.log(usage());
     return 0;
+  }
+
+  if (command === "update") {
+    console.log(`Installing the newest compatible ${PACKAGE_NAME} release...`);
+    return installLatestGlobal().status;
   }
 
   if (command === "list") {
@@ -87,4 +99,12 @@ function main() {
   return 1;
 }
 
-process.exitCode = main();
+async function entrypoint() {
+  const exitCode = main();
+  if (!process.argv.slice(2).includes("update")) {
+    await maybePrintUpdateNotice(currentVersion).catch(() => null);
+  }
+  process.exitCode = exitCode;
+}
+
+entrypoint();

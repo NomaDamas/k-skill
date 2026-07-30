@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const childProcess = require("node:child_process");
 
@@ -16,6 +17,12 @@ const {
 } = require("../src/assemble");
 const { detectRuntime } = require("../src/detect");
 const { resolveRunner, runBundledScript } = require("../src/execute");
+const {
+  compareVersions,
+  latestVersion,
+  maybePrintUpdateNotice,
+  updateNotice,
+} = require("../src/update-check");
 
 const packageRoot = path.join(__dirname, "..");
 const binPath = path.join(packageRoot, "bin", "k-skill.js");
@@ -195,6 +202,56 @@ test("assembled instructions match committed snapshots", () => {
       );
     }
   }
+});
+
+test("update-check compares versions and caches registry results", async () => {
+  assert.equal(compareVersions("0.2.1", "0.2.0"), 1);
+  assert.equal(compareVersions("0.2.0", "0.2.1"), -1);
+  assert.equal(compareVersions("0.2.1", "0.2.1"), 0);
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "k-skill-update-"));
+  const cacheFile = path.join(tempDir, "update-check.json");
+
+  try {
+    const unavailable = await latestVersion({
+      env: { KSKILL_REGISTRY_URL: "http://127.0.0.1:1" },
+      cacheFile,
+    });
+    assert.equal(unavailable.source, "unavailable");
+
+    fs.writeFileSync(
+      cacheFile,
+      JSON.stringify({ checkedAt: Date.now(), latest: "0.2.1" }),
+    );
+
+    const cached = await latestVersion({
+      env: { KSKILL_REGISTRY_URL: "http://127.0.0.1:1" },
+      cacheFile,
+    });
+    assert.equal(cached.latest, "0.2.1");
+    assert.equal(cached.source, "cache");
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+
+  const writes = [];
+  const notice = await maybePrintUpdateNotice("0.1.0", {
+    stderr: { write: (value) => writes.push(value) },
+    env: { KSKILL_REGISTRY_URL: "http://127.0.0.1:1" },
+    cacheFile: path.join(tempDir, "missing", "update-check.json"),
+  }).catch(() => null);
+  assert.equal(notice, null);
+
+  const disabled = await maybePrintUpdateNotice("0.1.0", {
+    stderr: { write: (value) => writes.push(value) },
+    env: { KSKILL_DISABLE_UPDATE_CHECK: "1" },
+  });
+  assert.equal(disabled, null);
+
+  assert.match(
+    updateNotice("0.1.0", "0.2.1"),
+    /npm install -g @nomadamas\/k-skill@0/,
+  );
 });
 
 test("CLI binary handles instruct, files, list, and errors", () => {

@@ -69,7 +69,9 @@ k-skill exec kosis-stats scripts/run_kosis_stats.py -- --help
 
 `@0`은 호환되는 최신 `0.x` CLI를 사용한다는 의미입니다. 스킬 디렉터리를
 다시 설치하지 않아도 CLI instruction과 번들 helper를 독립적으로 업데이트할
-수 있습니다. 전체 설치 방법과 에이전트별 경로는 [설치 방법](docs/install.md)을
+수 있습니다. CLI는 하루 한 번 npm registry를 확인해 최신 호환 버전이 있으면
+실행 후 안내를 출력하며, 전역 설치 사용자는 `k-skill update`로 바로 갱신할 수
+있습니다. 전체 설치 방법과 에이전트별 경로는 [설치 방법](docs/install.md)을
 참고하세요.
 
 ## 잠깐만~~~

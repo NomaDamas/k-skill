@@ -195,6 +195,16 @@ k-skill read kosis-stats references/kosis-openapi-guide.md
 npm install -g @nomadamas/k-skill@0
 ```
 
+CLI는 하루 한 번 최신 호환 버전을 확인하고, 더 새 버전이 있으면 실행 후 stderr로
+안내한다. `npx` 사용자는 다음 실행이 자동으로 최신 호환 버전을 받으며, 전역
+설치 사용자는 다음으로 바로 갱신할 수 있다.
+
+```bash
+k-skill update
+```
+
+버전 확인을 끄려면 `KSKILL_DISABLE_UPDATE_CHECK=1`을 설정한다.
+
 `naming-house` 는 작명소 스킬이다. 시크릿은 필요 없고, npm 배포 후 반복 사용 시 `npm install -g naming-house` 로 package를 설치한다. 저장소 개발 중에는 루트 `npm install` 후 로컬 workspace package를 사용한다.
 
 `korean-law-search` 는 별도 설치 없이 기본 hosted proxy(`k-skill-proxy.nomadamas.org`)를 통해 바로 사용할 수 있다. 사용자 쪽 `LAW_OC` 가 불필요하다. proxy의 `/v1/korean-law/search` · `/v1/korean-law/detail` endpoint가 법제처(국가법령정보센터) 공식 Open API(`open.law.go.kr`)를 감싸며, 설계는 `https://github.com/chrisryugj/korean-law-mcp` 를 참고했다. 운영자만 proxy 서버에 `LAW_OC` 를 채운다(무료 발급: `https://open.law.go.kr`). 자세한 사용법은 [한국 법령 검색 가이드](features/korean-law-search.md)를 본다.
