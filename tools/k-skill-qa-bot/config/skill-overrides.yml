@@ -13,16 +13,9 @@ intercity-bus-booking:
 foresttrip-vacancy:
   force_skip: true
   reason: "destructive booking flow (foresttrip.go.kr reservation)"
-catchtable-sniper:
-  force_skip: true
-  reason: "destructive reservation flow (requires logged-in Chrome session)"
-
 kakaotalk-mac:
   force_skip: true
   reason: "requires logged-in KakaoTalk macOS app session"
-hipass-receipt:
-  force_skip: true
-  reason: "requires logged-in HiPass session in Chrome"
 toss-securities:
   force_skip: true
   reason: "requires logged-in Toss Securities session"

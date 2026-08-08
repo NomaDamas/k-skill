@@ -95,7 +95,6 @@ k-skill이 제3자 표장을 **자기 서비스의 출처표시로 사용하지 
 | 스킬 | 식별하는 표장 또는 서비스 |
 | --- | --- |
 | `bunjang-search` | 번개장터 / Bunjang |
-| `catchtable-sniper` | 캐치테이블 / Catchtable |
 | `coupang-product-search` | 쿠팡 / Coupang |
 | `daangn-cars-search` | 당근 / Daangn |
 | `daangn-jobs-search` | 당근 / Daangn |
@@ -108,7 +107,6 @@ k-skill이 제3자 표장을 **자기 서비스의 출처표시로 사용하지 
 | `express-bus-booking` | KOBUS |
 | `flight-ticket-search` | Google Flights |
 | `foresttrip-vacancy` | 숲나들e / Foresttrip |
-| `hipass-receipt` | 하이패스 / Hi-Pass |
 | `intercity-bus-booking` | 티머니 시외버스 / Tmoney |
 | `job-posting-match` | 잡코리아, 사람인 |
 | `jobkorea-talent-search` | 잡코리아 / JobKorea |

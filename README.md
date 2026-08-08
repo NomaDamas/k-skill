@@ -111,8 +111,6 @@ Node.js 18 이상과 `npx`만 있으면 됩니다. Claude Code 사용자는 아�
 | K리그 경기 결과 조회 | `kleague-results` | 날짜별 K리그1/K리그2 경기 결과, 팀별 필터링, 현재 순위 확인 | 불필요 | [K리그 결과 가이드](docs/features/kleague-results.md) |
 | LCK 경기 분석 | `lck-analytics` | LCK 경기 결과, 현재 순위, live turning point, 밴픽, 패치 메타, 팀 파워 레이팅 | 불필요 | [LCK 경기 분석 가이드](docs/features/lck-analytics.md) |
 | 토스증권 조회 | `toss-securities` | 토스증권 공식 Open API(OAuth2) 우선, tossctl fallback으로 계좌·보유주식·시세·주문조회 등 조회 전용 | 필요 | [토스증권 조회 가이드](docs/features/toss-securities.md) |
-| 하이패스 영수증 발급 | `hipass-receipt` | 하이패스 사용내역 조회 및 영수증 출력 payload 준비 | 필요 | [하이패스 영수증 발급 가이드](docs/features/hipass-receipt.md) |
-| 캐치테이블 예약 스나이핑 | `catchtable-sniper` | 로그인된 캐치테이블 Chrome 세션으로 빈자리 감시, 오픈런, 자동 예약 시도 | 필요 | [캐치테이블 예약 스나이핑 가이드](docs/features/catchtable-sniper.md) |
 | 공연 일정·잔여석 조회 | `ticket-availability` | YES24·인터파크 공연의 회차별 일정과 등급별 잔여석 수를 단일 HTTP 호출로 조회 (조회 전용, 예매·결제 없음) | 불필요 | [공연 일정·잔여석 조회 가이드](docs/features/ticket-availability.md) |
 | 로또 당첨 확인 | `lotto-results` | 로또 최신 회차, 특정 회차, 번호 대조 | 불필요 | [로또 결과 가이드](docs/features/lotto-results.md) |
 | HWP 문서 조회/변환 | `hwp` | `.hwp/.hwpx` → Markdown/JSON 변환, 문서 비교, 양식 필드 추출, Markdown→HWPX 역변환 (kordoc 기반 read-only) | 불필요 | [HWP 문서 처리 가이드](docs/features/hwp.md) |
@@ -255,8 +253,6 @@ Node.js 18 이상과 `npx`만 있으면 됩니다. Claude Code 사용자는 아�
 - [LCK 경기 분석 가이드](docs/features/lck-analytics.md)
 - [토스증권 조회 가이드](docs/features/toss-securities.md)
 - [대신증권 리포트 조회 가이드](docs/features/daishin-report-search.md)
-- [하이패스 영수증 발급 가이드](docs/features/hipass-receipt.md)
-- [캐치테이블 예약 스나이핑 가이드](docs/features/catchtable-sniper.md)
 - [공연 일정·잔여석 조회 가이드](docs/features/ticket-availability.md)
 - [로또 당첨 확인](docs/features/lotto-results.md)
 - [등기부등본 자동화 가이드](docs/features/iros-registry-automation.md)

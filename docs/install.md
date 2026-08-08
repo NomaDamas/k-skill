@@ -56,7 +56,6 @@ npx --yes skills add NomaDamas/k-skill \
   --skill kleague-results \
   --skill lck-analytics \
   --skill toss-securities \
-  --skill hipass-receipt \
   --skill lotto-results \
   --skill kakaotalk-mac \
   --skill korean-law-search \
@@ -127,7 +126,6 @@ npx --yes skills add NomaDamas/k-skill \
   --skill joseon-sillok-search \
   --skill korean-patent-search \
   --skill naver-ad-performance \
-  --skill hipass-receipt \
   --skill seoul-subway-arrival \
   --skill seoul-density \
   --skill seoul-bike \
@@ -385,7 +383,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities hipass-receipt k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search gongsijiga-search donation-place-search ev-subsidy-status
+npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities k-lotto coupang-product-search used-car-price-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search gongsijiga-search donation-place-search ev-subsidy-status
 export NODE_PATH="$(npm root -g)"
 ```
 
@@ -487,7 +485,6 @@ npx -y @nomadamas/k-skill@0 exec korean-character-count scripts/korean_character
 - `real-estate-search`
 - `korean-patent-search`
 - `naver-ad-performance`
-- `hipass-receipt`
 - `korean-stock-search`
 - `household-waste-info`
 - `cheap-gas-nearby`

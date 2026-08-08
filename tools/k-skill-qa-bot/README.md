@@ -58,7 +58,7 @@ Overridable variables (see `config/defaults.sh`):
 | `LAST_RUN_MIN_AGE` | `259200` | Min seconds between runs (72h) |
 | `GH_REPO` | `NomaDamas/k-skill` | Where to file issues |
 
-`config/skill-overrides.yml` controls per-skill `force_skip` and category overrides. Destructive booking flows (`ktx-booking`, `srt-booking`, `catchtable-sniper`, etc.) and session-required skills (`kakaotalk-mac`, `hipass-receipt`, `toss-securities`, `iros-registry-automation`) are force-skipped by default so the bot never abuses an account.
+`config/skill-overrides.yml` controls per-skill `force_skip` and category overrides. Destructive booking flows (`ktx-booking`, `srt-booking`, etc.) and session-required skills (`kakaotalk-mac`, `toss-securities`, `iros-registry-automation`) are force-skipped by default so the bot never abuses an account.
 
 ## Logs and inspection
 

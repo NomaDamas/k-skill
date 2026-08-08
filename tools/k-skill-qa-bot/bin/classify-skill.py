@@ -22,13 +22,13 @@ LOCATION_REQUIRED = {
     "korean-transit-route", "delivery-tracking",
 }
 LOGIN_REQUIRED = {
-    "catchtable-sniper", "kakaotalk-mac", "hipass-receipt", "toss-securities",
+    "kakaotalk-mac", "toss-securities",
     "iros-registry-automation", "ktx-booking", "srt-booking",
     "foresttrip-vacancy",
 }
 DESTRUCTIVE = {
     "ktx-booking", "srt-booking", "express-bus-booking",
-    "intercity-bus-booking", "catchtable-sniper", "foresttrip-vacancy",
+    "intercity-bus-booking", "foresttrip-vacancy",
 }
 API_KEY_ENV_BY_SKILL = {
     "k-dart": "API_K_DART",

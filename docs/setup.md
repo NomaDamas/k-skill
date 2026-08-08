@@ -149,7 +149,6 @@ bash scripts/check-setup.sh
 - [한국 법령 검색 가이드](features/korean-law-search.md)
 - [한국 부동산 실거래가 조회 가이드](features/real-estate-search.md)
 - [한국 특허 정보 검색 가이드](features/korean-patent-search.md)
-- [하이패스 영수증 발급 가이드](features/hipass-receipt.md)
 - [한국 주식 정보 조회 가이드](features/korean-stock-search.md)
 - [근처 가장 싼 주유소 찾기 가이드](features/cheap-gas-nearby.md)
 - [근처 공중화장실 찾기 가이드](features/public-restroom-nearby.md)
