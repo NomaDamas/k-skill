@@ -43,7 +43,7 @@ test("discoverSkillPaths excludes infrastructure dirs and nested fixtures", () =
     // Excluded root dirs that happen to contain a SKILL.md somewhere.
     "packages/k-lotto/SKILL.md": SKILL_FM,
     "scripts/SKILL.md": SKILL_FM,
-    "tools/k-skill-qa-bot/test/fixtures/skills/kbo-results/SKILL.md": SKILL_FM,
+    "tools/example-fixtures/skills/kbo-results/SKILL.md": SKILL_FM,
     "docs/SKILL.md": SKILL_FM,
     // Dot-directory must be skipped regardless of contents.
     ".github/SKILL.md": SKILL_FM,

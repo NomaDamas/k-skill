@@ -1884,20 +1884,22 @@ test("unsupported naver map and blue ribbon skills are removed from the reposito
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
   const sources = read(path.join("docs", "sources.md"));
-  const qaClassifier = read(path.join("tools", "k-skill-qa-bot", "bin", "classify-skill.py"));
   const cleanerInstruction = read(path.join("k-skill-cleaner", "instruction.md"));
   assert.ok(!fs.existsSync(path.join(repoRoot, "blue-ribbon-nearby", "SKILL.md")));
   assert.ok(!fs.existsSync(path.join(repoRoot, "naver-map-route", "SKILL.md")));
   assert.ok(!fs.existsSync(path.join(repoRoot, "docs", "features", "blue-ribbon-nearby.md")));
   assert.ok(!fs.existsSync(path.join(repoRoot, "docs", "features", "naver-map-route.md")));
   assert.ok(!fs.existsSync(path.join(repoRoot, "packages", "blue-ribbon-nearby", "package.json")));
-  assert.doesNotMatch(qaClassifier, /blue-ribbon-nearby|naver-map-route/);
   assert.doesNotMatch(cleanerInstruction, /blue-ribbon-nearby|naver-map-route/);
 
   for (const doc of [readme, install, sources]) {
     assert.doesNotMatch(doc, /blue-ribbon-nearby|naver-map-route/);
     assert.doesNotMatch(doc, /근처 블루리본 맛집|네이버맵 길찾기|네이버맵 자동차 길찾기/);
   }
+});
+
+test("retired local QA daemon is removed from the repository", () => {
+  assert.ok(!fs.existsSync(path.join(repoRoot, "tools", "k-skill-qa-bot")));
 });
 
 test("repository docs advertise the kakao-bar-nearby skill across the documented surfaces", () => {
