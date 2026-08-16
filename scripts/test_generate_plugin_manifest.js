@@ -80,6 +80,15 @@ test("run --check passes when manifest matches, fails after drift", () => {
   assert.equal(run({ root, check: true }).ok, false);
 });
 
+test("run --check treats CRLF working-tree checkouts as up to date", () => {
+  const root = makeFixtureRoot({ "lotto-results/SKILL.md": SKILL_FM });
+  run({ root });
+  const manifestPath = manifestPathFor(root);
+  const lf = fs.readFileSync(manifestPath, "utf8");
+  fs.writeFileSync(manifestPath, lf.replace(/\n/g, "\r\n"));
+  assert.equal(run({ root, check: true }).ok, true);
+});
+
 test("run --check passes when local manifest is absent", () => {
   const root = makeFixtureRoot({ "lotto-results/SKILL.md": SKILL_FM });
   const result = run({ root, check: true });

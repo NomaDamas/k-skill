@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { resolvePython } = require("./ci-run");
 
 const repoRoot = path.resolve(__dirname, "..");
 const workflowDir = path.join(repoRoot, ".github", "workflows");
@@ -132,7 +133,7 @@ test("store longevity mirror workflow uses an import-safe module entrypoint", ()
   assert.match(workflow, /\bpython3 -m scripts\.store_longevity_mirror\b/);
 
   const result = spawnSync(
-    "python3",
+    resolvePython(),
     ["-m", "scripts.store_longevity_mirror", "--help"],
     { cwd: repoRoot, encoding: "utf8" },
   );

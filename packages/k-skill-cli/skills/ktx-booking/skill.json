@@ -4,19 +4,5 @@
   "profiles": [
     "lookup"
   ],
-  "frontmatter": "name: ktx-booking\ndescription: Read-only KTX operating-timetable lookup from official Korail public XLSX attachments. No login, internal mobile API, anti-bot bypass, live seat availability, reservation, or payment.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1",
-  "bundle": [
-    {
-      "from": "scripts/ktx_booking.py",
-      "to": "scripts/ktx_booking.py"
-    },
-    {
-      "from": "scripts/ktx_timetable.py",
-      "to": "scripts/ktx_timetable.py"
-    },
-    {
-      "from": "scripts/ktx_booking.py.lock",
-      "to": "scripts/ktx_booking.py.lock"
-    }
-  ]
+  "frontmatter": "name: ktx-booking\ndescription: Read-only KTX operating-timetable lookup from official Korail public XLSX attachments. No login, internal mobile API, anti-bot bypass, live seat availability, reservation, or payment.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
 }

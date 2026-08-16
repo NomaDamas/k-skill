@@ -1,6 +1,6 @@
 ---
 name: kopis-performance-search
-description: KOPIS 공연 목록·상세·시설을 조회하고, 돌쇠에서는 공식 예매처의 좌석·예약·승인 기반 결제까지 이어간다.
+description: KOPIS 공연 목록·상세·시설을 조회한다. 조회 전용.
 license: MIT
 metadata:
   category: culture

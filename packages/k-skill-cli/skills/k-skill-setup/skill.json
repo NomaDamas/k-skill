@@ -7,11 +7,5 @@
     "browser",
     "operations"
   ],
-  "frontmatter": "name: k-skill-setup\ndescription: Install the k-skill bundle, use the unified CLI, resolve credentials, verify the runtime, and optionally configure update checks and GitHub starring.\nlicense: MIT\nmetadata:\n  category: setup\n  locale: ko-KR\n  phase: v1",
-  "bundle": [
-    {
-      "from": "scripts/check-setup.sh",
-      "to": "scripts/check-setup.sh"
-    }
-  ]
+  "frontmatter": "name: k-skill-setup\ndescription: Install the k-skill bundle, use the unified CLI, resolve credentials, verify the runtime, and optionally configure update checks and GitHub starring.\nlicense: MIT\nmetadata:\n  category: setup\n  locale: ko-KR\n  phase: v1"
 }

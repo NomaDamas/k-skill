@@ -50,6 +50,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | 지하철 분실물 조회 | `subway-lost-property` | 지하철 역/물품명 기준 공식 LOST112 분실물 검색 조건과 유실물센터 진입점 안내 | 불필요 | [지하철 분실물 조회 가이드](docs/features/subway-lost-property.md) |
 | 긱뉴스 조회 | `geeknews-search` | GeekNews 공개 RSS/Atom 피드 기반 최신 글 목록, 검색, 상세 확인 | 불필요 | [긱뉴스 조회 가이드](docs/features/geeknews-search.md) |
 | 한국 날씨 조회 | `korea-weather` | 기상청 단기예보 기반 한국 날씨 조회 | 불필요 | [한국 날씨 조회 가이드](docs/features/korea-weather.md) |
+| 한국 공휴일·특일 조회 | `korean-holiday-calendar` | 한국천문연구원 특일 정보로 공휴일·국경일·기념일·24절기·잡절 조회 (공공데이터포털 15012690, 프록시 경유) | 불필요 | [한국 공휴일·특일 조회 가이드](docs/features/korean-holiday-calendar.md) |
 | 서울 기상 위험 시간대 조회 | `seoul-weather-risk` | ASK 서울 Marketplace의 장소별 폭염·한파·호우·대설·강풍 후보 예보 시간대와 판정 근거 조회 (기상청 공식 특보 아님) | 불필요 (hosted proxy) | [서울 기상 위험 시간대 조회 가이드](docs/features/seoul-weather-risk.md) |
 | 사용자 위치 미세먼지 조회 | `fine-dust-location` | 현재 위치 또는 지역 기준 PM10/PM2.5 미세먼지 조회 | 불필요 | [사용자 위치 미세먼지 조회 가이드](docs/features/fine-dust-location.md) |
 | 한강 수위 정보 조회 | `han-river-water-level` | 한강 관측소 기준 현재 수위·유량·기준수위 확인 | 불필요 | [한강 수위 정보 가이드](docs/features/han-river-water-level.md) |
@@ -70,6 +71,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | 장수 점포 레이더 | `store-longevity-radar` | 상가(상권)정보 공개파일(무인증)로 업종·상호 키워드 점포 전수를 뽑고, 과거 스냅샷과 상호+좌표 매칭해 장수 점포 추출 | 불필요 | [장수 점포 레이더 가이드](docs/features/store-longevity-radar.md) |
 | 창업진흥원 K-Startup 조회 | `kstartup-search` | 창업진흥원 K-Startup 통합공고 사업·지원사업 공고·창업 콘텐츠·통계보고서 조회 (공공데이터포털 15125364, 프록시 경유) | 불필요 | [창업진흥원 K-Startup 조회 가이드](docs/features/kstartup-search.md) |
 | 지방선거 후보자 조회 | `local-election-candidate-search` | 중앙선거관리위원회 선거통계시스템 공개 통합검색으로 지방선거 후보자 이력·선거종류·정당·지역·득표 정보를 이름 기준으로 조회 | 불필요 | [지방선거 후보자 조회 가이드](docs/features/local-election-candidate-search.md) |
+| 국회 의안·표결 조회 | `assembly-bill-vote-search` | 열린국회정보 Open API로 의안 검색·상세와 국회의원 본회의 표결 조회 (프록시 경유, 조회 전용) | 불필요 | [국회 의안·표결 조회 가이드](docs/features/assembly-bill-vote-search.md) |
 | 공무국외출장 보고서 조회 | `gov-overseas-trip-report` | 선관위·권익위·정보공개포털·대구/대전/경기/경북 의회 등 공개 표면에서 국외출장/훈련 보고서·현황을 조회하고, 표 밖 기관은 discover로 능동 탐색(로그인 벽 제외, 판정 아님) | 불필요 | [공무국외출장 보고서 조회 가이드](docs/features/gov-overseas-trip-report.md) |
 | 한국 사업자 장부 자동화 | `korean-jangbu-for` | `kimlawtech/korean-jangbu-for` 기반 카드·은행·영수증·세금계산서 입력 → 표준 거래내역·계정과목·세무사 전달 CSV·경영 리포트 생성 thin wrapper | 선택사항(CODEF BYOK 자동 수집 시 필요) | [한국 사업자 장부 자동화 가이드](docs/features/korean-jangbu-for.md) |
 | 팝빌 업무 API | `popbill` | 팝빌 전자세금계산서·전자명세서·현금영수증·문자·카카오톡·팩스·휴폐업/기업정보·계좌조회·홈택스 수집을 로컬 BYOK 방식으로 호출 | 필요 | [팝빌 all-service API helper](docs/features/popbill.md) |
@@ -100,6 +102,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | 조선왕조실록 검색 | `joseon-sillok-search` | 조선왕조실록 키워드 검색과 왕별/연도별 필터, 기사 발췌 조회 | 불필요 | [조선왕조실록 검색 가이드](docs/features/joseon-sillok-search.md) |
 | 국가유산 검색·행사 조회 | `korean-heritage-search` | 국가유산청 공식 Open API로 국가유산 목록·상세정보·좌표와 월별 국가유산 활용 행사 조회 | 불필요 | [한국 국가유산 검색 가이드](docs/features/korean-heritage-search.md) |
 | 한국 특허 정보 검색 | `korean-patent-search` | 한국 특허/실용신안 키워드 검색 및 출원번호 상세 조회 | 필요 | [한국 특허 정보 검색 가이드](docs/features/korean-patent-search.md) |
+| KR WHOIS 조회 | `kr-whois-lookup` | 공공데이터포털 WHOIS로 `.kr`/`.한국` 도메인·IP·AS 공개 등록정보 조회 (15094277, 프록시 경유) | 불필요 | [KR WHOIS 조회 가이드](docs/features/kr-whois-lookup.md) |
 | 근처 가장 싼 주유소 찾기 | `cheap-gas-nearby` | 현재 위치 기준 근처 최저가 주유소 조회 | 불필요 | [근처 가장 싼 주유소 찾기 가이드](docs/features/cheap-gas-nearby.md) |
 | 근처 공중화장실 찾기 | `public-restroom-nearby` | 현재 위치 기준 근처 공중화장실/개방화장실 조회 | 불필요 | [근처 공중화장실 찾기 가이드](docs/features/public-restroom-nearby.md) |
 | 근처 공영주차장 찾기 | `parking-lot-search` | 현재 위치 기준 근처 공영주차장 위치·요금·운영시간 조회 | 불필요 | [근처 공영주차장 찾기 가이드](docs/features/parking-lot-search.md) |
@@ -107,6 +110,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | 전기차 보조금 현황 조회 | `ev-subsidy-status` | 지자체별 전기차 민간공고·접수·출고·출고잔여 대수와 모델별 보조금 조회 | 불필요 | [전기차 보조금 현황 조회 가이드](docs/features/ev-subsidy-status.md) |
 | 고속도로 교통량·소통·CCTV 조회 | `highway-traffic-status` | 한국도로공사·ITS 공개 API로 고속도로 구간별 실시간 속도/교통량/정체 등급과 CCTV 스트림 메타데이터 조회 | 불필요 | [고속도로 교통량·소통·CCTV 조회 가이드](docs/features/highway-traffic-status.md) |
 | 근처 응급실 병상 상태 확인 | `emergency-room-beds` | 현재 위치 기준 가까운 응급실 운영·입원실/병상 운영 플래그와 갱신시각 조회 (정확한 잔여 병상 수/가동률은 공개 E-Gen nearby 목록에 없음) | 불필요 | [근처 응급실 병상 상태 확인 가이드](docs/features/emergency-room-beds.md) |
+| 장기요양·건강검진기관 조회 | `nhis-care-checkup-search` | 국민건강보험공단 장기요양기관·건강검진기관 공개 후보 조회 (공공데이터포털 15059029·15154419, 프록시 경유) | 불필요 | [장기요양·건강검진기관 조회 가이드](docs/features/nhis-care-checkup-search.md) |
 | 한국 마라톤 일정 조회 | `korean-marathon-schedule` | 고러닝 공개 페이지와 대한철인3종협회 일정에서 마라톤·철인3종 대회 일정, 장소, 신청 마감일, 종목 조회 | 불필요 | [한국 마라톤 일정 조회 가이드](docs/features/korean-marathon-schedule.md) |
 | KBO 경기 결과 조회 | `kbo-results` | 날짜별 KBO 경기 일정, 결과, 팀별 필터링 | 불필요 | [KBO 결과 가이드](docs/features/kbo-results.md) |
 | KBL 경기 결과 조회 | `kbl-results` | 날짜별 KBL 경기 일정, 결과, 팀별 필터링, 현재 순위 확인 | 불필요 | [KBL 경기 결과 가이드](docs/features/kbl-results.md) |
@@ -114,6 +118,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | LCK 경기 분석 | `lck-analytics` | LCK 경기 결과, 현재 순위, live turning point, 밴픽, 패치 메타, 팀 파워 레이팅 | 불필요 | [LCK 경기 분석 가이드](docs/features/lck-analytics.md) |
 | 토스증권 조회 | `toss-securities` | 토스증권 공식 Open API(OAuth2)로 계좌·보유주식·시세·주문조회 등 조회 전용 | 필요 | [토스증권 조회 가이드](docs/features/toss-securities.md) |
 | 공연 일정·잔여석 조회 | `ticket-availability` | YES24·인터파크 공연의 회차별 일정과 등급별 잔여석 수를 단일 HTTP 호출로 조회 (조회 전용, 예매·결제 없음) | 불필요 | [공연 일정·잔여석 조회 가이드](docs/features/ticket-availability.md) |
+| KOPIS 공연 조회 | `kopis-performance-search` | KOPIS 공연·시설 목록과 상세 조회 (프록시 경유). 예매·결제는 공식 예매처 | 불필요 | [KOPIS 공연 조회 가이드](docs/features/kopis-performance-search.md) |
 | 로또 당첨 확인 | `lotto-results` | 로또 최신 회차, 특정 회차, 번호 대조 | 불필요 | [로또 결과 가이드](docs/features/lotto-results.md) |
 | HWP 문서 조회/변환 | `hwp` | `.hwp/.hwpx` → Markdown/JSON 변환, 문서 비교, 양식 필드 추출, Markdown→HWPX 역변환 (kordoc 기반 read-only) | 불필요 | [HWP 문서 처리 가이드](docs/features/hwp.md) |
 | HWP 문서 편집 | `rhwp-edit` | `.hwp` 본문 텍스트 삽입/삭제, 표 생성, 셀 수정, replace-all (`k-skill-rhwp` CLI + `@rhwp/core` WASM, HWP 5.x round-trip) | 불필요 | [HWP 문서 편집 가이드](docs/features/rhwp-edit.md) |
@@ -200,6 +205,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [지하철 분실물 조회 가이드](docs/features/subway-lost-property.md)
 - [긱뉴스 조회 가이드](docs/features/geeknews-search.md)
 - [한국 날씨 조회 가이드](docs/features/korea-weather.md)
+- [한국 공휴일·특일 조회 가이드](docs/features/korean-holiday-calendar.md)
 - [서울 기상 위험 시간대 조회 가이드](docs/features/seoul-weather-risk.md)
 - [사용자 위치 미세먼지 조회](docs/features/fine-dust-location.md)
 - [한강 수위 정보 가이드](docs/features/han-river-water-level.md)
@@ -217,6 +223,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [장수 점포 레이더 가이드](docs/features/store-longevity-radar.md)
 - [창업진흥원 K-Startup 조회 가이드](docs/features/kstartup-search.md)
 - [지방선거 후보자 조회 가이드](docs/features/local-election-candidate-search.md)
+- [국회 의안·표결 조회 가이드](docs/features/assembly-bill-vote-search.md)
 - [한국 사업자 장부 자동화 가이드](docs/features/korean-jangbu-for.md)
 - [팝빌 all-service API helper](docs/features/popbill.md)
 - [한국 부동산 실거래가 조회 가이드](docs/features/real-estate-search.md)
@@ -240,6 +247,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [조선왕조실록 검색 가이드](docs/features/joseon-sillok-search.md)
 - [한국 국가유산 검색 가이드](docs/features/korean-heritage-search.md)
 - [한국 특허 정보 검색 가이드](docs/features/korean-patent-search.md)
+- [KR WHOIS 조회 가이드](docs/features/kr-whois-lookup.md)
 - [근처 가장 싼 주유소 찾기 가이드](docs/features/cheap-gas-nearby.md)
 - [근처 공중화장실 찾기 가이드](docs/features/public-restroom-nearby.md)
 - [근처 공영주차장 찾기 가이드](docs/features/parking-lot-search.md)
@@ -247,6 +255,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [고속도로 교통량·소통·CCTV 조회 가이드](docs/features/highway-traffic-status.md)
 - [전기차 보조금 현황 조회 가이드](docs/features/ev-subsidy-status.md)
 - [근처 응급실 병상 상태 확인 가이드](docs/features/emergency-room-beds.md)
+- [장기요양·건강검진기관 조회 가이드](docs/features/nhis-care-checkup-search.md)
 - [한국 마라톤 일정 조회 가이드](docs/features/korean-marathon-schedule.md)
 - [KBO 경기 결과 조회](docs/features/kbo-results.md)
 - [KBL 경기 결과 가이드](docs/features/kbl-results.md)
@@ -255,6 +264,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [토스증권 조회 가이드](docs/features/toss-securities.md)
 - [대신증권 리포트 조회 가이드](docs/features/daishin-report-search.md)
 - [공연 일정·잔여석 조회 가이드](docs/features/ticket-availability.md)
+- [KOPIS 공연 조회 가이드](docs/features/kopis-performance-search.md)
 - [로또 당첨 확인](docs/features/lotto-results.md)
 - [등기부등본 자동화 가이드](docs/features/iros-registry-automation.md)
 - [건축물대장 표제부 조회 가이드](docs/features/building-register-search.md)

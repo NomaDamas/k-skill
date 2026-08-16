@@ -1,18 +1,18 @@
 # Runtime Action Audit
 
-2026-08-01 기준 top-level `SKILL.md` 124개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
+2026-08-01 기준 top-level `SKILL.md` 120개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
 
 ## Mode definitions
 
-- **commerce** (13): 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제
-- **booking** (17): 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제
-- **submission** (12): 공식 폼·첨부 준비 → `clarify` 후 제출/지원/결제/취소
+- **commerce** (12): 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제
+- **booking** (12): 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제
+- **submission** (11): 공식 폼·첨부 준비 → `clarify` 후 제출/지원/결제/취소
 - **recruiting** (2): 기업 인재검색 → shortlist → 유료 열람/제안 직전 `clarify`
-- **account** (3): 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify`
+- **account** (2): 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify`
 - **legal** (8): 공식 법률·정부 표면의 로그인/인증/서류 준비를 진행하고 `clarify` 후 제출·입찰·수수료 결제
 - **operations** (1): k-skill 설치·업데이트·복구·런타임 연결을 실제 적용하고 검증
 - **local** (12): 요청 산출물을 로컬에서 실제 생성·변환·정리
-- **lookup** (57): 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
+- **lookup** (60): 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
 
 ## Complete catalog
 
@@ -74,7 +74,7 @@
 | `kbo-results` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `keris-academic-search` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
 | `kleague-results` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
-| `kopis-performance-search` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
+| `kopis-performance-search` | `lookup` | KOPIS 공연·시설 목록과 상세 조회 완료 |
 | `korea-weather` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `korean-character-count` | `local` | 요청 산출물을 로컬에서 실제 생성·변환·정리 |
 | `korean-cinema-search` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |

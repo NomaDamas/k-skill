@@ -90,8 +90,11 @@ ASK 서울 기상 위험 시간대 조회는 기본 hosted proxy를 사용하므
 ## 확인
 
 ```bash
+npx -y @nomadamas/k-skill@0 exec k-skill-setup scripts/check-setup.sh --
 bash scripts/check-setup.sh
 ```
+
+원본 helper는 `k-skill-setup/scripts/check-setup.sh`다. 루트 `scripts/check-setup.sh`는 저장소 체크아웃용 shim이다.
 
 ## 시크릿이 없을 때의 기본 응답
 

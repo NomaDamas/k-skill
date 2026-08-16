@@ -114,6 +114,10 @@ function serialize(manifest) {
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
+function normalizeNewlines(text) {
+  return text.replace(/\r\n/g, "\n");
+}
+
 /**
  * Core entry point usable from tests.
  * @returns {{ ok: boolean, manifest: object, current: string, next: string, written?: boolean }}
@@ -128,7 +132,7 @@ function run({ root = repoRoot, check = false } = {}) {
     if (!current) {
       return { ok: true, manifest, current, next, missing: true };
     }
-    return { ok: current === next, manifest, current, next };
+    return { ok: normalizeNewlines(current) === normalizeNewlines(next), manifest, current, next };
   }
 
   fs.mkdirSync(path.dirname(manifestPath), { recursive: true });

@@ -12,6 +12,7 @@ from requests import ConnectionError as RequestsConnectionError
 from SRT.errors import SRTNetFunnelError
 
 SCRIPT_PATH = Path(__file__).with_name("srt_booking.py")
+CANONICAL_PATH = SCRIPT_PATH.parent.parent / "srt-booking" / "scripts" / "srt_booking.py"
 SPEC = importlib.util.spec_from_file_location("srt_booking", SCRIPT_PATH)
 assert SPEC and SPEC.loader
 srt_booking = importlib.util.module_from_spec(SPEC)
@@ -81,7 +82,7 @@ class SrtLiveReadOnlyTests(unittest.TestCase):
         self.assertEqual(set(subcommands), {"search", "source"})
 
     def test_helper_uses_live_srtrain_not_file_transport(self) -> None:
-        source = SCRIPT_PATH.read_text()
+        source = CANONICAL_PATH.read_text()
         self.assertIn("SRTrain", source)
         self.assertNotIn("kordoc", source)
         self.assertNotIn("downloadAttach", source)

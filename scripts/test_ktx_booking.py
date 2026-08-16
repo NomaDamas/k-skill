@@ -13,6 +13,7 @@ from openpyxl import Workbook
 
 
 SCRIPT_PATH = Path(__file__).with_name("ktx_booking.py")
+CANONICAL_PATH = SCRIPT_PATH.parent.parent / "ktx-booking" / "scripts" / "ktx_booking.py"
 SPEC = importlib.util.spec_from_file_location("ktx_booking", SCRIPT_PATH)
 assert SPEC and SPEC.loader
 ktx_booking = importlib.util.module_from_spec(SPEC)
@@ -255,7 +256,7 @@ class KtxOfficialTimetableTests(unittest.TestCase):
         fetch.assert_not_called()
 
     def test_helper_contains_no_mobile_api_or_state_changing_commands(self) -> None:
-        source = SCRIPT_PATH.read_text(encoding="utf-8")
+        source = CANONICAL_PATH.read_text(encoding="utf-8")
 
         self.assertNotIn("ScheduleView", source)
         self.assertNotIn("korail2", source)
@@ -272,8 +273,8 @@ class KtxOfficialTimetableTests(unittest.TestCase):
             / "scripts"
             / "ktx_booking.py"
         )
-        self.assertEqual(SCRIPT_PATH.read_bytes(), bundled.read_bytes())
-        parser_source = SCRIPT_PATH.with_name("ktx_timetable.py")
+        self.assertEqual(CANONICAL_PATH.read_bytes(), bundled.read_bytes())
+        parser_source = CANONICAL_PATH.with_name("ktx_timetable.py")
         parser_bundled = bundled.with_name("ktx_timetable.py")
         self.assertEqual(parser_source.read_bytes(), parser_bundled.read_bytes())
 

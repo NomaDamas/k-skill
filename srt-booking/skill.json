@@ -4,15 +4,5 @@
   "profiles": [
     "lookup"
   ],
-  "frontmatter": "name: srt-booking\ndescription: Read-only live SRT timetable and seat-availability lookup through the SRTrain search path. No login, reservation, payment, cancellation, exact seat selection, or automated monitoring.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1",
-  "bundle": [
-    {
-      "from": "scripts/srt_booking.py",
-      "to": "scripts/srt_booking.py"
-    },
-    {
-      "from": "scripts/srt_booking.py.lock",
-      "to": "scripts/srt_booking.py.lock"
-    }
-  ]
+  "frontmatter": "name: srt-booking\ndescription: Read-only live SRT timetable and seat-availability lookup through the SRTrain search path. No login, reservation, payment, cancellation, exact seat selection, or automated monitoring.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
 }

@@ -77,6 +77,7 @@
 ## 검증
 
 - 문서만 바꿔도 관련 문서 테스트를 먼저 추가하거나 업데이트하고, 실패를 확인한 뒤 구현하는 TDD 흐름을 권장합니다.
+- `npm run lint` / `npm test` / `npm run pack:dry-run`은 `scripts/run-*.js`가 파일 목록을 glob으로 수집합니다. 새 helper나 테스트를 추가할 때 루트 `package.json` 스크립트 문자열을 손으로 늘리지 않습니다.
 - `npm run lint`가 모든 top-level 스킬의 stub/source/bundle 정합성과 profile 유효성을 검증하는지 확인합니다.
 - 일반 변경은 가능한 한 `npm run lint`, `npm run typecheck`, `npm test`를 실행합니다.
 - 릴리스나 패키징 관련 변경은 `npm run ci`를 실행합니다.

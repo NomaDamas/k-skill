@@ -177,6 +177,7 @@ npx -y @nomadamas/k-skill@0 read my-new-skill references/guide.md
 ```
 
 `npm run sync:cli-skills`가 helper와 reference를 통합 CLI 패키지에 동봉한다.
+루트 `scripts/`에서 `bundle[]`로 끌어오지 않는다. helper는 스킬 디렉터리의 `scripts/`에 둔다.
 
 ---
 
@@ -273,13 +274,13 @@ npm run ci
 - [ ] `my-new-skill/SKILL.md` 작성 완료
 - [ ] 정확한 `## Runtime contract (required)` 블록을 원문 그대로 포함
 - [ ] frontmatter `name`이 디렉토리 이름과 일치
-- [ ] `npm run ci` 통과 (`./scripts/validate-skills.sh` 포함)
+- [ ] `npm run ci` 통과 (`./scripts/validate-skills.sh` 포함). Python/Node helper 테스트는 `scripts/test_*.py`, `<skill>/tests/`, `<skill>/scripts/test_*.py`에 두면 루트 `npm test`가 glob으로 수집한다. `package.json` 테스트 목록을 손으로 고치지 않는다.
 - [ ] npm 패키지라면 `packages/`에 구현체와 테스트 추가
 - [ ] npm 패키지라면 `.changeset/*.md` 파일 추가 (반드시 **기능 PR에서**, Version Packages PR에서 추가하지 말 것)
 - [ ] 프록시 경유라면 `k-skill-proxy/src/server.js`에 route 추가하고 gpu01 production `.env` 및 자동 배포 smoke 구성이 맞는지 확인
 - [ ] 크롤링/검색 스킬이라면 공개 접근 경로, fallback 순서, 차단/로그인/빈 결과 실패 모드 문서화
 - [ ] 시크릿이 있다면 `KSKILL_` 접두사 규칙 준수 및 `docs/setup.md` 업데이트
-- [ ] `docs/features/my-new-skill.md` 작성 (선택, 상세 가이드)
+- [ ] `docs/features/my-new-skill.md` 작성. `k-skill-setup`만 예외로 [공통 설정 가이드](setup.md)를 가리킨다.
 - [ ] 브라우저가 필요한 스킬이라면 돌쇠 CloakBrowser 우선, `k-skill-browser-runtime` semver fallback, typed stop rule, 직접 HTTP 우선, `workspace:` 미사용 확인 ([브라우저 런타임 문서](browser-runtime.md))
 - [ ] 액션 가능한 스킬이라면 돌쇠에서 조회 뒤 실제 액션 경로와 `clarify` 비가역 승인 경계를 문서화
 
