@@ -115,8 +115,11 @@ k-skill이 제3자 표장을 **자기 서비스의 출처표시로 사용하지 
 | `kakaotalk-mac` | 카카오톡 / KakaoTalk |
 | `kbl-results` | KBL |
 | `kbo-results` | KBO |
+| `keris-academic-search` | KERIS / RISS |
 | `kleague-results` | K League |
+| `kopis-performance-search` | KOPIS |
 | `korean-cinema-search` | CGV, 메가박스, 롯데시네마 |
+| `korean-stock-search` | KRX / 한국거래소 |
 | `korean-transit-route` | ODsay, 카카오 |
 | `ktx-booking` | KTX, 코레일 / Korail |
 | `lck-analytics` | LCK, Riot Games, LoL Esports |

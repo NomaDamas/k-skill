@@ -12,6 +12,12 @@ Runtime mode: generic
 - Resolve credentials in this order: already-injected environment variables, then the host vault, then `~/.config/k-skill/secrets.env` (mode `0600`). If the value is missing, request it through the safest input surface the host provides and store it in the vault or dotenv; never echo it back.
 - Complete search and reversible reservation steps that the documented portable workflow supports, then report the confirmation, purchase deadline, and the exact official surface where the user finishes payment. Do not automate payment here.
 
+## Bundled asset access
+
+- Execute bundled helpers only through `npx -y @nomadamas/k-skill@0 exec kopis-performance-search scripts/<file> -- <args>`; do not assume a repository-relative or installed-skill-relative path.
+- Resolve an asset path with `npx -y @nomadamas/k-skill@0 path kopis-performance-search <relative-path>` only when another tool explicitly requires a filesystem path.
+- Read bundled references through `npx -y @nomadamas/k-skill@0 read kopis-performance-search references/<file>`.
+
 # KOPIS Performance Search
 
 ## What this skill does

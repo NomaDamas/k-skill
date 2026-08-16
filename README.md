@@ -305,3 +305,5 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 
 - `packages/k-skill-proxy/` — [AGPL-3.0-only](packages/k-skill-proxy/LICENSE)
 - `infra/k-skill-proxy-dashboard/` — AGPL-3.0-only (프록시 모니터링 스택)
+
+제3자 상표와 서비스명은 기능·조회 대상·호환 대상을 설명하기 위해서만 사용하며, 별도 명시가 없는 한 해당 권리자나 운영사의 공식 기능·지원·제휴·승인 또는 협업을 의미하지 않습니다. 공개정보 조회 기능은 개인적·비조직적 용도로만 사용하고, 대량·체계적 크롤링이나 접근통제 회피, 서비스 장애·영업 방해를 해서는 안 됩니다.

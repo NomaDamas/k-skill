@@ -264,6 +264,59 @@ test("CLI-managed skills keep source, stub safety floor, and bundled copies alig
   childProcess.execFileSync("node", [path.join(__dirname, "sync-cli-skills.js"), "--check"], { cwd: repoRoot });
 });
 
+test("trademark-reviewed skills publish the combined legal disclaimer", () => {
+  const reviewedSkills = cliManagedSkills().filter((skillName) =>
+    fs.existsSync(path.join(repoRoot, skillName, "references", "DISCLAIMER.md")),
+  );
+
+  assert.equal(reviewedSkills.length, 43, "expected the complete trademark-reviewed skill set");
+
+  for (const skillName of reviewedSkills) {
+    const disclaimerPath = path.join(skillName, "references", "DISCLAIMER.md");
+    const bundledDisclaimerPath = path.join(
+      "packages",
+      "k-skill-cli",
+      "skills",
+      skillName,
+      "references",
+      "DISCLAIMER.md",
+    );
+
+    assert.ok(fs.existsSync(path.join(repoRoot, disclaimerPath)), `${skillName} must publish DISCLAIMER.md`);
+
+    const disclaimer = readRaw(disclaimerPath);
+    const stub = readRaw(path.join(skillName, "SKILL.md"));
+
+    assert.ok(
+      fs.existsSync(path.join(repoRoot, skillName, "references", "TRADEMARK-LEGAL-STATEMENT.md")),
+      `${skillName} must keep a skill-specific trademark statement`,
+    );
+    assert.match(disclaimer, /공식 기능|공식 지원/);
+    assert.match(disclaimer, /제휴|협업/);
+    assert.match(disclaimer, /기능|조회 대상|호환 대상/);
+    assert.match(disclaimer, /2005도1637/);
+    assert.match(disclaimer, /2021도1533/);
+    assert.match(disclaimer, /정보통신망법 제48조/);
+    assert.match(disclaimer, /저작권법 제93조/);
+    assert.match(disclaimer, /개인.*조회/);
+    assert.match(disclaimer, /조직적.*크롤링|대량.*수집/);
+    assert.match(disclaimer, /영업.*방해|서비스.*(?:장애|방해)/);
+    assert.match(disclaimer, /접근통제|차단.*회피/);
+
+    assert.equal(
+      readRaw(bundledDisclaimerPath),
+      disclaimer,
+      `packages/k-skill-cli/skills/${skillName}/references/DISCLAIMER.md must match the source`,
+    );
+    assert.match(stub, /^## Legal disclaimer \(required\)$/m);
+    assert.match(
+      stub,
+      new RegExp(`read ${escapeRegex(skillName)} references/DISCLAIMER\\.md`),
+      `${skillName} stub must require reading its disclaimer`,
+    );
+  }
+});
+
 test("actionable skills publish a Dolshoi action path", () => {
   const cliManaged = new Set(cliManagedSkills());
   const actionableSkills = [
