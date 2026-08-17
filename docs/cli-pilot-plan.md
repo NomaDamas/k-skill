@@ -2,7 +2,7 @@
 
 ## 문제
 
-- 121개 `SKILL.md`가 동일한 runtime contract를 물리적으로 복제하고 있어 정책 변경 시 121곳을 동기화해야 한다.
+- 119개 `SKILL.md`가 동일한 runtime contract를 물리적으로 복제하고 있어 정책 변경 시 119곳을 동기화해야 한다.
 - instruction 업데이트가 스킬 재설치 없이는 전파되지 않는다.
 - raw `SKILL.md`만 설치하는 도구에서는 `scripts/`·`references/`가 누락된다.
 - 돌쇠/비돌쇠 분기 instruction이 한 파일에 공존해 컨텍스트를 낭비한다.
@@ -83,7 +83,7 @@ stub은 major 버전 고정(`@0`)으로 CLI를 호출한다. breaking 변경은 
 
 ## 전환 범위
 
-121개 top-level 스킬 전체가 `skill.json` + `instruction.md` source와 생성된
+119개 top-level 스킬 전체가 `skill.json` + `instruction.md` source와 생성된
 `SKILL.md` CLI stub 구조를 사용한다. 유형별 profile과 completion target은
 `docs/runtime-action-audit.md`에서 관리한다.
 

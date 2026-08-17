@@ -293,4 +293,4 @@ npm run ci
 - [보안/시크릿 정책](security-and-secrets.md) — 인증 정보 취급 원칙
 - [브라우저 런타임](browser-runtime.md) — BrowserOS CDP 런타임과 stop rule
 - [돌쇠 런타임 계약](dolshoi-runtime.md) — vault, CloakBrowser, action, approval, fallback 계약
-- [전체 런타임 액션 감사표](runtime-action-audit.md) — 121개 스킬의 action mode와 완료 목표
+- [전체 런타임 액션 감사표](runtime-action-audit.md) — 119개 스킬의 action mode와 완료 목표

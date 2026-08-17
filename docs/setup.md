@@ -161,7 +161,6 @@ bash scripts/check-setup.sh
 - [건축물대장 표제부 조회 가이드](features/building-register-search.md)
 - [KERIS/RISS 학술자료 검색 가이드](features/keris-academic-search.md)
 - [팝빌 all-service API helper](features/popbill.md)
-- [지방선거 후보자 조회 가이드](features/local-election-candidate-search.md)
 - [보안/시크릿 정책](security-and-secrets.md)
 - [브라우저 런타임 가이드](browser-runtime.md)
 
