@@ -17,8 +17,23 @@ const SAFETY_FLOOR = `## Hard rules even without the CLI
 - Never ask for, print, or store plaintext credentials in chat, files, or shell arguments.
 - Never bypass legal, physical-presence, CAPTCHA, identity-proofing, or electronic-signature boundaries.`;
 
-function renderStub(manifest) {
+function legalDisclaimerSection(skillName) {
+  return `## Legal disclaimer (required)
+
+This skill is not an official feature of, officially supported by, affiliated with, sponsored by, approved by, or developed in collaboration with any third-party trademark owner or service operator it identifies. Third-party names are used only to describe the skill's function, lookup target, or compatibility.
+
+Any automated collection of publicly accessible information must be limited to personal, non-organizational lookup. Do not use this skill for systematic or bulk crawling, database building, access-control or block circumvention, or conduct that interferes with a third party's business or service.
+
+Read the full Korean legal disclaimer, including the cited Korean Supreme Court precedents and statutory limits, before use:
+
+\`\`\`bash
+npx -y @nomadamas/k-skill@0 read ${skillName} references/DISCLAIMER.md
+\`\`\``;
+}
+
+function renderStub(manifest, hasLegalDisclaimer = false) {
   const skillName = manifest.name;
+  const legalDisclaimer = hasLegalDisclaimer ? `${legalDisclaimerSection(skillName)}\n\n` : "";
 
   return `---
 ${manifest.frontmatter.trim()}
@@ -44,7 +59,7 @@ npx -y @nomadamas/k-skill@0 files ${skillName}
 
 If \`npx\` is unavailable, install Node.js 18+ or follow https://github.com/NomaDamas/k-skill#readme, or read the source instructions at https://github.com/NomaDamas/k-skill/blob/main/${skillName}/instruction.md.
 
-${SAFETY_FLOOR}
+${legalDisclaimer}${SAFETY_FLOOR}
 `;
 }
 
@@ -62,7 +77,10 @@ function main() {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(repoRoot, skillName, "skill.json"), "utf8"),
     );
-    const stub = renderStub(manifest);
+    const hasLegalDisclaimer = fs.existsSync(
+      path.join(repoRoot, skillName, "references", "DISCLAIMER.md"),
+    );
+    const stub = renderStub(manifest, hasLegalDisclaimer);
     const target = path.join(repoRoot, skillName, "SKILL.md");
 
     if (check) {
@@ -90,4 +108,4 @@ function main() {
 
 main();
 
-module.exports = { SAFETY_FLOOR, renderStub };
+module.exports = { SAFETY_FLOOR, legalDisclaimerSection, renderStub };
