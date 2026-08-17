@@ -1,6 +1,6 @@
 # naming-house
 
-Deterministic Korean naming recommendation helper for k-skill. It combines `saju-fortune` birth-based five-element context, `namefyi` Hanja/CJK stroke helpers, `korean-stroke` Hangul fallback strokes, and explicit local scoring weights.
+Deterministic Korean naming recommendation helper for k-skill. It combines `saju-fortune` birth-based five-element context, `hanja` per-character stroke-order data, `korean-stroke` Hangul fallback strokes, and explicit local scoring weights.
 
 ## Install
 
@@ -65,11 +65,13 @@ Grades: `excellent` 85-100, `good` 70-84, `fair` 50-69, `weak` 0-49.
 ## Provenance
 
 - `saju-fortune`: saju pillars, five-element distribution, weak/useful elements, time/lunar limitations.
-- `namefyi`: Hanja/CJK stroke count, stroke-to-element mapping, element compatibility, Korean romanization. The npm package is ESM-only, so `naming-house` loads it with dynamic `import()` from a CommonJS package. If the installed package cannot provide the Hanja stroke functions, Hanja stroke scoring fails closed with `hanja-stroke-unavailable`; only romanization may use a local compatibility fallback.
+- `hanja`: deterministic Hanja stroke-order strings. `naming-house` counts the strokes and reports `strokeProfile.source: "hanja-stroke-order"` plus `source: "hanja"` on each character.
 - `korean-stroke`: Hangul stroke fallback when Hanja is not supplied.
 
 ## Limitations
 
 This package is cultural/reference guidance. It does not certify official 인명용 한자, legal name validity, 불용문자, fate, health, finance, or legal outcomes. Lunar dates must be converted with a verified 만세력 before calling with `calendar: "solar"`; unsupported lunar input follows `saju-fortune` rejection behavior.
+
+`hanja-stroke-order` is the number of strokes in the official stroke-sequence data. It is not a Kangxi Dictionary original-form count or an 81-numerology four-grid calculation.
 
 `naming-house` runs as a local or global npm package. It does not serve an MCP server or proxy.

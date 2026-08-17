@@ -1962,13 +1962,13 @@ test("naming-house docs and package preserve the 작명소 contract", () => {
   assert.match(install, /--skill naming-house/);
   assert.match(install, /npm install -g naming-house/);
   assert.equal(packageJson.name, "naming-house");
-  assert.equal(packageJson.dependencies.namefyi, "^0.1.2");
+  assert.equal(packageJson.dependencies.hanja, "^1.1.5");
   assert.equal(packageJson.dependencies["korean-stroke"], "^1.1.5");
-  assert.match(sources, /namefyi/);
+  assert.match(sources, /hanja/);
   assert.match(sources, /korean-stroke/);
 
   for (const doc of [skill, featureDoc, packageReadme]) {
-    assert.match(doc, /namefyi/);
+    assert.match(doc, /hanja/);
     assert.match(doc, /korean-stroke/);
     assert.match(doc, /saju-fortune/);
     assert.match(doc, /음력|lunar/);

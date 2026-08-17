@@ -31,8 +31,8 @@
     "작명"
   ],
   "dependencies": {
+    "hanja": "^1.1.5",
     "korean-stroke": "^1.1.5",
-    "namefyi": "^0.1.2",
     "saju-fortune": "^0.2.0"
   },
   "scripts": {

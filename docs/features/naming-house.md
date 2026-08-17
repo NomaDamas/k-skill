@@ -56,7 +56,7 @@ naming-house --tool recommend_names --input-json '{"surname":"김","birthDate":"
 | 구성 | 범위 | 의미 |
 | --- | --- | --- |
 | `elementBalance` | 0-40 | 사주에서 보완할 오행과 이름 오행의 일치·상생 여부 |
-| `strokeHarmony` | 0-30 | 한자 획수 또는 한글 fallback 획수의 흐름 |
+| `strokeHarmony` | 0-30 | 한자 필순 횟수 또는 한글 fallback 획수의 흐름 |
 | `soundFlow` | 0-20 | 전체 이름 길이, 반복 음절, 로마자 흐름 |
 | `preferenceFit` | 0-10 | 선호 음절, 회피 음절, 스타일 태그, 의미 메모 반영 |
 
@@ -65,10 +65,11 @@ naming-house --tool recommend_names --input-json '{"surname":"김","birthDate":"
 ## 해석 가이드
 
 - 점수가 가장 높은 이름을 단정적으로 "최고"라고 하지 말고, 어떤 요소가 강한지 설명한다.
-- 한자 이름이 있는 후보는 `namefyi` 기반 한자 획수 출처를 표시한다.
+- 한자 이름이 있는 후보는 `hanja-stroke-order` 기반 한자 필순 횟수 출처를 표시한다.
 - 한자가 없는 후보는 `korean-stroke` 한글 획수 fallback이며 정밀도가 낮다고 표시한다.
 - 태어난 시간이 없으면 시주 기반 보완 오행은 확정하지 않는다.
 - 결과는 성명학 참고용이며 법적 개명, 인명용 한자 검증, 운명 판단을 대신하지 않는다.
+- `hanja-stroke-order`를 강희자전 원획수나 81수리 4격 값으로 해석하지 않는다.
 
 ## 주의사항
 

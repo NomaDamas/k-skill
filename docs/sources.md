@@ -228,7 +228,7 @@
 - 우체국 배송조회: https://service.epost.go.kr/trace.RetrieveRegiPrclDeliv.postal?sid1=
 - 우체국 배송상세 HTML: https://service.epost.go.kr/trace.RetrieveDomRigiTraceList.comm
 
-- `namefyi` npm package: https://www.npmjs.com/package/namefyi — MIT, ESM-only TypeScript package used by `naming-house` for Korean romanization, CJK stroke counts, stroke→오행, and 오행 compatibility; repository https://github.com/fyipedia/namefyi-js; homepage https://namefyi.com.
+- `hanja` npm package: https://www.npmjs.com/package/hanja — MIT TypeScript package used by `naming-house` for deterministic Hanja stroke-order strings; repository https://github.com/rockpicado/hanja. Its stroke data originates from Taiwan government open data and is not treated as Kangxi original-form or 81-numerology counts.
 - `korean-stroke` npm package: https://www.npmjs.com/package/korean-stroke — MIT CommonJS package used by `naming-house` for Hangul stroke fallback when Hanja is unavailable; repository https://github.com/hwahyeon/korean-stroke; depends on `korean-unpacker`.
 - Naver Shopping public BFF JSON: `https://ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui` (네이버 쇼핑 가격비교 스킬의 no-key fallback)
 - Naver Developers Search API shopping docs: https://developers.naver.com/docs/serviceapi/search/shopping/shopping.md

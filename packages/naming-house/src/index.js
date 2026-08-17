@@ -1,3 +1,4 @@
+const hanja = require("hanja").default;
 const strokeCounter = require("korean-stroke");
 const { analyzeSaju } = require("saju-fortune");
 
@@ -9,8 +10,6 @@ const HANGUL_RE = /^[가-힣]{1,3}$/;
 const CJK_RE = /^[\u4E00-\u9FFF]+$/u;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
-
-let cachedNamefyi;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -51,40 +50,12 @@ function localRomanizeKorean(text) {
   }).join("");
 }
 
-function makeFallbackNamefyi(error) {
-  return {
-    __fallback: true,
-    __error: error ? error.message : undefined,
-    romanizeKorean: localRomanizeKorean
-  };
-}
-
-async function loadNamefyi() {
-  if (cachedNamefyi) return cachedNamefyi;
-  try {
-    cachedNamefyi = await import("namefyi");
-  } catch (error) {
-    cachedNamefyi = makeFallbackNamefyi(error);
-  }
-  return cachedNamefyi;
-}
-
 function relationOf(first, second) {
   if (!CANONICAL_ELEMENTS.includes(first) || !CANONICAL_ELEMENTS.includes(second)) return "unknown";
   if (first === second) return "neutral";
   if (GENERATING[first] === second) return "generating";
   if (OVERCOMING[first] === second) return "overcoming";
   return "neutral";
-}
-
-function normalizeRelationship(value) {
-  if (!value) return "unknown";
-  const raw = typeof value === "string" ? value : (value.relationship || value.type || value.result || "");
-  const text = String(raw).toLowerCase();
-  if (text.includes("generat") || text.includes("생")) return "generating";
-  if (text.includes("overcom") || text.includes("克") || text.includes("극")) return "overcoming";
-  if (text.includes("neutral") || text.includes("same")) return "neutral";
-  return "unknown";
 }
 
 function parseDate(value) {
@@ -233,24 +204,19 @@ async function buildNamingContext(rawInput) {
 }
 
 async function getHanjaStrokeProfile(surnameHanja, hanjaName) {
-  const namefyi = await loadNamefyi();
   const text = `${surnameHanja || ""}${hanjaName || ""}`;
   const warnings = [];
   const limitations = [];
   if (!text || !CJK_RE.test(text)) {
-    return { source: "namefyi-hanja", available: false, warnings, limitations: ["hanja-stroke-unavailable"], strokes: [], relationships: [] };
-  }
-  if (namefyi.__fallback) {
-    warnings.push(`namefyi unavailable: ${namefyi.__error || "dynamic import failed"}`);
-    return { source: "namefyi-hanja", available: false, warnings, limitations: ["hanja-stroke-unavailable"], strokes: [], relationships: [] };
+    return { source: "hanja-stroke-order", available: false, warnings, limitations: ["hanja-stroke-unavailable"], strokes: [], relationships: [] };
   }
   const strokes = [];
   for (const char of Array.from(text)) {
     try {
-      const count = Number(namefyi.getStrokeCount(char.codePointAt(0)));
+      const strokeOrder = hanja.getStrokes(char);
+      const count = typeof strokeOrder === "string" ? Array.from(strokeOrder).length : 0;
       if (!Number.isFinite(count) || count <= 0) throw new Error("invalid stroke count");
-      const element = normalizeElement(namefyi.fiveElementsForStrokes(count));
-      strokes.push({ char, strokes: count, element: element === "unknown" ? elementForStrokes(count) : element, source: "namefyi" });
+      strokes.push({ char, strokes: count, element: elementForStrokes(count), source: "hanja" });
     } catch (error) {
       limitations.push("hanja-stroke-unavailable");
       warnings.push(`hanja stroke unavailable for ${char}: ${error.message}`);
@@ -258,13 +224,9 @@ async function getHanjaStrokeProfile(surnameHanja, hanjaName) {
   }
   const relationships = [];
   for (let index = 0; index < strokes.length - 1; index += 1) {
-    try {
-      relationships.push(normalizeRelationship(namefyi.checkElementCompatibility(strokes[index].element, strokes[index + 1].element)));
-    } catch {
-      relationships.push(relationOf(strokes[index].element, strokes[index + 1].element));
-    }
+    relationships.push(relationOf(strokes[index].element, strokes[index + 1].element));
   }
-  return { source: "namefyi-hanja", available: strokes.length === Array.from(text).length, warnings, limitations, strokes, relationships };
+  return { source: "hanja-stroke-order", available: strokes.length === Array.from(text).length, warnings, limitations, strokes, relationships };
 }
 
 function getHangulStrokeProfile(text) {
@@ -325,13 +287,12 @@ function scoreStrokeHarmony(profile, candidate) {
 }
 
 async function scoreSoundFlow(fullName, givenName, preferences) {
-  const namefyi = await loadNamefyi();
   let score = 10;
   if ([3, 4].includes(Array.from(fullName).length)) score += 4;
   if (Array.from(givenName).length === 2) score += 3;
   const syllables = Array.from(givenName);
   if (!syllables.some((char, index) => index > 0 && char === syllables[index - 1])) score += 2;
-  const romanized = typeof namefyi.romanizeKorean === "function" ? namefyi.romanizeKorean(fullName) : localRomanizeKorean(fullName);
+  const romanized = localRomanizeKorean(fullName);
   if (romanized && romanized.length >= 3 && romanized.length <= 16) score += 1;
   if ((preferences.avoidSyllables || []).some((item) => fullName.includes(item))) score -= 4;
   return { score: clamp(score, 0, 20), romanized };
@@ -377,12 +338,12 @@ async function scoreNameCandidate(rawCandidate, context, options = {}) {
   const score = clamp(Math.round(Object.values(components).reduce((sum, item) => sum + item, 0)), 0, 100);
   const limitations = [...new Set([...(context.limitations || []), ...(strokeProfileRaw.limitations || [])])];
   const sources = ["naming-house-local-scoring", ...context.sources];
-  if (strokeProfileRaw.source === "namefyi-hanja" && strokeProfileRaw.available !== false && strokeProfileRaw.strokes.length) sources.push("namefyi");
+  if (strokeProfileRaw.source === "hanja-stroke-order" && strokeProfileRaw.available !== false && strokeProfileRaw.strokes.length) sources.push("hanja");
   if (strokeProfileRaw.source === "korean-stroke-hangul") sources.push("korean-stroke");
   const neededKo = context.neededElements.map((element) => ELEMENT_KO[element] || element).join("·");
   const explanation = [
     `사주 보완 오행(${neededKo})과 이름 오행의 겹침을 ${components.elementBalance}점으로 보았습니다.`,
-    `획수 흐름은 ${strokeProfileRaw.source === "namefyi-hanja" ? "한자 획수" : "한글 획수 fallback"} 기준 ${components.strokeHarmony}점입니다.`,
+    `획수 흐름은 ${strokeProfileRaw.source === "hanja-stroke-order" ? "한자 필획" : "한글 획수 fallback"} 기준 ${components.strokeHarmony}점입니다.`,
     `발음 흐름과 길이는 ${components.soundFlow}점입니다.`,
     ...preferenceFit.explanations
   ];
@@ -490,7 +451,6 @@ module.exports = {
   recommendNames,
   callNamingHouseTool,
   adapters: {
-    loadNamefyi,
     getHanjaStrokeProfile,
     getHangulStrokeProfile
   }

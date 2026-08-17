@@ -74,14 +74,42 @@ test("recommendNames ranks candidates deterministically", async () => {
   assert.ok(first.recommendations[0].score >= first.recommendations[1].score);
 });
 
-test("Hanja candidate fails closed when namefyi Hanja data is unavailable", async () => {
+test("Hanja candidates use real per-character stroke counts", async () => {
+  // Given: candidates whose Hanja have different official stroke sequences
+  const input = sampleInput({
+    surname: "정",
+    surnameHanja: "鄭",
+    candidates: [
+      { givenName: "초희", hanjaName: "草熙" },
+      { givenName: "초희", hanjaName: "初熙" },
+      { givenName: "초희", hanjaName: "楚熙" }
+    ]
+  });
+
+  // When: the candidates are scored
+  const result = await recommendNames(input);
+
+  // Then: every character has a real stroke count and the candidates differ
+  const profiles = new Map(result.recommendations.map((item) => [
+    item.hanjaName,
+    item.strokeProfile
+  ]));
+  assert.deepEqual(profiles.get("草熙").strokes.map((entry) => entry.strokes), [15, 10, 14]);
+  assert.deepEqual(profiles.get("初熙").strokes.map((entry) => entry.strokes), [15, 8, 14]);
+  assert.deepEqual(profiles.get("楚熙").strokes.map((entry) => entry.strokes), [15, 13, 14]);
+  assert.equal(new Set(Array.from(profiles.values(), (profile) => profile.strokes.map((entry) => entry.strokes).join(","))).size, 3);
+  assert.ok(Array.from(profiles.values()).every((profile) => profile.available));
+});
+
+test("Hanja candidate reports stroke provenance", async () => {
   const result = await recommendNames(sampleInput({ candidates: [{ givenName: "서아", hanjaName: "瑞雅" }] }));
   const [score] = result.recommendations;
-  assert.equal(score.strokeProfile.source, "namefyi-hanja");
-  assert.equal(score.strokeProfile.available, false);
-  assert.equal(score.sources.includes("namefyi"), false);
-  assert.deepEqual(score.strokeProfile.strokes, []);
-  assert.ok(score.limitations.includes("hanja-stroke-unavailable"));
+  assert.equal(score.strokeProfile.source, "hanja-stroke-order");
+  assert.equal(score.strokeProfile.available, true);
+  assert.equal(score.sources.includes("hanja"), true);
+  assert.deepEqual(score.strokeProfile.strokes.map((entry) => entry.source), ["hanja", "hanja", "hanja"]);
+  assert.deepEqual(score.strokeProfile.strokes.map((entry) => entry.strokes), [8, 13, 12]);
+  assert.equal(score.limitations.includes("hanja-stroke-unavailable"), false);
 });
 
 test("candidate without Hanja uses korean-stroke fallback with limitation", async () => {
@@ -145,15 +173,8 @@ test("CLI recommend_names prints JSON", () => {
   assert.equal(parsed.recommendations.length, 3);
 });
 
-test("CommonJS adapter exposes romanization and fail-closed fallback state when namefyi dist is unavailable", async () => {
-  const namefyi = await adapters.loadNamefyi();
-  assert.equal(typeof namefyi.romanizeKorean, "function");
-  if (namefyi.__fallback) {
-    const profile = await adapters.getHanjaStrokeProfile("金", "瑞雅");
-    assert.equal(profile.available, false);
-    assert.ok(profile.limitations.includes("hanja-stroke-unavailable"));
-    assert.equal(profile.strokes.length, 0);
-  } else {
-    assert.equal(typeof namefyi.getStrokeCount, "function");
-  }
+test("CommonJS adapter exposes deterministic Hanja stroke profiles", async () => {
+  const profile = await adapters.getHanjaStrokeProfile("金", "瑞雅");
+  assert.equal(profile.available, true);
+  assert.deepEqual(profile.strokes.map((entry) => entry.strokes), [8, 13, 12]);
 });
