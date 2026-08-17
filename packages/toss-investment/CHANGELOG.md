@@ -1,4 +1,4 @@
-# toss-securities
+# toss-investment
 
 ## 1.0.0
 
@@ -16,7 +16,7 @@
 
 ### Minor Changes
 
-- 01de419: Improve toss-securities session-expiry handling and diagnostics.
+- 01de419: Improve toss-investment session-expiry handling and diagnostics.
 
   - Add `auth doctor` wiring and `checkSession()` helper.
   - Add `TossSessionExpiredError` for clearer invalid-session failures.
@@ -28,7 +28,7 @@
 
 ### Minor Changes
 
-- 3cea4be: Improve toss-securities session-expiry handling and diagnostics.
+- 3cea4be: Improve toss-investment session-expiry handling and diagnostics.
 
   - Add `auth doctor` wiring and `checkSession()` helper.
   - Add `TossSessionExpiredError` for clearer invalid-session failures.

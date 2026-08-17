@@ -56,7 +56,7 @@ npx --yes skills add NomaDamas/k-skill \
   --skill kbl-results \
   --skill kleague-results \
   --skill lck-analytics \
-  --skill toss-securities \
+  --skill toss-investment \
   --skill lotto-results \
   --skill kakaotalk-mac \
   --skill korean-law-search \
@@ -383,7 +383,7 @@ npm run ci
 ### Node 패키지
 
 ```bash
-npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-securities k-lotto coupang-product-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search gongsijiga-search donation-place-search ev-subsidy-status
+npm install -g kordoc pdfjs-dist kbo-game kbl-results kleague-results lck-analytics toss-investment k-lotto coupang-product-search cheap-gas-nearby public-restroom-nearby korean-law-mcp market-kurly-search daiso bunjang-cli court-auction-notice-search gongsijiga-search donation-place-search ev-subsidy-status
 export NODE_PATH="$(npm root -g)"
 ```
 
@@ -406,7 +406,7 @@ cargo install katok
 export PATH="$HOME/.cargo/bin:$PATH"
 ```
 
-`toss-securities` 스킬은 공식 토스증권 Open API만 사용한다. 발급받은 자격증명을 사용자 환경변수로 두며, 공유 프록시로 보내지 않고 토스 서버로 직접 호출한다. 공식 credentials가 없거나 공식 API가 제공하지 않는 기능은 비공식 경로로 우회하지 않는다.
+`toss-investment` 스킬은 공식 토스증권 Open API만 사용한다. 발급받은 자격증명을 사용자 환경변수로 두며, 공유 프록시로 보내지 않고 토스 서버로 직접 호출한다. 공식 credentials가 없거나 공식 API가 제공하지 않는 기능은 비공식 경로로 우회하지 않는다.
 
 ```bash
 export TOSSINVEST_CLIENT_ID=...        # 필수

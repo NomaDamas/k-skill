@@ -1,4 +1,4 @@
-# toss-securities — assembled instructions
+# toss-investment — assembled instructions
 
 Runtime mode: dolshoi (CloakBrowser available)
 
@@ -13,9 +13,9 @@ Runtime mode: dolshoi (CloakBrowser available)
 
 ## Bundled asset access
 
-- Execute bundled helpers only through `npx -y @nomadamas/k-skill@0 exec toss-securities scripts/<file> -- <args>`; do not assume a repository-relative or installed-skill-relative path.
-- Resolve an asset path with `npx -y @nomadamas/k-skill@0 path toss-securities <relative-path>` only when another tool explicitly requires a filesystem path.
-- Read bundled references through `npx -y @nomadamas/k-skill@0 read toss-securities references/<file>`.
+- Execute bundled helpers only through `npx -y @nomadamas/k-skill@0 exec toss-investment scripts/<file> -- <args>`; do not assume a repository-relative or installed-skill-relative path.
+- Resolve an asset path with `npx -y @nomadamas/k-skill@0 path toss-investment <relative-path>` only when another tool explicitly requires a filesystem path.
+- Read bundled references through `npx -y @nomadamas/k-skill@0 read toss-investment references/<file>`.
 
 # Toss Securities
 
@@ -61,7 +61,7 @@ const {
   getPrices,
   listOfficialAccounts,
   getHoldings
-} = require("toss-securities");
+} = require("toss-investment");
 
 async function main() {
   const prices = await getPrices(["005930", "AAPL"]);

@@ -135,7 +135,7 @@
 | `store-longevity-radar` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `subway-lost-property` | `lookup` | LOST112·운영기관 공식 표면의 검색 조건과 결과를 정리 |
 | `ticket-availability` | `booking` | 공식 일정·좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
-| `toss-securities` | `account` | 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify` |
+| `toss-investment` | `account` | 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify` |
 | `yebigun-training` | `legal` | 공식 예비군 표면에서 로그인·일정 확인·신청 준비를 진행하고 `clarify` 후 허용된 신청 |
 | `zipcode-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 

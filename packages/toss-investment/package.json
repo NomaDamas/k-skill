@@ -1,5 +1,5 @@
 {
-  "name": "toss-securities",
+  "name": "toss-investment",
   "version": "1.0.0",
   "description": "Read-only client for the official Toss Securities Open API with OAuth2",
   "license": "MIT",
@@ -22,6 +22,7 @@
     "k-skill",
     "korea",
     "toss",
+    "investment",
     "securities",
     "tossinvest",
     "openapi"

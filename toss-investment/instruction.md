@@ -1,22 +1,3 @@
-# toss-securities — assembled instructions
-
-Runtime mode: generic
-
-## Runtime rules
-
-- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
-- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
-- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
-- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
-- Resolve credentials in this order: already-injected environment variables, then the host vault, then `~/.config/k-skill/secrets.env` (mode `0600`). If the value is missing, request it through the safest input surface the host provides and store it in the vault or dotenv; never echo it back.
-- Perform read operations and reversible preparation that the documented portable workflow supports; hand irreversible account changes to the user on the official surface.
-
-## Bundled asset access
-
-- Execute bundled helpers only through `npx -y @nomadamas/k-skill@0 exec toss-securities scripts/<file> -- <args>`; do not assume a repository-relative or installed-skill-relative path.
-- Resolve an asset path with `npx -y @nomadamas/k-skill@0 path toss-securities <relative-path>` only when another tool explicitly requires a filesystem path.
-- Read bundled references through `npx -y @nomadamas/k-skill@0 read toss-securities references/<file>`.
-
 # Toss Securities
 
 ## What this skill does
@@ -61,7 +42,7 @@ const {
   getPrices,
   listOfficialAccounts,
   getHoldings
-} = require("toss-securities");
+} = require("toss-investment");
 
 async function main() {
   const prices = await getPrices(["005930", "AAPL"]);

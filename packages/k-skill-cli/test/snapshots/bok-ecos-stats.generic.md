@@ -40,7 +40,7 @@ Runtime mode: generic
 
 ## When not to use
 
-- 주식/증권 시세 → `korean-stock-search`, `toss-securities`
+- 주식/증권 시세 → `korean-stock-search`, `toss-investment`
 - KOSIS 일반 통계(인구/가구/고용 등) → `kosis-stats`
 - 환전 수수료·실시간 매매 환율 비교 (ECOS는 공식 통계 기준)
 

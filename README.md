@@ -116,7 +116,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | KBL 경기 결과 조회 | `kbl-results` | 날짜별 KBL 경기 일정, 결과, 팀별 필터링, 현재 순위 확인 | 불필요 | [KBL 경기 결과 가이드](docs/features/kbl-results.md) |
 | K리그 경기 결과 조회 | `kleague-results` | 날짜별 K리그1/K리그2 경기 결과, 팀별 필터링, 현재 순위 확인 | 불필요 | [K리그 결과 가이드](docs/features/kleague-results.md) |
 | LCK 경기 분석 | `lck-analytics` | LCK 경기 결과, 현재 순위, live turning point, 밴픽, 패치 메타, 팀 파워 레이팅 | 불필요 | [LCK 경기 분석 가이드](docs/features/lck-analytics.md) |
-| 토스증권 조회 | `toss-securities` | 토스증권 공식 Open API(OAuth2)로 계좌·보유주식·시세·주문조회 등 조회 전용 | 필요 | [토스증권 조회 가이드](docs/features/toss-securities.md) |
+| 토스증권 조회 | `toss-investment` | 토스증권 공식 Open API(OAuth2)로 계좌·보유주식·시세·주문조회 등 조회 전용 | 필요 | [토스증권 조회 가이드](docs/features/toss-investment.md) |
 | 공연 일정·잔여석 조회 | `ticket-availability` | YES24·인터파크 공연의 회차별 일정과 등급별 잔여석 수를 단일 HTTP 호출로 조회 (조회 전용, 예매·결제 없음) | 불필요 | [공연 일정·잔여석 조회 가이드](docs/features/ticket-availability.md) |
 | KOPIS 공연 조회 | `kopis-performance-search` | KOPIS 공연·시설 목록과 상세 조회 (프록시 경유). 예매·결제는 공식 예매처 | 불필요 | [KOPIS 공연 조회 가이드](docs/features/kopis-performance-search.md) |
 | 로또 당첨 확인 | `lotto-results` | 로또 최신 회차, 특정 회차, 번호 대조 | 불필요 | [로또 결과 가이드](docs/features/lotto-results.md) |
@@ -261,7 +261,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [KBL 경기 결과 가이드](docs/features/kbl-results.md)
 - [K리그 경기 결과 조회](docs/features/kleague-results.md)
 - [LCK 경기 분석 가이드](docs/features/lck-analytics.md)
-- [토스증권 조회 가이드](docs/features/toss-securities.md)
+- [토스증권 조회 가이드](docs/features/toss-investment.md)
 - [대신증권 리포트 조회 가이드](docs/features/daishin-report-search.md)
 - [공연 일정·잔여석 조회 가이드](docs/features/ticket-availability.md)
 - [KOPIS 공연 조회 가이드](docs/features/kopis-performance-search.md)

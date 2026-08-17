@@ -1,4 +1,4 @@
-# toss-securities
+# toss-investment
 
 토스증권 **공식 Open API 전용 조회(read-only)** 클라이언트입니다. 토스증권 공식 Open API(`https://openapi.tossinvest.com`)를 OAuth 2.0 Client Credentials 토큰으로 직접 호출합니다.
 
@@ -62,7 +62,7 @@ const {
   getPrices,
   getHoldings,
   listOfficialAccounts
-} = require("toss-securities");
+} = require("toss-investment");
 
 async function main() {
   // 환경변수 TOSSINVEST_CLIENT_ID / TOSSINVEST_CLIENT_SECRET 필요

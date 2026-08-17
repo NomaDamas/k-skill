@@ -36,7 +36,7 @@ const {
   listOfficialAccounts,
   getHoldings,
   getBuyingPower
-} = require("toss-securities");
+} = require("toss-investment");
 
 async function main() {
   const prices = await getPrices(["005930", "AAPL"]);
@@ -75,4 +75,4 @@ main().catch((error) => {
 
 - 공식 credentials가 없으면 helper가 `TossCredentialsError` 로 명확히 실패한다.
 - 공식 API가 지원하지 않는 요청은 비공식 경로로 우회하지 않고 지원 불가로 종료한다.
-- 이 레포의 `toss-securities` 패키지는 공식 API read-only 전용이며, 거래 mutation 명령(주문 생성/정정/취소)은 공개 API에 포함하지 않는다.
+- 이 레포의 `toss-investment` 패키지는 공식 API read-only 전용이며, 거래 mutation 명령(주문 생성/정정/취소)은 공개 API에 포함하지 않는다.

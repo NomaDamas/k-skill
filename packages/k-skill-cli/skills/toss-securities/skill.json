@@ -1,9 +1,0 @@
-{
-  "name": "toss-securities",
-  "description": "토스증권 공식 Open API(OAuth2)로 계좌, 보유주식, 시세/종목/시장정보, 주문조회를 안전한 read-only 흐름으로 조회한다. 공식 credentials가 없거나 공식 API가 지원하지 않는 기능은 비공식 경로로 우회하지 않는다.",
-  "profiles": [
-    "vault",
-    "action:account"
-  ],
-  "frontmatter": "name: toss-securities\ndescription: 토스증권 공식 Open API(OAuth2)로 계좌, 보유주식, 시세/종목/시장정보, 주문조회를 안전한 read-only 흐름으로 조회한다. 공식 credentials가 없거나 공식 API가 지원하지 않는 기능은 비공식 경로로 우회하지 않는다.\nlicense: MIT\nmetadata:\n  category: finance\n  locale: ko-KR\n  phase: v1"
-}

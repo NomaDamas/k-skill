@@ -42,7 +42,7 @@ const {
   getPrices,
   listOfficialAccounts,
   getHoldings
-} = require("toss-securities");
+} = require("toss-investment");
 
 async function main() {
   const prices = await getPrices(["005930", "AAPL"]);

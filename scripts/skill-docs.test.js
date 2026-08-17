@@ -443,7 +443,7 @@ test("actionable skills publish a Dolshoi action path", () => {
     "srt-booking",
     "subway-lost-property",
     "ticket-availability",
-    "toss-securities",
+    "toss-investment",
     "yebigun-training",
   ];
 
@@ -2214,37 +2214,37 @@ test("fine-dust helper python regression tests pass", () => {
   );
 });
 
-test("repository docs advertise the toss-securities skill across the documented surfaces", () => {
+test("repository docs advertise the toss-investment skill across the documented surfaces", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
   const roadmap = read(path.join("docs", "roadmap.md"));
   const sources = read(path.join("docs", "sources.md"));
-  const featureDocPath = path.join(repoRoot, "docs", "features", "toss-securities.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "toss-investment.md");
 
-  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/toss-securities.md to exist");
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/toss-investment.md to exist");
   assert.match(readme, /\| 토스증권 조회 \|/);
-  assert.match(readme, /\[토스증권 조회 가이드\]\(docs\/features\/toss-securities\.md\)/);
-  assert.match(install, /--skill toss-securities/);
+  assert.match(readme, /\[토스증권 조회 가이드\]\(docs\/features\/toss-investment\.md\)/);
+  assert.match(install, /--skill toss-investment/);
   assert.match(roadmap, /토스증권 조회 스킬 출시/);
   assert.match(sources, /토스증권 공식 Open API 문서: https:\/\/developers\.tossinvest\.com\/docs/);
 });
 
-test("toss-securities skill source and bundled metadata stay synchronized", () => {
-  const sourceManifest = readJson(path.join("toss-securities", "skill.json"));
+test("toss-investment skill source and bundled metadata stay synchronized", () => {
+  const sourceManifest = readJson(path.join("toss-investment", "skill.json"));
   const bundledManifest = readJson(
-    path.join("packages", "k-skill-cli", "skills", "toss-securities", "skill.json")
+    path.join("packages", "k-skill-cli", "skills", "toss-investment", "skill.json")
   );
 
   assert.deepEqual(bundledManifest, sourceManifest);
   assert.deepEqual(sourceManifest.profiles, ["vault", "action:account"]);
 });
 
-test("toss-securities package exposes only official read-only helpers", () => {
-  const pkg = require(path.join(repoRoot, "packages", "toss-securities", "src", "index.js"));
+test("toss-investment package exposes only official read-only helpers", () => {
+  const pkg = require(path.join(repoRoot, "packages", "toss-investment", "src", "index.js"));
   const official = require(path.join(
     repoRoot,
     "packages",
-    "toss-securities",
+    "toss-investment",
     "src",
     "official-client.js"
   ));
@@ -2264,27 +2264,27 @@ test("toss-securities package exposes only official read-only helpers", () => {
   assert.equal(pkg.cancelOrder, undefined);
 });
 
-test("toss-securities package metadata excludes the retired fallback", () => {
-  const packageJson = readJson(path.join("packages", "toss-securities", "package.json"));
-  const parserPath = path.join(repoRoot, "packages", "toss-securities", "src", "parse.js");
+test("toss-investment package metadata excludes the retired fallback", () => {
+  const packageJson = readJson(path.join("packages", "toss-investment", "package.json"));
+  const parserPath = path.join(repoRoot, "packages", "toss-investment", "src", "parse.js");
 
-  assert.equal(packageJson.name, "toss-securities");
+  assert.equal(packageJson.name, "toss-investment");
   assert.ok(packageJson.keywords.includes("openapi"));
   assert.ok(!packageJson.keywords.includes("tossctl"));
   assert.equal(fs.existsSync(parserPath), false);
 });
 
-test("pack:dry-run includes the toss-securities workspace", () => {
+test("pack:dry-run includes the toss-investment workspace", () => {
   const packageJson = JSON.parse(read("package.json"));
   const { listPublishableWorkspaces } = require("./ci-paths");
 
   assert.equal(packageJson.scripts["pack:dry-run"], "node scripts/pack-dry-run.js");
-  assert.ok(listPublishableWorkspaces().includes("toss-securities"));
+  assert.ok(listPublishableWorkspaces().includes("toss-investment"));
 });
 
-test("toss-securities pack dry-run ships only the official client surface", () => {
+test("toss-investment pack dry-run ships only the official client surface", () => {
   const packResult = JSON.parse(
-    childProcess.execFileSync("npm", ["pack", "--workspace", "toss-securities", "--json", "--dry-run"], {
+    childProcess.execFileSync("npm", ["pack", "--workspace", "toss-investment", "--json", "--dry-run"], {
       cwd: repoRoot,
       encoding: "utf8"
     }),
@@ -2299,16 +2299,16 @@ test("toss-securities pack dry-run ships only the official client surface", () =
   ]);
 });
 
-test("package-lock captures the toss-securities workspace metadata for npm ci", () => {
+test("package-lock captures the toss-investment workspace metadata for npm ci", () => {
   const packageLock = readJson("package-lock.json");
 
   assert.deepEqual(packageLock.packages[""].workspaces, ["packages/*"]);
-  assert.deepEqual(packageLock.packages["node_modules/toss-securities"], {
-    resolved: "packages/toss-securities",
+  assert.deepEqual(packageLock.packages["node_modules/toss-investment"], {
+    resolved: "packages/toss-investment",
     link: true,
   });
-  assert.equal(packageLock.packages["packages/toss-securities"].license, "MIT");
-  assert.equal(packageLock.packages["packages/toss-securities"].engines.node, ">=18");
+  assert.equal(packageLock.packages["packages/toss-investment"].license, "MIT");
+  assert.equal(packageLock.packages["packages/toss-investment"].engines.node, ">=18");
 });
 
 test("repository docs advertise the korean-law-search skill via k-skill-proxy", () => {
@@ -4455,7 +4455,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["KBL 경기 결과 조회", "kbl-results"],
   ["K리그 경기 결과 조회", "kleague-results"],
   ["LCK 경기 분석", "lck-analytics"],
-  ["토스증권 조회", "toss-securities"],
+  ["토스증권 조회", "toss-investment"],
   ["로또 당첨 확인", "lotto-results"],
   ["HWP 문서 조회/변환", "hwp"],
   ["HWP 문서 편집", "rhwp-edit"],
