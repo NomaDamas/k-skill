@@ -52,6 +52,15 @@ npx --yes daiso get /api/lottecinema/movies --keyword 월드타워 --playDate <Y
 npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json
 ```
 
+롯데시네마 `movies`/`seats` JSON은 조회 직후 반드시 remap 한다. `daiso@1.0.10`은 공식 `BookingSeatCount`(예매 가능 좌석)를 `bookedSeats`에 넣고 `remainingSeats`를 그 반대값으로 계산한다. 원라벨 그대로 보고하면 잔여/매진이 뒤집힌다.
+
+```bash
+npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json \
+  | npx -y @nomadamas/k-skill@0 exec korean-cinema-search scripts/remap_lotte_seats.js --
+npx --yes daiso lottecinema-seats --playDate <YYYYMMDD> --theaterId 3032 --json \
+  | npx -y @nomadamas/k-skill@0 exec korean-cinema-search scripts/remap_lotte_seats.js --
+```
+
 반복 사용이면 전역 설치도 가능하다.
 
 ```bash
@@ -75,6 +84,8 @@ node dist/bin.js get /api/cgv/timetable --keyword 강남 --playDate <YYYYMMDD> -
 node dist/bin.js get /api/megabox/seats --keyword 코엑스 --playDate <YYYYMMDD> --limit 10 --json
 node dist/bin.js get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json
 ```
+
+clone fallback로 롯데시네마 좌석을 조회해도 같은 remap helper를 통과시킨다.
 
 ## Required inputs
 
@@ -136,11 +147,12 @@ CGV는 시간표 중심으로 본다.
 npx --yes daiso get /api/cgv/timetable --keyword 강남 --playDate <YYYYMMDD> --json
 ```
 
-메가박스와 롯데시네마는 잔여석 endpoint를 사용할 수 있다.
+메가박스와 롯데시네마는 잔여석 endpoint를 사용할 수 있다. 롯데시네마만은 원라벨 JSON을 그대로 읽지 말고 remap helper를 통과시킨다.
 
 ```bash
 npx --yes daiso get /api/megabox/seats --keyword 코엑스 --playDate <YYYYMMDD> --limit 10 --json
-npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json
+npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json \
+  | npx -y @nomadamas/k-skill@0 exec korean-cinema-search scripts/remap_lotte_seats.js --
 ```
 
 ### 5. Respond conservatively
@@ -150,7 +162,7 @@ npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YY
 - 영화관 체인
 - 기준 지역이나 지점
 - 상영작 또는 선택 영화
-- 시간표와 잔여석
+- 시간표와 잔여석 (롯데시네마는 remap 이후 `remainingSeats`만 잔여석으로 말한다)
 - 조회 시각과 공개 endpoint 특성상 변동 가능하다는 점
 
 예매와 결제는 자동화하지 않는다.
@@ -168,6 +180,7 @@ npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YY
 - public endpoint는 upstream 상태에 따라 간헐적인 5xx를 줄 수 있다.
 - 지역 키워드가 넓으면 다른 지점이 섞일 수 있다.
 - 시간표와 잔여석은 시점에 따라 달라진다.
+- 롯데시네마 `daiso` 원라벨 `bookedSeats`/`remainingSeats`는 반대이다. remap 없이 보고하면 잔여 0석을 매진으로 읽는다.
 - 일부 체인은 상영작, 시간표, 잔여석 endpoint의 입력값이 다르므로 theaterId, movieId가 있으면 그 값을 우선 사용한다.
 
 ## Notes

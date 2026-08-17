@@ -29,6 +29,13 @@ npx --yes daiso get /api/lottecinema/movies --keyword 월드타워 --playDate <Y
 npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json
 ```
 
+롯데시네마 `daiso` 응답의 `bookedSeats`는 공식 `BookingSeatCount`(잔여/예매 가능 좌석)이고 `remainingSeats`는 그 반대값이다. 잔여석을 말할 때는 remap helper를 통과시킨다.
+
+```bash
+npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YYYYMMDD> --limit 10 --json \
+  | npx -y @nomadamas/k-skill@0 exec korean-cinema-search scripts/remap_lotte_seats.js --
+```
+
 ## 원본 저장소 clone fallback
 
 ```bash
@@ -64,7 +71,8 @@ node dist/bin.js get /api/lottecinema/seats --keyword 월드타워 --playDate <Y
 4. `/api/cgv/movies`, `/api/megabox/movies`, `/api/lottecinema/movies` 로 상영작을 확인한다.
 5. CGV는 `/api/cgv/timetable` 로 시간표를 본다.
 6. 메가박스와 롯데시네마는 `/api/megabox/seats`, `/api/lottecinema/seats` 로 잔여석을 본다.
-7. 예매와 결제는 자동화하지 않는다.
+7. 롯데시네마 JSON만 `remap_lotte_seats.js`로 `bookedSeats`/`remainingSeats` 라벨을 교정한 뒤 잔여석을 말한다.
+8. 예매와 결제는 자동화하지 않는다.
 
 ## 응답 원칙
 
