@@ -43,6 +43,45 @@ def resolve_proxy_base_url(explicit_base_url: str | None = None, env: dict[str, 
     return DEFAULT_PROXY_BASE_URL
 
 
+LEGAL_BOUNDARY = {
+    "statutes": [
+        {
+            "id": "medical_service_act_27_1",
+            "citation": "의료법 제27조제1항",
+            "forbidden": "진단·확진, 처방, 복용량 증감 지시, 처방약 중단 권고",
+            "penalty": "의료법 제87조의2제2항제2호 (5년 이하 징역 또는 5천만원 이하 벌금)",
+        },
+        {
+            "id": "pharmaceutical_affairs_act_23_1",
+            "citation": "약사법 제23조제1항",
+            "forbidden": "조제에 해당하는 배합·분할 복용 지시",
+            "penalty": "약사법 제93조제1항제3호 (5년 이하 징역 또는 5천만원 이하 벌금)",
+        },
+        {
+            "id": "pharmaceutical_affairs_act_44_1",
+            "citation": "약사법 제44조제1항",
+            "forbidden": "약국개설자가 아닌 자의 의약품 판매·거래 중개",
+            "penalty": "약사법 제93조제1항제7호 (5년 이하 징역 또는 5천만원 이하 벌금)",
+        },
+        {
+            "id": "pharmaceutical_affairs_act_61_2_1",
+            "citation": "약사법 제61조의2제1항",
+            "forbidden": "해외직구·개인거래 등 불법 의약품 판매 알선·광고, 구매 경로 안내",
+            "penalty": "약사법 제95조제1항제10호의2",
+        },
+        {
+            "id": "pharmaceutical_affairs_act_68",
+            "citation": "약사법 제68조",
+            "forbidden": "허가사항을 넘는 효능 단정, 전문의약품 홍보성 권유",
+            "penalty": "약사법 제95조제1항제10호 (1년 이하 징역 또는 1천만원 이하 벌금)",
+        },
+    ],
+    "allowed": "식약처 허가사항 원문 인용·요약, 근거 문구 유무 확인, 약사·의사에게 물어볼 질문 정리",
+    "disclaimer_is_not_a_defense": "의료법 제27조제1항은 행위 자체를 금지하므로 면책 문구나 이용자 동의로 구성요건이 해제되지 않는다. 완화 수단은 고지가 아니라 답변 범위 제한이다.",
+    "sensitive_data": "증상·기저질환·복용이력은 「개인정보 보호법」 제23조 민감정보다. lookup 요청에는 제품명만 전송하고 증상 텍스트는 보내지 않는다.",
+}
+
+
 def build_drug_interview(question: str | None = None, symptoms: str | None = None) -> dict[str, Any]:
     return {
         "domain": "drug",
@@ -63,6 +102,7 @@ def build_drug_interview(question: str | None = None, symptoms: str | None = Non
         ],
         "urgent_action": "red flag 가 하나라도 있으면 약 정보 조회보다 즉시 119·응급실·의료진 연결을 우선하세요.",
         "policy": "이 helper 는 진단이나 복용 지시를 하지 않고, 공식 식약처 안전정보 확인 전에 반드시 되묻기 흐름을 제공합니다.",
+        "legal_boundary": LEGAL_BOUNDARY,
     }
 
 

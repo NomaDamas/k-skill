@@ -1,6 +1,7 @@
 import unittest
 
 from scripts.mfds_drug_safety import (
+    LEGAL_BOUNDARY,
     build_drug_interview,
     lookup_drugs,
     normalize_easy_drug_item,
@@ -24,6 +25,28 @@ class DrugInterviewTest(unittest.TestCase):
         self.assertTrue(any("호흡곤란" in item for item in interview["red_flags"]))
         self.assertTrue(any("의식" in item for item in interview["red_flags"]))
         self.assertIn("즉시 119", interview["urgent_action"])
+
+    def test_build_drug_interview_carries_legal_boundary(self):
+        boundary = build_drug_interview()["legal_boundary"]
+
+        self.assertIs(boundary, LEGAL_BOUNDARY)
+        self.assertEqual(
+            {statute["id"] for statute in boundary["statutes"]},
+            {
+                "medical_service_act_27_1",
+                "pharmaceutical_affairs_act_23_1",
+                "pharmaceutical_affairs_act_44_1",
+                "pharmaceutical_affairs_act_61_2_1",
+                "pharmaceutical_affairs_act_68",
+            },
+        )
+        for statute in boundary["statutes"]:
+            self.assertTrue(statute["citation"].strip())
+            self.assertTrue(statute["forbidden"].strip())
+            self.assertTrue(statute["penalty"].strip())
+        self.assertTrue(boundary["allowed"].strip())
+        self.assertTrue(boundary["disclaimer_is_not_a_defense"].strip())
+        self.assertTrue(boundary["sensitive_data"].strip())
 
 
 class DrugNormalizationTest(unittest.TestCase):
@@ -88,6 +111,19 @@ class ProxyResolutionTest(unittest.TestCase):
         self.assertIn("itemName=%ED%83%80%EC%9D%B4%EB%A0%88%EB%86%80", captured["url"])
         self.assertIn("itemName=%ED%8C%90%EC%BD%9C", captured["url"])
         self.assertIn("limit=3", captured["url"])
+
+    def test_lookup_drugs_sends_no_health_information(self):
+        captured = {}
+
+        def fake_request_json(request):
+            captured["url"] = request.full_url
+            return {"items": []}
+
+        lookup_drugs(["타이레놀"], base_url="https://proxy.example.com", request_json=fake_request_json)
+
+        query = captured["url"].split("?", 1)[1]
+        parameter_names = sorted({pair.split("=", 1)[0] for pair in query.split("&")})
+        self.assertEqual(parameter_names, ["itemName", "limit"])
 
 
 if __name__ == "__main__":
