@@ -283,7 +283,7 @@ test("every top-level skill is a generated CLI stub", () => {
     .filter((name) => fs.existsSync(path.join(repoRoot, name, "SKILL.md")))
     .sort();
 
-  assert.equal(skillDirs.length, 119);
+  assert.equal(skillDirs.length, 118);
 
   for (const skillName of skillDirs) {
     const skill = readRaw(path.join(skillName, "SKILL.md"));
@@ -489,7 +489,6 @@ test("actionable skills publish a Dolshoi action path", () => {
     "subway-lost-property",
     "ticket-availability",
     "toss-investment",
-    "yebigun-training",
   ];
 
   for (const skillName of actionableSkills) {

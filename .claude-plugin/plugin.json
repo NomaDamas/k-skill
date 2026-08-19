@@ -126,7 +126,6 @@
     "./subway-lost-property",
     "./ticket-availability",
     "./toss-investment",
-    "./yebigun-training",
     "./zipcode-search"
   ]
 }

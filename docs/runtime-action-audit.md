@@ -1,6 +1,6 @@
 # Runtime Action Audit
 
-2026-08-01 기준 top-level `SKILL.md` 119개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
+2026-08-01 기준 top-level `SKILL.md` 118개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
 
 ## Mode definitions
 
@@ -9,7 +9,7 @@
 - **submission** (11): 공식 폼·첨부 준비 → `clarify` 후 제출/지원/결제/취소
 - **recruiting** (2): 기업 인재검색 → shortlist → 유료 열람/제안 직전 `clarify`
 - **account** (2): 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify`
-- **legal** (8): 공식 법률·정부 표면의 로그인/인증/서류 준비를 진행하고 `clarify` 후 제출·입찰·수수료 결제
+- **legal** (7): 공식 법률·정부 표면의 로그인/인증/서류 준비를 진행하고 `clarify` 후 제출·입찰·수수료 결제
 - **operations** (1): k-skill 설치·업데이트·복구·런타임 연결을 실제 적용하고 검증
 - **local** (12): 요청 산출물을 로컬에서 실제 생성·변환·정리
 - **lookup** (59): 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
@@ -135,7 +135,6 @@
 | `subway-lost-property` | `lookup` | LOST112·운영기관 공식 표면의 검색 조건과 결과를 정리 |
 | `ticket-availability` | `booking` | 공식 일정·좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
 | `toss-investment` | `account` | 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify` |
-| `yebigun-training` | `legal` | 공식 예비군 표면에서 로그인·일정 확인·신청 준비를 진행하고 `clarify` 후 허용된 신청 |
 | `zipcode-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 
 ## Commerce capability gaps

@@ -56,7 +56,6 @@ portable runtime은 typed stop reason을 노출한다. 돌쇠에서는 아래처
 
 - `court-auction-notice-search` — 법원경매 직접 HTTP 1차, 플랫폼별 runtime browser fallback 후 로컬 launch
 - `court-payment-order-assistant` — 전자소송 지급명령 로그인 이후 handoff (BrowserOS CDP → 수동)
-- `yebigun-training` — 예비군 로그인 세션에서 훈련정보 조회 (macOS `auto`: Aside → BrowserOS → Chrome, 기타 플랫폼은 BrowserOS 우선)
 
 ## 이 런타임 밖에 있는 브라우저 스킬
 
