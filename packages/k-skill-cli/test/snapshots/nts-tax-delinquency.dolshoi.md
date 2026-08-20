@@ -65,7 +65,8 @@ npx -y @nomadamas/k-skill@0 exec nts-tax-delinquency scripts/nts_tax_delinquency
 ## Failure modes
 
 - `unavailable` + 안내: 상호 미입력, 네트워크 오류, 페이지 구조 변경 추정 — 수동 확인 URL 제공.
-- 0건: 두 명단 모두 매치 없음 (`match_count: 0`).
+- `coverage`: 조회한 공개 명단 범위, 상호·법인명 문자열 대조 기준, 제외 범위, 0건의 의미, 조회시각(`checked_at`)을 구조화해 제공한다.
+- 0건: 두 명단 모두 공개 명단에서 문자열 매치가 없음 (`match_count: 0`). 모든 국세 체납이 없다는 뜻은 아니다.
 
 ## Official surfaces
 

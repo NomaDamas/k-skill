@@ -66,7 +66,8 @@ npx -y @nomadamas/k-skill@0 exec fsc-corporate-info scripts/fsc_corporate_info.p
 - `400 bad_request`: 법인명을 주지 않음.
 - `503 upstream_not_configured`: 프록시 서버에 `DATA_GO_KR_API_KEY` 없음.
 - `502 upstream_forbidden`: 프록시 키가 15043184에 활용신청되지 않음.
-- 빈 결과: 법인명 불일치 — 표기를 바꿔 재시도.
+- `coverage`: 기업기본정보 데이터셋 범위, 법인명 후보 및 선택적 사업자번호 교차검증 기준, 제외 범위, 0건의 의미, 조회시각(`checked_at`)을 구조화해 제공한다.
+- 빈 결과: 이 데이터셋에서 입력 법인명 후보가 없음. 법인이 존재하지 않는다는 뜻이 아니며 표기 차이 가능성이 있다.
 
 ## Official surfaces
 

@@ -6939,12 +6939,43 @@ test("fsc corp-outline route returns name-matched candidates and cross-checks bz
   assert.equal(body.candidate_count, 1);
   assert.equal(body.b_no_cross_check.checked, true);
   assert.equal(body.b_no_cross_check.matched_candidates.length, 1);
+  assert.equal(body.coverage.scope, "fsc-corporate-outline-dataset");
+  assert.equal(body.coverage.match_basis, "corporate-name-candidates-with-optional-business-number-cross-check");
+  assert.ok(body.coverage.checked_at);
   const cached = await app.inject({
     method: "GET",
     url: "/v1/fsc/corp-outline?name=" + encodeURIComponent("테스트") + "&b_no=1234567890"
   });
   assert.equal(cached.json().proxy.cache.hit, true);
   assert.equal(fetchCalls, 1);
+});
+
+test("fsc corp-outline zero result explains dataset and naming limits", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    JSON.stringify({
+      response: {
+        header: { resultCode: "00", resultMsg: "NORMAL SERVICE." },
+        body: { items: "" }
+      }
+    }),
+    { status: 200, headers: { "content-type": "application/json" } }
+  );
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const res = await app.inject({
+    method: "GET",
+    url: "/v1/fsc/corp-outline?name=" + encodeURIComponent("없는법인")
+  });
+  const body = res.json();
+  assert.equal(res.statusCode, 200);
+  assert.equal(body.candidate_count, 0);
+  assert.ok(body.coverage.zero_result_meaning);
+  assert.ok(body.coverage.exclusions.includes("candidates-missed-by-corporate-name-variation-or-mismatch"));
 });
 
 test("fsc corp-outline route maps upstream 403 to a 502 forbidden error", async (t) => {
@@ -7004,6 +7035,9 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   assert.equal(res.statusCode, 200);
   assert.equal(body.total_count, 1);
   assert.equal(body.active_sanctions[0].bizNm, "갑");
+  assert.equal(body.coverage.scope, "currently-effective-g2b-sanctions");
+  assert.equal(body.coverage.match_basis, "exact-business-number");
+  assert.ok(body.coverage.checked_at);
   assert.match(seenUrls[0], /ServiceKey=data-go-key/);
   assert.match(seenUrls[0], /inqryDiv=1/);
 
@@ -7018,6 +7052,31 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   const missing = await noKey.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
   assert.equal(missing.statusCode, 503);
 
+});
+
+test("g2b sanctioned-supplier zero result explains excluded historical sanctions", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    JSON.stringify({
+      response: {
+        header: { resultCode: "00" },
+        body: { items: "", totalCount: 0 }
+      }
+    }),
+    { status: 200, headers: { "content-type": "application/json" } }
+  );
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const res = await app.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
+  const body = res.json();
+  assert.equal(res.statusCode, 200);
+  assert.equal(body.total_count, 0);
+  assert.ok(body.coverage.zero_result_meaning);
+  assert.ok(body.coverage.exclusions.includes("expired-or-lifted-sanctions"));
 });
 
 test("korean-law search endpoint proxies law.go.kr with the server OC and browser headers", async (t) => {

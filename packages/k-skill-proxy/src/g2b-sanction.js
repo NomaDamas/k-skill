@@ -121,6 +121,17 @@ async function fetchG2bSanctions({ bizno, serviceKey, fetchImpl = global.fetch }
     bizno,
     total_count: extracted.totalCount,
     active_sanctions: extracted.items,
+    coverage: {
+      scope: "currently-effective-g2b-sanctions",
+      match_basis: "exact-business-number",
+      exclusions: [
+        "expired-or-lifted-sanctions",
+        "sanctions-against-suppliers-or-individuals-not-registered-in-g2b",
+      ],
+      zero_result_meaning:
+        "조회 시점에 해당 사업자등록번호로 현재 유효한 제재가 조회되지 않았다는 뜻이며, 과거 만료·해제 제재가 없다는 뜻은 아니다.",
+      checked_at: new Date().toISOString(),
+    },
     match_basis:
       "Exact business-number match (inqryDiv=1) — the list of sanctions in force at query time (first 100). Expired/lifted sanctions and non-registered suppliers are not provided by the upstream.",
   };

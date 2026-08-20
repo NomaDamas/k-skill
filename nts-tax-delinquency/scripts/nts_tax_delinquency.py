@@ -36,6 +36,18 @@ INDIV_COLUMNS = ("no", "공개년도", "성명", "연령", "상호", "직업(업
 IDENTITY_NOTE = ("명단공개 자료에는 사업자등록번호가 수록되지 않아 입력 사업자번호와의 "
                  "동일성은 확인할 수 없다 — 상호·법인명 문자열 일치 후보의 공개 사실만 "
                  "나열하며, 동명 상호일 가능성은 사용자가 판단한다.")
+COVERAGE = {
+    "scope": "nts-high-amount-habitual-delinquent-disclosure",
+    "match_basis": "corporate-name-and-trade-name-string-match",
+    "exclusions": [
+        "명단공개 기준에 들지 않는 체납 및 비공개 체납",
+        "사업자등록번호 동일성 확인",
+    ],
+    "zero_result_meaning": (
+        "조회한 국세청 고액·상습체납자 공개 명단에서 법인명·상호 문자열 일치가 없다는 뜻이며, "
+        "모든 국세 체납이 없다는 뜻은 아니다."
+    ),
+}
 
 _HEADING_MARKER = "고액상습체납자"
 _ZERO_MARKER = "조회된 데이터가 없습니다"
@@ -50,13 +62,15 @@ def _now_iso() -> str:
 
 
 def _envelope(status: str, *, result: dict | None = None, note: str | None = None) -> dict:
+    looked_up_at = _now_iso()
     return {
         "source": SOURCE,
-        "looked_up_at": _now_iso(),
+        "looked_up_at": looked_up_at,
         "status": status,
         "result": result,
         "origin": "unauthenticated-public",
         "note": note,
+        "coverage": {**COVERAGE, "checked_at": looked_up_at} if status == "ok" else None,
     }
 
 

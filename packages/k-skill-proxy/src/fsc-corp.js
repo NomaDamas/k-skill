@@ -137,6 +137,18 @@ async function fetchFscCorpOutline({ corpNm, bno = null, serviceKey, fetchImpl =
     query_corp_nm: corpNm,
     candidate_count: items.length,
     candidates: items,
+    coverage: {
+      scope: "fsc-corporate-outline-dataset",
+      match_basis: "corporate-name-candidates-with-optional-business-number-cross-check",
+      exclusions: [
+        "records-outside-the-fsc-corporate-outline-dataset",
+        "candidates-missed-by-corporate-name-variation-or-mismatch",
+        "business-number-identity-check-when-upstream-bzno-is-absent",
+      ],
+      zero_result_meaning:
+        "입력한 법인명으로 이 데이터셋에서 후보가 조회되지 않았다는 뜻이며, 법인이 존재하지 않는다는 뜻이 아니다.",
+      checked_at: new Date().toISOString(),
+    },
     b_no_cross_check: {
       checked: Boolean(hasBzno && bno),
       input_b_no: bno,

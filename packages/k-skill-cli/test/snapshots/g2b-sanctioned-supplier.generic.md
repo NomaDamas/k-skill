@@ -69,7 +69,8 @@ npx -y @nomadamas/k-skill@0 exec g2b-sanctioned-supplier scripts/g2b_sanctioned_
 - `400 bad_request`: 사업자번호가 10자리가 아님.
 - `503 upstream_not_configured`: 프록시 서버에 `DATA_GO_KR_API_KEY` 없음.
 - `502 upstream_forbidden`: 프록시 키가 15129466에 활용신청되지 않음.
-- `total_count = 0`: 조회시점 현재 유효한 제재 없음 (만료·미등록업체는 미제공임에 유의).
+- `coverage`: 현재 유효 제재 범위, 사업자번호 정확 일치 기준, 과거·미등록 제외 범위, 0건의 의미, 조회시각(`checked_at`)을 구조화해 제공한다.
+- `total_count = 0`: 조회시점 현재 유효한 제재가 조회되지 않음. 만료·해제된 과거 제재가 없다는 뜻은 아니다.
 
 ## Official surfaces
 
