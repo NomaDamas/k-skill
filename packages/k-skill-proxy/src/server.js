@@ -1532,6 +1532,14 @@ async function proxyAirKoreaRequest({ service, operation, query, serviceKey, fet
     error.code = "upstream_fetch_failed";
     throw error;
   }
+  if (response.status === 403) {
+    const error = new Error(`AirKorea upstream returned HTTP 403 for ${service}/${operation}.`);
+    error.statusCode = 403;
+    error.code = "upstream_forbidden";
+    error.service = service;
+    error.operation = operation;
+    throw error;
+  }
   const body = await response.text();
   return {
     statusCode: response.status,
@@ -2355,12 +2363,25 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
   app.get("/B552584/:service/:operation", async (request, reply) => {
     const { service, operation } = request.params;
-    const upstream = await proxyAirKoreaRequest({
-      service,
-      operation,
-      query: request.query,
-      serviceKey: config.airKoreaApiKey
-    });
+    let upstream;
+    try {
+      upstream = await proxyAirKoreaRequest({
+        service,
+        operation,
+        query: request.query,
+        serviceKey: config.airKoreaApiKey
+      });
+    } catch (error) {
+      request.log.error({
+        route: "/B552584/:service/:operation",
+        service,
+        operation,
+        upstreamStatus: error.statusCode || 502,
+        upstreamError: error.code || "upstream_error",
+        upstreamMessage: error.message
+      }, "AirKorea upstream error");
+      throw error;
+    }
 
     reply.code(upstream.statusCode);
     reply.header("content-type", upstream.contentType);

@@ -2950,6 +2950,26 @@ test("proxyAirKoreaRequest redacts service keys echoed with URLSearchParams enco
   }
 });
 
+test("proxyAirKoreaRequest preserves AirKorea 403 operation context", async () => {
+  await assert.rejects(
+    () => proxyAirKoreaRequest({
+      service: "ArpltnInforInqireSvc",
+      operation: "getMsrstnAcctoRltmMesureDnsty",
+      query: { returnType: "json", stationName: "강남구" },
+      serviceKey: "airkorea-key",
+      fetchImpl: async () => new Response("forbidden", { status: 403 })
+    }),
+    (error) => {
+      assert.equal(error.statusCode, 403);
+      assert.equal(error.code, "upstream_forbidden");
+      assert.equal(error.service, "ArpltnInforInqireSvc");
+      assert.equal(error.operation, "getMsrstnAcctoRltmMesureDnsty");
+      assert.match(error.message, /getMsrstnAcctoRltmMesureDnsty/);
+      return true;
+    }
+  );
+});
+
 test("AirKorea fetch rejections do not expose credential-bearing URLs", async (t) => {
   const originalFetch = global.fetch;
   global.fetch = async (url) => {
