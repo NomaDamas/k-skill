@@ -67,6 +67,32 @@ systemctl --user status k-skill-proxy.service
 systemctl --user status k-skill-proxy-tunnel.service
 ```
 
+## Proxy error watchdog
+
+The watchdog reads only new structured `routeUsage` lines from `proxy.log`,
+aggregates `route × statusCode × errorCode`, and requires two consecutive
+hourly threshold breaches before acting. It is dry-run by default:
+
+```bash
+node scripts/proxy-error-watchdog.mjs
+node scripts/proxy-error-watchdog.mjs --apply
+```
+
+`--apply` requires an authenticated `gh` CLI with `issues:write` permission and
+the repository label `auto-proxy-watchdog`. It creates one open issue per
+fingerprint, updates an existing issue instead of duplicating it, and limits
+comments to once per UTC day.
+
+Recommended gpu01 cron after a one-week dry-run tuning period:
+
+```cron
+5 * * * * /data/home/jeffrey/apps/k-skill-proxy-repo/scripts/proxy-error-watchdog.sh >> /data/home/jeffrey/apps/k-skill-proxy/watchdog.log 2>&1
+```
+
+After thresholds are approved, add `--apply`. Runtime paths can be overridden
+with `KSKILL_PROXY_LOG_FILE` and `KSKILL_PROXY_WATCHDOG_STATE`. The state file
+stores the byte offset, consecutive-window counters, and comment timestamps.
+
 Verify the trust-proxy setting without printing the rest of the secret-bearing env file:
 
 ```bash
