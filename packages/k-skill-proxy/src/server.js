@@ -266,6 +266,56 @@ function makeCacheKey(payload) {
   return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
+function shortHash(value, salt = "") {
+  return crypto.createHash("sha256").update(`${salt}:${value}`).digest("hex").slice(0, 8);
+}
+
+function normalizeUnmatchedPath(rawPath) {
+  return String(rawPath || "/")
+    .split("?")[0]
+    .split("/")
+    .map((segment) => {
+      if (
+        /^\d+$/.test(segment)
+        || /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(segment)
+        || /^[0-9a-f]{12,}$/i.test(segment)
+      ) {
+        return ":n";
+      }
+      return segment;
+    })
+    .join("/");
+}
+
+function buildRouteUsageFields({
+  route,
+  statusCode,
+  query = {},
+  clientIp = null,
+  attributionSalt = null,
+  errorCode = null
+}) {
+  const fields = { routeUsage: true, route, statusCode };
+  if (statusCode >= 400) {
+    const queryKeys = Object.keys(query).sort();
+    if (queryKeys.length > 0) {
+      fields.queryKeys = queryKeys;
+      fields.queryHash = shortHash(JSON.stringify(query));
+    }
+    if (clientIp && attributionSalt) {
+      fields.clientHash = shortHash(clientIp, attributionSalt);
+    }
+    if (errorCode) {
+      fields.errorCode = errorCode;
+    }
+  }
+  return fields;
+}
+
+function getErrorLogLevel(statusCode) {
+  return statusCode >= 500 ? "error" : "warn";
+}
+
 function isFailureResponse(value) {
   if (!value || typeof value !== "object") {
     return false;
@@ -2140,7 +2190,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   // per request so daily/weekly/monthly totals can be derived from the server logs.
   // /health is excluded because health checks are operational noise, not usage.
   const routeUsageStats = new Map();
+  const unmatchedPathStats = new Map();
   app.decorate("routeUsageStats", routeUsageStats);
+  app.decorate("unmatchedPathStats", unmatchedPathStats);
   app.addHook("onResponse", async (request, reply) => {
     const matchedRoute = request.routeOptions && request.routeOptions.url;
     if (matchedRoute === "/health") {
@@ -2151,10 +2203,32 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     // without bound.
     const route = matchedRoute || "__unmatched__";
     routeUsageStats.set(route, (routeUsageStats.get(route) || 0) + 1);
-    app.log.info({ routeUsage: true, route, statusCode: reply.statusCode }, "route usage");
+    if (!matchedRoute) {
+      const normalizedPath = normalizeUnmatchedPath(request.url);
+      if (unmatchedPathStats.has(normalizedPath)) {
+        unmatchedPathStats.set(normalizedPath, unmatchedPathStats.get(normalizedPath) + 1);
+      } else if (unmatchedPathStats.size < 100) {
+        unmatchedPathStats.set(normalizedPath, 1);
+      }
+    }
+    app.log.info(buildRouteUsageFields({
+      route,
+      statusCode: reply.statusCode,
+      query: request.query || {},
+      clientIp: config.trustProxyHops > 0 ? request.ip : null,
+      attributionSalt: trimOrNull(env.KSKILL_PROXY_ATTRIBUTION_SALT),
+      errorCode: reply.errorCode
+    }), "route usage");
   });
 
   app.addHook("onSend", async (_request, reply, payload) => {
+    if (reply.statusCode >= 400 && typeof payload === "string") {
+      try {
+        reply.errorCode = JSON.parse(payload).error || null;
+      } catch {
+        reply.errorCode = null;
+      }
+    }
     reply.header("link", PRIVACY_POLICY_LINK);
     return payload;
   });
@@ -3645,6 +3719,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     });
 
     if (result.error) {
+      request.log.warn({
+        route: "/v1/real-estate/:assetType/:dealType",
+        upstreamError: result.error,
+        upstreamMessage: result.message
+      }, "real estate upstream error");
       reply.code(502);
       return {
         ...result,
@@ -3734,6 +3813,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         serviceKey: config.molitApiKey
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/search",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.upstreamCode ? "upstream_error" : "proxy_error",
@@ -3917,6 +4001,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         filters: normalized
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/base-info",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -3998,6 +4087,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         filters: normalized
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/trade-info",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5873,8 +5967,8 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   });
 
   app.setErrorHandler((error, request, reply) => {
-    request.log.error(error);
     const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    request.log[getErrorLogLevel(statusCode)](error);
     const payload = {
       error: error.code || (statusCode >= 500 ? "proxy_error" : "request_error"),
       message: error.message
@@ -5913,11 +6007,13 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildRouteUsageFields,
   buildConfig,
   buildRateLimiter,
   buildServer,
   convertLatLonToKmaGrid,
   createMemoryCache,
+  getErrorLogLevel,
   isFailureResponse,
   makeCacheKey,
   normalizeAssemblyBillDetailQuery,
@@ -5962,6 +6058,7 @@ module.exports = {
   normalizeNaverShoppingSearchQuery,
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
+  normalizeUnmatchedPath,
   normalizeParkingLotSearchQuery,
   normalizeRealEstateQuery,
   normalizeRegionCodeQuery,

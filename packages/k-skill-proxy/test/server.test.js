@@ -5,7 +5,9 @@ const assert = require("node:assert/strict");
 const {
   buildServer,
   buildRateLimiter,
+  buildRouteUsageFields,
   createMemoryCache,
+  getErrorLogLevel,
   isFailureResponse,
   makeCacheKey,
   normalizeAssemblyBillSearchQuery,
@@ -32,6 +34,7 @@ const {
   normalizeNhisLongTermCareQuery,
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
+  normalizeUnmatchedPath,
   proxyAirKoreaRequest,
   proxyData4LibraryRequest,
   proxyHrfcoWaterLevelRequest,
@@ -166,6 +169,48 @@ test("route usage stats count endpoint calls by route pattern and skip /health",
   assert.equal(notFound.statusCode, 404);
   await app.inject({ method: "GET", url: "/another/arbitrary/missing/path" });
   assert.equal(app.routeUsageStats.get("__unmatched__"), 2, "unmatched paths must use one bounded aggregation key");
+});
+
+test("route usage attribution normalizes unmatched paths and excludes query values", () => {
+  assert.equal(
+    normalizeUnmatchedPath("/users/123/550e8400-e29b-41d4-a716-446655440000/aabbccddeeff"),
+    "/users/:n/:n/:n"
+  );
+
+  const fields = buildRouteUsageFields({
+    route: "/v1/example",
+    statusCode: 400,
+    query: { secret: "must-not-leak", page: "1" },
+    clientIp: "203.0.113.10",
+    attributionSalt: "test-salt",
+    errorCode: "bad_request"
+  });
+
+  assert.deepEqual(fields.queryKeys, ["page", "secret"]);
+  assert.match(fields.queryHash, /^[a-f0-9]{8}$/);
+  assert.match(fields.clientHash, /^[a-f0-9]{8}$/);
+  assert.equal(fields.errorCode, "bad_request");
+  assert.doesNotMatch(JSON.stringify(fields), /must-not-leak|203\.0\.113\.10/);
+});
+
+test("error handler uses warn for 4xx and error for 5xx", () => {
+  assert.equal(getErrorLogLevel(400), "warn");
+  assert.equal(getErrorLogLevel(499), "warn");
+  assert.equal(getErrorLogLevel(500), "error");
+  assert.equal(getErrorLogLevel(503), "error");
+});
+
+test("unmatched path attribution stays bounded", async (t) => {
+  const app = buildServer({ env: {} });
+  t.after(async () => {
+    await app.close();
+  });
+
+  for (let index = 0; index < 105; index += 1) {
+    await app.inject({ method: "GET", url: `/missing/path-${index}` });
+  }
+
+  assert.equal(app.unmatchedPathStats.size, 100);
 });
 
 test("privacy policy is publicly readable and linked from every response", async (t) => {
