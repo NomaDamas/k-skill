@@ -88,6 +88,7 @@ ASK 서울 기상 위험 시간대 조회도 기본 hosted proxy를 사용하므
 - `KSKILL_EV_CHARGER_API_KEY` (전기차 충전소 `--direct` 호출용. 일반 조회는 hosted proxy가 처리; 데이터셋 `15076352` 활용신청 별도 필요)
 - `KSKILL_BUILDING_REGISTER_API_KEY` (건축물대장 `--direct` 호출용. 일반/주소 조회는 hosted proxy가 처리; 데이터셋 `15134735` 활용신청 별도 필요)
 - `KSKILL_RISS_API_KEY` (RISS 학술자료 검색용 사용자 본인 키; 호환 변수 `RISS_API_KEY`, `DATA_GO_KR_API_KEY`와 별개)
+- `KSKILL_XQUIK_API_KEY` (Xquik 공개 X 읽기용 사용자 본인 키; 호환 변수 `XQUIK_API_KEY`, `k-skill-proxy` 미사용)
 - `LAW_OC`
 - `KIPRIS_PLUS_API_KEY`
 - `AIR_KOREA_OPEN_API_KEY`

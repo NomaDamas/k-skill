@@ -52,6 +52,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | 카카오맵 장소·자동차 길찾기 | `kakao-map` | Kakao Local 키워드/카테고리/좌표↔주소 변환 + Kakao Mobility 자동차 길찾기(거리·소요시간·통행료·예상 택시요금) | 불필요 | [카카오맵 가이드](docs/features/kakao-map.md) |
 | 지하철 분실물 조회 | `subway-lost-property` | 지하철 역/물품명 기준 공식 LOST112 분실물 검색 조건과 유실물센터 진입점 안내 | 불필요 | [지하철 분실물 조회 가이드](docs/features/subway-lost-property.md) |
 | 긱뉴스 조회 | `geeknews-search` | GeekNews 공개 RSS/Atom 피드 기반 최신 글 목록, 검색, 상세 확인 | 불필요 | [긱뉴스 조회 가이드](docs/features/geeknews-search.md) |
+| X(Twitter) 공개 게시물 검색 | `x-twitter-search` | Xquik REST API로 공개 게시물 검색, 게시물 조회, 공개 프로필 확인 | 필요(Xquik API 키) | [X(Twitter) 공개 게시물 검색 가이드](docs/features/x-twitter-search.md) |
 | 한국 날씨 조회 | `korea-weather` | 기상청 단기예보 기반 한국 날씨 조회 | 불필요 | [한국 날씨 조회 가이드](docs/features/korea-weather.md) |
 | 한국 공휴일·특일 조회 | `korean-holiday-calendar` | 한국천문연구원 특일 정보로 공휴일·국경일·기념일·24절기·잡절 조회 (공공데이터포털 15012690, 프록시 경유) | 불필요 | [한국 공휴일·특일 조회 가이드](docs/features/korean-holiday-calendar.md) |
 | 서울 기상 위험 시간대 조회 | `seoul-weather-risk` | ASK 서울 Marketplace의 장소별 폭염·한파·호우·대설·강풍 후보 예보 시간대와 판정 근거 조회 (기상청 공식 특보 아님) | 불필요 (hosted proxy) | [서울 기상 위험 시간대 조회 가이드](docs/features/seoul-weather-risk.md) |
@@ -205,6 +206,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [카카오맵 가이드](docs/features/kakao-map.md)
 - [지하철 분실물 조회 가이드](docs/features/subway-lost-property.md)
 - [긱뉴스 조회 가이드](docs/features/geeknews-search.md)
+- [X(Twitter) 공개 게시물 검색 가이드](docs/features/x-twitter-search.md)
 - [한국 날씨 조회 가이드](docs/features/korea-weather.md)
 - [한국 공휴일·특일 조회 가이드](docs/features/korean-holiday-calendar.md)
 - [서울 기상 위험 시간대 조회 가이드](docs/features/seoul-weather-risk.md)

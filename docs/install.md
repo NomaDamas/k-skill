@@ -86,6 +86,7 @@ npx --yes skills add NomaDamas/k-skill \
   --skill han-river-water-level \
   --skill subway-lost-property \
   --skill geeknews-search \
+  --skill x-twitter-search \
   --skill daiso-product-search \
   --skill market-kurly-search \
   --skill olive-young-search \
@@ -131,6 +132,7 @@ npx --yes skills add NomaDamas/k-skill \
   --skill seoul-bike \
   --skill subway-lost-property \
   --skill geeknews-search \
+  --skill x-twitter-search \
   --skill korea-weather \
   --skill fine-dust-location
 ```
