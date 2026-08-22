@@ -33,6 +33,8 @@ KSKILL_EV_CHARGER_API_KEY=replace-me
 KSKILL_BUILDING_REGISTER_API_KEY=replace-me
 # RISS 학술자료 검색은 사용자 본인의 RISS 검색 API 키로 직접 호출한다(비영리 기관/대학 발급).
 KSKILL_RISS_API_KEY=replace-me
+# X 공개 게시물 검색은 사용자 본인의 Xquik API 키로 직접 호출한다.
+KSKILL_XQUIK_API_KEY=replace-me
 LAW_OC=replace-me
 KIPRIS_PLUS_API_KEY=replace-me
 AIR_KOREA_OPEN_API_KEY=replace-me
@@ -57,6 +59,8 @@ chmod 0600 ~/.config/k-skill/secrets.env
 건축물대장 표제부 일반 조회는 hosted proxy를 사용하므로 사용자 키가 필요 없다. 주소 입력도 hosted Kakao geocode를 사용한다. `--direct`에서는 주소를 받지 않고 `KSKILL_BUILDING_REGISTER_API_KEY` 또는 `DATA_GO_KR_API_KEY`를 사용하며, 데이터셋 `15134735` 활용신청은 별도로 해야 한다(자동승인).
 
 KERIS/RISS 학술자료 검색은 RISS 검색 API가 기관 전용 키를 요구하므로 hosted proxy를 사용하지 않고, 사용자가 직접 발급받은 `KSKILL_RISS_API_KEY`(호환 `RISS_API_KEY`)로 상류를 호출한다. RISS 키는 비영리 기관/대학에만 발급되며 RISS 검색에는 `DATA_GO_KR_API_KEY`를 사용하지 않는다.
+
+X(Twitter) 공개 게시물 검색은 사용자가 발급받은 `KSKILL_XQUIK_API_KEY`로 Xquik REST API를 직접 호출한다. 기존 Xquik 환경의 `XQUIK_API_KEY`도 호환한다. Xquik은 사용자별 API 키와 계정 크레딧을 쓰므로 `k-skill-proxy`에 키를 보관하지 않는다.
 
 ASK 서울 기상 위험 시간대 조회는 기본 hosted proxy를 사용하므로 사용자 API Key가 필요 없다. proxy 운영자만 `ASK_SEOUL_SKILL_API_BASE_URL`과 회수 가능한 전용 `ASK_SEOUL_KSKILL_API_KEY`를 **proxy 서버 환경**에 설정한다. 이 키는 `k-skill-proxy:seoul-weather-risk` principal의 `skill:seoul-weather-risk:read` scope로 발급하며, 사용자 secrets 파일, URL, CLI 인자, 로그에 넣지 않는다.
 
@@ -132,6 +136,7 @@ bash scripts/check-setup.sh
 | 전기차 충전소 위치·상태 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct` 때만 `KSKILL_EV_CHARGER_API_KEY` 또는 `DATA_GO_KR_API_KEY`, 데이터셋 `15076352` 별도 활용신청) |
 | 건축물대장 표제부 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct` 때만 `KSKILL_BUILDING_REGISTER_API_KEY` 또는 `DATA_GO_KR_API_KEY`, 데이터셋 `15134735` 별도 활용신청) |
 | KERIS/RISS 학술자료 검색 | 사용자 본인 `KSKILL_RISS_API_KEY`(호환 `RISS_API_KEY`) 필요; RISS 검색 API는 비영리 기관/대학 전용 키로 직접 호출, proxy 미사용 |
+| X(Twitter) 공개 게시물 검색 | 사용자 본인 `KSKILL_XQUIK_API_KEY` 필요(호환 `XQUIK_API_KEY`); Xquik REST API 직접 호출, proxy 미사용 |
 
 ## 다음에 볼 문서
 

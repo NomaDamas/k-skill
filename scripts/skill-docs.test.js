@@ -283,7 +283,7 @@ test("every top-level skill is a generated CLI stub", () => {
     .filter((name) => fs.existsSync(path.join(repoRoot, name, "SKILL.md")))
     .sort();
 
-  assert.equal(skillDirs.length, 118);
+  assert.equal(skillDirs.length, 119);
 
   for (const skillName of skillDirs) {
     const skill = readRaw(path.join(skillName, "SKILL.md"));
@@ -383,7 +383,7 @@ test("trademark-reviewed skills publish the combined legal disclaimer", () => {
     fs.existsSync(path.join(repoRoot, skillName, "references", "DISCLAIMER.md")),
   );
 
-  assert.equal(reviewedSkills.length, 43, "expected the complete trademark-reviewed skill set");
+  assert.equal(reviewedSkills.length, 44, "expected the complete trademark-reviewed skill set");
 
   for (const skillName of reviewedSkills) {
     const disclaimerPath = path.join(skillName, "references", "DISCLAIMER.md");
@@ -1227,6 +1227,47 @@ test("geeknews-search docs lock the RSS-first list-search-detail workflow", () =
     assert.match(doc, /@nomadamas\/k-skill@0 exec geeknews-search scripts\/geeknews_search\.py -- detail/);
     assert.match(doc, /RSS-first|RSS first|RSS 피드/);
     assert.match(doc, /read-only|읽기 전용/);
+  }
+});
+
+test("repository docs register the bounded x-twitter-search skill", () => {
+  const readme = read("README.md");
+  const install = read(path.join("docs", "install.md"));
+  const setup = read(path.join("docs", "setup.md"));
+  const sources = read(path.join("docs", "sources.md"));
+  const instructionPath = path.join(repoRoot, "x-twitter-search", "instruction.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "x-twitter-search.md");
+  const helperPath = path.join(
+    repoRoot,
+    "x-twitter-search",
+    "scripts",
+    "x_twitter_search.py",
+  );
+
+  assert.ok(fs.existsSync(instructionPath), "expected x-twitter-search/instruction.md");
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/x-twitter-search.md");
+  assert.ok(fs.existsSync(helperPath), "expected x-twitter-search helper");
+  assert.match(readme, /\| X\(Twitter\) 공개 게시물 검색 \| `x-twitter-search` \|/);
+  assert.match(install, /--skill x-twitter-search/);
+  assert.match(setup, /KSKILL_XQUIK_API_KEY/);
+  assert.match(sources, /https:\/\/xquik\.com\/openapi\.json/);
+});
+
+test("x-twitter-search docs lock read-only scope, direct auth, and content isolation", () => {
+  const instruction = read(path.join("x-twitter-search", "instruction.md"));
+  const featureDoc = read(path.join("docs", "features", "x-twitter-search.md"));
+
+  for (const doc of [instruction, featureDoc]) {
+    assert.match(doc, /https:\/\/xquik\.com\/api\/v1/);
+    assert.match(doc, /KSKILL_XQUIK_API_KEY/);
+    assert.match(doc, /XQUIK_UNTRUSTED_X_CONTENT/);
+    assert.match(doc, /읽기 전용/);
+    assert.match(doc, /최대 100건|100건 상한/);
+    assert.match(doc, /k-skill-proxy.*(?:사용하지 않는다|경유하지 않는다)/s);
+    assert.match(
+      doc,
+      /@nomadamas\/k-skill@0 exec x-twitter-search scripts\/x_twitter_search\.py --/,
+    );
   }
 });
 
@@ -4494,6 +4535,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["서울 지하철 도착정보 조회", "seoul-subway-arrival"],
   ["지하철 분실물 조회", "subway-lost-property"],
   ["긱뉴스 조회", "geeknews-search"],
+  ["X(Twitter) 공개 게시물 검색", "x-twitter-search"],
   ["한국 날씨 조회", "korea-weather"],
   ["사용자 위치 미세먼지 조회", "fine-dust-location"],
   ["한강 수위 정보 조회", "han-river-water-level"],

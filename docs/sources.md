@@ -210,6 +210,9 @@
 - 서울교통공사 유실물센터: https://www.seoulmetro.co.kr/kr/page.do?menuIdx=541
 - GeekNews public RSS/Atom feed: https://feeds.feedburner.com/geeknews-feed
 - GeekNews home: https://news.hada.io
+- Xquik REST API: https://xquik.com/api/v1 — `x-twitter-search`가 사용자 소유 API 키를 `x-api-key` 헤더로 보내 공개 게시물 검색, 게시물 조회, 공개 프로필 조회를 직접 호출한다. 사용자별 유료 키이므로 `k-skill-proxy`를 경유하지 않는다.
+- Xquik OpenAPI 3.1 계약: https://xquik.com/openapi.json — 2026-08-22 확인 기준 검색은 `GET /api/v1/x/tweets/search`, 게시물은 `GET /api/v1/x/tweets/{id}`, 공개 프로필은 `GET /api/v1/x/users/{id}`다. 검색 결과는 게시물 배열과 불투명 다음 커서를 반환한다.
+- Xquik 문서와 비제휴 고지: https://docs.xquik.com — Xquik은 X Corp.와 관계없는 독립적인 제3자 서비스다. "Twitter"와 "X"는 X Corp.의 상표다.
 - 기상청 단기예보 조회서비스: https://www.data.go.kr/data/15084084/openapi.do
 - ASK 서울 K-Skill API(기상청 단기예보 2차 가공, 공공누리 제1유형·출처표시 기상청): https://ask-seoul.kr/skill-openapi.json
 - 에어코리아 대기오염정보: https://www.data.go.kr/data/15073861/openapi.do

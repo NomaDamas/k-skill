@@ -126,6 +126,7 @@
     "./subway-lost-property",
     "./ticket-availability",
     "./toss-investment",
+    "./x-twitter-search",
     "./zipcode-search"
   ]
 }

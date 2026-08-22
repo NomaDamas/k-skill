@@ -1,0 +1,9 @@
+{
+  "name": "x-twitter-search",
+  "description": "Xquik REST API로 X(Twitter) 공개 게시물 검색, 게시물 조회, 공개 프로필 확인을 수행하는 읽기 전용 스킬.",
+  "profiles": [
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: x-twitter-search\ndescription: Xquik REST API로 X(Twitter) 공개 게시물 검색, 게시물 조회, 공개 프로필 확인을 수행하는 읽기 전용 스킬.\nlicense: MIT\nmetadata:\n  category: research\n  locale: ko-KR\n  source: xquik-rest"
+}
