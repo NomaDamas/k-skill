@@ -1,0 +1,6 @@
+{
+  "name": "customs-cargo-clearance",
+  "description": "관세청 UNI-PASS 공식 API로 수입화물 통관 진행 상태와 화물 이벤트를 조회한다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: customs-cargo-clearance\ndescription: 관세청 UNI-PASS 공식 API로 수입화물 통관 진행 상태와 화물 이벤트를 조회한다.\nlicense: MIT\nmetadata:\n  category: logistics\n  locale: ko-KR\n  phase: v1"
+}
