@@ -81,6 +81,7 @@ const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require
 const { normalizeFscCorpQuery, fetchFscCorpOutline } = require("./fsc-corp");
 const { normalizeG2bSanctionQuery, fetchG2bSanctions } = require("./g2b-sanction");
 const { normalizeG2bOrderPlanQuery, fetchG2bOrderPlans } = require("./g2b-order-plan");
+const { normalizeHrdQuery, fetchHrdKorea } = require("./hrdkorea");
 const { fetchEvCharger, normalizeEvChargerQuery } = require("./ev-charger");
 const { fetchBuildingRegisterTitle, normalizeBuildingRegisterQuery } = require("./building-register");
 const {
@@ -4464,6 +4465,24 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     reply
   }));
 
+  app.get("/v1/hrdkorea/qualification/:operation", async (request, reply) => {
+    let normalized;
+    try { normalized = normalizeHrdQuery(request.params.operation, request.query || {}); }
+    catch (error) { reply.code(400); return { error: "bad_request", message: error.message }; }
+    const cacheKey = makeCacheKey({ route: `hrdkorea-${request.params.operation}`, ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) return { ...cached, proxy: { ...cached.proxy, cache: { hit: true, ttl_ms: config.cacheTtlMs } } };
+    if (!config.molitApiKey) {
+      reply.code(503);
+      return { error: "upstream_not_configured", message: "DATA_GO_KR_API_KEY is not configured on the proxy server.", proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } } };
+    }
+    const result = await fetchHrdKorea({ ...normalized, serviceKey: config.molitApiKey });
+    if (result.error) { reply.code(result.error === "upstream_timeout" ? 504 : 502); return { ...result, proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } } }; }
+    const payload = { ...result, proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }, requested_at: new Date().toISOString() } };
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
   async function handleKstartupRoute({ operation, route, request, reply }) {
     let normalized;
     try {
@@ -6405,7 +6424,7 @@ module.exports = {
   normalizeKopisDetailQuery,
   normalizeKopisListQuery,
   normalizeKstartupQuery,
-  normalizeMofaTravelAlarmQuery,
+  normalizeHrdQuery,
   normalizeKrWhoisAsQuery,
   normalizeKrWhoisDomainQuery,
   normalizeKrWhoisIpQuery,
@@ -6450,6 +6469,7 @@ module.exports = {
   fetchKakaoLocalEndpoint,
   fetchKakaoMobilityDirections,
   fetchNaverShoppingSearch,
+  fetchHrdKorea,
   proxyOpinetRequest,
   proxySeoulBikeRealtimeRequest,
   proxySeoulBikeStationsRequest,
