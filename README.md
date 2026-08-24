@@ -71,6 +71,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | 금융위 기업기본정보 조회 | `fsc-corporate-info` | 법인명으로 대표자·설립일·업종 등 법인 개요 조회와 사업자번호 교차검증(공공데이터포털 API, 프록시 경유) | 불필요 | [금융위 기업기본정보 조회 가이드](docs/features/fsc-corporate-info.md) |
 | 부정당제재업체 조회 | `g2b-sanctioned-supplier` | 사업자번호로 나라장터 부정당제재(조회시점 유효 제재) 조회(공공데이터포털 API, 프록시 경유) | 불필요 | [부정당제재업체 조회 가이드](docs/features/g2b-sanctioned-supplier.md) |
 | 나라장터 발주계획 검색 | `g2b-order-plan-search` | 물품·공사·용역·외자 발주계획을 발주년월·게시일시·기관·사업명 조건으로 조회(공공데이터포털 API, 프록시 경유) | 불필요 | [나라장터 발주계획 검색 가이드](docs/features/g2b-order-plan-search.md) |
+| 연안여객선 운항정보 조회 | `komsa-ferry-info` | KOMSA MTIS 공식 API로 연안여객선 운항 일정·선박·기항지·항로·운항상태 조회(프록시 경유) | 불필요 | [KOMSA 연안여객선 정보 조회 가이드](docs/features/komsa-ferry-info.md) |
 | 국방전자조달 공고 조회 | `d2b-notice-search` | 국방전자조달시스템(D2B) 공개 입찰공고 화면을 Aside Browser 우선으로 조회하고 공고건명·공고구분·날짜·G2B공고번호·발주기관 조건으로 검색 | 불필요 | [국방전자조달시스템 공고 조회 가이드](docs/features/d2b-notice-search.md) |
 | 인허가 영업상태 조회 | `localdata-business-status` | 상호+시군구로 동네 사업장(208업종)의 영업/휴업/폐업·업력·주소 조회(LOCALDATA 무인증) | 불필요 | [인허가 영업상태 조회 가이드](docs/features/localdata-business-status.md) |
 | 장수 점포 레이더 | `store-longevity-radar` | 상가(상권)정보 공개파일(무인증)로 업종·상호 키워드 점포 전수를 뽑고, 과거 스냅샷과 상호+좌표 매칭해 장수 점포 추출 | 불필요 | [장수 점포 레이더 가이드](docs/features/store-longevity-radar.md) |
@@ -225,6 +226,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [금융위 기업기본정보 조회 가이드](docs/features/fsc-corporate-info.md)
 - [부정당제재업체 조회 가이드](docs/features/g2b-sanctioned-supplier.md)
 - [나라장터 발주계획 검색 가이드](docs/features/g2b-order-plan-search.md)
+- [KOMSA 연안여객선 정보 조회 가이드](docs/features/komsa-ferry-info.md)
 - [국방전자조달시스템 공고 조회 가이드](docs/features/d2b-notice-search.md)
 - [인허가 영업상태 조회 가이드](docs/features/localdata-business-status.md)
 - [장수 점포 레이더 가이드](docs/features/store-longevity-radar.md)

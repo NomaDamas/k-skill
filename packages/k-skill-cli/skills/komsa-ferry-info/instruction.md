@@ -18,6 +18,15 @@
 
 ## Workflow
 
+Helper 실행:
+
+```bash
+npx -y @nomadamas/k-skill@0 exec komsa-ferry-info scripts/komsa_ferry_info.py -- \
+  schedules --date 20260824 --vessel 섬사랑12호 --limit 10
+```
+
+프록시를 직접 확인하려면:
+
 ```bash
 BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
 curl -fsS --get "$BASE/v1/komsa/ferry/schedules" \
