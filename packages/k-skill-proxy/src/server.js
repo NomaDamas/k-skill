@@ -81,6 +81,7 @@ const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require
 const { normalizeFscCorpQuery, fetchFscCorpOutline } = require("./fsc-corp");
 const { normalizeG2bSanctionQuery, fetchG2bSanctions } = require("./g2b-sanction");
 const { normalizeG2bOrderPlanQuery, fetchG2bOrderPlans } = require("./g2b-order-plan");
+const { normalizeKomsaFerryQuery, fetchKomsaFerryInfo } = require("./komsa-mtis");
 const { fetchEvCharger, normalizeEvChargerQuery } = require("./ev-charger");
 const { fetchBuildingRegisterTitle, normalizeBuildingRegisterQuery } = require("./building-register");
 const {
@@ -267,7 +268,7 @@ function buildConfig(env = process.env) {
     askSeoulKskillApiKey: trimOrNull(env.ASK_SEOUL_KSKILL_API_KEY),
     coupangAccessKey: trimOrNull(env.COUPANG_ACCESS_KEY),
     coupangSecretKey: trimOrNull(env.COUPANG_SECRET_KEY),
-    kamisApiKey: trimOrNull(env.KAMIS_API_KEY ?? env.KSKILL_KAMIS_API_KEY),
+    komsaMtisApiKey: trimOrNull(env.KOMSA_MTIS_API_KEY ?? env.KSKILL_KOMSA_MTIS_API_KEY),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     cacheMaxEntries: Math.max(1, parseInteger(env.KSKILL_PROXY_CACHE_MAX_ENTRIES, 1000)),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
@@ -4464,6 +4465,40 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     reply
   }));
 
+  app.get("/v1/komsa/ferry/:dataset", async (request, reply) => {
+    const dataset = request.params.dataset;
+    let normalized;
+    try {
+      normalized = normalizeKomsaFerryQuery(dataset, request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return { error: "bad_request", message: error.message };
+    }
+    if (!config.komsaMtisApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KOMSA_MTIS_API_KEY is not configured on the proxy server.",
+        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
+      };
+    }
+    const route = `komsa-ferry-${dataset}`;
+    const cacheKey = makeCacheKey({ route, ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) return { ...cached, proxy: { ...cached.proxy, cache: { hit: true, ttl_ms: config.cacheTtlMs } } };
+    const result = await fetchKomsaFerryInfo({ ...normalized, serviceKey: config.komsaMtisApiKey });
+    if (result.error) {
+      reply.code(result.error === "upstream_not_configured" ? 503 : result.error === "upstream_timeout" ? 504 : 502);
+      return { ...result, proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } } };
+    }
+    const payload = {
+      ...result,
+      proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }, requested_at: new Date().toISOString() }
+    };
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
   async function handleKstartupRoute({ operation, route, request, reply }) {
     let normalized;
     try {
@@ -6405,7 +6440,7 @@ module.exports = {
   normalizeKopisDetailQuery,
   normalizeKopisListQuery,
   normalizeKstartupQuery,
-  normalizeMofaTravelAlarmQuery,
+  normalizeKomsaFerryQuery,
   normalizeKrWhoisAsQuery,
   normalizeKrWhoisDomainQuery,
   normalizeKrWhoisIpQuery,
@@ -6445,6 +6480,7 @@ module.exports = {
   proxyKopisRequest,
   proxyKrWhoisDomainRequest,
   proxyKstartupRequest,
+  fetchKomsaFerryInfo,
   proxyNhisCheckupRequest,
   proxyNhisLongTermCareRequest,
   fetchKakaoLocalEndpoint,
