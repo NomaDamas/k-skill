@@ -26,7 +26,6 @@
 | `building-register-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `bunjang-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
 | `cheap-gas-nearby` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
-| `consumer-price-safety-search` | `lookup` | 소비자 가격·물품·리콜 안전정보 조회 완료 |
 | `corporate-registration-consulting` | `legal` | 공식 법률 표면에서 로그인·서류 준비를 진행하고 `clarify` 후 허용된 제출·수수료 결제 |
 | `coupang-product-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
 | `court-auction-notice-search` | `legal` | 공식 법원 표면에서 로그인·물건 검토·입찰 준비를 진행하고 `clarify` 후 허용된 법적 액션 |
