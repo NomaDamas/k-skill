@@ -291,6 +291,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [마이리얼트립 MCP 검색 가이드](docs/features/myrealtrip-search.md)
 - [항공권 가격 조회 가이드](docs/features/flight-ticket-search.md)
 - [택배 배송조회](docs/features/delivery-tracking.md)
+- [소비자 가격·안전정보 조회](docs/features/consumer-price-safety-search.md)
 - [쿠팡 상품 검색](docs/features/coupang-product-search.md)
 - [오늘의집 오늘의딜 조회](docs/features/ohou-today-deal.md)
 - [번개장터 검색 가이드](docs/features/bunjang-search.md)
