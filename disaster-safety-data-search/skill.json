@@ -1,0 +1,6 @@
+{
+  "name": "disaster-safety-data-search",
+  "description": "재난안전데이터 공유플랫폼의 공식 재난·안전 데이터셋을 조회한다. 현재는 데이터셋별 활용신청과 API 계약을 확정하는 draft scaffold다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: disaster-safety-data-search\ndescription: 재난안전데이터 공유플랫폼의 공식 재난·안전 데이터셋을 조회한다. 현재는 데이터셋별 활용신청과 API 계약을 확정하는 draft scaffold다.\nlicense: MIT\nmetadata:\n  category: safety\n  locale: ko-KR\n  phase: draft"
+}
