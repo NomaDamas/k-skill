@@ -107,6 +107,7 @@
     "./naver-news-search",
     "./naver-shopping-search",
     "./nhis-care-checkup-search",
+    "./nongsaro-search",
     "./nts-business-registration",
     "./nts-tax-delinquency",
     "./ohou-today-deal",
