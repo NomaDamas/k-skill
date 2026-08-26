@@ -151,6 +151,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | 네이버 쇼핑 가격비교 | `naver-shopping-search` | 네이버 검색 Open API 우선, 공개 BFF JSON fallback으로 상품 후보·현재 노출가·판매처 링크 비교 | 불필요 | [네이버 쇼핑 가격비교 가이드](docs/features/naver-shopping-search.md) |
 | 다나와 최저가 비교 | `danawa-price-search` | 다나와 공개 검색/가격비교 표면으로 상품 후보·쇼핑몰별 가격·배송비 포함 실구매가·카드 할인가·무이자 할부 비교 | 불필요 | [다나와 최저가 비교 가이드](docs/features/danawa-price-search.md) |
 | 네이버 뉴스 검색 | `naver-news-search` | 네이버 검색 Open API 뉴스 검색으로 기사 제목·요약·발행시각·원문/네이버 링크를 정리 | 불필요 | [네이버 뉴스 검색 가이드](docs/features/naver-news-search.md) |
+| BC카드 eat.pl 맛집 검색 | `bccard-eatpl-search` | 장소 주소·업종 조건으로 eat.pl 잇플의 최근 1개월 BC카드 결제 데이터 기반 매출 상위 맛집과 상세 링크 조회 | 불필요 (proxy 운영 secret은 필요) | [BC카드 eat.pl 맛집 검색 가이드](docs/features/bccard-eatpl-search.md) |
 | 한국일보 뉴스 조회 | `hankookilbo-news` | 한국일보 공식 원격 MCP 서버를 인증 없이 직접 호출해 편집 헤드라인·많이 본·꼼꼼히 본·최신·섹션별 추천·주제 검색·오늘의 운세를 기사 메타데이터로 조회 | 불필요 | [한국일보 뉴스 조회 가이드](docs/features/hankookilbo-news.md) |
 | 네이버 검색광고 성과 조회 | `naver-ad-performance` | 네이버 검색광고 캠페인/광고그룹/키워드의 노출수·클릭수·광고비·CTR·CPC·전환수 조회, 연관키워드·월간 조회수 도구 (읽기 전용, 로컬 실행 전용) | 필요 | [네이버 검색광고 성과 조회 가이드](docs/features/naver-ad-performance.md) |
 | 한국어 글자 수 세기 | `korean-character-count` | 한국어 텍스트의 글자 수·줄 수·UTF-8/NEIS byte 수를 결정론적으로 계산 | 불필요 | [한국어 글자 수 세기 가이드](docs/features/korean-character-count.md) |
@@ -302,6 +303,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [네이버 쇼핑 가격비교 가이드](docs/features/naver-shopping-search.md)
 - [다나와 최저가 비교 가이드](docs/features/danawa-price-search.md)
 - [네이버 뉴스 검색 가이드](docs/features/naver-news-search.md)
+- [BC카드 eat.pl 맛집 검색 가이드](docs/features/bccard-eatpl-search.md)
 - [한국일보 뉴스 조회 가이드](docs/features/hankookilbo-news.md)
 - [한국어 글자 수 세기 가이드](docs/features/korean-character-count.md)
 - [한국어 유행어 글쓰기 가이드](docs/features/korean-slang-writing.md)

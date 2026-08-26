@@ -41,6 +41,11 @@ const {
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
 const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const {
+  createTraceNumberFactory,
+  fetchBccardEatplSearch,
+  normalizeBccardEatplSearchQuery
+} = require("./bccard-eatpl");
+const {
   VWORLD_CREDENTIAL_HEADER,
   isVWorldSuccessBody,
   normalizeVWorldPriceQuery,
@@ -260,6 +265,9 @@ function buildConfig(env = process.env) {
     kosisApiKey: trimOrNull(env.KOSIS_API_KEY ?? env.KSKILL_KOSIS_API_KEY),
     naverSearchClientId: trimOrNull(env.NAVER_SEARCH_CLIENT_ID ?? env.NAVER_CLIENT_ID),
     naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
+    bccardEatplInstNm: trimOrNull(env.BCCARD_EATPL_INST_NM),
+    bccardEatplApiBaseUrl: trimOrNull(env.BCCARD_EATPL_API_BASE_URL) || "https://dev-api.paybooc.ai/api/mer",
+    bccardEatplApiTimeoutMs: parseInteger(env.BCCARD_EATPL_API_TIMEOUT_MS, 20000),
     lawOc: trimOrNull(env.LAW_OC),
     lawReferer: trimOrNull(env.LAW_REFERER),
     lawUserAgent: trimOrNull(env.LAW_USER_AGENT),
@@ -2192,6 +2200,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     sizeOf: (value) => Buffer.byteLength(String(value?.body || ""), "utf8")
   });
   const rateLimit = buildRateLimiter(config);
+  const nextBccardEatplTraceNumber = createTraceNumberFactory({
+    instNm: config.bccardEatplInstNm || "unconfigured",
+    now
+  });
   const app = Fastify({
     logger: true,
     logController: new LogController({ disableRequestLogging: true }),
@@ -2288,6 +2300,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
         naverNewsApiConfigured: naverSearchKeysPresent,
+        bccardEatplConfigured: Boolean(config.bccardEatplInstNm),
         vworldRelayAvailable: true,
         ntsBusinessConfigured: Boolean(config.molitApiKey),
         kstartupConfigured: Boolean(config.molitApiKey),
@@ -5602,6 +5615,67 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
+  app.get("/v1/bccard-eatpl/search", async (request, reply) => {
+    let normalized;
+    try {
+      normalized = normalizeBccardEatplSearchQuery(request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return { error: "bad_request", message: error.message };
+    }
+
+    const cacheKey = makeCacheKey({ route: "bccard-eatpl-search", ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        proxy: { ...cached.proxy, cache: { hit: true, ttl_ms: config.cacheTtlMs } }
+      };
+    }
+
+    let result;
+    try {
+      result = await fetchBccardEatplSearch({
+        query: normalized,
+        instNm: config.bccardEatplInstNm,
+        baseUrl: config.bccardEatplApiBaseUrl,
+        nextTraceNumber: nextBccardEatplTraceNumber,
+        timeoutMs: config.bccardEatplApiTimeoutMs
+      });
+    } catch (error) {
+      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      const payload = {
+        error: error.code || "proxy_error",
+        message: error.message,
+        proxy: {
+          name: config.proxyName,
+          cache: { hit: false, ttl_ms: config.cacheTtlMs }
+        }
+      };
+      if (error.upstreamStatusCode) {
+        payload.upstream = {
+          status_code: error.upstreamStatusCode,
+          body_snippet: error.upstreamBodySnippet || null
+        };
+      }
+      return payload;
+    }
+
+    const payload = {
+      items: result.items,
+      query: result.query,
+      attribution: result.attribution,
+      upstream: result.upstream,
+      proxy: {
+        name: config.proxyName,
+        cache: { hit: false, ttl_ms: config.cacheTtlMs },
+        requested_at: new Date().toISOString()
+      }
+    };
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
   async function handleKakaoLocalEndpointRoute({
     request,
     reply,
@@ -6420,6 +6494,7 @@ module.exports = {
   normalizeNeisSchoolMealQuery,
   normalizeNeisSchoolSearchQuery,
   normalizeNaverShoppingSearchQuery,
+  normalizeBccardEatplSearchQuery,
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
   normalizeUnmatchedPath,
@@ -6450,6 +6525,7 @@ module.exports = {
   fetchKakaoLocalEndpoint,
   fetchKakaoMobilityDirections,
   fetchNaverShoppingSearch,
+  fetchBccardEatplSearch,
   proxyOpinetRequest,
   proxySeoulBikeRealtimeRequest,
   proxySeoulBikeStationsRequest,

@@ -11,6 +11,7 @@
   "skills": [
     "./animal-pharmacy-search",
     "./assembly-bill-vote-search",
+    "./bccard-eatpl-search",
     "./biz-health-check",
     "./bok-ecos-stats",
     "./building-register-search",

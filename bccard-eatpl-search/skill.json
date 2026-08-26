@@ -1,0 +1,6 @@
+{
+  "name": "bccard-eatpl-search",
+  "description": "BC카드 eat.pl 잇플의 결제 데이터 기반 매출 상위 맛집을 주소·장르 조건으로 검색하고 지도 정보와 상세 링크를 함께 제공한다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: bccard-eatpl-search\ndescription: BC카드 eat.pl 잇플의 결제 데이터 기반 매출 상위 맛집을 주소·장르 조건으로 검색하고 지도 정보와 상세 링크를 함께 제공한다.\nlicense: MIT\nmetadata:\n  category: food\n  locale: ko-KR\n  phase: v1"
+}
