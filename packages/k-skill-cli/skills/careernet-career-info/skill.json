@@ -1,0 +1,6 @@
+{
+  "name": "careernet-career-info",
+  "description": "커리어넷 공식 API로 직업 설명과 진로·적성 정보를 조회한다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: careernet-career-info\ndescription: 커리어넷 공식 API로 직업 설명과 진로·적성 정보를 조회한다.\nlicense: MIT\nmetadata:\n  category: education\n  locale: ko-KR\n  phase: v1"
+}
