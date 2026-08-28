@@ -1,0 +1,6 @@
+{
+  "name": "hrdkorea-qualification-search",
+  "description": "한국산업인력공단 공식 API로 국가자격 시험 일정과 종목 정보를 조회한다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: hrdkorea-qualification-search\ndescription: 한국산업인력공단 공식 API로 국가자격 시험 일정과 종목 정보를 조회한다.\nlicense: MIT\nmetadata:\n  category: education\n  locale: ko-KR\n  phase: v1"
+}
