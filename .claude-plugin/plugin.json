@@ -20,6 +20,7 @@
     "./coupang-product-search",
     "./court-auction-notice-search",
     "./court-payment-order-assistant",
+    "./customs-cargo-clearance",
     "./d2b-notice-search",
     "./daangn-cars-search",
     "./daangn-jobs-search",
