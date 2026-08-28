@@ -1,6 +1,6 @@
 # Runtime Action Audit
 
-2026-08-25 기준 top-level `SKILL.md` 122개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
+2026-08-25 기준 top-level `SKILL.md` 120개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
 
 ## Mode definitions
 
@@ -12,7 +12,7 @@
 - **legal** (7): 공식 법률·정부 표면의 로그인/인증/서류 준비를 진행하고 `clarify` 후 제출·입찰·수수료 결제
 - **operations** (1): k-skill 설치·업데이트·복구·런타임 연결을 실제 적용하고 검증
 - **local** (12): 요청 산출물을 로컬에서 실제 생성·변환·정리
-- **lookup** (62): 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
+- **lookup** (61): 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
 
 ## Complete catalog
 
@@ -38,6 +38,7 @@
 | `daiso-product-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
 | `danawa-price-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
 | `delivery-tracking` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `disaster-safety-data-search` | `lookup` | 재난·안전 데이터셋 조회 완료 |
 | `donation-place-search` | `submission` | 공식 폼·첨부 준비 → `clarify` 후 제출/결제/취소 |
 | `emergency-room-beds` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `ev-charger-nearby` | `lookup` | 충전소 위치·충전기 유형·현재 상태 조회 완료 |
