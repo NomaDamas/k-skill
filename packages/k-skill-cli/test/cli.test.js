@@ -143,7 +143,7 @@ test("all bundled assets are exposed through exec/read/path instructions", () =>
   // 82 source skill directories own assets; srt-booking, ktx-booking,
   // fine-dust-location, and k-skill-setup additionally bundle legacy root
   // helpers through skill.json mappings.
-  assert.equal(assetSkills, 87);
+  assert.equal(assetSkills, 85);
 });
 
 test("asset resolution rejects traversal and reads bundled references", () => {

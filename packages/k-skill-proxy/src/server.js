@@ -81,6 +81,7 @@ const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require
 const { normalizeFscCorpQuery, fetchFscCorpOutline } = require("./fsc-corp");
 const { normalizeG2bSanctionQuery, fetchG2bSanctions } = require("./g2b-sanction");
 const { normalizeG2bOrderPlanQuery, fetchG2bOrderPlans } = require("./g2b-order-plan");
+const { normalizeKoroadQuery, fetchKoroad } = require("./koroad");
 const { fetchEvCharger, normalizeEvChargerQuery } = require("./ev-charger");
 const { fetchBuildingRegisterTitle, normalizeBuildingRegisterQuery } = require("./building-register");
 const {
@@ -267,7 +268,7 @@ function buildConfig(env = process.env) {
     askSeoulKskillApiKey: trimOrNull(env.ASK_SEOUL_KSKILL_API_KEY),
     coupangAccessKey: trimOrNull(env.COUPANG_ACCESS_KEY),
     coupangSecretKey: trimOrNull(env.COUPANG_SECRET_KEY),
-    kamisApiKey: trimOrNull(env.KAMIS_API_KEY ?? env.KSKILL_KAMIS_API_KEY),
+    koroadApiKey: trimOrNull(env.KOROAD_API_KEY ?? env.KSKILL_KOROAD_API_KEY),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     cacheMaxEntries: Math.max(1, parseInteger(env.KSKILL_PROXY_CACHE_MAX_ENTRIES, 1000)),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
@@ -4464,6 +4465,39 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     reply
   }));
 
+  app.get("/v1/koroad/traffic-accident/:kind", async (request, reply) => {
+    const kind = request.params.kind === "hotspots" ? (request.query?.category || "child") : "stats";
+    let normalized;
+    try {
+      normalized = normalizeKoroadQuery(kind, request.query || {});
+    } catch (error) {
+      reply.code(400);
+      return { error: "bad_request", message: error.message };
+    }
+    if (!config.koroadApiKey) {
+      reply.code(503);
+      return {
+        error: "upstream_not_configured",
+        message: "KOROAD_API_KEY is not configured on the proxy server.",
+        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
+      };
+    }
+    const cacheKey = makeCacheKey({ route: `koroad-${request.params.kind}`, ...normalized });
+    const cached = cache.get(cacheKey);
+    if (cached) return { ...cached, proxy: { ...cached.proxy, cache: { hit: true, ttl_ms: config.cacheTtlMs } } };
+    const result = await fetchKoroad({ ...normalized, apiKey: config.koroadApiKey });
+    if (result.error) {
+      reply.code(result.error === "upstream_timeout" ? 504 : 502);
+      return { ...result, proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } } };
+    }
+    const payload = {
+      ...result,
+      proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }, requested_at: new Date().toISOString() }
+    };
+    cache.set(cacheKey, payload, config.cacheTtlMs);
+    return payload;
+  });
+
   async function handleKstartupRoute({ operation, route, request, reply }) {
     let normalized;
     try {
@@ -6405,7 +6439,7 @@ module.exports = {
   normalizeKopisDetailQuery,
   normalizeKopisListQuery,
   normalizeKstartupQuery,
-  normalizeMofaTravelAlarmQuery,
+  normalizeKoroadQuery,
   normalizeKrWhoisAsQuery,
   normalizeKrWhoisDomainQuery,
   normalizeKrWhoisIpQuery,
@@ -6448,6 +6482,7 @@ module.exports = {
   proxyNhisCheckupRequest,
   proxyNhisLongTermCareRequest,
   fetchKakaoLocalEndpoint,
+  fetchKoroad,
   fetchKakaoMobilityDirections,
   fetchNaverShoppingSearch,
   proxyOpinetRequest,

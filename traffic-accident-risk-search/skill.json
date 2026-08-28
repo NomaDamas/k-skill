@@ -1,0 +1,6 @@
+{
+  "name": "traffic-accident-risk-search",
+  "description": "한국도로교통공단 TAAS 공식 API로 교통사고 다발지역과 지역별 사고 통계를 조회한다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: traffic-accident-risk-search\ndescription: 한국도로교통공단 TAAS 공식 API로 교통사고 다발지역과 지역별 사고 통계를 조회한다.\nlicense: MIT\nmetadata:\n  category: safety\n  locale: ko-KR\n  phase: v1"
+}

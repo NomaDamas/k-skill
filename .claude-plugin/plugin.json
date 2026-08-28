@@ -130,6 +130,7 @@
     "./subway-lost-property",
     "./ticket-availability",
     "./toss-investment",
+    "./traffic-accident-risk-search",
     "./zipcode-search"
   ]
 }
