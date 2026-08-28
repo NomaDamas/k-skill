@@ -58,6 +58,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | 외교부 해외안전·여행경보 조회 | `mofa-travel-safety` | 외교부 0404 국가·지역별 공식 여행경보와 경보 내용 조회 (프록시 경유) | 불필요 | [외교부 해외안전·여행경보 조회 가이드](docs/features/mofa-travel-safety.md) |
 | 서울 기상 위험 시간대 조회 | `seoul-weather-risk` | ASK 서울 Marketplace의 장소별 폭염·한파·호우·대설·강풍 후보 예보 시간대와 판정 근거 조회 (기상청 공식 특보 아님) | 불필요 (hosted proxy) | [서울 기상 위험 시간대 조회 가이드](docs/features/seoul-weather-risk.md) |
 | 사용자 위치 미세먼지 조회 | `fine-dust-location` | 현재 위치 또는 지역 기준 PM10/PM2.5 미세먼지 조회 | 불필요 | [사용자 위치 미세먼지 조회 가이드](docs/features/fine-dust-location.md) |
+| 소비자 가격·안전 조회 | `consumer-price-safety-search` | 참가격 가격정보와 소비자24 물품·서비스별 리콜정보 조회(프록시 경유) | 불필요 | [소비자 가격·안전 조회 가이드](docs/features/consumer-price-safety-search.md) |
 | 한강 수위 정보 조회 | `han-river-water-level` | 한강 관측소 기준 현재 수위·유량·기준수위 확인 | 불필요 | [한강 수위 정보 가이드](docs/features/han-river-water-level.md) |
 | 한국 법령 검색 | `korean-law-search` | 한국 법령/조문/판례/유권해석 검색 | 불필요 | [한국 법령 검색 가이드](docs/features/korean-law-search.md) |
 | 등기부등본 자동화 | `iros-registry-automation` | 인터넷등기소(IROS)에서 법인/부동산 등기부등본 장바구니, 수동 결제 후 열람·저장 흐름을 보조 | 필요(수동 로그인·결제/TouchEn) | [등기부등본 자동화 가이드](docs/features/iros-registry-automation.md) |
@@ -290,6 +291,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 - [마이리얼트립 MCP 검색 가이드](docs/features/myrealtrip-search.md)
 - [항공권 가격 조회 가이드](docs/features/flight-ticket-search.md)
 - [택배 배송조회](docs/features/delivery-tracking.md)
+- [소비자 가격·안전정보 조회](docs/features/consumer-price-safety-search.md)
 - [쿠팡 상품 검색](docs/features/coupang-product-search.md)
 - [오늘의집 오늘의딜 조회](docs/features/ohou-today-deal.md)
 - [번개장터 검색 가이드](docs/features/bunjang-search.md)

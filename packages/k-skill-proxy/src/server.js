@@ -58,18 +58,13 @@ const {
   proxyKstartupRequest
 } = require("./kstartup");
 const {
-  fetchGovernmentSupportSurvey,
-  normalizeGovernmentSupportQuery
-} = require("./government-support");
-const {
-  isKamisFailureBody,
-  normalizeKamisQuery,
-  proxyKamisRequest
-} = require("./kamis");
-const {
-  normalizeMofaTravelAlarmQuery,
-  proxyMofaTravelAlarmRequest
-} = require("./mofa-travel-safety");
+  buildConsumer24ServiceKeys,
+  normalizeConsumer24GoodsQuery,
+  normalizeConsumer24RecallQuery,
+  parseConsumer24Xml,
+  proxyConsumer24GoodsRequest,
+  proxyConsumer24RecallRequest
+} = require("./consumer24");
 const { fetchNearbyParkingLots } = require("./parking-lots");
 const {
   normalizeCoupangProductSearchQuery,
@@ -267,7 +262,7 @@ function buildConfig(env = process.env) {
     askSeoulKskillApiKey: trimOrNull(env.ASK_SEOUL_KSKILL_API_KEY),
     coupangAccessKey: trimOrNull(env.COUPANG_ACCESS_KEY),
     coupangSecretKey: trimOrNull(env.COUPANG_SECRET_KEY),
-    kamisApiKey: trimOrNull(env.KAMIS_API_KEY ?? env.KSKILL_KAMIS_API_KEY),
+    consumer24ServiceKeys: buildConsumer24ServiceKeys(env),
     cacheTtlMs: parseInteger(env.KSKILL_PROXY_CACHE_TTL_MS, 300000),
     cacheMaxEntries: Math.max(1, parseInteger(env.KSKILL_PROXY_CACHE_MAX_ENTRIES, 1000)),
     rateLimitWindowMs: parseInteger(env.KSKILL_PROXY_RATE_LIMIT_WINDOW_MS, 60000),
@@ -4613,65 +4608,22 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     reply
   }));
 
-  app.get("/v1/government-support/survey", async (request, reply) => {
+  async function handleConsumer24XmlRoute({ request, reply, type }) {
     let normalized;
     try {
-      normalized = normalizeGovernmentSupportQuery(request.query || {});
+      normalized = type === "recall"
+        ? normalizeConsumer24RecallQuery(request.query || {})
+        : normalizeConsumer24GoodsQuery(request.query || {});
     } catch (error) {
       reply.code(400);
       return { error: "bad_request", message: error.message };
     }
 
-    const cacheKey = makeCacheKey({ route: "government-support-survey", ...normalized });
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        proxy: {
-          ...cached.proxy,
-          cache: { hit: true, ttl_ms: config.cacheTtlMs }
-        }
-      };
-    }
-
-    const survey = await fetchGovernmentSupportSurvey({
-      query: normalized,
-      serviceKey: config.molitApiKey
+    const serviceId = type === "recall" ? normalized.serviceId : "00000035";
+    const cacheKey = makeCacheKey({
+      route: `consumer24-${type}`,
+      ...normalized
     });
-    const payload = {
-      ...survey,
-      query: normalized,
-      attribution: {
-        software: "https://github.com/djfksjd/ir-search (MIT)",
-        sources: [
-          "https://www.data.go.kr/data/15125364/openapi.do",
-          "https://www.bizinfo.go.kr/",
-          "https://www.nipa.kr/home/2-2",
-          "https://www.kocca.kr/kocca/pims/list.do",
-          "https://www.smtech.go.kr/front/ifg/no/notice02_list.do"
-        ],
-        redistribution: "Structured metadata and official links only; announcement bodies and attachments are not mirrored."
-      },
-      proxy: {
-        name: config.proxyName,
-        cache: { hit: false, ttl_ms: config.cacheTtlMs },
-        requested_at: new Date().toISOString()
-      }
-    };
-    cache.set(cacheKey, payload, config.cacheTtlMs);
-    return payload;
-  });
-
-  async function handleKamisRoute(request, reply) {
-    let normalized;
-    try {
-      normalized = normalizeKamisQuery(request.query || {});
-    } catch (error) {
-      reply.code(400);
-      return { error: "bad_request", message: error.message };
-    }
-
-    const cacheKey = makeCacheKey({ route: "kamis-food-price-daily-category", ...normalized });
     const cached = cache.get(cacheKey);
     if (cached) {
       return {
@@ -4680,64 +4632,40 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    let upstream;
-    try {
-      upstream = await proxyKamisRequest({
-        query: normalized,
-        apiKey: config.kamisApiKey
-      });
-    } catch (error) {
-      reply.code(502);
-      return {
-        error: "upstream_error",
-        message: "KAMIS upstream request failed.",
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-      };
-    }
+    const serviceKey = config.consumer24ServiceKeys[serviceId];
+    const upstream = type === "recall"
+      ? await proxyConsumer24RecallRequest({ query: normalized, serviceKey })
+      : await proxyConsumer24GoodsRequest({ query: normalized, serviceKey });
 
-    let parsed;
-    try {
-      parsed = JSON.parse(upstream.body);
-    } catch {
-      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
-      return {
-        error: "upstream_invalid_response",
-        message: "KAMIS upstream did not return valid JSON.",
-        upstream_status: upstream.statusCode,
-        upstream_body: String(upstream.body || "").slice(0, 500),
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-      };
-    }
-
-    const errorCode = parsed?.data?.error_code;
     if (upstream.statusCode === 503) {
       reply.code(503);
-      return {
-        ...parsed,
-        error: parsed.error || "upstream_not_configured",
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }
-        }
-      };
+      return JSON.parse(upstream.body);
     }
-    if (upstream.statusCode < 200 || upstream.statusCode >= 300 || isKamisFailureBody(upstream.body)) {
-      reply.code(errorCode === "200" ? 400 : (upstream.statusCode >= 400 ? upstream.statusCode : 502));
+    if (upstream.statusCode < 200 || upstream.statusCode >= 300) {
+      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
       return {
-        error: errorCode === "900" ? "upstream_auth_error" : "upstream_error",
-        message: `KAMIS returned error code ${errorCode || upstream.statusCode}.`,
-        upstream: parsed,
-        query: normalized,
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }
-        }
+        error: "upstream_error",
+        upstream_status: upstream.statusCode,
+        message: "Consumer24 upstream request failed."
       };
     }
 
-    const data = parsed?.data || {};
+    const parsed = parseConsumer24Xml(upstream.body);
+    if (parsed.code && parsed.code !== "00") {
+      reply.code(parsed.code === "50" || parsed.code === "51" ? 502 : 400);
+      return {
+        error: parsed.code === "50" ? "upstream_auth_error" : "upstream_error",
+        upstream_code: parsed.code,
+        message: parsed.codeMsg || "Consumer24 upstream returned an error."
+      };
+    }
+
     const payload = {
+      service_id: serviceId,
+      ...(type === "recall" ? { cntnts_id: normalized.cntntsId } : { goods_cd: normalized.goodsCd }),
       query: normalized,
-      items: Array.isArray(data.item) ? data.item : [],
-      upstream: {
-        error_code: data.error_code || "001",
-      },
+      all_count: parsed.allCnt,
+      items: parsed.items,
       proxy: {
         name: config.proxyName,
         cache: { hit: false, ttl_ms: config.cacheTtlMs },
@@ -4748,95 +4676,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   }
 
-  app.get("/v1/kamis/food-price/daily-category", handleKamisRoute);
-
-  async function handleMofaTravelAlarmRoute(request, reply) {
-    let normalized;
-    try {
-      normalized = normalizeMofaTravelAlarmQuery(request.query || {});
-    } catch (error) {
-      reply.code(400);
-      return { error: "bad_request", message: error.message };
-    }
-
-    const cacheKey = makeCacheKey({ route: "mofa-travel-safety-travel-alarm", ...normalized });
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        proxy: { ...cached.proxy, cache: { hit: true, ttl_ms: config.cacheTtlMs } }
-      };
-    }
-
-    let upstream;
-    try {
-      upstream = await proxyMofaTravelAlarmRequest({
-        query: normalized,
-        serviceKey: config.molitApiKey
-      });
-    } catch {
-      reply.code(502);
-      return {
-        error: "upstream_error",
-        message: "MOFA travel alarm upstream request failed.",
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-      };
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(upstream.body);
-    } catch {
-      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
-      return {
-        error: "upstream_invalid_response",
-        message: "MOFA travel alarm upstream did not return valid JSON.",
-        upstream_status: upstream.statusCode,
-        upstream_body: String(upstream.body || "").slice(0, 500),
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-      };
-    }
-
-    const body = parsed?.response?.body || {};
-    const header = parsed?.response?.header || {};
-    if (upstream.statusCode === 503) {
-      reply.code(503);
-      return {
-        ...parsed,
-        error: parsed.error || "upstream_not_configured",
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-      };
-    }
-    if (upstream.statusCode < 200 || upstream.statusCode >= 300 || String(header.resultCode || "") !== "0") {
-      reply.code(upstream.statusCode >= 400 ? upstream.statusCode : 502);
-      return {
-        error: "upstream_error",
-        message: header.resultMsg || "MOFA travel alarm upstream returned an error.",
-        upstream: parsed,
-        query: normalized,
-        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
-      };
-    }
-
-    const rawItems = body.items?.item || [];
-    const items = Array.isArray(rawItems) ? rawItems : [rawItems];
-    const payload = {
-      query: normalized,
-      items: items.filter(Boolean),
-      total_count: Number(body.totalCount || 0),
-      current_count: Number(body.currentCount || items.length),
-      source: "mofa_travel_alarm_0404",
-      proxy: {
-        name: config.proxyName,
-        cache: { hit: false, ttl_ms: config.cacheTtlMs },
-        requested_at: new Date().toISOString()
-      }
-    };
-    cache.set(cacheKey, payload, config.cacheTtlMs);
-    return payload;
-  }
-
-  app.get("/v1/mofa-travel-safety/travel-alerts", handleMofaTravelAlarmRoute);
+  app.get("/v1/consumer24/recalls", async (request, reply) => (
+    handleConsumer24XmlRoute({ request, reply, type: "recall" })
+  ));
+  app.get("/v1/consumer24/goods", async (request, reply) => (
+    handleConsumer24XmlRoute({ request, reply, type: "goods" })
+  ));
 
   async function handleKoreanLawRoute({ endpoint, normalize, cacheRoute, request, reply }) {
     let normalized;
@@ -6401,7 +6246,8 @@ module.exports = {
   normalizeKosisMetaQuery,
   normalizeKosisSearchQuery,
   normalizeKoreanHolidayQuery,
-  normalizeKamisQuery,
+  normalizeConsumer24GoodsQuery,
+  normalizeConsumer24RecallQuery,
   normalizeKopisDetailQuery,
   normalizeKopisListQuery,
   normalizeKstartupQuery,

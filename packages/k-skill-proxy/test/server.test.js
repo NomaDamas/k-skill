@@ -45,7 +45,9 @@ const {
   proxySeoulBikeRealtimeRequest,
   proxySeoulBikeStationsRequest,
   proxySeoulCityDataRequest,
-  proxySeoulSubwayRequest
+  proxySeoulSubwayRequest,
+  normalizeConsumer24RecallQuery,
+  normalizeConsumer24GoodsQuery
 } = require("../src/server");
 const {
   buildCoupangAuthorization,
