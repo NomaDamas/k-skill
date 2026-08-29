@@ -4476,8 +4476,8 @@ test("rhwp feature docs, README, install, roadmap, and sources are wired for the
 
   assert.match(readme, /\| HWP 문서 편집 \|/);
   assert.match(readme, /\| HWP 레이아웃·IR 디버깅 \|/);
-  assert.match(readme, /\[HWP 문서 편집\]\(docs\/features\/rhwp-edit\.md\)/);
-  assert.match(readme, /\[HWP 레이아웃·IR 디버깅\]\(docs\/features\/rhwp-advanced\.md\)/);
+  assert.match(readme, /\[HWP 문서 편집 가이드\]\(docs\/features\/rhwp-edit\.md\)/);
+  assert.match(readme, /\[HWP 레이아웃·IR 디버깅 가이드\]\(docs\/features\/rhwp-advanced\.md\)/);
 
   assert.match(install, /--skill rhwp-edit/);
   assert.match(install, /--skill rhwp-advanced/);
