@@ -878,8 +878,8 @@ test("repository docs advertise the MFDS public-health skills and mandatory symp
   assert.ok(fs.existsSync(foodFeaturePath), "expected docs/features/mfds-food-safety.md to exist");
   assert.match(readme, /\| \[의약품 안전 체크\]\(docs\/features\/mfds-drug-safety\.md\) \|/);
   assert.match(readme, /\| \[식품 안전 체크\]\(docs\/features\/mfds-food-safety\.md\) \|/);
-  assert.match(readme, /\| \[의약품 안전 체크\]\(docs\/features\/mfds-drug-safety\.md\) \| .* \| 불필요 \|/);
-  assert.match(readme, /\| \[식품 안전 체크\]\(docs\/features\/mfds-food-safety\.md\) \| .* \| 불필요 \|/);
+  assert.match(readme, /\| \[의약품 안전 체크\]\(docs\/features\/mfds-drug-safety\.md\) \|/);
+  assert.match(readme, /\| \[식품 안전 체크\]\(docs\/features\/mfds-food-safety\.md\) \|/);
   assert.match(install, /--skill mfds-drug-safety/);
   assert.match(install, /--skill mfds-food-safety/);
   assert.match(sources, /15075057\/openapi\.do/);
@@ -919,7 +919,7 @@ test("seoul subway docs default to the hosted proxy when KSKILL_PROXY_BASE_URL i
   const proxyReadme = read(path.join("packages", "k-skill-proxy", "README.md"));
   const secretsExample = read(path.join("examples", "secrets.env.example"));
 
-  assert.match(readme, /\| \[서울 지하철 도착정보 조회\]\(docs\/features\/seoul-subway-arrival\.md\) \| .* \| 불필요 \|/);
+  assert.match(readme, /\| \[서울 지하철 도착정보 조회\]\(docs\/features\/seoul-subway-arrival\.md\) \|/);
   assert.match(setup, /\| 서울 지하철 도착정보 조회 \| 사용자 시크릿 불필요 \(기본 hosted proxy 사용, 운영자만 `SEOUL_OPEN_API_KEY`\) \|/);
   assert.match(install, /--skill seoul-subway-arrival/);
 
@@ -2438,7 +2438,7 @@ test("repository docs advertise the korean-law-search skill via k-skill-proxy", 
   assert.ok(fs.existsSync(featureDocPath), "expected docs/features/korean-law-search.md to exist");
   assert.match(readme, /\| \[한국 법령 검색\]\(docs\/features\/korean-law-search\.md\) \|/);
   assert.match(readme, /\[한국 법령 검색\]\(docs\/features\/korean-law-search\.md\)/);
-  assert.match(readme, /\| \[한국 법령 검색\]\(docs\/features\/korean-law-search\.md\) \| .* \| 불필요 \|/);
+  assert.match(readme, /\| \[한국 법령 검색\]\(docs\/features\/korean-law-search\.md\) \|/);
   assert.match(install, /--skill korean-law-search/);
   assert.match(install, /k-skill-proxy\.nomadamas\.org/);
   assert.match(install, /운영자만 proxy 서버에 `LAW_OC`/);
@@ -4598,7 +4598,7 @@ test("README skill table header advertises the new 스킬 이름 column (issue #
 
   assert.match(
     readme,
-    /\| 할 수 있는 일 \| 스킬 이름 \| 설명 \| 사용자 로그인 \|\n\| --- \| --- \| --- \| --- \|/,
+    /\| 할 수 있는 일 \| 스킬 이름 \| 설명 \|\n\| --- \| --- \| --- \|/,
     "expected the 어떤 걸 할 수 있나 table header to include 스킬 이름 between 할 수 있는 일 and 설명 with a 5-column separator",
   );
 });
