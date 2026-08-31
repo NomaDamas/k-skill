@@ -1,0 +1,6 @@
+{
+  "name": "nongsaro-search",
+  "description": "농촌진흥청 농사로 Open API로 작목·병해충·농업기술 정보를 조회한다. 현재는 API 키와 서비스 계약을 확정하는 draft scaffold다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: nongsaro-search\ndescription: 농촌진흥청 농사로 Open API로 작목·병해충·농업기술 정보를 조회한다. 현재는 API 키와 서비스 계약을 확정하는 draft scaffold다.\nlicense: MIT\nmetadata:\n  category: agriculture\n  locale: ko-KR\n  phase: draft"
+}

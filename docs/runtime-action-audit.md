@@ -117,6 +117,7 @@
 | `naver-news-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `naver-shopping-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
 | `nhis-care-checkup-search` | `lookup` | 장기요양기관·건강검진기관 후보와 공개 정보를 조회 |
+| `nongsaro-search` | `lookup` | 농사로 작목·병해충·농업기술 정보 조회 완료 |
 | `nts-business-registration` | `submission` | 공식 폼·첨부 준비 → `clarify` 후 제출/결제/취소 |
 | `nts-tax-delinquency` | `submission` | 공식 폼·첨부 준비 → `clarify` 후 제출/결제/취소 |
 | `ohou-today-deal` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
