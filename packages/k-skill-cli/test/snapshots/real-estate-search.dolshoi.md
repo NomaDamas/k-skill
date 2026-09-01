@@ -11,6 +11,11 @@ Runtime mode: dolshoi (CloakBrowser available)
 - Plain lookups go through the hosted `k-skill-proxy` (`https://k-skill-proxy.nomadamas.org`) by default; no user API key is needed. Set `KSKILL_PROXY_BASE_URL` only for a self-hosted or alternate proxy. Direct upstream calls require the skill-documented API key.
 - This skill is lookup-oriented. Completion means the requested data is retrieved, summarized with its source (table/endpoint, period, unit), and any requested follow-up action is connected to the official surface that supports it.
 
+## Bundled asset access
+
+- Execute bundled helpers only through `npx -y @nomadamas/k-skill@0 exec real-estate-search scripts/<file> -- <args>`; do not assume a repository-relative or installed-skill-relative path.
+- Resolve an asset path with `npx -y @nomadamas/k-skill@0 path real-estate-search <relative-path>` only when another tool explicitly requires a filesystem path.
+
 # Korean Real Estate Search
 
 ## What this skill does
@@ -41,9 +46,26 @@ Runtime mode: dolshoi (CloakBrowser available)
 
 ## Prerequisites
 
-없음. 사용자는 별도 API key를 준비할 필요가 없다. upstream key는 proxy 서버에서만 주입한다.
+없음. 사용자는 별도 API key를 준비할 필요가 없다. 개별 조회의 upstream key는 proxy 서버에서만 주입하며, 전국 일일 보고는 아래 공식 RTMS CSV를 직접 사용한다.
 
-## Default path
+## 전국 일일 보고 — 공식 RTMS CSV 직접 조회
+
+proxy나 ServiceKey 없이 국토교통부 실거래가 자료제공 화면의 실제 CSV 응답을 집계한다.
+
+```bash
+npx -y @nomadamas/k-skill@0 exec real-estate-search scripts/nationwide_daily_report.py -- --as-of YYYY-MM-DD
+```
+
+`--as-of`를 생략하면 KST 오늘을 사용한다. 공식 시·도/시·군·구 목록을 조회한 뒤 아파트·오피스텔·연립다세대·단독다가구의 매매·전월세 8개 조합을 전국 일괄 CSV로 실행한다. 현재 월이 0건이면 직전 월을 한 번 확인한다.
+
+- `success`: CSV를 내려받아 파싱한 조합. 지역별 0건은 `empty`로 집계한다.
+- `empty`: 현재 월과 직전 월의 공식 건수가 모두 0인 조합.
+- `failure`: 네트워크, HTTP, 응답 크기, JSON/CSV 계약 또는 건수 불일치 오류.
+- `unexecuted`: 실행 결과가 없는 조합. 실패나 빈 결과를 이 상태로 바꾸지 않는다.
+
+한 조합이라도 실패하면 보고서는 성공/빈 결과/실패 범위를 모두 출력하고 종료코드 1을 반환한다. 원문 근거는 실제로 접속한 `https://rt.molit.go.kr/pt/xls/xls.do`로 고정한다.
+
+## 개별 조회 기본 경로
 
 추가 client API 레이어는 불필요하다. 그냥 프록시 서버에 HTTP 요청만 넣으면 된다.
 
@@ -169,17 +191,20 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/real-estate/officetel/re
 - 프록시 서버에 `DATA_GO_KR_API_KEY` 가 없으면 503 응답
 - upstream MOLIT API 오류면 502 + `molit_api_XXX` 에러 코드
 - 해당 지역/기간에 데이터가 없으면 빈 `items` 배열 반환
+- 전국 일일 보고의 공식 RTMS 응답이 실패하거나 계약과 다르면 해당 조합을 `failure`로 유지하고 누락 수치나 더미 데이터를 만들지 않는다.
 
 ## Done when
 
 - 요청 자산 타입에 맞는 endpoint를 선택했다.
 - 필요한 경우 `region-code` 로 지역코드를 먼저 확인했다.
 - 실거래가/전월세 결과를 조회하고 요약했다.
+- 전국 일일 보고 요청이면 공식 RTMS CSV helper를 실행하고 success/empty/failure/unexecuted를 구분했다.
 - 원본 데이터 출처(국토교통부 실거래가 신고)를 함께 남겼다.
 
 ## Notes
 
 - 원본 참고: `https://github.com/tae0y/real-estate-mcp/tree/main`
 - 공식 데이터 출처: 공공데이터포털 (`https://www.data.go.kr`)
+- 공식 RTMS CSV 자료제공: `https://rt.molit.go.kr/pt/xls/xls.do`
 - 가격 단위: `price_10k`, `deposit_10k` = 만원 단위 (예: 245000 = 24억 5천만원)
 - 취소된 거래는 서버에서 자동 필터링된다.
