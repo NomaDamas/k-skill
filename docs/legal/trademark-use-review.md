@@ -121,7 +121,6 @@ k-skill이 제3자 표장을 **자기 서비스의 출처표시로 사용하지 
 | `korean-cinema-search` | CGV, 메가박스, 롯데시네마 |
 | `korean-stock-search` | KRX / 한국거래소 |
 | `korean-transit-route` | ODsay, 카카오 |
-| `ktx-booking` | KTX, 코레일 / Korail |
 | `lck-analytics` | LCK, Riot Games, LoL Esports |
 | `lotto-results` | 로또 6/45 / Lotto |
 | `market-kurly-search` | 마켓컬리 / Market Kurly |
@@ -134,7 +133,7 @@ k-skill이 제3자 표장을 **자기 서비스의 출처표시로 사용하지 
 | `olive-young-search` | 올리브영 / Olive Young |
 | `popbill` | 팝빌 / Popbill |
 | `saramin-talent-search` | 사람인 / Saramin |
-| `srt-booking` | SRT / SR |
+| `railway-timetable` | KTX, 코레일 / Korail, SRT / SR |
 | `ticket-availability` | YES24, 인터파크 |
 | `toss-investment` | 토스증권 / Toss Securities |
 

@@ -5,7 +5,7 @@
 권장 순서는 아래와 같다.
 
 1. Node.js 18 이상과 `npx`가 사용 가능한지 확인한다.
-2. KTX·SRT 스킬을 사용할 경우 Python 3.11 이상과 `uv`가 사용 가능한지 확인한다.
+2. 철도 통합 시간표 스킬을 사용할 경우 Python 3.11 이상과 `uv`가 사용 가능한지 확인한다.
 3. `k-skill` 전체 스킬을 먼저 설치한다.
 4. 설치가 끝나면 `k-skill-setup` 스킬을 사용해 공통 설정을 마친다.
 5. 그 다음 필요한 기능 스킬을 호출한다.
@@ -114,8 +114,7 @@ npx --yes skills add NomaDamas/k-skill \
 ```bash
 npx --yes skills add NomaDamas/k-skill \
   --skill k-skill-setup \
-  --skill srt-booking \
-  --skill ktx-booking \
+  --skill railway-timetable \
   --skill express-bus-booking \
   --skill intercity-bus-booking \
   --skill foresttrip-vacancy \
@@ -153,7 +152,7 @@ npx -y @nomadamas/k-skill@0 instruct <skill-name>
 npx -y @nomadamas/k-skill@0 list
 
 # 현재 환경에 맞는 instruction 확인
-npx -y @nomadamas/k-skill@0 instruct srt-booking
+npx -y @nomadamas/k-skill@0 instruct railway-timetable
 
 # npm 패키지에 동봉된 helper 실행
 npx -y @nomadamas/k-skill@0 exec \
@@ -181,7 +180,7 @@ npm 접근이 제한되거나 반복 호출 비용을 피해야 하면 선택적
 ```bash
 npm install -g @nomadamas/k-skill@0
 k-skill list
-k-skill instruct srt-booking
+k-skill instruct railway-timetable
 k-skill exec kosis-stats scripts/run_kosis_stats.py -- --help
 k-skill read kosis-stats references/kosis-openapi-guide.md
 ```
@@ -475,8 +474,7 @@ npx -y @nomadamas/k-skill@0 exec korean-character-count scripts/korean_character
 
 먼저 `k-skill-setup`을 따라야 하는 스킬:
 
-- `srt-booking`
-- `ktx-booking`
+- `railway-timetable`
 - `seoul-subway-arrival`
 - `seoul-density`
 - `seoul-bike`

@@ -1,0 +1,8 @@
+{
+  "name": "railway-timetable",
+  "description": "Read-only unified KTX and SRT railway timetable lookup with official Korail plan schedules and anonymous SRTrain live results. No reservation, payment, cancellation, or seat holding.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: railway-timetable\ndescription: Read-only unified KTX and SRT railway timetable lookup with official Korail plan schedules and anonymous SRTrain live results. No reservation, payment, cancellation, or seat holding.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
+}

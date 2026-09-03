@@ -135,8 +135,7 @@ bash scripts/check-setup.sh
 
 ## 다음에 볼 문서
 
-- [SRT 라이브 시간표 조회 가이드](features/srt-booking.md) — credential 불필요
-- [KTX 공식 시간표 조회 가이드](features/ktx-booking.md) — credential 불필요
+- [철도 통합 시간표 조회 가이드](features/railway-timetable.md) — credential 불필요
 - [고속버스 예매 가이드](features/express-bus-booking.md)
 - [시외버스 예매 가이드](features/intercity-bus-booking.md)
 - [자연휴양림 빈 객실 조회 가이드](features/foresttrip-vacancy.md)
