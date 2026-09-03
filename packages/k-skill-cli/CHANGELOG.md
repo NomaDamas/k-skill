@@ -1,5 +1,11 @@
 # @nomadamas/k-skill
 
+## 0.6.0
+
+### Minor Changes
+
+- 986e795: Add the official RTMS nationwide daily report helper to the real-estate-search CLI bundle.
+
 ## 0.5.0
 
 ### Minor Changes
