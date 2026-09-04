@@ -420,7 +420,7 @@ export TOSSINVEST_ACCOUNT=...          # 선택, 계좌·자산·주문조회 �
 uv --version
 ```
 
-KTX·SRT 스킬은 Python 3.11 이상과 [`uv`](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. `uv`가 KTX 공식 XLSX parser의 `openpyxl`과 SRT 익명 search client인 `SRTrain`을 자동 설치하며 철도 회원 ID·비밀번호는 필요하지 않습니다.
+철도 통합 시간표 스킬은 Python 3.11 이상과 [`uv`](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. `uv`가 코레일 공식 XLSX parser의 `openpyxl`을 자동 설치하며 철도 회원 ID·비밀번호는 필요하지 않습니다.
 
 조선왕조실록 검색 helper는 설치된 `joseon-sillok-search` skill 안의 `scripts/sillok_search.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
 

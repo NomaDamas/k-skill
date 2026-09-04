@@ -120,8 +120,6 @@ def parse_timetable_rows(
                 if section.type_index >= 0
                 else "KTX"
             )
-            if "KTX" not in train_type:
-                continue
             if section.note_index >= 0 and not runs_on_date(row[section.note_index], requested_date):
                 continue
             dep_time = normalize_time(row[section.dep_index])

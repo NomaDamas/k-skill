@@ -134,7 +134,7 @@
 | `seoul-subway-arrival` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `seoul-weather-risk` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `sh-notice-search` | `submission` | 공식 폼·첨부 준비 → `clarify` 후 제출/결제/취소 |
-| `railway-timetable` | `lookup` | 코레일 공개 XLSX와 SRTrain 익명 라이브 검색으로 KTX·SRT 시간표를 통합 조회; 예약·결제·취소 없음 |
+| `railway-timetable` | `lookup` | 코레일 공식 통합 공개 XLSX로 KTX 계열 시간표를 조회; 예약·결제·취소 없음 |
 | `store-longevity-radar` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `subway-lost-property` | `lookup` | LOST112·운영기관 공식 표면의 검색 조건과 결과를 정리 |
 | `ticket-availability` | `booking` | 공식 일정·좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |

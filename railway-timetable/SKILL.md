@@ -1,6 +1,6 @@
 ---
 name: railway-timetable
-description: Read-only unified KTX and SRT railway timetable lookup with official Korail plan schedules and anonymous SRTrain live results. No reservation, payment, cancellation, or seat holding.
+description: Read-only Korail integrated railway timetable lookup covering KTX-family trains. No reservation, payment, cancellation, or seat holding.
 license: MIT
 metadata:
   category: travel

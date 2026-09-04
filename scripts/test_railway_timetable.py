@@ -1,5 +1,4 @@
 import importlib.util
-import json
 import sys
 import unittest
 from pathlib import Path
@@ -16,71 +15,39 @@ SPEC.loader.exec_module(railway_timetable)
 
 
 class RailwayTimetableTests(unittest.TestCase):
-    def test_parser_accepts_each_operator_and_both(self) -> None:
+    def test_parser_uses_korail_as_the_only_operator(self) -> None:
         parser = railway_timetable.build_parser()
 
-        for operator in ("ktx", "srt", "both"):
-            args = parser.parse_args([
-                "--operator",
-                operator,
-                "source",
-            ])
-            self.assertEqual(args.operator, operator)
+        args = parser.parse_args(["source"])
 
-    def test_source_combines_operator_metadata_without_mutation(self) -> None:
-        with (
-            mock.patch.object(
-                railway_timetable,
-                "source_for_operator",
-                side_effect=[
-                    {"mode": "plan", "operator": "한국철도공사"},
-                    {"mode": "live", "operator": "주식회사 에스알"},
-                ],
-            ),
-        ):
-            result = railway_timetable.source_info("both")
+        self.assertFalse(hasattr(args, "operator"))
 
-        self.assertEqual(result["operators"], ["ktx", "srt"])
-        self.assertEqual(
-            [item["operator"] for item in result["sources"]],
-            ["한국철도공사", "주식회사 에스알"],
-        )
+    def test_source_uses_integrated_korail_metadata(self) -> None:
+        result = railway_timetable.source_info()
 
-    def test_both_search_returns_explicit_operator_on_each_train(self) -> None:
-        ktx = {
+        self.assertEqual(result["operator"], "한국철도공사")
+        self.assertEqual(result["transport"], "Korail integrated timetable")
+
+    def test_search_delegates_to_integrated_korail_backend(self) -> None:
+        korail = {
             "count": 1,
-            "trains": [{"train_no": "1", "dep_time": "06:00"}],
+            "trains": [{"train_no": "601", "dep_time": "05:08"}],
             "source": {"operator": "한국철도공사"},
             "booking_url": "https://www.korail.com/ticket/search",
         }
-        srt = {
-            "count": 1,
-            "trains": [{"train_no": "303", "dep_time": "06:10"}],
-            "source": {"operator": "주식회사 에스알"},
-            "booking_url": "https://etk.srail.kr/",
-        }
 
-        with mock.patch.object(
-            railway_timetable,
-            "search_operator",
-            side_effect=[ktx, srt],
-        ):
+        with mock.patch.object(railway_timetable.ktx_backend, "search_public_timetable", return_value=korail) as search:
             result = railway_timetable.search(
-                operator="both",
-                dep="서울",
-                arr="부산",
-                date="20260904",
-                earliest="0600",
+                dep="수서",
+                arr="광주송정",
+                date="20260905",
+                earliest="0000",
                 latest="1200",
                 limit=5,
             )
 
-        self.assertEqual(result["count"], 2)
-        self.assertEqual(
-            [(train["operator"], train["train_no"]) for train in result["trains"]],
-            [("ktx", "1"), ("srt", "303")],
-        )
-        self.assertEqual(json.loads(json.dumps(result))["count"], 2)
+        search.assert_called_once()
+        self.assertEqual(result["count"], 1)
 
 
 if __name__ == "__main__":

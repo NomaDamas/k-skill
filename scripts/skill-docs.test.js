@@ -1161,7 +1161,7 @@ test("repository docs advertise the unified railway read-only lookup skill as su
   assert.match(install, /--skill railway-timetable/);
 });
 
-test("railway-timetable docs enforce unified read-only lookup", () => {
+test("railway-timetable docs enforce Korail integrated read-only lookup", () => {
   const skillPath = path.join(repoRoot, "railway-timetable", "SKILL.md");
   const helperPath = path.join(repoRoot, "railway-timetable", "scripts", "railway_timetable.py");
 
@@ -1178,17 +1178,16 @@ test("railway-timetable docs enforce unified read-only lookup", () => {
   assert.deepEqual(manifest.profiles, ["lookup"]);
 
   for (const doc of [instruction, featureDoc]) {
-    assert.match(doc, /@nomadamas\/k-skill@0 exec railway-timetable scripts\/railway_timetable\.py --\s*\\?\s+--operator both search/);
+    assert.match(doc, /@nomadamas\/k-skill@0 exec railway-timetable scripts\/railway_timetable\.py --\s*\\?\s+search/);
     assert.match(doc, /조회 전용/);
     assert.match(doc, /KTX/);
-    assert.match(doc, /SRT/);
+    assert.match(doc, /코레일/);
     assert.match(doc, /예약.*(?:결제|취소).*실행하지 않는다|예약.*결제.*취소.*없/);
     assert.doesNotMatch(doc, /--train-id|--try-waiting/);
   }
 
-  assert.match(helper, /search_operator/);
   assert.match(helper, /ktx_backend/);
-  assert.match(helper, /srt_backend/);
+  assert.doesNotMatch(helper, /srt_backend|SRTrain/);
   assert.match(helper, /def build_parser/);
   assert.doesNotMatch(helper, /reserve|cancel|payment|login/);
 });
