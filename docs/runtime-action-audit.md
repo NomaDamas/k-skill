@@ -98,8 +98,8 @@
 | `korean-transit-route` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `kosis-stats` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `kr-whois-lookup` | `lookup` | 공개 WHOIS 등록정보 조회 완료 |
+| `komsa-ferry-info` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `kstartup-search` | `submission` | 공식 폼·첨부 준비 → `clarify` 후 제출/결제/취소 |
-| `ktx-booking` | `lookup` | 코레일 공식 공개 XLSX에서 요청 구간의 계획 시간표 조회 완료 |
 | `lck-analytics` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `lh-notice-search` | `submission` | 공식 폼·첨부 준비 → `clarify` 후 제출/결제/취소 |
 | `library-book-search` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
@@ -135,7 +135,7 @@
 | `seoul-subway-arrival` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `seoul-weather-risk` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `sh-notice-search` | `submission` | 공식 폼·첨부 준비 → `clarify` 후 제출/결제/취소 |
-| `srt-booking` | `lookup` | SRTrain 익명 라이브 검색 전용; 시간표·좌석 가능 여부만 조회하고 예약·결제·취소 없음 |
+| `railway-timetable` | `lookup` | 코레일 공식 통합 공개 XLSX로 KTX 계열 시간표를 조회; 예약·결제·취소 없음 |
 | `store-longevity-radar` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `subway-lost-property` | `lookup` | LOST112·운영기관 공식 표면의 검색 조건과 결과를 정리 |
 | `ticket-availability` | `booking` | 공식 일정·좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |

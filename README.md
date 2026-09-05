@@ -3,7 +3,7 @@
 ![k-skill thumbnail](docs/assets/k-skill-thumbnail.png)
 
 한국인인가요? 이 스킬 모음집을 다운로드 받아 두세요. 언젠가 **무조건** 쓸 때가 옵니다!
-SRT, KTX, KBO, 로또, 당근, 쿠팡, 카톡, 정부24, 홈택스 등등 귀찮은 것을 AI 에이전트에게 다 시켜버리세요.
+KTX, KBO, 로또, 당근, 쿠팡, 카톡, 정부24, 홈택스 등등 귀찮은 것을 AI 에이전트에게 다 시켜버리세요.
 
 Claude Code, Codex, OpenCode, OpenClaw/ClawHub 등 각종 코딩 에이전트 지원합니다.
 
@@ -12,7 +12,7 @@ Claude Code, Codex, OpenCode, OpenClaw/ClawHub 등 각종 코딩 에이전트 �
 공개 API 프록시를 사용하는 스킬의 개인정보 처리 기준은
 [k-skill-proxy 개인정보 처리방침](https://k-skill-proxy.nomadamas.org/privacy)에서 확인할 수 있습니다.
 
-> **KTX와 SRT는 조회 전용 스킬입니다.** KTX는 코레일 공식 계획 시간표를, SRT는 라이브 시간표와 일반실·특실 이용 가능 여부를 조회하며 로그인·예약·예약대기·결제·취소는 수행하지 않습니다.
+> **철도 통합 시간표는 조회 전용 스킬입니다.** KTX는 코레일 공식 계획 시간표를 조회하며 로그인·예약·예약대기·결제·취소는 수행하지 않습니다.
 
 ## 설치
 
@@ -21,10 +21,10 @@ Claude Code, Codex, OpenCode, OpenClaw/ClawHub 등 각종 코딩 에이전트 �
 npx --yes skills add NomaDamas/k-skill --all -g
 
 # 특정 스킬만 설치
-npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
+npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 ```
 
-기본 설치에는 Node.js 18 이상과 `npx`만 필요합니다. KTX 공식 시간표와 SRT 라이브 조회 helper를 실행할 때는 Python 3.11 이상과 `uv`가 추가로 필요합니다. Claude Code 사용자는 아래 마켓플레이스로도 설치할 수 있습니다. 자세한 방법은 [설치 방법](docs/install.md)을 참고하세요.
+기본 설치에는 Node.js 18 이상과 `npx`만 필요합니다. KTX 공식 시간표 helper를 실행할 때는 Python 3.11 이상과 `uv`가 추가로 필요합니다. Claude Code 사용자는 아래 마켓플레이스로도 설치할 수 있습니다. 자세한 방법은 [설치 방법](docs/install.md)을 참고하세요.
 
 ## 잠깐만~~~
 
@@ -41,8 +41,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
-| [SRT 라이브 시간표 조회](docs/features/srt-booking.md) | `srt-booking` | SRTrain 검색 경로 기반 시간표·일반실/특실 가능 여부 조회 전용 |
-| [KTX 공식 시간표 조회](docs/features/ktx-booking.md) | `ktx-booking` | 코레일 공개 XLSX 기반 계획 시간표 조회 전용 |
+| [철도 통합 시간표 조회](docs/features/railway-timetable.md) | `railway-timetable` | KTX 코레일 공식 공개 시간표 조회 전용 |
 | [고속버스 예매](docs/features/express-bus-booking.md) | `express-bus-booking` | KOBUS 배차·좌석·요금·임시 선점 조회와 예매 지원 |
 | [시외버스 예매](docs/features/intercity-bus-booking.md) | `intercity-bus-booking` | 티머니 배차·좌석·요금·임시 선점 조회와 예매 지원 |
 | [항공권 가격 조회](docs/features/flight-ticket-search.md) | `flight-ticket-search` | `fast-flights` 기반 Google Flights 공개 검색으로 항공권 후보, 예약 검색 링크, 날짜/월/연도별 최저가·평균가 비교 (조회 전용, 예매·결제 없음) |
@@ -55,6 +54,7 @@ npx --yes skills add NomaDamas/k-skill --skill srt-booking -g
 | [한국 대중교통 길찾기](docs/features/korean-transit-route.md) | `korean-transit-route` | ODsay LIVE API + Kakao geocoding 기반 출발지→도착지 지하철+버스+도보 경로 및 환승 정보 조회 |
 | [카카오맵 장소·자동차 길찾기](docs/features/kakao-map.md) | `kakao-map` | Kakao Local 키워드/카테고리/좌표↔주소 변환 + Kakao Mobility 자동차 길찾기(거리·소요시간·통행료·예상 택시요금) |
 | [고속도로 교통량·소통·CCTV 조회](docs/features/highway-traffic-status.md) | `highway-traffic-status` | 한국도로공사·ITS 공개 API로 고속도로 구간별 실시간 속도/교통량/정체 등급과 CCTV 스트림 메타데이터 조회 |
+| [KOMSA 연안여객선 정보 조회](docs/features/komsa-ferry-info.md) | `komsa-ferry-info` | KOMSA MTIS 공식 API로 연안여객선 운항 일정·선박·기항지·항로·운항상태 조회(프록시 경유) |
 | [근처 가장 싼 주유소 찾기](docs/features/cheap-gas-nearby.md) | `cheap-gas-nearby` | 현재 위치 기준 근처 최저가 주유소 조회 |
 | [근처 공영주차장 찾기](docs/features/parking-lot-search.md) | `parking-lot-search` | 현재 위치 기준 근처 공영주차장 위치·요금·운영시간 조회 |
 | [전기차 충전소 위치·상태 조회](docs/features/ev-charger-nearby.md) | `ev-charger-nearby` | 지역·충전소 기준 전기차 충전소 정보와 충전기 현재 상태 조회 (공공데이터포털 15076352, 프록시 경유) |

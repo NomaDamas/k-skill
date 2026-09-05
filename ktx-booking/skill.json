@@ -1,8 +1,0 @@
-{
-  "name": "ktx-booking",
-  "description": "Read-only KTX operating-timetable lookup from official Korail public XLSX attachments. No login, internal mobile API, anti-bot bypass, live seat availability, reservation, or payment.",
-  "profiles": [
-    "lookup"
-  ],
-  "frontmatter": "name: ktx-booking\ndescription: Read-only KTX operating-timetable lookup from official Korail public XLSX attachments. No login, internal mobile API, anti-bot bypass, live seat availability, reservation, or payment.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
-}
