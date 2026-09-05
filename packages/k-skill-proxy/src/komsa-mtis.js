@@ -9,6 +9,31 @@ const DATASETS = Object.freeze({
   status: "oprt-stts-info"
 });
 
+const DATASET_PARAMETERS = Object.freeze({
+  schedules: {
+    rlvtYmd: ["rlvtYmd", "rlvt_ymd", "date"],
+    psnshpNm: ["psnshpNm", "psnshp_nm", "vessel", "vesselName"]
+  },
+  vessels: {
+    psnshpNm: ["psnshpNm", "psnshp_nm", "vessel", "vesselName"]
+  },
+  ports: {
+    portclNm: ["portclNm", "portcl_nm", "port", "portName"],
+    admdstCtpvNm: ["admdstCtpvNm", "admdst_ctpv_nm", "region", "regionName"]
+  },
+  "license-routes": {
+    lcnsSeawyNm: ["lcnsSeawyNm", "lcns_seawy_nm", "route", "routeName"]
+  },
+  "operation-routes": {
+    nvgSeawyNm: ["nvgSeawyNm", "nvg_seawy_nm", "route", "routeName"]
+  },
+  status: {
+    rlvtYmd: ["rlvtYmd", "rlvt_ymd", "date"],
+    sailTm: ["sailTm", "sail_tm", "time"],
+    psnshpNm: ["psnshpNm", "psnshp_nm", "vessel", "vesselName"]
+  }
+});
+
 function text(value) {
   const normalized = String(value ?? "").trim();
   return normalized || undefined;
@@ -44,18 +69,10 @@ function normalizeKomsaFerryQuery(dataset, query = {}) {
     pageNo: positive(query.pageNo ?? query.page, 1, 1000, "pageNo"),
     numOfRows: positive(query.numOfRows ?? query.limit, 10, 100, "numOfRows")
   };
-  const aliases = {
-    rlvt_ymd: ["rlvt_ymd", "date"],
-    psnshp_nm: ["psnshp_nm", "vessel", "vesselName"],
-    psnshp_cd: ["psnshp_cd", "vesselCode"],
-    lcns_seawy_nm: ["lcns_seawy_nm", "route", "routeName"],
-    lcns_seawy_cd: ["lcns_seawy_cd", "routeCode"],
-    oport_nm: ["oport_nm", "port", "portName"],
-    oport_cd: ["oport_cd", "portCode"]
-  };
-  for (const [target, keys] of Object.entries(aliases)) {
+  for (const [target, keys] of Object.entries(DATASET_PARAMETERS[dataset])) {
     const value = keys.map((key) => text(query[key])).find(Boolean);
-    if (value) normalized[target] = target === "rlvt_ymd" ? date(value, "date") : value;
+    if (!value) continue;
+    normalized[target] = target === "rlvtYmd" ? date(value, "date") : value;
   }
   return normalized;
 }
@@ -63,7 +80,7 @@ function normalizeKomsaFerryQuery(dataset, query = {}) {
 function extractItems(payload) {
   const header = payload?.response?.header || {};
   const code = String(header.resultCode ?? "").trim();
-  if (code && !["00", "0", "03"].includes(code)) {
+  if (code && !["00", "0", "03", "200"].includes(code)) {
     return { error: "upstream_error", message: `KOMSA MTIS returned ${code}: ${header.resultMsg || "unknown error"}.` };
   }
   const body = payload?.response?.body || {};

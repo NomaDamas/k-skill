@@ -72,6 +72,8 @@ ASK 서울 기상 위험 시간대 조회는 기본 hosted proxy를 사용하므
 
 한국 특허 정보 검색의 KIPRIS Plus 경로용 `KIPRIS_PLUS_API_KEY` 는 helper가 읽는 표준 변수명이다. 실제 HTTP 요청에서는 같은 값을 `ServiceKey` 쿼리 파라미터로 보낸다. 공공데이터포털에서 복사한 percent-encoded key도 helper가 한 번 정규화해서 그대로 쓸 수 있다.
 
+KOMSA MTIS 연안여객선 정보 조회는 기본 hosted proxy를 사용하므로 일반 사용자는 키가 필요 없다. self-host proxy 운영자만 KOMSA MTIS 포털에서 발급받은 키를 서버 `.env`에 `KOMSA_MTIS_API_KEY=...`로 설정한다(호환 변수명: `KSKILL_KOMSA_MTIS_API_KEY`). 키를 클라이언트 요청의 `serviceKey`, URL, CLI 인자에 넣지 않는다.
+
 ## 브라우저 런타임
 
 돌쇠에서는 내장 browser tool의 CloakBrowser를 최우선으로 쓴다. 내장 tool이 CloakBrowser를 제공하거나 `CLOAKBROWSER_PEEK_TOKEN`이 있으면 `k-skill-browser-runtime`보다 먼저 사용한다.
@@ -128,6 +130,7 @@ bash scripts/check-setup.sh
 | 도서관 도서 조회 | 사용자 시크릿 불필요 (프록시에 `DATA4LIBRARY_AUTH_KEY`가 설정된 hosted/self-host 사용) |
 | 의약품 안전 체크 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`가 설정된 hosted/self-host 사용) |
 | 식품 안전 체크 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`와 선택적 `FOODSAFETYKOREA_API_KEY`가 설정된 hosted/self-host 사용) |
+| KOMSA 연안여객선 운항정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KOMSA_MTIS_API_KEY`) |
 | 창업진흥원 K-Startup 조회 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`가 설정된 hosted/self-host 사용; `--direct` 호출 때만 `KSKILL_KSTARTUP_API_KEY`) |
 | 전기차 충전소 위치·상태 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct` 때만 `KSKILL_EV_CHARGER_API_KEY` 또는 `DATA_GO_KR_API_KEY`, 데이터셋 `15076352` 별도 활용신청) |
 | 건축물대장 표제부 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct` 때만 `KSKILL_BUILDING_REGISTER_API_KEY` 또는 `DATA_GO_KR_API_KEY`, 데이터셋 `15134735` 별도 활용신청) |

@@ -85,6 +85,7 @@ client/skill -> k-skill-proxy -> upstream public API
 - `DATA_GO_KR_API_KEY=...` (WHOIS `15094277`, 특일 `15012690`, 장기요양 `15059029`, 검진기관 `15154419`, EV 충전소 `15076352`, 건축물대장 `15134735` 등 route별 공공데이터포털 활용신청 승인 필요)
 - `ASSEMBLY_API_KEY=...` 또는 `KSKILL_ASSEMBLY_API_KEY=...` (열린국회정보 Open API)
 - `KOPIS_API_KEY=...` 또는 `KSKILL_KOPIS_API_KEY=...` (KOPIS Open API)
+- `KOMSA_MTIS_API_KEY=...` 또는 `KSKILL_KOMSA_MTIS_API_KEY=...` (KOMSA MTIS Open API)
 - `FOODSAFETYKOREA_API_KEY=...` (선택: 식품안전나라 회수 live 결과, 없으면 sample fallback)
 - `KEDU_INFO_KEY=...` (나이스 교육정보 개방 포털 Open API 인증키)
 - `DATA4LIBRARY_AUTH_KEY=...` (도서관 정보나루 Open API 인증키)

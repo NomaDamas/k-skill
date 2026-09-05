@@ -19,12 +19,59 @@ test("normalizeKomsaFerryQuery allowlists datasets and normalizes filters", () =
     endpoint: "oprt-schd-info",
     pageNo: "2",
     numOfRows: "20",
-    rlvt_ymd: "20260824",
-    psnshp_nm: "섬사랑12호",
-    lcns_seawy_nm: "향화-낙월"
+    rlvtYmd: "20260824",
+    psnshpNm: "섬사랑12호"
   });
   assert.throws(() => normalizeKomsaFerryQuery("unknown", {}), /Unsupported dataset/);
   assert.throws(() => normalizeKomsaFerryQuery("schedules", { date: "2026-02-30" }), /valid date/);
+});
+
+test("fetchKomsaFerryInfo sends the official camelCase schedule parameters", async () => {
+  let requestedUrl;
+  const result = await fetchKomsaFerryInfo({
+    serviceKey: "test-key",
+    ...normalizeKomsaFerryQuery("schedules", {
+      date: "2026-08-24",
+      vessel: "섬사랑12호"
+    }),
+    fetchImpl: async (url) => {
+      requestedUrl = new URL(url);
+      return new Response(JSON.stringify({
+        response: {
+          header: { resultCode: "200", resultMsg: "NORMAL_SERVICE" },
+          body: { pageNo: 1, numOfRows: 1, totalCount: 0, items: { item: [] } }
+        }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(requestedUrl.searchParams.get("rlvtYmd"), "20260824");
+  assert.equal(requestedUrl.searchParams.get("psnshpNm"), "섬사랑12호");
+  assert.equal(requestedUrl.searchParams.get("rlvt_ymd"), null);
+  assert.equal(requestedUrl.searchParams.get("psnshp_nm"), null);
+});
+
+test("normalizeKomsaFerryQuery uses official parameter names per dataset", () => {
+  assert.equal(normalizeKomsaFerryQuery("ports", { port: "소청", region: "인천광역시" }).portclNm, "소청");
+  assert.equal(
+    normalizeKomsaFerryQuery("ports", { port: "소청", region: "인천광역시" }).admdstCtpvNm,
+    "인천광역시"
+  );
+  assert.equal(normalizeKomsaFerryQuery("license-routes", { route: "향화-낙월" }).lcnsSeawyNm, "향화-낙월");
+  assert.equal(normalizeKomsaFerryQuery("operation-routes", { route: "향화낙월" }).nvgSeawyNm, "향화낙월");
+  assert.deepEqual(
+    normalizeKomsaFerryQuery("status", { date: "2026-08-24", time: "730", vessel: "섬사랑12호" }),
+    {
+      dataset: "status",
+      endpoint: "oprt-stts-info",
+      pageNo: "1",
+      numOfRows: "10",
+      rlvtYmd: "20260824",
+      sailTm: "730",
+      psnshpNm: "섬사랑12호"
+    }
+  );
 });
 
 test("fetchKomsaFerryInfo injects the server key and parses JSON", async () => {
