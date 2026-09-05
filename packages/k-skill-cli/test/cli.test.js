@@ -88,15 +88,24 @@ test("dolshoi and generic runtime rules differ for vault/browser skills", () => 
   assert.doesNotMatch(dolshoi, /Do not automate payment here/);
 });
 
+test("generic browser instructions publish the platform-aware auto provider order", () => {
+  const generic = runtimeRulesSection(assemble("foresttrip-vacancy", GENERIC));
+
+  assert.match(generic, /On macOS it tries Aside Browser first/);
+  assert.match(generic, /then BrowserOS CDP/);
+  assert.match(generic, /then user-launched Chrome\/Chromium CDP/);
+  assert.match(generic, /on other platforms it tries BrowserOS CDP/);
+});
+
 test("bundledFiles lists helper files for directory-package skills", () => {
   const files = bundledFiles("kosis-stats").map((file) => file.split(path.sep).join("/"));
 
   assert.ok(files.some((f) => f.endsWith("scripts/run_kosis_stats.py")));
   assert.ok(files.some((f) => f.endsWith("references/kosis-openapi-guide.md")));
   assert.ok(
-    bundledFiles("srt-booking")
+    bundledFiles("railway-timetable")
       .map((file) => file.split(path.sep).join("/"))
-      .some((f) => f.endsWith("scripts/srt_booking.py")),
+      .some((f) => f.endsWith("scripts/railway_timetable.py")),
   );
 });
 
@@ -140,10 +149,8 @@ test("all bundled assets are exposed through exec/read/path instructions", () =>
     }
   }
 
-  // 82 source skill directories own assets; srt-booking, ktx-booking,
-  // fine-dust-location, and k-skill-setup additionally bundle legacy root
-  // helpers through skill.json mappings.
-  assert.equal(assetSkills, 88);
+  // Source skill directories own their bundled assets.
+  assert.equal(assetSkills, 87);
 });
 
 test("asset resolution rejects traversal and reads bundled references", () => {
@@ -219,13 +226,13 @@ test("CLI binary handles instruct, files, list, and errors", () => {
 
   const list = run(["list"]);
   assert.equal(list.status, 0);
-  assert.ok(list.stdout.includes("srt-booking"));
+  assert.ok(list.stdout.includes("railway-timetable"));
 
-  const generic = run(["instruct", "srt-booking"]);
+  const generic = run(["instruct", "railway-timetable"]);
   assert.equal(generic.status, 0);
   assert.match(generic.stdout, /Runtime mode: generic/);
 
-  const dolshoi = run(["instruct", "srt-booking"], { DOLSHOI_ACTION_BROKER_URL: "http://x" });
+  const dolshoi = run(["instruct", "railway-timetable"], { DOLSHOI_ACTION_BROKER_URL: "http://x" });
   assert.match(dolshoi.stdout, /Runtime mode: dolshoi/);
 
   const unknown = run(["instruct", "nope"]);

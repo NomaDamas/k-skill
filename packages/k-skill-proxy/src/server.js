@@ -2262,7 +2262,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
-  app.get("/health", async () => {
+  app.get("/health", async (request, reply) => {
+    if (!rateLimit(request, reply)) {
+      return reply;
+    }
     const naverSearchKeysPresent = Boolean(config.naverSearchClientId && config.naverSearchClientSecret);
     return {
       ok: true,

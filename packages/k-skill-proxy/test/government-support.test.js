@@ -7,7 +7,9 @@ const {
   parseNipaPage,
   parseKoccaPage,
   parseSmtechPage,
-  buildGovernmentSupportSurvey
+  buildGovernmentSupportSurvey,
+  fetchHtmlSourcePage,
+  fetchKstartupPage
 } = require("../src/government-support");
 const { buildServer } = require("../src/server");
 
@@ -72,6 +74,56 @@ test("public portal parsers return one stable normalized schema", () => {
   assert.equal(nipa[0].apply_end, "2026-09-17");
   assert.equal(kocca[0].source, "kocca");
   assert.equal(smtech[0].title, "AI R&D 지원");
+});
+
+test("KOCCA parser preserves two-digit live announcement dates", () => {
+  const [item] = parseKoccaPage(`
+    <tr><td><span class="category_color1">콘텐츠</span></td>
+    <td><a href="/kocca/pims/view.do?intcNo=5678&menuNo=204104">실시간 공고</a></td>
+    <td data-label="공고일">26.08.26</td>
+    <td data-label="접수기간">26.08.26 ~ 26.09.07</td></tr>
+  `);
+
+  assert.equal(item.apply_start, "2026-08-26");
+  assert.equal(item.apply_end, "2026-09-07");
+  assert.equal(item.reg_date, "2026-08-26");
+});
+
+test("government support upstream calls include bounded timeout signals", async () => {
+  const seen = [];
+  const fetchImpl = async (_url, options) => {
+    seen.push(options);
+    return {
+      ok: true,
+      status: 200,
+      async text() {
+        return `
+          <tr><td><span class="category_color1">콘텐츠</span></td>
+          <td><a href="/kocca/pims/view.do?intcNo=5678">실시간 공고</a></td>
+          <td data-label="공고일">2026-08-26</td>
+          <td data-label="접수기간">2026-08-26 ~ 2026-09-07</td></tr>
+        `;
+      }
+    };
+  };
+
+  await fetchHtmlSourcePage("kocca", 1, { fetchImpl });
+  assert.ok(seen[0].signal);
+
+  await fetchKstartupPage(1, 1, {
+    serviceKey: "test-key",
+    fetchImpl: async (_url, options) => {
+      seen.push(options);
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { data: [{ id: "one" }] };
+        }
+      };
+    }
+  });
+  assert.ok(seen.at(-1).signal);
 });
 
 test("survey preserves partial results and reports source failures", async () => {

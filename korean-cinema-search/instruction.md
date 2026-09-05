@@ -136,6 +136,12 @@ CGV는 시간표 중심으로 본다.
 npx --yes daiso get /api/cgv/timetable --keyword 강남 --playDate <YYYYMMDD> --json
 ```
 
+CGV 공개 endpoint가 `503 CGV_UPSTREAM_UNAVAILABLE`을 반환하면 CGV 공식 웹사이트
+(`https://www.cgv.co.kr`)를 브라우저 사용 스킬로 대체 조회한다. 이때도 공개 상영정보
+조회만 수행하고, 로그인·예매·결제는 진행하지 않는다. 공식 웹사이트에서 비정상 접속
+차단, CAPTCHA, 브라우저 검증 또는 유사한 접근 제한이 표시되면 이를 우회하지 말고
+CGV 조회를 중단한다.
+
 메가박스와 롯데시네마는 잔여석 endpoint를 사용할 수 있다.
 
 ```bash
@@ -165,7 +171,7 @@ npx --yes daiso get /api/lottecinema/seats --keyword 월드타워 --playDate <YY
 
 ## Failure modes
 
-- public endpoint는 upstream 상태에 따라 간헐적인 5xx를 줄 수 있다.
+- CGV 공개 endpoint가 CGV 원본 서비스의 봇 차단·접속 제한을 받으면 `503 CGV_UPSTREAM_UNAVAILABLE`을 반환할 수 있다. 이 응답은 skill 또는 CLI 입력 오류가 아니라 upstream 접근 실패이므로 CGV 공식 웹사이트를 브라우저 사용 스킬로 대체 조회한다. 공식 웹사이트에서도 차단, CAPTCHA, 브라우저 검증 또는 유사한 접근 제한이 표시되면 우회하지 말고 중단한다.
 - 지역 키워드가 넓으면 다른 지점이 섞일 수 있다.
 - 시간표와 잔여석은 시점에 따라 달라진다.
 - 일부 체인은 상영작, 시간표, 잔여석 endpoint의 입력값이 다르므로 theaterId, movieId가 있으면 그 값을 우선 사용한다.

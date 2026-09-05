@@ -66,6 +66,12 @@ node dist/bin.js get /api/lottecinema/seats --keyword 월드타워 --playDate <Y
 6. 메가박스와 롯데시네마는 `/api/megabox/seats`, `/api/lottecinema/seats` 로 잔여석을 본다.
 7. 예매와 결제는 자동화하지 않는다.
 
+CGV endpoint가 `503 CGV_UPSTREAM_UNAVAILABLE`을 반환하면 CGV 공식 웹사이트
+(`https://www.cgv.co.kr`)를 브라우저 사용 스킬로 대체 조회한다. 공식 웹사이트에서도
+비정상 접속 차단, CAPTCHA, 브라우저 검증 또는 유사한 접근 제한이 표시되면 우회하지
+않고 CGV 조회를 중단한다. 이 fallback은 공개 상영정보 조회에만 사용하며 로그인·예매·결제는
+진행하지 않는다.
+
 ## 응답 원칙
 
 - 기준 체인과 지점을 먼저 쓴다.
@@ -75,7 +81,7 @@ node dist/bin.js get /api/lottecinema/seats --keyword 월드타워 --playDate <Y
 
 ## 실패 모드
 
-- public endpoint가 일시적으로 5xx를 줄 수 있다.
+- CGV 공개 endpoint가 CGV 원본 서비스의 봇 차단·접속 제한을 받으면 `503 CGV_UPSTREAM_UNAVAILABLE`을 반환할 수 있다. 이 응답은 skill 또는 CLI 입력 오류가 아니라 upstream 접근 실패이므로 CGV 공식 웹사이트를 브라우저 사용 스킬로 대체 조회한다. 공식 웹사이트에서도 차단, CAPTCHA, 브라우저 검증 또는 유사한 접근 제한이 표시되면 우회하지 말고 중단한다.
 - 넓은 지역 키워드는 여러 지점을 섞을 수 있다.
 - 시간표와 잔여석은 빠르게 바뀔 수 있다.
 - theaterId, movieId가 있으면 keyword보다 그 값을 우선한다.
