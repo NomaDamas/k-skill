@@ -1,5 +1,11 @@
 # k-skill-proxy
 
+## 0.11.1
+
+### Patch Changes
+
+- 3a8567d: Add KAMIS food-price and MOFA travel-alert proxy routes for the new lookup skills.
+
 ## 0.11.0
 
 ### Minor Changes
