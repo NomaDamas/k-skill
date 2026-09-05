@@ -283,7 +283,7 @@ test("every top-level skill is a generated CLI stub", () => {
     .filter((name) => fs.existsSync(path.join(repoRoot, name, "SKILL.md")))
     .sort();
 
-  assert.equal(skillDirs.length, 123);
+  assert.equal(skillDirs.length, 122);
 
   for (const skillName of skillDirs) {
     const skill = readRaw(path.join(skillName, "SKILL.md"));
@@ -311,10 +311,7 @@ test("CLI-managed skills keep helpers in the skill directory instead of root bun
     );
   }
 
-  assert.ok(fs.existsSync(path.join(repoRoot, "ktx-booking", "scripts", "ktx_booking.py")));
-  assert.ok(fs.existsSync(path.join(repoRoot, "ktx-booking", "scripts", "ktx_booking.py.lock")));
-  assert.ok(fs.existsSync(path.join(repoRoot, "srt-booking", "scripts", "srt_booking.py")));
-  assert.ok(fs.existsSync(path.join(repoRoot, "srt-booking", "scripts", "srt_booking.py.lock")));
+  assert.ok(fs.existsSync(path.join(repoRoot, "railway-timetable", "scripts", "railway_timetable.py")));
   assert.ok(fs.existsSync(path.join(repoRoot, "fine-dust-location", "scripts", "fine_dust.py")));
   assert.ok(fs.existsSync(path.join(repoRoot, "k-skill-setup", "scripts", "check-setup.sh")));
 });
@@ -383,7 +380,7 @@ test("trademark-reviewed skills publish the combined legal disclaimer", () => {
     fs.existsSync(path.join(repoRoot, skillName, "references", "DISCLAIMER.md")),
   );
 
-  assert.equal(reviewedSkills.length, 43, "expected the complete trademark-reviewed skill set");
+  assert.equal(reviewedSkills.length, 42, "expected the complete trademark-reviewed skill set");
 
   for (const skillName of reviewedSkills) {
     const disclaimerPath = path.join(skillName, "references", "DISCLAIMER.md");
@@ -469,7 +466,6 @@ test("actionable skills publish a Dolshoi action path", () => {
     "korean-scholarship-search",
     "kr-whois-lookup",
     "kstartup-search",
-    "ktx-booking",
     "lh-notice-search",
     "library-book-search",
     "market-kurly-search",
@@ -485,7 +481,6 @@ test("actionable skills publish a Dolshoi action path", () => {
     "s2b-notice-search",
     "saramin-talent-search",
     "sh-notice-search",
-    "srt-booking",
     "subway-lost-property",
     "ticket-availability",
     "toss-investment",
@@ -1154,89 +1149,46 @@ test("kakaotalk-mac skill documents katok archive search usage", () => {
   }
 });
 
-test("repository docs advertise the KTX read-only lookup skill as supported", () => {
+test("repository docs advertise the unified railway read-only lookup skill as supported", () => {
   const readme = read("README.md");
   const install = read(path.join("docs", "install.md"));
-  const featureDocPath = path.join(repoRoot, "docs", "features", "ktx-booking.md");
+  const featureDocPath = path.join(repoRoot, "docs", "features", "railway-timetable.md");
 
-  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/ktx-booking.md to exist");
-  assert.match(readme, /\| \[KTX 공식 시간표 조회\]\(docs\/features\/ktx-booking\.md\) \|/);
-  assert.match(readme, /\[KTX 공식 시간표 조회\]\(docs\/features\/ktx-booking\.md\)/);
+  assert.ok(fs.existsSync(featureDocPath), "expected docs/features/railway-timetable.md to exist");
+  assert.match(readme, /\| \[철도 통합 시간표 조회\]\(docs\/features\/railway-timetable\.md\) \|/);
+  assert.match(readme, /\[철도 통합 시간표 조회\]\(docs\/features\/railway-timetable\.md\)/);
   assert.match(readme, /조회 전용/);
-  assert.match(install, /--skill ktx-booking/);
+  assert.match(install, /--skill railway-timetable/);
 });
 
-test("ktx-booking docs enforce official public timetable lookup", () => {
-  const skillPath = path.join(repoRoot, "ktx-booking", "SKILL.md");
-  const helperPath = path.join(repoRoot, "ktx-booking", "scripts", "ktx_booking.py");
+test("railway-timetable docs enforce Korail integrated read-only lookup", () => {
+  const skillPath = path.join(repoRoot, "railway-timetable", "SKILL.md");
+  const helperPath = path.join(repoRoot, "railway-timetable", "scripts", "railway_timetable.py");
 
-  assert.ok(fs.existsSync(skillPath), "expected ktx-booking/SKILL.md to exist");
-  assert.ok(fs.existsSync(helperPath), "expected ktx-booking/scripts/ktx_booking.py to exist");
+  assert.ok(fs.existsSync(skillPath), "expected railway-timetable/SKILL.md to exist");
+  assert.ok(fs.existsSync(helperPath), "expected railway-timetable/scripts/railway_timetable.py to exist");
 
-  const instruction = read(path.join("ktx-booking", "instruction.md"));
-  const manifest = JSON.parse(read(path.join("ktx-booking", "skill.json")));
-  const stub = read(path.join("ktx-booking", "SKILL.md"));
-  const featureDoc = read(path.join("docs", "features", "ktx-booking.md"));
-  const helper = read(path.join("ktx-booking", "scripts", "ktx_booking.py"));
+  const instruction = read(path.join("railway-timetable", "instruction.md"));
+  const manifest = JSON.parse(read(path.join("railway-timetable", "skill.json")));
+  const stub = read(path.join("railway-timetable", "SKILL.md"));
+  const featureDoc = read(path.join("docs", "features", "railway-timetable.md"));
+  const helper = read(path.join("railway-timetable", "scripts", "railway_timetable.py"));
 
-  assert.match(stub, /^name: ktx-booking$/m);
+  assert.match(stub, /^name: railway-timetable$/m);
   assert.deepEqual(manifest.profiles, ["lookup"]);
 
   for (const doc of [instruction, featureDoc]) {
-    assert.match(doc, /@nomadamas\/k-skill@0 exec ktx-booking scripts\/ktx_booking\.py --\s*\\?\s+search/);
+    assert.match(doc, /@nomadamas\/k-skill@0 exec railway-timetable scripts\/railway_timetable\.py --\s*\\?\s+search/);
     assert.match(doc, /조회 전용/);
-    assert.match(doc, /회원 로그인.*사용하지 않는다|로그인 없이 공개/);
-    assert.match(doc, /공식.*(?:XLSX|시간표)/);
-    assert.match(doc, /실시간.*잔여석.*(?:아니|조회하지 않는다)/);
-    assert.match(doc, /예약.*결제.*취소.*없|예약.*결제.*취소.*실행하지 않는다/);
+    assert.match(doc, /KTX/);
+    assert.match(doc, /코레일/);
+    assert.match(doc, /예약.*(?:결제|취소).*실행하지 않는다|예약.*결제.*취소.*없/);
     assert.doesNotMatch(doc, /--train-id|--try-waiting/);
   }
 
-  assert.match(helper, /userBoard\.do/);
-  assert.match(helper, /openpyxl/);
+  assert.match(helper, /ktx_backend/);
   assert.match(helper, /def build_parser/);
-  assert.doesNotMatch(helper, /KSKILL_KTX_ID|KSKILL_KTX_PASSWORD|ScheduleView|korail2|Dynapath|def command_reserve/);
-});
-
-test("srt-booking docs enforce live read-only lookup", () => {
-  const instruction = read(path.join("srt-booking", "instruction.md"));
-  const manifest = JSON.parse(read(path.join("srt-booking", "skill.json")));
-  const featureDoc = read(path.join("docs", "features", "srt-booking.md"));
-  const helper = read(path.join("srt-booking", "scripts", "srt_booking.py"));
-
-  assert.deepEqual(manifest.profiles, ["lookup"]);
-  for (const doc of [instruction, featureDoc]) {
-    assert.match(doc, /@nomadamas\/k-skill@0 exec srt-booking scripts\/srt_booking\.py --\s*\\?\s+search/);
-    assert.match(doc, /조회 전용/);
-    assert.match(doc, /로그인.*불필요|회원 로그인.*사용하지 않는다/);
-    assert.match(doc, /일반실.*특실.*(?:가능|예약 가능)/);
-    assert.match(doc, /예약.*결제.*취소.*없|예약.*결제.*취소.*실행하지 않는다/);
-    assert.match(doc, /SRTrain/);
-    assert.doesNotMatch(doc, /--train-id|--try-waiting|--hold-seat|kordoc|HWP/);
-  }
-
-  assert.match(helper, /SRTrain/);
-  assert.match(helper, /search_schedule|selectListAra10007/);
-  assert.doesNotMatch(helper, /KSKILL_SRT_ID|KSKILL_SRT_PASSWORD|def command_reserve/);
-});
-
-test("ktx-booking helper python regression tests pass", () => {
-  const python = venvPython();
-  const result = childProcess.spawnSync(
-    python,
-    ["scripts/test_ktx_booking.py"],
-    {
-      cwd: repoRoot,
-      encoding: "utf8",
-      env: { ...process.env, PYTHONNOUSERSITE: "1" },
-    },
-  );
-
-  assert.equal(
-    result.status,
-    0,
-    `expected python KTX helper regression tests to pass\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
-  );
+  assert.doesNotMatch(helper, /reserve|cancel|payment|login/);
 });
 
 test("repository docs advertise the geeknews-search skill across the documented surfaces", () => {
@@ -4535,8 +4487,7 @@ test("k-skill-rhwp package ships CLI bin, WASM-init shim, and minor semver chang
 });
 
 const README_SKILL_NAME_COLUMN_MAPPING = [
-  ["SRT 라이브 시간표 조회", "srt-booking"],
-  ["KTX 공식 시간표 조회", "ktx-booking"],
+  ["철도 통합 시간표 조회", "railway-timetable"],
   ["카카오톡 Mac 아카이브 검색", "kakaotalk-mac"],
   ["서울 지하철 도착정보 조회", "seoul-subway-arrival"],
   ["지하철 분실물 조회", "subway-lost-property"],
