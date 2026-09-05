@@ -1,5 +1,12 @@
 # @nomadamas/k-skill
 
+## 0.7.0
+
+### Minor Changes
+
+- 98b7ee8: 철도 통합 시간표 조회 스킬로 KTX 조회 경로를 통합합니다.
+- 28bac25: Add the komsa-ferry-info skill and hosted KOMSA MTIS ferry lookup route.
+
 ## 0.6.0
 
 ### Minor Changes
