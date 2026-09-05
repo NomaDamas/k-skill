@@ -54,6 +54,7 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 | [한국 대중교통 길찾기](docs/features/korean-transit-route.md) | `korean-transit-route` | ODsay LIVE API + Kakao geocoding 기반 출발지→도착지 지하철+버스+도보 경로 및 환승 정보 조회 |
 | [카카오맵 장소·자동차 길찾기](docs/features/kakao-map.md) | `kakao-map` | Kakao Local 키워드/카테고리/좌표↔주소 변환 + Kakao Mobility 자동차 길찾기(거리·소요시간·통행료·예상 택시요금) |
 | [고속도로 교통량·소통·CCTV 조회](docs/features/highway-traffic-status.md) | `highway-traffic-status` | 한국도로공사·ITS 공개 API로 고속도로 구간별 실시간 속도/교통량/정체 등급과 CCTV 스트림 메타데이터 조회 |
+| [KOMSA 연안여객선 정보 조회](docs/features/komsa-ferry-info.md) | `komsa-ferry-info` | KOMSA MTIS 공식 API로 연안여객선 운항 일정·선박·기항지·항로·운항상태 조회(프록시 경유) |
 | [근처 가장 싼 주유소 찾기](docs/features/cheap-gas-nearby.md) | `cheap-gas-nearby` | 현재 위치 기준 근처 최저가 주유소 조회 |
 | [근처 공영주차장 찾기](docs/features/parking-lot-search.md) | `parking-lot-search` | 현재 위치 기준 근처 공영주차장 위치·요금·운영시간 조회 |
 | [전기차 충전소 위치·상태 조회](docs/features/ev-charger-nearby.md) | `ev-charger-nearby` | 지역·충전소 기준 전기차 충전소 정보와 충전기 현재 상태 조회 (공공데이터포털 15076352, 프록시 경유) |

@@ -150,7 +150,7 @@ test("all bundled assets are exposed through exec/read/path instructions", () =>
   }
 
   // Source skill directories own their bundled assets.
-  assert.equal(assetSkills, 86);
+  assert.equal(assetSkills, 87);
 });
 
 test("asset resolution rejects traversal and reads bundled references", () => {

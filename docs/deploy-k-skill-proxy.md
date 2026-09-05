@@ -89,6 +89,7 @@ KSKILL_PROXY_RATE_LIMIT_WINDOW_MS=60000
 KSKILL_PROXY_RATE_LIMIT_MAX=60
 COUPANG_ACCESS_KEY=<coupang-partners-access-key>
 COUPANG_SECRET_KEY=<coupang-partners-secret-key>
+KOMSA_MTIS_API_KEY=<komsa-mtis-service-key>
 ```
 
 `KSKILL_PROXY_TRUST_PROXY_HOPS=1` is required in production. Leave it unset
@@ -100,6 +101,11 @@ The Coupang keys enable `GET /v1/coupang/products/search`. Store them only in
 the gpu01 runtime `.env`; never pass them in query strings, shell arguments,
 issues, or logs. Verify activation through
 `/health` → `upstreams.coupangConfigured=true`.
+
+`KOMSA_MTIS_API_KEY` enables `GET /v1/komsa/ferry/:dataset`. Store the value
+only in the gpu01 runtime `.env`; never pass it in query strings, shell
+arguments, issues, or logs. After adding or rotating it, restart the proxy
+through the normal deployment procedure and exercise a read-only ferry lookup.
 
 ## ASK Seoul weather-risk route handoff
 
