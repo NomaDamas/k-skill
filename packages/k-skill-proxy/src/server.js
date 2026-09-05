@@ -2297,6 +2297,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         ntsBusinessConfigured: Boolean(config.molitApiKey),
         kstartupConfigured: Boolean(config.molitApiKey),
         kamisConfigured: Boolean(config.kamisApiKey),
+        komsaConfigured: Boolean(config.komsaMtisApiKey),
         mofaTravelSafetyConfigured: Boolean(config.molitApiKey),
         nhisCareConfigured: Boolean(config.molitApiKey),
         nhisCheckupConfigured: Boolean(config.molitApiKey),

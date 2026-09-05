@@ -53,7 +53,7 @@ curl -fsS --get "$BASE/v1/komsa/ferry/schedules" \
   --data-urlencode "limit=10"
 ```
 
-입력은 날짜(`YYYYMMDD` 또는 `YYYY-MM-DD`), 선박명/코드, 항로명/코드, 기항지명/코드, 페이지와 결과 수를 사용한다. 응답의 `items`는 공식 원문 필드를 보존하며, 일정 응답에는 출항일자·시각·출발지·도착지·항로·운항상태가 포함될 수 있다.
+입력은 날짜(`YYYYMMDD` 또는 `YYYY-MM-DD`), 선박명, 항로명, 기항지명, 페이지와 결과 수를 사용한다. 공식 MTIS 조회 파라미터는 명칭 필터이며, 매핑되지 않은 코드 필터는 `400`이다. 응답의 `items`는 공식 원문 필드를 보존하며, 일정 응답에는 출항일자·시각·출발지·도착지·항로·운항상태가 포함될 수 있다.
 
 ## Done when
 
@@ -63,7 +63,7 @@ curl -fsS --get "$BASE/v1/komsa/ferry/schedules" \
 
 ## Failure modes
 
-- `400 bad_request`: 허용되지 않은 dataset, 잘못된 날짜, 페이지 또는 결과 수.
+- `400 bad_request`: 허용되지 않은 dataset, 매핑되지 않은 필터, 잘못된 날짜, 페이지 또는 결과 수.
 - `503 upstream_not_configured`: 프록시 운영자에게 `KOMSA_MTIS_API_KEY` 설정이 필요하다.
 - `502 upstream_error` / `502 upstream_invalid_response`: MTIS 인증 오류, quota 초과, upstream 장애 또는 응답 형식 변경.
 - `504 upstream_timeout`: 공식 API가 시간 내 응답하지 않음.

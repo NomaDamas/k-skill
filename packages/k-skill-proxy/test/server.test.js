@@ -1516,6 +1516,25 @@ test("health endpoint stays public and reports auth/upstream status", async (t) 
   assert.equal(body.upstreams.seoulOpenApiConfigured, false);
   assert.equal(body.upstreams.hrfcoConfigured, false);
   assert.equal(body.upstreams.data4libraryConfigured, false);
+  assert.equal(body.upstreams.komsaConfigured, false);
+});
+
+test("health endpoint is rate-limited", async (t) => {
+  const app = buildServer({
+    env: {
+      KSKILL_PROXY_RATE_LIMIT_MAX: "1"
+    }
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const first = await app.inject({ method: "GET", url: "/health" });
+  const second = await app.inject({ method: "GET", url: "/health" });
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 429);
+  assert.equal(second.json().error, "rate_limited");
 });
 
 test("health endpoint reports KRX upstream status when configured", async (t) => {
@@ -1536,6 +1555,27 @@ test("health endpoint reports KRX upstream status when configured", async (t) =>
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().upstreams.krxConfigured, true);
+});
+
+test("health endpoint reports KOMSA upstream status when configured", async (t) => {
+  const app = buildServer({
+    env: {
+      KOMSA_MTIS_API_KEY: "komsa-key"
+    }
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/health"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().upstreams.komsaConfigured, true);
+  assert.doesNotMatch(response.body, /komsa-key/);
 });
 
 test("KOSIS normalizers map public query aliases to upstream params", () => {

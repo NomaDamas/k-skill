@@ -63,6 +63,15 @@ function date(value, label) {
 function normalizeKomsaFerryQuery(dataset, query = {}) {
   const endpoint = DATASETS[dataset];
   if (!endpoint) throw new Error(`Unsupported dataset: ${dataset}.`);
+  const allowed = new Set(["pageNo", "page", "numOfRows", "limit"]);
+  for (const keys of Object.values(DATASET_PARAMETERS[dataset])) {
+    for (const key of keys) allowed.add(key);
+  }
+  for (const key of Object.keys(query)) {
+    if (text(query[key]) && !allowed.has(key)) {
+      throw new Error(`Unsupported filter: ${key}.`);
+    }
+  }
   const normalized = {
     dataset,
     endpoint,

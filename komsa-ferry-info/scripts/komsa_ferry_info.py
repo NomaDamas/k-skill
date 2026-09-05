@@ -46,11 +46,8 @@ def parser():
     result.add_argument("dataset", choices=["schedules", "vessels", "ports", "license-routes", "operation-routes", "status"])
     result.add_argument("--date")
     result.add_argument("--vessel")
-    result.add_argument("--vessel-code")
     result.add_argument("--route")
-    result.add_argument("--route-code")
     result.add_argument("--port")
-    result.add_argument("--port-code")
     result.add_argument("--page", default="1")
     result.add_argument("--limit", default="10")
     result.add_argument("--proxy-base-url")
@@ -62,11 +59,8 @@ def main(argv=None):
     params = {
         "date": args.date,
         "vessel": args.vessel,
-        "vesselCode": args.vessel_code,
         "route": args.route,
-        "routeCode": args.route_code,
         "port": args.port,
-        "portCode": args.port_code,
         "page": args.page,
         "limit": args.limit,
     }

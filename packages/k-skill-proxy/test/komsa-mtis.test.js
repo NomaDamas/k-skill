@@ -11,7 +11,6 @@ test("normalizeKomsaFerryQuery allowlists datasets and normalizes filters", () =
   assert.deepEqual(normalizeKomsaFerryQuery("schedules", {
     date: "2026-08-24",
     vessel: " 섬사랑12호 ",
-    route: "향화-낙월",
     page: "2",
     limit: "20"
   }), {
@@ -24,6 +23,10 @@ test("normalizeKomsaFerryQuery allowlists datasets and normalizes filters", () =
   });
   assert.throws(() => normalizeKomsaFerryQuery("unknown", {}), /Unsupported dataset/);
   assert.throws(() => normalizeKomsaFerryQuery("schedules", { date: "2026-02-30" }), /valid date/);
+  assert.throws(
+    () => normalizeKomsaFerryQuery("schedules", { date: "20260824", vesselCode: "ABC" }),
+    /Unsupported filter: vesselCode/,
+  );
 });
 
 test("fetchKomsaFerryInfo sends the official camelCase schedule parameters", async () => {
@@ -130,4 +133,13 @@ test("KOMSA route returns 503 without an operator key and serves a cached succes
   assert.equal(second.json().proxy.cache.hit, true);
   assert.equal(calls, 1);
   assert.doesNotMatch(first.body, /test-key/);
+
+  const rejected = await app.inject({
+    method: "GET",
+    url: "/v1/komsa/ferry/schedules?date=20260824&vesselCode=ABC"
+  });
+  assert.equal(rejected.statusCode, 400);
+  assert.equal(rejected.json().error, "bad_request");
+  assert.match(rejected.json().message, /Unsupported filter: vesselCode/);
+  assert.equal(calls, 1);
 });

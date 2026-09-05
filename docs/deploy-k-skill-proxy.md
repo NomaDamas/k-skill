@@ -104,8 +104,8 @@ issues, or logs. Verify activation through
 
 `KOMSA_MTIS_API_KEY` enables `GET /v1/komsa/ferry/:dataset`. Store the value
 only in the gpu01 runtime `.env`; never pass it in query strings, shell
-arguments, issues, or logs. After adding or rotating it, restart the proxy
-through the normal deployment procedure and exercise a read-only ferry lookup.
+arguments, issues, or logs. Verify activation through
+`/health` → `upstreams.komsaConfigured=true`, then exercise a read-only ferry lookup.
 
 ## ASK Seoul weather-risk route handoff
 
