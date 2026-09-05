@@ -3,7 +3,7 @@
 ![k-skill thumbnail](docs/assets/k-skill-thumbnail.png)
 
 한국인인가요? 이 스킬 모음집을 다운로드 받아 두세요. 언젠가 **무조건** 쓸 때가 옵니다!
-SRT, KTX, KBO, 로또, 당근, 쿠팡, 카톡, 정부24, 홈택스 등등 귀찮은 것을 AI 에이전트에게 다 시켜버리세요.
+KTX, KBO, 로또, 당근, 쿠팡, 카톡, 정부24, 홈택스 등등 귀찮은 것을 AI 에이전트에게 다 시켜버리세요.
 
 Claude Code, Codex, OpenCode, OpenClaw/ClawHub 등 각종 코딩 에이전트 지원합니다.
 
@@ -12,7 +12,7 @@ Claude Code, Codex, OpenCode, OpenClaw/ClawHub 등 각종 코딩 에이전트 �
 공개 API 프록시를 사용하는 스킬의 개인정보 처리 기준은
 [k-skill-proxy 개인정보 처리방침](https://k-skill-proxy.nomadamas.org/privacy)에서 확인할 수 있습니다.
 
-> **철도 통합 시간표는 조회 전용 스킬입니다.** KTX는 코레일 공식 계획 시간표를, SRT는 라이브 시간표와 일반실·특실 이용 가능 여부를 조회하며 로그인·예약·예약대기·결제·취소는 수행하지 않습니다.
+> **철도 통합 시간표는 조회 전용 스킬입니다.** KTX는 코레일 공식 계획 시간표를 조회하며 로그인·예약·예약대기·결제·취소는 수행하지 않습니다.
 
 ## 설치
 
@@ -24,7 +24,7 @@ npx --yes skills add NomaDamas/k-skill --all -g
 npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 ```
 
-기본 설치에는 Node.js 18 이상과 `npx`만 필요합니다. KTX 공식 시간표와 SRT 라이브 조회 helper를 실행할 때는 Python 3.11 이상과 `uv`가 추가로 필요합니다. Claude Code 사용자는 아래 마켓플레이스로도 설치할 수 있습니다. 자세한 방법은 [설치 방법](docs/install.md)을 참고하세요.
+기본 설치에는 Node.js 18 이상과 `npx`만 필요합니다. KTX 공식 시간표 helper를 실행할 때는 Python 3.11 이상과 `uv`가 추가로 필요합니다. Claude Code 사용자는 아래 마켓플레이스로도 설치할 수 있습니다. 자세한 방법은 [설치 방법](docs/install.md)을 참고하세요.
 
 ## 잠깐만~~~
 
@@ -41,7 +41,7 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
-| [철도 통합 시간표 조회](docs/features/railway-timetable.md) | `railway-timetable` | KTX·SRT 공식/공개 시간표 통합 조회 전용 |
+| [철도 통합 시간표 조회](docs/features/railway-timetable.md) | `railway-timetable` | KTX 코레일 공식 공개 시간표 조회 전용 |
 | [고속버스 예매](docs/features/express-bus-booking.md) | `express-bus-booking` | KOBUS 배차·좌석·요금·임시 선점 조회와 예매 지원 |
 | [시외버스 예매](docs/features/intercity-bus-booking.md) | `intercity-bus-booking` | 티머니 배차·좌석·요금·임시 선점 조회와 예매 지원 |
 | [항공권 가격 조회](docs/features/flight-ticket-search.md) | `flight-ticket-search` | `fast-flights` 기반 Google Flights 공개 검색으로 항공권 후보, 예약 검색 링크, 날짜/월/연도별 최저가·평균가 비교 (조회 전용, 예매·결제 없음) |

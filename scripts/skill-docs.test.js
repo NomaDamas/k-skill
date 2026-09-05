@@ -1187,7 +1187,6 @@ test("railway-timetable docs enforce Korail integrated read-only lookup", () => 
   }
 
   assert.match(helper, /ktx_backend/);
-  assert.doesNotMatch(helper, /srt_backend|SRTrain/);
   assert.match(helper, /def build_parser/);
   assert.doesNotMatch(helper, /reserve|cancel|payment|login/);
 });

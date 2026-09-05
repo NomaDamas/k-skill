@@ -110,7 +110,7 @@ dist/manus/
 
 Manus 환경에서 k-skill 을 쓸 때도 본 저장소의 **사용자 로그인 / 시크릿 정책**을 그대로 따른다.
 
-- "사용자 로그인 필요" 로 표시된 스킬(예: `toss-securities`)은 Manus 세션 안에서 사용자가 직접 자격 증명을 제공해야 한다. `railway-timetable`은 코레일 공개 운행계획 XLSX와 SRT 익명 라이브 조회 전용이므로 철도 회원 자격 증명이 필요하지 않다.
+- "사용자 로그인 필요" 로 표시된 스킬(예: `toss-securities`)은 Manus 세션 안에서 사용자가 직접 자격 증명을 제공해야 한다. `railway-timetable`은 코레일 공개 운행계획 XLSX 조회 전용이므로 철도 회원 자격 증명이 필요하지 않다.
 - "불필요" 로 표시된 스킬은 공개 API 또는 운영자가 관리하는 `k-skill-proxy` 를 그대로 사용한다. Manus 측에서 별도 키를 받지 않는다.
 - 자세한 정책은 [`docs/security-and-secrets.md`](security-and-secrets.md) 와 [`docs/features/k-skill-proxy.md`](features/k-skill-proxy.md) 참고.
 
