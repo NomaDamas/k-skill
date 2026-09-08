@@ -8,7 +8,7 @@ domain is served by a Cloudflare Tunnel that forwards to the Fastify process on
 
 | Item | Value |
 | --- | --- |
-| Host | `gpu01` (`gpu01.nomadamas.org`) |
+| Host | `gpu01` (`gpu01.nomadamas.org`; `hostname -s` is `marker-multi-gpu-server-01`) |
 | Public URL | `https://k-skill-proxy.nomadamas.org` |
 | App directory | `/data/home/jeffrey/apps/k-skill-proxy` |
 | Source checkout | `/data/home/jeffrey/apps/k-skill-proxy-repo` |
@@ -18,7 +18,7 @@ domain is served by a Cloudflare Tunnel that forwards to the Fastify process on
 | Deployed revision | `/data/home/jeffrey/apps/k-skill-proxy/deployed-sha` |
 | Deploy script | `scripts/deploy-k-skill-proxy-gpu01.sh` |
 
-The production listener is bound to `127.0.0.1` and receives public traffic through exactly one local Cloudflare Tunnel hop. Only when the gpu01 deployment script is running with `KSKILL_PROXY_DEPLOY_ENVIRONMENT=production` and `KSKILL_PROXY_DEPLOY_HOST=gpu01` does it ensure the runtime env contains `KSKILL_PROXY_TRUST_PROXY_HOPS=1` before restarting the service. Those values are the script defaults on the production host. Non-production or non-gpu01 executions leave the application default at `0`. An explicit operator value is preserved, and `KSKILL_PROXY_ENV_FILE` may point the script at a non-default runtime env path.
+The production listener is bound to `127.0.0.1` and receives public traffic through exactly one local Cloudflare Tunnel hop. Only when the gpu01 deployment script is running with `KSKILL_PROXY_DEPLOY_ENVIRONMENT=production` and a production host (`KSKILL_PROXY_DEPLOY_HOST=gpu01`, or `hostname -s` of `gpu01` / `marker-multi-gpu-server-01`) does it ensure the runtime env contains `KSKILL_PROXY_TRUST_PROXY_HOPS=1` before restarting the service. Cron should set `KSKILL_PROXY_DEPLOY_HOST=gpu01` explicitly. Non-production or non-gpu01 executions leave the application default at `0`. An explicit operator value is preserved, and `KSKILL_PROXY_ENV_FILE` may point the script at a non-default runtime env path.
 
 Do not use this setting for a directly exposed listener. Trusting one hop is safe here because the Fastify port is loopback-only; making that port externally reachable would allow clients to supply a forged `X-Forwarded-For` value.
 
@@ -68,6 +68,7 @@ unit files live in the repo:
 
 | Unit | Repo source |
 | --- | --- |
+| proxy | `infra/k-skill-proxy-dashboard/systemd/k-skill-proxy.service` |
 | tunnel | `infra/k-skill-proxy-dashboard/systemd/k-skill-proxy-tunnel.service` |
 | loki / promtail / grafana | `infra/k-skill-proxy-dashboard/systemd/` |
 
@@ -78,7 +79,14 @@ NFS mount and must not be exec'd before the mount is up at boot.
 Install or repair the cron entry:
 
 ```cron
-*/5 * * * * flock -n /tmp/k-skill-proxy-deploy.lock /data/home/jeffrey/apps/k-skill-proxy/deploy-k-skill-proxy-gpu01.sh >> /data/home/jeffrey/apps/k-skill-proxy/deploy.log 2>&1
+*/5 * * * * KSKILL_PROXY_DEPLOY_HOST=gpu01 flock -n /tmp/k-skill-proxy-deploy.lock /data/home/jeffrey/apps/k-skill-proxy/deploy-k-skill-proxy-gpu01.sh >> /data/home/jeffrey/apps/k-skill-proxy/deploy.log 2>&1
+```
+
+The SSH alias is `gpu01`, but `hostname -s` on the box is `marker-multi-gpu-server-01`. The deploy script treats both as production; still set `KSKILL_PROXY_DEPLOY_HOST=gpu01` in cron so a hostname change cannot silently disable the watchdog. After the first `main` deploy that includes this script, it copies itself onto `$APP_DIR/deploy-k-skill-proxy-gpu01.sh`. Until then, install it once:
+
+```bash
+install -m 0755 /data/home/jeffrey/apps/k-skill-proxy-repo/scripts/deploy-k-skill-proxy-gpu01.sh \
+  /data/home/jeffrey/apps/k-skill-proxy/deploy-k-skill-proxy-gpu01.sh
 ```
 
 ## Manual operation
