@@ -1043,6 +1043,15 @@ test("proxy deployment script and docs stay aligned with gpu01 automation", () =
   assert.match(deployScript, /KSKILL_PROXY_ENV_FILE/);
   assert.match(deployScript, /KSKILL_PROXY_DEPLOY_ENVIRONMENT:-production/);
   assert.match(deployScript, /KSKILL_PROXY_DEPLOY_HOST:-\$\(hostname -s\)/);
+  assert.match(deployScript, /export XDG_RUNTIME_DIR=/);
+  assert.match(deployScript, /export DBUS_SESSION_BUS_ADDRESS=/);
+  assert.match(deployScript, /is_gpu01_production/);
+  assert.match(deployScript, /marker-multi-gpu-server-01/);
+  assert.match(deployScript, /ensure_production_services "\$DEPLOY_ENVIRONMENT" "\$DEPLOY_HOST"/);
+  assert.match(
+    deployScript,
+    /install -m 0755 "\$REPO_DIR\/scripts\/deploy-k-skill-proxy-gpu01\.sh" "\$APP_DIR\/deploy-k-skill-proxy-gpu01\.sh"/,
+  );
   assert.match(deployScript, /ensure_gpu01_production_defaults "\$ENV_FILE" "\$DEPLOY_ENVIRONMENT" "\$DEPLOY_HOST"/);
   assert.match(deployScript, /npm --prefix "\$REPO_DIR" run test --workspace k-skill-proxy/);
   assert.match(deployScript, /tar -C "\$APP_DIR" -czf "\$backup"/);
@@ -1068,6 +1077,18 @@ test("proxy deployment script and docs stay aligned with gpu01 automation", () =
   assert.match(deployDoc, /deployed-sha/);
   assert.match(deployDoc, /KSKILL_PROXY_TRUST_PROXY_HOPS=1/);
   assert.match(deployDoc, /Cloudflare Tunnel/);
+  assert.match(
+    deployDoc,
+    /KSKILL_PROXY_DEPLOY_HOST=gpu01 flock -n \/tmp\/k-skill-proxy-deploy\.lock/,
+  );
+  assert.match(deployDoc, /marker-multi-gpu-server-01/);
+  const setupScript = read(path.join("infra", "k-skill-proxy-dashboard", "setup-gpu01.sh"));
+  assert.match(setupScript, /k-skill-proxy-tunnel\.service/);
+  const proxyUnit = read(
+    path.join("infra", "k-skill-proxy-dashboard", "systemd", "k-skill-proxy.service"),
+  );
+  assert.match(proxyUnit, /^Restart=always$/m);
+  assert.match(proxyUnit, /^StartLimitIntervalSec=0$/m);
   assert.match(packageReadme, /KSKILL_PROXY_TRUST_PROXY_HOPS/);
   assert.match(deployScript, /KSKILL_PROXY_TRUST_PROXY_HOPS/);
 });
@@ -1091,23 +1112,131 @@ test("proxy deployment defaults trust-proxy only for gpu01 production", () => {
     );
 
   const productionEnv = path.join(tmpDir, "production.env");
+  const realHostnameEnv = path.join(tmpDir, "real-hostname.env");
   const stagingEnv = path.join(tmpDir, "staging.env");
   const otherHostEnv = path.join(tmpDir, "other-host.env");
   const explicitEnv = path.join(tmpDir, "explicit.env");
-  for (const envFile of [productionEnv, stagingEnv, otherHostEnv]) {
+  for (const envFile of [productionEnv, realHostnameEnv, stagingEnv, otherHostEnv]) {
     fs.writeFileSync(envFile, "KSKILL_PROXY_RATE_LIMIT_MAX=60\n");
   }
   fs.writeFileSync(explicitEnv, "KSKILL_PROXY_TRUST_PROXY_HOPS=2\n");
 
   runDefault(productionEnv, "production", "gpu01");
+  runDefault(realHostnameEnv, "production", "marker-multi-gpu-server-01");
   runDefault(stagingEnv, "staging", "gpu01");
   runDefault(otherHostEnv, "production", "developer-mac");
   runDefault(explicitEnv, "production", "gpu01");
 
   assert.match(fs.readFileSync(productionEnv, "utf8"), /^KSKILL_PROXY_TRUST_PROXY_HOPS=1$/m);
+  assert.match(fs.readFileSync(realHostnameEnv, "utf8"), /^KSKILL_PROXY_TRUST_PROXY_HOPS=1$/m);
   assert.doesNotMatch(fs.readFileSync(stagingEnv, "utf8"), /KSKILL_PROXY_TRUST_PROXY_HOPS/);
   assert.doesNotMatch(fs.readFileSync(otherHostEnv, "utf8"), /KSKILL_PROXY_TRUST_PROXY_HOPS/);
   assert.match(fs.readFileSync(explicitEnv, "utf8"), /^KSKILL_PROXY_TRUST_PROXY_HOPS=2$/m);
+});
+
+test("proxy deploy watchdog starts dead services on the real gpu01 hostname", () => {
+  const deployScript = path.join(repoRoot, "scripts", "deploy-k-skill-proxy-gpu01.sh");
+  const mockRoot = fs.mkdtempSync(path.join(os.tmpdir(), "k-skill-proxy-watchdog-"));
+  const mockBin = path.join(mockRoot, "bin");
+  fs.mkdirSync(mockBin);
+  fs.writeFileSync(
+    path.join(mockBin, "systemctl"),
+    [
+      "#!/usr/bin/env bash",
+      "set -euo pipefail",
+      'STATE_DIR="${MOCK_SYSTEMCTL_STATE:?}"',
+      'echo "$*" >> "$STATE_DIR/calls.log"',
+      'cmd=""',
+      "args=()",
+      "while [[ $# -gt 0 ]]; do",
+      '  case "$1" in',
+      "    --user|--no-legend|--quiet|--no-pager) shift ;;",
+      "    *)",
+      '      if [[ -z "$cmd" ]]; then cmd="$1"; shift',
+      '      else args+=("$1"); shift',
+      "      fi",
+      "      ;;",
+      "  esac",
+      "done",
+      'unit="${args[0]:-}"',
+      'case "$cmd" in',
+      "  list-unit-files)",
+      '    if [[ -f "$STATE_DIR/installed/$unit" ]]; then echo "$unit enabled"; fi',
+      "    exit 0",
+      "    ;;",
+      "  is-active)",
+      '    if [[ -f "$STATE_DIR/active/$unit" ]]; then exit 0; fi',
+      "    exit 3",
+      "    ;;",
+      "  start)",
+      '    mkdir -p "$STATE_DIR/active"',
+      '    touch "$STATE_DIR/active/$unit"',
+      '    echo "$unit" >> "$STATE_DIR/started.log"',
+      "    exit 0",
+      "    ;;",
+      "  *)",
+      '    echo "unexpected: $cmd" >&2',
+      "    exit 99",
+      "    ;;",
+      "esac",
+      "",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+
+  const runWatchdog = (host, { installed = [], active = [] } = {}) => {
+    const state = fs.mkdtempSync(path.join(mockRoot, "state-"));
+    fs.mkdirSync(path.join(state, "installed"));
+    fs.mkdirSync(path.join(state, "active"));
+    fs.writeFileSync(path.join(state, "calls.log"), "");
+    fs.writeFileSync(path.join(state, "started.log"), "");
+    for (const unit of installed) {
+      fs.writeFileSync(path.join(state, "installed", unit), "");
+    }
+    for (const unit of active) {
+      fs.writeFileSync(path.join(state, "active", unit), "");
+    }
+    childProcess.execFileSync(
+      "bash",
+      [
+        "-c",
+        'export PATH="$1:$PATH"; export MOCK_SYSTEMCTL_STATE="$2"; KSKILL_PROXY_DEPLOY_LIB_ONLY=1 source "$3"; ensure_production_services production "$4"',
+        "bash",
+        mockBin,
+        state,
+        deployScript,
+        host,
+      ],
+      { encoding: "utf8" },
+    );
+    const startedRaw = fs.readFileSync(path.join(state, "started.log"), "utf8").trim();
+    return {
+      started: startedRaw === "" ? [] : startedRaw.split("\n"),
+      calls: fs.readFileSync(path.join(state, "calls.log"), "utf8"),
+    };
+  };
+
+  const watched = [
+    "k-skill-proxy.service",
+    "k-skill-proxy-tunnel.service",
+    "k-skill-proxy-loki.service",
+    "k-skill-proxy-promtail.service",
+    "k-skill-proxy-grafana.service",
+  ];
+
+  assert.deepEqual(runWatchdog("developer-mac", { installed: watched }).started, []);
+  assert.deepEqual(
+    runWatchdog("marker-multi-gpu-server-01", { installed: watched }).started.sort(),
+    [...watched].sort(),
+  );
+  assert.deepEqual(
+    runWatchdog("gpu01", {
+      installed: watched,
+      active: watched.filter((unit) => unit !== "k-skill-proxy-tunnel.service"),
+    }).started,
+    ["k-skill-proxy-tunnel.service"],
+  );
+  assert.deepEqual(runWatchdog("gpu01", { installed: [] }).started, []);
 });
 
 test("kakaotalk-mac skill documents katok archive search usage", () => {

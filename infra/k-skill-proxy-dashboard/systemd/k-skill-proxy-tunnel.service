@@ -1,0 +1,21 @@
+[Unit]
+Description=cloudflared tunnel for k-skill-proxy.nomadamas.org
+After=network-online.target k-skill-proxy.service
+Wants=network-online.target
+# cloudflared, its config, and the app directory live on the gpu02:/data NFS
+# mount, so wait for it before attempting ExecStart at boot.
+RequiresMountsFor=/data/home/jeffrey/bin/cloudflared /data/home/jeffrey/.cloudflared /data/home/jeffrey/apps/k-skill-proxy
+# Never give up restarting: a clean stop or NFS unavailability must not leave
+# the public endpoint dark until the next manual intervention.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/data/home/jeffrey/bin/cloudflared --no-autoupdate --config /data/home/jeffrey/.cloudflared/config.yml tunnel run k-skill-proxy
+Restart=always
+RestartSec=5
+StandardOutput=append:/data/home/jeffrey/apps/k-skill-proxy/tunnel.log
+StandardError=append:/data/home/jeffrey/apps/k-skill-proxy/tunnel.log
+
+[Install]
+WantedBy=default.target

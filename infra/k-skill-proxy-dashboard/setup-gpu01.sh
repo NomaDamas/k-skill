@@ -92,12 +92,16 @@ install_units() {
   install -m 0644 "$APP_DIR/systemd/k-skill-proxy-loki.service" \
     "$APP_DIR/systemd/k-skill-proxy-promtail.service" \
     "$APP_DIR/systemd/k-skill-proxy-grafana.service" \
+    "$APP_DIR/systemd/k-skill-proxy-tunnel.service" \
     "$HOME/.config/systemd/user/"
   systemctl --user daemon-reload
   systemctl --user enable --now k-skill-proxy-loki.service
   systemctl --user enable --now k-skill-proxy-promtail.service
   systemctl --user enable --now k-skill-proxy-grafana.service
   systemctl --user restart k-skill-proxy-loki.service k-skill-proxy-promtail.service k-skill-proxy-grafana.service
+  # Install/enable the tunnel unit but do not restart it here: this script is
+  # the dashboard installer, and bouncing cloudflared would drop public proxy.
+  systemctl --user enable k-skill-proxy-tunnel.service
 }
 
 install_grafana
