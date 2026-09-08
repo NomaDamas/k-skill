@@ -40,6 +40,41 @@ Any failure after the backup performs an automatic rollback by restoring the
 previous files and restarting the old service. A `main` merge is therefore deployed within the cron interval when the
 new proxy tests and smoke checks pass.
 
+### Service watchdog
+
+Every cron run — including runs that exit early because `deployed-sha` already
+matches — first ensures the production services are active before anything
+else. If any of them is installed but not active, the script starts it. This
+exists because the 2026-08-29 gpu01 reboot left the Cloudflare tunnel and the
+Loki/Grafana/Promtail dashboard stack dead for ~10 days: their units used
+`Restart=on-failure`, which does not revive a clean SIGTERM, and nothing else
+ever started them. The proxy only survived because this same cron happens to
+`restart` it on every run.
+
+Watched services (production gpu01 only, overridable via
+`KSKILL_PROXY_WATCHED_SERVICES`):
+
+| Service | Role |
+| --- | --- |
+| `k-skill-proxy.service` | Fastify proxy |
+| `k-skill-proxy-tunnel.service` | cloudflared tunnel for both public hostnames |
+| `k-skill-proxy-loki.service` | log store |
+| `k-skill-proxy-promtail.service` | log shipper |
+| `k-skill-proxy-grafana.service` | dashboard UI |
+
+All five units use `Restart=always` with `StartLimitIntervalSec=0` so a clean
+stop or repeated failure never disables restart permanently. The canonical
+unit files live in the repo:
+
+| Unit | Repo source |
+| --- | --- |
+| tunnel | `infra/k-skill-proxy-dashboard/systemd/k-skill-proxy-tunnel.service` |
+| loki / promtail / grafana | `infra/k-skill-proxy-dashboard/systemd/` |
+
+The tunnel unit also carries `RequiresMountsFor=` on the cloudflared binary,
+its config, and the app directory, because all three live on the `gpu02:/data`
+NFS mount and must not be exec'd before the mount is up at boot.
+
 Install or repair the cron entry:
 
 ```cron

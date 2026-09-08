@@ -10,6 +10,11 @@ ENV_FILE="${KSKILL_PROXY_ENV_FILE:-$APP_DIR/.env}"
 DEPLOY_ENVIRONMENT="${KSKILL_PROXY_DEPLOY_ENVIRONMENT:-production}"
 DEPLOY_HOST="${KSKILL_PROXY_DEPLOY_HOST:-$(hostname -s)}"
 
+# Services the watchdog keeps alive in production. The 2026-08-29 gpu01 reboot
+# left the tunnel and dashboard stack dead for ~10 days because nothing but
+# this cron ever started them and Restart=on-failure ignores clean SIGTERMs.
+WATCHED_SERVICES="${KSKILL_PROXY_WATCHED_SERVICES:-$SERVICE_NAME k-skill-proxy-tunnel.service k-skill-proxy-loki.service k-skill-proxy-promtail.service k-skill-proxy-grafana.service}"
+
 log() {
   printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"
 }
@@ -54,6 +59,39 @@ ensure_gpu01_production_defaults() {
   ensure_env_default "$env_file" "KSKILL_PROXY_TRUST_PROXY_HOPS" "1"
 }
 
+ensure_service_active() {
+  local service="$1"
+
+  if [[ ! "$service" == *.service ]]; then
+    service="$service.service"
+  fi
+
+  if ! systemctl --user list-unit-files "$service" --no-legend 2>/dev/null | grep -q .; then
+    return
+  fi
+
+  if systemctl --user is-active --quiet "$service"; then
+    return
+  fi
+
+  log "Service $service is not active; starting"
+  systemctl --user start "$service"
+}
+
+ensure_production_services() {
+  local deploy_environment="$1"
+  local deploy_host="$2"
+
+  if [[ "$deploy_environment" != "production" || "$deploy_host" != "gpu01" ]]; then
+    return
+  fi
+
+  local service
+  for service in $WATCHED_SERVICES; do
+    ensure_service_active "$service"
+  done
+}
+
 privacy_check() {
   local url="$1"
   local output
@@ -68,6 +106,8 @@ privacy_check() {
 if [[ "${KSKILL_PROXY_DEPLOY_LIB_ONLY:-0}" == "1" ]]; then
   return 0 2>/dev/null || exit 0
 fi
+
+ensure_production_services "$DEPLOY_ENVIRONMENT" "$DEPLOY_HOST"
 
 if [[ ! -d "$REPO_DIR/.git" ]]; then
   log "Cloning source repository"
