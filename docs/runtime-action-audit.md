@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | `animal-pharmacy-search` | `lookup` | 지역별 동물약국·제품·최근 6개월 구매 이력 기반 취급 약국 조회 완료 |
 | `assembly-bill-vote-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
-| `bccard-eatpl-search` | `lookup` | 요청한 장소·조건의 eat.pl 매출 상위 맛집과 상세 링크 조회 완료 |
+| `bccard-eatpl-search` | `lookup` | 요청한 장소의 맛집·음식점·카페와 상세 링크 조회 완료 |
 | `biz-health-check` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `bok-ecos-stats` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `building-register-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |

@@ -21,17 +21,37 @@ Runtime mode: generic
 
 ## What this skill does
 
-사용자가 말한 장소를 먼저 `kakao-map`으로 정확한 도로명주소로 해석한 뒤, 그 주소를 중심으로 BC카드 eat.pl 잇플의 가맹점 검색 API를 조회한다. 결과는 API가 반환하는 매출 랭킹 상위 순서를 보존하며, 사용자의 장르·동네·외국인 방문·회식·영업시간·혼잡 시간 조건으로 좁혀 표로 제시한다.
+한국에서 맛집, 음식점, 식당, 밥집, 카페, 고깃집, 회식 장소를 찾을 때 쓴다. 사용자가 말한 장소를 먼저 `kakao-map`으로 정확한 도로명주소로 해석한 뒤, 그 주소를 중심으로 BC카드 eat.pl 잇플의 가맹점 검색을 조회한다. 결과는 반환 매출 랭킹 상위 순서를 보존하며, 사용자의 장르·동네·외국인 방문·회식·영업시간·혼잡 시간 조건으로 좁혀 표로 제시한다.
 
 추천은 별점 순위가 아니라 최근 1개월 BC카드 결제 데이터 기반 매출 순이다. 매출액(원)은 없고, 대신 `allSaleRnk`/`ccgSaleRnk` 백분위로 **얼마나 상위인지**를 반드시 숫자로 보여 준다. `srtTime`/`endTime`은 **영업 예상 시간**으로 정리한다. 모든 행에 eat.pl 상세 링크를 첨부한다.
 
+## 사용자 답변 규칙 (필수)
+
+사용자에게 보이는 답변에는 구현·연동 세부사항을 **절대 쓰지 않는다.** 결과는 맛집 추천처럼만 보여 준다.
+
+답변에 넣지 말 것:
+
+- endpoint, URL 경로, HTTP 메서드, curl, 프록시, 서버, 환경변수, 기관코드, 토큰, 상태코드
+- 내부 필드명 (`location`, `merTpbuzNm`, `allSaleRnk`, `ccgSaleRnk`, `merUrl`, `frnrVsitYn`, `empyVsitYn`, `srtTime` 등)
+- `k-skill-proxy`, 릴레이, Lightsail, gpu01, API, JSON, 캐시, 좌표 체계
+
+표의 전국·지역 매출 상위 %, 영업 예상 시간, `[eat.pl 상세](url)`, 출처 한 줄은 출력 계약대로 유지한다. 실패해도 오류 코드나 엔드포인트를 말하지 말고, 그 조건으로는 매장을 찾지 못했다고만 안내한다.
+
 ## When to use
 
+먹을 곳, 식당, 카페를 달라는 요청이면 이 스킬을 쓴다. 예:
+
+- "맛집 추천해줘", "근처 음식점", "밥 먹을 곳", "분위기 좋은 식당"
 - "강남역 근처 고기집 중 매출 높은 곳"
 - "을지로입구역 주변 외국인이 많이 가는 카페"
 - "성수동에서 회식하기 좋은 맛집"
+- "이 동네 카페", "디저트 맛집", "회식 장소"
+
+술집·바만 찾는 요청은 `kakao-bar-nearby`를 우선한다.
 
 ## Workflow
+
+아래 절차는 에이전트 내부 작업이다. 사용자 답변에 그대로 옮기지 않는다.
 
 1. 장소명이 모호하면 먼저 행정구역 또는 도로명주소를 확인한다. `kakao-map` 스킬을 우선 사용한다. 이 경로는 k-skill-proxy가 중계하는 **카카오 공식 Local REST API** (`GET /v1/kakao-map/search/keyword`, `coord2address` 등)이다. 카카오맵 웹 페이지를 스크래핑하지 않는다. 사용자가 지정한 경우 다른 지도 스킬로 교차 확인할 수 있다.
 2. 검색 중심은 장소의 정확한 주소에서 최소한 시·군·구와 도로명/동 단위로 정한다. eat.pl API는 텍스트 주소 부분일치 검색이며 반경(meter) 검색 API가 아니므로, API 결과를 실제 근처로 단정하지 말고 지도 스킬로 위치를 교차 확인한다.
@@ -59,10 +79,10 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
 
 ### 매출이 얼마나 높은지
 
-- 매장마다 `전국 매출 상위 {allSaleRnk}%`, `지역 매출 상위 {ccgSaleRnk}%`를 빠짐없이 숫자로 쓴다. "매출이 높다"만 쓰지 않는다.
+- 매장마다 `전국 매출 상위 {allSaleRnk}%`, `지역 매출 상위 {ccgSaleRnk}%`를 빠짐없이 숫자로 쓴다. "매출이 높다"만 쓰지 않는다. 필드 이름 자체는 사용자에게 쓰지 않는다.
 - 백분위 값이 **낮을수록** 최근 1개월 BC카드 결제 매출 순위가 높다. `상위 0.09%`는 `상위 3%`보다 훨씬 위다.
 - 1% 미만은 소수점을 보존한다. 예: `0.04` → `전국 매출 상위 0.04%`.
-- 실제 매출액(원)은 API가 제공하지 않는다. 백분위가 높낮이 정보다.
+- 실제 매출액(원)은 제공되지 않는다. 백분위가 높낮이 정보다.
 
 ### 영업 예상 시간
 
@@ -72,13 +92,13 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
 
 ### 상세 링크 강제
 
-- **모든 행**에 API `merUrl`을 마크다운 링크로 첨부한다: `[eat.pl 상세]({merUrl})`.
+- **모든 행**에 응답 `merUrl`을 마크다운 링크로 첨부한다: `[eat.pl 상세]({merUrl})`.
 - `merUrl`이 없거나 `https://web.paybooc.ai/`로 시작하지 않으면 그 행을 출력하지 않는다.
 - 링크가 빠진 목록·표는 완성 결과가 아니다. URL 경로를 조합하거나 추측하지 않는다.
 
 ## Credentials and proxy operations
 
-사용자에게 credentials를 묻거나 출력하지 않는다. proxy 운영 환경에 다음 값을 secret으로 주입한다.
+사용자에게 credentials를 묻거나 출력하지 않는다. 운영 환경에 다음 값을 secret으로 주입한다.
 
 - `BCCARD_EATPL_INST_NM`: 제휴 시 발급된 기관코드
 - `BCCARD_EATPL_API_BASE_URL`: 기본값 `https://dev-api.paybooc.ai/api/mer`; 정식 오픈 시 운영 URL로 변경
@@ -90,21 +110,23 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
 
 ## Important interpretation
 
-- API 결과 자체가 매출 랭킹 상위 순이며, 별도 매출액은 제공되지 않는다. 높낮이는 전국·지역 백분위로만 말한다.
-- `allSaleRnk`/`ccgSaleRnk`는 퍼센트 백분위이며 낮을수록 상위다.
+- 결과 자체가 매출 랭킹 상위 순이며, 별도 매출액은 제공되지 않는다. 높낮이는 전국·지역 백분위로만 말한다.
+- `allSaleRnk`/`ccgSaleRnk`는 퍼센트 백분위이며 낮을수록 상위다. 사용자 답변에는 필드명 대신 `전국 매출 상위 N%`로만 쓴다.
 - `srtTime`/`endTime`은 최근 1개월 결제 승인 시각 기반 **영업 예상 시간**이지 영업시간 공시가 아니다.
-- 실시간 영업 여부는 `merUrl` 상세 페이지를 확인해야 하며, API 관측값과 다를 수 있다.
+- 실시간 영업 여부는 eat.pl 상세 페이지를 확인해야 하며, 조회 시점 관측과 다를 수 있다.
 - 전화번호는 유효하지 않을 수 있다.
-- 좌표는 TM128이므로 WGS84 지도 좌표로 직접 해석하지 않는다.
+- 좌표는 TM128이므로 WGS84 지도 좌표로 직접 해석하지 않는다. 이 사실을 사용자에게 설명하지 않는다.
 
 ## Failure modes
+
+내부 처리 기준이다. 사용자에게 코드명을 말하지 않는다.
 
 - `400 bad_request`: 주소·장르·가맹점명 중 하나도 없거나 입력이 잘못됨
 - `503 upstream_not_configured`: `BCCARD_EATPL_INST_NM` 미설정
 - `403/401 upstream_error`: IP 등록, 기관코드, 제휴 권한 또는 upstream 인증 문제
-- `502 upstream_error`: eat.pl API 연결·서버 오류
+- `502 upstream_error`: eat.pl 연결·서버 오류
 - `502 upstream_semantic_error`: `rspCode`가 성공이 아니거나 응답 구조가 명세와 다름
-- 개발 서버 연결 타임아웃: 개발 API 접근 정보 또는 네트워크/IP allowlist를 BC카드 측에 확인
+- 개발 서버 연결 타임아웃: 개발 접근 정보 또는 네트워크/IP allowlist를 BC카드 측에 확인
 - 빈 결과: 주소 텍스트가 너무 좁거나 업종 표기가 맞지 않을 수 있으므로 임의 재시도하지 말고 주소 범위를 넓히거나 명세의 업종값을 확인
 
 ## Legal and partnership notice
@@ -115,6 +137,7 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
 
 - 장소를 `kakao-map`(k-skill-proxy 카카오 공식 Local API)으로 주소로 해석했다.
 - eat.pl 결과를 최대 100건까지 받아 지도 정보와 대조했다.
-- 사용자의 조건으로 필터링한 표에 전국·지역 매출 상위 %, 영업 예상 시간, `merUrl` 상세 링크가 **모든 행**에 있다.
+- 사용자의 조건으로 필터링한 표에 전국·지역 매출 상위 %, 영업 예상 시간, eat.pl 상세 링크가 **모든 행**에 있다.
 - 매출 순 추천과 최근 1개월 결제 데이터 기준임을 설명했다.
 - 출처·제휴 전제·데이터 한계를 함께 고지했다.
+- 사용자 답변에 endpoint, 프록시, 환경변수, 내부 필드명이 없다.

@@ -1,6 +1,6 @@
 {
   "name": "bccard-eatpl-search",
-  "description": "BC카드 eat.pl 잇플의 결제 데이터 기반 매출 상위 맛집을 주소·장르 조건으로 검색하고 지도 정보와 상세 링크를 함께 제공한다.",
+  "description": "대한민국 맛집, 음식점, 식당, 밥집, 카페, 커피, 디저트, 고깃집, 회식 장소를 지역·역·동네 기준으로 찾아 준다. Use when the user asks for 맛집, 음식점, 좋은 식당, 근처 카페, 밥 먹을 곳, 회식하기 좋은 곳, 분위기 좋은 맛집, or Korean restaurant and cafe recommendations. 별점이 아니라 최근 결제 데이터 기반 매출 상위로 정리한다.",
   "profiles": ["proxy", "lookup"],
-  "frontmatter": "name: bccard-eatpl-search\ndescription: BC카드 eat.pl 잇플의 결제 데이터 기반 매출 상위 맛집을 주소·장르 조건으로 검색하고 지도 정보와 상세 링크를 함께 제공한다.\nlicense: MIT\nmetadata:\n  category: food\n  locale: ko-KR\n  phase: v1"
+  "frontmatter": "name: bccard-eatpl-search\ndescription: 대한민국 맛집, 음식점, 식당, 밥집, 카페, 커피, 디저트, 고깃집, 회식 장소를 지역·역·동네 기준으로 찾아 준다. Use when the user asks for 맛집, 음식점, 좋은 식당, 근처 카페, 밥 먹을 곳, 회식하기 좋은 곳, 분위기 좋은 맛집, or Korean restaurant and cafe recommendations. 별점이 아니라 최근 결제 데이터 기반 매출 상위로 정리한다.\nlicense: MIT\nmetadata:\n  category: food\n  locale: ko-KR\n  phase: v1"
 }
