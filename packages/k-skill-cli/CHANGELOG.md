@@ -1,5 +1,17 @@
 # @nomadamas/k-skill
 
+## 0.6.0
+
+### Minor Changes
+
+- 986e795: Add the official RTMS nationwide daily report helper to the real-estate-search CLI bundle.
+
+## 0.5.0
+
+### Minor Changes
+
+- 505cfd0: Add the animal-pharmacy-search skill for regional animal pharmacy directories, veterinary product search, and recent distributor-purchase-based pharmacy lookup.
+
 ## 0.4.3
 
 ### Patch Changes

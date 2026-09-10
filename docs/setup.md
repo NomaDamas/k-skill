@@ -1,6 +1,6 @@
 # 공통 설정 가이드
 
-`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(자연휴양림 빈 객실 조회, KOSIS `bigdata`/`--direct` 조회용 `KSKILL_KOSIS_API_KEY` (https://kosis.kr/openapi/ 에서 무료 발급), 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC`, 한국 특허 정보 검색의 KIPRIS Plus 경로용 `KIPRIS_PLUS_API_KEY`, self-host 프록시 운영용 서울 지하철/한국 날씨/미세먼지/한강홍수통제소/식약처/KOSIS/Kakao upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다. KTX는 코레일이 공개한 공식 운행계획 XLSX를 읽고, SRT는 익명 live search client를 사용하므로 둘 다 철도 회원 credential이 필요하지 않다. 미세먼지, 한강 수위, 주유소 가격, 부동산 실거래가, 한국 주식 정보 조회, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 기본 hosted proxy를 쓰므로 사용자 쪽 키가 불필요하다. KOSIS 일반 조회와 Kakao Local geocoding도 기본 hosted proxy를 쓰므로 사용자 쪽 키가 불필요하다(단, hosted 프록시 운영 측에서 `DATA_GO_KR_API_KEY`·`KEDU_INFO_KEY`·`DATA4LIBRARY_AUTH_KEY`·`FOODSAFETYKOREA_API_KEY`·`KOSIS_API_KEY`·`KAKAO_REST_API_KEY` 등은 서버에 설정되어 있어야 한다).
+`k-skill` 전체 스킬을 설치한 뒤, 인증 정보가 필요한 기능(자연휴양림 빈 객실 조회, KOSIS `bigdata`/`--direct` 조회용 `KSKILL_KOSIS_API_KEY` (https://kosis.kr/openapi/ 에서 무료 발급), 한국 법령 검색의 로컬 CLI/MCP 경로용 `LAW_OC`, 한국 특허 정보 검색의 KIPRIS Plus 경로용 `KIPRIS_PLUS_API_KEY`, self-host 프록시 운영용 서울 지하철/한국 날씨/미세먼지/한강홍수통제소/식약처/KOSIS/Kakao upstream key, 또는 배포 확인이 끝난 proxy URL 공유)이 있으면 이 절차를 진행하면 된다. KTX는 코레일이 공개한 공식 운행계획 XLSX를 읽으므로 철도 회원 credential이 필요하지 않다. 미세먼지, 한강 수위, 주유소 가격, 부동산 실거래가, 한국 주식 정보 조회, 생활쓰레기 배출정보 조회, 학교 급식 식단 조회, 의약품 안전 체크, 식품 안전 체크는 기본 hosted proxy를 쓰므로 사용자 쪽 키가 불필요하다. KOSIS 일반 조회와 Kakao Local geocoding도 기본 hosted proxy를 쓰므로 사용자 쪽 키가 불필요하다(단, hosted 프록시 운영 측에서 `DATA_GO_KR_API_KEY`·`KEDU_INFO_KEY`·`DATA4LIBRARY_AUTH_KEY`·`FOODSAFETYKOREA_API_KEY`·`KOSIS_API_KEY`·`KAKAO_REST_API_KEY` 등은 서버에 설정되어 있어야 한다).
 
 ## Credential resolution order
 
@@ -72,6 +72,8 @@ ASK 서울 기상 위험 시간대 조회는 기본 hosted proxy를 사용하므
 
 한국 특허 정보 검색의 KIPRIS Plus 경로용 `KIPRIS_PLUS_API_KEY` 는 helper가 읽는 표준 변수명이다. 실제 HTTP 요청에서는 같은 값을 `ServiceKey` 쿼리 파라미터로 보낸다. 공공데이터포털에서 복사한 percent-encoded key도 helper가 한 번 정규화해서 그대로 쓸 수 있다.
 
+KOMSA MTIS 연안여객선 정보 조회는 기본 hosted proxy를 사용하므로 일반 사용자는 키가 필요 없다. self-host proxy 운영자만 KOMSA MTIS 포털에서 발급받은 키를 서버 `.env`에 `KOMSA_MTIS_API_KEY=...`로 설정한다(호환 변수명: `KSKILL_KOMSA_MTIS_API_KEY`). 키를 클라이언트 요청의 `serviceKey`, URL, CLI 인자에 넣지 않는다.
+
 ## 브라우저 런타임
 
 돌쇠에서는 내장 browser tool의 CloakBrowser를 최우선으로 쓴다. 내장 tool이 CloakBrowser를 제공하거나 `CLOAKBROWSER_PEEK_TOKEN`이 있으면 `k-skill-browser-runtime`보다 먼저 사용한다.
@@ -128,6 +130,7 @@ bash scripts/check-setup.sh
 | 도서관 도서 조회 | 사용자 시크릿 불필요 (프록시에 `DATA4LIBRARY_AUTH_KEY`가 설정된 hosted/self-host 사용) |
 | 의약품 안전 체크 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`가 설정된 hosted/self-host 사용) |
 | 식품 안전 체크 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`와 선택적 `FOODSAFETYKOREA_API_KEY`가 설정된 hosted/self-host 사용) |
+| KOMSA 연안여객선 운항정보 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `KOMSA_MTIS_API_KEY`) |
 | 창업진흥원 K-Startup 조회 | 사용자 시크릿 불필요 (프록시에 `DATA_GO_KR_API_KEY`가 설정된 hosted/self-host 사용; `--direct` 호출 때만 `KSKILL_KSTARTUP_API_KEY`) |
 | 전기차 충전소 위치·상태 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct` 때만 `KSKILL_EV_CHARGER_API_KEY` 또는 `DATA_GO_KR_API_KEY`, 데이터셋 `15076352` 별도 활용신청) |
 | 건축물대장 표제부 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용; `--direct` 때만 `KSKILL_BUILDING_REGISTER_API_KEY` 또는 `DATA_GO_KR_API_KEY`, 데이터셋 `15134735` 별도 활용신청) |
@@ -135,8 +138,7 @@ bash scripts/check-setup.sh
 
 ## 다음에 볼 문서
 
-- [SRT 라이브 시간표 조회 가이드](features/srt-booking.md) — credential 불필요
-- [KTX 공식 시간표 조회 가이드](features/ktx-booking.md) — credential 불필요
+- [철도 통합 시간표 조회 가이드](features/railway-timetable.md) — credential 불필요
 - [고속버스 예매 가이드](features/express-bus-booking.md)
 - [시외버스 예매 가이드](features/intercity-bus-booking.md)
 - [자연휴양림 빈 객실 조회 가이드](features/foresttrip-vacancy.md)

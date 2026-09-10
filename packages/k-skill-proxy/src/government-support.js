@@ -44,12 +44,18 @@ function clean(value) {
 }
 
 function normalizeDate(value) {
-  const match = String(value || "").match(/(\d{4})[.\-/]\s*(\d{1,2})[.\-/]\s*(\d{1,2})/);
-  return match ? `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}` : "";
+  const match = String(value || "").match(/(\d{2,4})[.\-/]\s*(\d{1,2})[.\-/]\s*(\d{1,2})/);
+  if (!match) {
+    return "";
+  }
+  const year = match[1].length === 2
+    ? `${Number.parseInt(match[1], 10) >= 70 ? "19" : "20"}${match[1]}`
+    : match[1];
+  return `${year}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
 }
 
 function splitPeriod(value) {
-  const dates = String(value || "").match(/\d{4}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}/g) || [];
+  const dates = String(value || "").match(/\d{2,4}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}/g) || [];
   return [normalizeDate(dates[0]), normalizeDate(dates[1])];
 }
 
@@ -184,8 +190,9 @@ async function fetchHtmlSourcePage(source, page, { fetchImpl = fetch } = {}) {
   const response = await fetchWithRetry(request.url, {
     fetchImpl,
     attempts: 2,
-    method: request.method || "GET",
-    body: request.body,
+      method: request.method || "GET",
+      body: request.body,
+      signal: AbortSignal.timeout(20000),
     headers: {
       "user-agent": "k-skill-proxy/1.0 (+https://github.com/NomaDamas/k-skill)",
       accept: "text/html,application/xhtml+xml",
@@ -237,7 +244,11 @@ async function fetchKstartupPage(page, perPage, { serviceKey, fetchImpl = fetch 
   url.searchParams.set("perPage", String(perPage));
   url.searchParams.set("returnType", "json");
   url.searchParams.set("rcrt_prgs_yn", "Y");
-  const response = await fetchWithRetry(url, { fetchImpl, attempts: 2 });
+  const response = await fetchWithRetry(url, {
+    fetchImpl,
+    attempts: 2,
+    signal: AbortSignal.timeout(20000)
+  });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
@@ -308,5 +319,7 @@ module.exports = {
   parseBizinfoPage,
   parseKoccaPage,
   parseNipaPage,
-  parseSmtechPage
+  parseSmtechPage,
+  fetchHtmlSourcePage,
+  fetchKstartupPage
 };

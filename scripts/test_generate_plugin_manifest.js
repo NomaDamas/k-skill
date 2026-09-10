@@ -30,11 +30,11 @@ const SKILL_FM = "---\nname: x\ndescription: y\n---\n";
 test("discoverSkillPaths returns sorted ./-prefixed dirs that contain SKILL.md", () => {
   const root = makeFixtureRoot({
     "lotto-results/SKILL.md": SKILL_FM,
-    "ktx-booking/SKILL.md": SKILL_FM,
+    "railway-timetable/SKILL.md": SKILL_FM,
     "not-a-skill/README.md": "no skill here",
     "top-level-file.md": "ignored",
   });
-  assert.deepEqual(discoverSkillPaths(root), ["./ktx-booking", "./lotto-results"]);
+  assert.deepEqual(discoverSkillPaths(root), ["./lotto-results", "./railway-timetable"]);
 });
 
 test("discoverSkillPaths excludes infrastructure dirs and nested fixtures", () => {
@@ -75,8 +75,8 @@ test("run --check passes when manifest matches, fails after drift", () => {
   assert.equal(run({ root, check: true }).ok, true);
 
   // Add a new skill on disk -> check must now report drift.
-  fs.mkdirSync(path.join(root, "ktx-booking"));
-  fs.writeFileSync(path.join(root, "ktx-booking", "SKILL.md"), SKILL_FM);
+  fs.mkdirSync(path.join(root, "railway-timetable"));
+  fs.writeFileSync(path.join(root, "railway-timetable", "SKILL.md"), SKILL_FM);
   assert.equal(run({ root, check: true }).ok, false);
 });
 

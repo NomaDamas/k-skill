@@ -28,7 +28,15 @@ The script:
    never overwritten and must never be committed to git;
 3. rewrites provisioning paths into `data/provisioning`;
 4. installs and starts `k-skill-proxy-{loki,promtail,grafana}.service`
-   (Grafana on `127.0.0.1:3200`).
+   (Grafana on `127.0.0.1:3200`) and installs/enables the tunnel unit without
+   restarting it.
+
+The canonical systemd unit files live in `systemd/`. All units use
+`Restart=always` with `StartLimitIntervalSec=0` so a reboot or a clean stop
+cannot leave the stack dead until manual intervention. The Cloudflare tunnel
+and Fastify proxy units live here too; they additionally pin `RequiresMountsFor=`
+on the NFS-backed paths so they wait for `gpu02:/data` at boot instead of
+crash-looping past the start limit.
 
 Public access goes through the existing cloudflared tunnel
 (`~/.cloudflared/config.yml`, hostname

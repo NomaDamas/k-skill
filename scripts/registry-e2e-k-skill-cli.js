@@ -40,7 +40,7 @@ check(packageJson.version === expectedVersion, `expected ${expectedVersion}, got
 const list = run(["list"]);
 check(list.status === 0, `list failed: ${list.stderr}`);
 const skills = list.stdout.trim().split("\n").filter(Boolean);
-check(skills.length === 119, `expected 119 skills, got ${skills.length}`);
+check(skills.length === 120, `expected 120 skills, got ${skills.length}`);
 check(new Set(skills).size === skills.length, "skill list contains duplicates");
 
 const unresolvedScript =
