@@ -35,7 +35,7 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 
 ## 어떤 걸 할 수 있나
 
-총 124개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
+총 125개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
 
 ### 🚉 이동·교통·여행
 
@@ -165,6 +165,7 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
 | [KAMIS 농수축산물 가격 조회](docs/features/kamis-food-price.md) | `kamis-food-price` | KAMIS 공식 농수축산물 도매·소매 가격과 기간 비교값 조회 (프록시 경유) |
+| [농사로 작목·병해충·농업기술 조회](docs/features/nongsaro-search.md) | `nongsaro-search` | 농촌진흥청 농사로 Open API로 작목·병해충·농업기술 정보를 조회 |
 | [근처 술집 조회](docs/features/kakao-bar-nearby.md) | `kakao-bar-nearby` | 현재 위치 기준 영업 상태·메뉴·좌석·전화번호가 포함된 근처 술집 조회 |
 | [올라포케 역삼 포케](docs/features/hola-poke-yeoksam.md) | `hola-poke-yeoksam` | 올라포케 역삼점 메뉴, 매장 정보, 이벤트 참여 흐름 안내 |
 
