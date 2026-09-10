@@ -76,4 +76,4 @@ if (!venvHasPip(venvDir)) {
   run(venv, ["-m", "ensurepip", "--upgrade"]);
 }
 
-run(venv, ["-m", "pip", "install", "--quiet", "beautifulsoup4", "openpyxl==3.1.5", "SRTrain==2.6.7"]);
+run(venv, ["-m", "pip", "install", "--quiet", "beautifulsoup4", "openpyxl==3.1.5"]);

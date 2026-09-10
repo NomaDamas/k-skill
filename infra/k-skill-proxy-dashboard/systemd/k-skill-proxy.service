@@ -1,0 +1,20 @@
+[Unit]
+Description=k-skill-proxy (Fastify upstream API proxy)
+After=network-online.target
+Wants=network-online.target
+# App dir lives on the gpu02:/data NFS mount.
+RequiresMountsFor=/data/home/jeffrey/apps/k-skill-proxy
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/data/home/jeffrey/apps/k-skill-proxy/packages/k-skill-proxy
+EnvironmentFile=/data/home/jeffrey/apps/k-skill-proxy/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+StandardOutput=append:/data/home/jeffrey/apps/k-skill-proxy/proxy.log
+StandardError=append:/data/home/jeffrey/apps/k-skill-proxy/proxy.log
+
+[Install]
+WantedBy=default.target

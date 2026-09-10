@@ -1,0 +1,8 @@
+{
+  "name": "railway-timetable",
+  "description": "Read-only Korail integrated railway timetable lookup covering KTX-family trains. No reservation, payment, cancellation, or seat holding.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: railway-timetable\ndescription: Read-only Korail integrated railway timetable lookup covering KTX-family trains. No reservation, payment, cancellation, or seat holding.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
+}

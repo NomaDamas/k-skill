@@ -1,0 +1,6 @@
+{
+  "name": "komsa-ferry-info",
+  "description": "한국해양교통안전공단 KOMSA MTIS 공식 API로 연안여객선 운항 일정과 선박·항로 정보를 조회한다.",
+  "profiles": ["proxy", "lookup"],
+  "frontmatter": "name: komsa-ferry-info\ndescription: 한국해양교통안전공단 KOMSA MTIS 공식 API로 연안여객선 운항 일정과 선박·항로 정보를 조회한다.\nlicense: MIT\nmetadata:\n  category: transport\n  locale: ko-KR\n  phase: v1"
+}

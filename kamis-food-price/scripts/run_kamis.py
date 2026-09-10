@@ -63,6 +63,7 @@ def main(argv=None):
     parser.add_argument("--proxy-base-url", default=os.getenv("KSKILL_PROXY_BASE_URL", DEFAULT_PROXY))
     parser.add_argument("--secrets-path", default=os.path.expanduser("~/.config/k-skill/secrets.env"))
     args = parser.parse_args(argv)
+    key = None
     try:
         params = query(args)
     except ValueError as error:
@@ -75,13 +76,18 @@ def main(argv=None):
         if not key:
             print("[error] --direct requires KSKILL_KAMIS_API_KEY", file=sys.stderr)
             return 3
+        assert key is not None
         params = {**params, "action": "dailyPriceByCategoryList", "p_cert_key": key, "p_cert_id": "TEST"}
         url = f"{UPSTREAM}?{urllib.parse.urlencode(params)}"
     else:
         url = f"{args.proxy_base_url.rstrip('/')}/v1/kamis/food-price/daily-category?{urllib.parse.urlencode(params)}"
 
     if args.dry_run:
-        print(json.dumps({"url": url.replace(key, "<redacted>") if args.direct else url, "query": params}, ensure_ascii=False, indent=2))
+        display_params = {**params}
+        if args.direct:
+            display_params["p_cert_key"] = "<redacted>"
+        display_url = url.replace(key, "<redacted>") if args.direct and key is not None else url
+        print(json.dumps({"url": display_url, "query": display_params}, ensure_ascii=False, indent=2))
         return 0
 
     try:

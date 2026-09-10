@@ -5,7 +5,7 @@
 권장 순서는 아래와 같다.
 
 1. Node.js 18 이상과 `npx`가 사용 가능한지 확인한다.
-2. KTX·SRT 스킬을 사용할 경우 Python 3.11 이상과 `uv`가 사용 가능한지 확인한다.
+2. 철도 통합 시간표 스킬을 사용할 경우 Python 3.11 이상과 `uv`가 사용 가능한지 확인한다.
 3. `k-skill` 전체 스킬을 먼저 설치한다.
 4. 설치가 끝나면 `k-skill-setup` 스킬을 사용해 공통 설정을 마친다.
 5. 그 다음 필요한 기능 스킬을 호출한다.
@@ -114,8 +114,7 @@ npx --yes skills add NomaDamas/k-skill \
 ```bash
 npx --yes skills add NomaDamas/k-skill \
   --skill k-skill-setup \
-  --skill srt-booking \
-  --skill ktx-booking \
+  --skill railway-timetable \
   --skill express-bus-booking \
   --skill intercity-bus-booking \
   --skill foresttrip-vacancy \
@@ -153,7 +152,7 @@ npx -y @nomadamas/k-skill@0 instruct <skill-name>
 npx -y @nomadamas/k-skill@0 list
 
 # 현재 환경에 맞는 instruction 확인
-npx -y @nomadamas/k-skill@0 instruct srt-booking
+npx -y @nomadamas/k-skill@0 instruct railway-timetable
 
 # npm 패키지에 동봉된 helper 실행
 npx -y @nomadamas/k-skill@0 exec \
@@ -181,7 +180,7 @@ npm 접근이 제한되거나 반복 호출 비용을 피해야 하면 선택적
 ```bash
 npm install -g @nomadamas/k-skill@0
 k-skill list
-k-skill instruct srt-booking
+k-skill instruct railway-timetable
 k-skill exec kosis-stats scripts/run_kosis_stats.py -- --help
 k-skill read kosis-stats references/kosis-openapi-guide.md
 ```
@@ -421,7 +420,7 @@ export TOSSINVEST_ACCOUNT=...          # 선택, 계좌·자산·주문조회 �
 uv --version
 ```
 
-KTX·SRT 스킬은 Python 3.11 이상과 [`uv`](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. `uv`가 KTX 공식 XLSX parser의 `openpyxl`과 SRT 익명 search client인 `SRTrain`을 자동 설치하며 철도 회원 ID·비밀번호는 필요하지 않습니다.
+철도 통합 시간표 스킬은 Python 3.11 이상과 [`uv`](https://docs.astral.sh/uv/getting-started/installation/)가 필요합니다. `uv`가 코레일 공식 XLSX parser의 `openpyxl`을 자동 설치하며 철도 회원 ID·비밀번호는 필요하지 않습니다.
 
 조선왕조실록 검색 helper는 설치된 `joseon-sillok-search` skill 안의 `scripts/sillok_search.py` 를 그대로 쓰면 되고, 별도 외부 패키지 없이 표준 라이브러리 `python3` 만 있으면 된다.
 
@@ -475,8 +474,7 @@ npx -y @nomadamas/k-skill@0 exec korean-character-count scripts/korean_character
 
 먼저 `k-skill-setup`을 따라야 하는 스킬:
 
-- `srt-booking`
-- `ktx-booking`
+- `railway-timetable`
 - `seoul-subway-arrival`
 - `seoul-density`
 - `seoul-bike`

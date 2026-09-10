@@ -15,7 +15,7 @@
 
 | 유형 | 설명 | 예시 |
 |------|------|------|
-| **instruction 전용** | `instruction.md`의 명령만으로 동작 | `kakaotalk-mac`, `srt-booking` |
+| **instruction 전용** | `instruction.md`의 명령만으로 동작 | `kakaotalk-mac`, `railway-timetable` |
 | **npm 패키지** | `packages/` 아래 Node.js 라이브러리로 구현 | `k-lotto`, `daiso-product-search` |
 | **프록시 경유** | `k-skill-proxy`가 upstream API 키를 보관하고 HTTP로 중계 | `seoul-subway-arrival`, `fine-dust-location` |
 | **Python 스크립트** | `scripts/`의 Python 파일 직접 실행 | `korean-spell-check`, `sillok-search` |

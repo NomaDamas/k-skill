@@ -62,7 +62,7 @@ const EXCLUDED_DIRS = new Set([
 const DEFAULT_MANIFEST = {
   name: "k-skill",
   description:
-    "한국인을 위한 90+ Agent Skill 모음 — SRT/KTX/당근/쿠팡/카톡/정부24 등 한국 일상·업무 자동화",
+    "한국인을 위한 90+ Agent Skill 모음 — KTX/당근/쿠팡/카톡/정부24 등 한국 일상·업무 자동화",
   version: "1.0.0",
   author: { name: "NomaDamas" },
   homepage: "https://github.com/NomaDamas/k-skill",

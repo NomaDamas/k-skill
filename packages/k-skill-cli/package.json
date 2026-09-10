@@ -1,6 +1,6 @@
 {
   "name": "@nomadamas/k-skill",
-  "version": "0.4.3",
+  "version": "0.6.0",
   "description": "k-skill unified CLI: assembles runtime-aware skill instructions and ships bundled helper files",
   "license": "MIT",
   "bin": {
