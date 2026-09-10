@@ -91,6 +91,17 @@ COUPANG_ACCESS_KEY=<coupang-partners-access-key>
 COUPANG_SECRET_KEY=<coupang-partners-secret-key>
 ```
 
+Optional BC Card eat.pl relay keys, only when the Lightsail fixed-egress relay
+is in use. Store the same random token on Lightsail as `EATPL_RELAY_TOKEN`.
+Never put the token in Git, chat, or client requests:
+
+```dotenv
+BCCARD_EATPL_INST_NM=<partner-institution-code>
+BCCARD_EATPL_API_BASE_URL=https://api.paybooc.ai/api/mer
+BCCARD_EATPL_RELAY_URL=https://eatpl-relay.nomadamas.org/v1/search
+BCCARD_EATPL_RELAY_TOKEN=<same-token-as-lightsail>
+```
+
 `KSKILL_PROXY_TRUST_PROXY_HOPS=1` is required in production. Leave it unset
 (default `0`) only for a locally bound process that is not behind a reverse
 proxy. When hops are trusted, the rate limiter prefers `CF-Connecting-IP` over

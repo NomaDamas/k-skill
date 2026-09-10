@@ -267,6 +267,8 @@ function buildConfig(env = process.env) {
     naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
     bccardEatplInstNm: trimOrNull(env.BCCARD_EATPL_INST_NM),
     bccardEatplApiBaseUrl: trimOrNull(env.BCCARD_EATPL_API_BASE_URL) || "https://dev-api.paybooc.ai/api/mer",
+    bccardEatplRelayUrl: trimOrNull(env.BCCARD_EATPL_RELAY_URL),
+    bccardEatplRelayToken: trimOrNull(env.BCCARD_EATPL_RELAY_TOKEN),
     bccardEatplApiTimeoutMs: parseInteger(env.BCCARD_EATPL_API_TIMEOUT_MS, 20000),
     lawOc: trimOrNull(env.LAW_OC),
     lawReferer: trimOrNull(env.LAW_REFERER),
@@ -5639,6 +5641,8 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         query: normalized,
         instNm: config.bccardEatplInstNm,
         baseUrl: config.bccardEatplApiBaseUrl,
+        relayUrl: config.bccardEatplRelayUrl,
+        relayToken: config.bccardEatplRelayToken,
         nextTraceNumber: nextBccardEatplTraceNumber,
         timeoutMs: config.bccardEatplApiTimeoutMs
       });

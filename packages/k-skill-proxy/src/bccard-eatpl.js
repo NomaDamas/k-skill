@@ -51,6 +51,8 @@ async function fetchBccardEatplSearch({
   query,
   instNm,
   baseUrl = DEFAULT_BASE_URL,
+  relayUrl = null,
+  relayToken = null,
   nextTraceNumber,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fetchImpl = global.fetch
@@ -61,25 +63,35 @@ async function fetchBccardEatplSearch({
     error.statusCode = 503;
     throw error;
   }
+  if (relayUrl && !relayToken) {
+    const error = new Error("BCCARD_EATPL_RELAY_TOKEN is not configured on the proxy server.");
+    error.code = "upstream_not_configured";
+    error.statusCode = 503;
+    throw error;
+  }
   if (typeof fetchImpl !== "function") {
     throw new Error("fetch is not available in this Node runtime.");
   }
 
-  const url = buildBccardEatplSearchUrl(baseUrl);
-  const response = await fetchImpl(url, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      "user-agent": "k-skill-proxy/bccard-eatpl"
-    },
-    body: JSON.stringify({
+  const url = relayUrl ? new URL(String(relayUrl)) : buildBccardEatplSearchUrl(baseUrl);
+  const body = relayUrl
+    ? query
+    : {
       trnsTrceNo: nextTraceNumber(),
       instNm,
       ...(query.merNm ? { merNm: query.merNm } : {}),
       ...(query.location ? { location: query.location } : {}),
       ...(query.merTpbuzNm ? { merTpbuzNm: query.merTpbuzNm } : {})
-    }),
+    };
+  const response = await fetchImpl(url, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      "user-agent": "k-skill-proxy/bccard-eatpl",
+      ...(relayUrl ? { authorization: `Bearer ${relayToken}` } : {})
+    },
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs)
   });
   const text = await response.text();
@@ -113,7 +125,7 @@ async function fetchBccardEatplSearch({
     upstream: {
       url: url.toString(),
       status_code: response.status,
-      provider: "bccard-eatpl"
+      provider: relayUrl ? "bccard-eatpl-relay" : "bccard-eatpl"
     }
   };
 }

@@ -61,6 +61,49 @@ test("builds the documented upstream path", () => {
   );
 });
 
+test("can send the search through an authenticated fixed-egress relay", async () => {
+  const calls = [];
+  const result = await fetchBccardEatplSearch({
+    query: normalizeBccardEatplSearchQuery({ location: "서울 종로구", genre: "일반한식" }),
+    instNm: "kskill",
+    relayUrl: "https://eatpl-relay.nomadamas.org/v1/search",
+    relayToken: "relay-secret",
+    nextTraceNumber: () => {
+      throw new Error("relay mode must not generate caller trace numbers");
+    },
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), options });
+      return new Response(JSON.stringify({
+        rspCode: "00000",
+        rspMessage: "Success",
+        data: []
+      }), { status: 200 });
+    }
+  });
+  assert.equal(calls[0].url, "https://eatpl-relay.nomadamas.org/v1/search");
+  assert.equal(calls[0].options.headers.authorization, "Bearer relay-secret");
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    location: "서울 종로구",
+    merNm: null,
+    merTpbuzNm: "일반한식"
+  });
+  assert.equal(result.upstream.provider, "bccard-eatpl-relay");
+});
+
+test("refuses to call the relay without a bearer token", async () => {
+  await assert.rejects(
+    () => fetchBccardEatplSearch({
+      query: normalizeBccardEatplSearchQuery({ location: "서울 종로구" }),
+      instNm: "kskill",
+      relayUrl: "https://eatpl-relay.nomadamas.org/v1/search",
+      fetchImpl: async () => {
+        throw new Error("relay must not be called without a token");
+      }
+    }),
+    (error) => error.statusCode === 503 && error.code === "upstream_not_configured"
+  );
+});
+
 test("proxy route hides institution credentials, caches, and rejects invalid input", async (t) => {
   const originalFetch = global.fetch;
   const calls = [];
