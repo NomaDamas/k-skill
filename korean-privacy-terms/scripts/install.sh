@@ -66,6 +66,23 @@ if [[ "${HEAD_SHA}" != "${UPSTREAM_SHA}" ]]; then
   exit 1
 fi
 
+# 0바이트 템플릿 검증 (#660). 업스트림 파일이 빈 채 커밋돼 있으면 해당 경로의
+# 문서 생성이 조용히 실패하므로 설치 시점에 경고로 표면화한다. 다른 경로의
+# 문서는 정상 생성되므로 경고만 하고 설치는 계속한다.
+EMPTY_TEMPLATES=()
+while IFS= read -r -d '' EMPTY_FILE; do
+  EMPTY_TEMPLATES+=("${EMPTY_FILE#"${CLONE_DIR}/"}")
+done < <(find "${CLONE_DIR}" -type f -name '*.tmpl' -size 0 -print0)
+
+if (( ${#EMPTY_TEMPLATES[@]} > 0 )); then
+  echo "[korean-privacy-terms] warning: pinned upstream 에 0바이트 템플릿 ${#EMPTY_TEMPLATES[@]}건이 있다." >&2
+  for EMPTY_TEMPLATE in "${EMPTY_TEMPLATES[@]}"; do
+    echo "  - ${EMPTY_TEMPLATE}" >&2
+  done
+  echo "  해당 템플릿 경로의 문서는 생성되지 않는다. 나머지 경로는 정상 생성된다." >&2
+  echo "  상세와 해소 상태는 스킬 instruction.md 의 Failure modes 를 확인해달라." >&2
+fi
+
 # Dual-install targets. Both paths respect AGENTS.md indirection rules and do not
 # introduce repo-local skill directories.
 HOME_DIRS=(

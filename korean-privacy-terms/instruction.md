@@ -115,6 +115,7 @@ git -C ~/.agents/skills/korean-privacy-terms/upstream rev-parse HEAD
 - pin SHA 가 업스트림에서 삭제/force-push 된 경우: 스크립트가 SHA mismatch 로 비정상 종료한다. `scripts/upstream.pin` 을 최신 태그 SHA 로 bump 하고 PR 을 만든다.
 - Next.js Pages Router 단독 프로젝트: 업스트림이 실행을 중단한다. 사용자에게 App Router 전환이 선행 조건임을 안내한다.
 - 법률 개정 드리프트: 업스트림이 CHANGELOG 로 반영 기준을 관리한다. pin 만 올리지 말고 업스트림 CHANGELOG 를 함께 확인한다.
+- 한글 이용약관 템플릿 0바이트 (upstream, #660): pin 시점 기준 `jurisdictions/kr-pipa/terms-of-service.ko.mdx.tmpl` 과 `templates/terms-of-service.mdx.tmpl` 이 빈 파일이라 한국어(`outputLocale: ko`) 경로에서 이용약관을 생성할 수 없다. 개인정보처리방침(ko/en)과 영문 약관은 정상 생성된다. 업스트림에 템플릿이 채워지면 `scripts/upstream.pin` bump 로 해소한다. `install.sh` 가 설치 시 0바이트 템플릿을 경고로 표면화하므로 인터뷰 시작 전에 확인한다.
 
 ## Notes
 
