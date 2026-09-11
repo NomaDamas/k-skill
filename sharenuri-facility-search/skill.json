@@ -1,0 +1,8 @@
+{
+  "name": "sharenuri-facility-search",
+  "description": "공유누리(eshare.go.kr) 공개 통합검색으로 전국 공공개방자원(회의실·체육시설·숙소·교육·물품 등)을 인증키·로그인 없이 검색하고, 상세정보(요금·정원·예약방법·문의처)와 공식 예약 경로를 안내한다. 조회 전용.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: sharenuri-facility-search\ndescription: 공유누리(eshare.go.kr) 공개 통합검색으로 전국 공공개방자원(회의실·체육시설·숙소·교육·물품 등)을 인증키·로그인 없이 검색하고, 상세정보(요금·정원·예약방법·문의처)와 공식 예약 경로를 안내한다. 조회 전용.\nlicense: MIT\nmetadata:\n  category: civic\n  locale: ko-KR\n  phase: v1"
+}
