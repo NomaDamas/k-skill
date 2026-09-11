@@ -3774,6 +3774,40 @@ test("korean-privacy-terms ships an install.sh wrapper and a pinned upstream SHA
   );
 });
 
+test("korean-privacy-terms install.sh warns on zero-byte upstream templates (#660)", () => {
+  const install = fs.readFileSync(
+    path.join(repoRoot, "korean-privacy-terms", "scripts", "install.sh"),
+    "utf8",
+  );
+
+  assert.match(
+    install,
+    /find\s+"?\$\{?CLONE_DIR\}?[\s\S]*-name\s+'\*\.tmpl'[\s\S]*-size 0/,
+    "install.sh must scan the pinned upstream checkout for zero-byte .tmpl templates",
+  );
+  assert.match(
+    install,
+    /0바이트 템플릿/,
+    "install.sh must warn in Korean when a zero-byte template is found",
+  );
+});
+
+test("korean-privacy-terms docs record the zero-byte Korean terms template limitation (#660)", () => {
+  const instruction = read(path.join("korean-privacy-terms", "instruction.md"));
+  const featureDoc = read(path.join("docs", "features", "korean-privacy-terms.md"));
+
+  for (const [label, doc] of [["instruction.md", instruction], ["docs/features/korean-privacy-terms.md", featureDoc]]) {
+    assert.match(doc, /terms-of-service\.ko\.mdx\.tmpl/, `${label} must name the missing template`);
+    assert.match(doc, /0바이트/, `${label} must record that the template is zero bytes`);
+  }
+
+  assert.match(
+    instruction,
+    /Failure modes[\s\S]*terms-of-service\.ko\.mdx\.tmpl/,
+    "instruction.md must document the limitation under Failure modes",
+  );
+});
+
 test("korean-privacy-terms bundles the Apache-2.0 LICENSE per §4(a) redistribution requirement", () => {
   const licensePath = path.join(repoRoot, "korean-privacy-terms", "LICENSE.upstream");
 
