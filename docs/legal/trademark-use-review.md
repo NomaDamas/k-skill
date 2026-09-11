@@ -133,6 +133,7 @@ k-skill이 제3자 표장을 **자기 서비스의 출처표시로 사용하지 
 | `olive-young-search` | 올리브영 / Olive Young |
 | `popbill` | 팝빌 / Popbill |
 | `saramin-talent-search` | 사람인 / Saramin |
+| `sharenuri-facility-search` | 공유누리 / eShare |
 | `railway-timetable` | KTX, 코레일 / Korail |
 | `ticket-availability` | YES24, 인터파크 |
 | `toss-investment` | 토스증권 / Toss Securities |
