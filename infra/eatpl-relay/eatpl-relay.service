@@ -1,0 +1,21 @@
+[Unit]
+Description=k-skill eat.pl fixed-egress relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/eatpl-relay
+EnvironmentFile=/etc/eatpl-relay/eatpl-relay.env
+ExecStart=/usr/bin/node /opt/eatpl-relay/server.js
+Restart=always
+RestartSec=3
+User=eatpl-relay
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/eatpl-relay
+
+[Install]
+WantedBy=multi-user.target

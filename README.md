@@ -35,7 +35,7 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 
 ## 어떤 걸 할 수 있나
 
-총 124개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
+총 125개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
 
 ### 🚉 이동·교통·여행
 
@@ -167,6 +167,7 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 | [KAMIS 농수축산물 가격 조회](docs/features/kamis-food-price.md) | `kamis-food-price` | KAMIS 공식 농수축산물 도매·소매 가격과 기간 비교값 조회 (프록시 경유) |
 | [근처 술집 조회](docs/features/kakao-bar-nearby.md) | `kakao-bar-nearby` | 현재 위치 기준 영업 상태·메뉴·좌석·전화번호가 포함된 근처 술집 조회 |
 | [올라포케 역삼 포케](docs/features/hola-poke-yeoksam.md) | `hola-poke-yeoksam` | 올라포케 역삼점 메뉴, 매장 정보, 이벤트 참여 흐름 안내 |
+| [BC카드 eat.pl 맛집 검색](docs/features/bccard-eatpl-search.md) | `bccard-eatpl-search` | 지역·역·동네 기준 맛집·음식점·카페 검색. 최근 1개월 결제 데이터 기반 매출 상위와 상세 링크 |
 
 ### ⚽ 스포츠·경기
 

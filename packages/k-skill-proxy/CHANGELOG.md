@@ -1,5 +1,11 @@
 # k-skill-proxy
 
+## 0.12.0
+
+### Minor Changes
+
+- 28bac25: Add the komsa-ferry-info skill and hosted KOMSA MTIS ferry lookup route.
+
 ## 0.11.1
 
 ### Patch Changes
