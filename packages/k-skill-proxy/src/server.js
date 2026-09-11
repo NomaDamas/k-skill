@@ -267,7 +267,7 @@ function buildConfig(env = process.env) {
     naverSearchClientId: trimOrNull(env.NAVER_SEARCH_CLIENT_ID ?? env.NAVER_CLIENT_ID),
     naverSearchClientSecret: trimOrNull(env.NAVER_SEARCH_CLIENT_SECRET ?? env.NAVER_CLIENT_SECRET),
     bccardEatplInstNm: trimOrNull(env.BCCARD_EATPL_INST_NM),
-    bccardEatplApiBaseUrl: trimOrNull(env.BCCARD_EATPL_API_BASE_URL) || "https://dev-api.paybooc.ai/api/mer",
+    bccardEatplApiBaseUrl: trimOrNull(env.BCCARD_EATPL_API_BASE_URL),
     bccardEatplRelayUrl: trimOrNull(env.BCCARD_EATPL_RELAY_URL),
     bccardEatplRelayToken: trimOrNull(env.BCCARD_EATPL_RELAY_TOKEN),
     bccardEatplApiTimeoutMs: parseInteger(env.BCCARD_EATPL_API_TIMEOUT_MS, 20000),

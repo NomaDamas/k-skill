@@ -82,7 +82,7 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
 사용자에게 credentials를 묻거나 출력하지 않는다. 운영 환경에 다음 값을 secret으로 주입한다.
 
 - `BCCARD_EATPL_INST_NM`: 제휴 시 발급된 기관코드
-- `BCCARD_EATPL_API_BASE_URL`: 기본값 `https://dev-api.paybooc.ai/api/mer`; 정식 오픈 시 운영 URL로 변경
+- `BCCARD_EATPL_API_BASE_URL`: 필수값, 기본값 없음 (미설정 시 503 `upstream_not_configured`). 운영 URL은 `https://api.paybooc.ai/api/mer`
 - `BCCARD_EATPL_RELAY_URL`: 선택값, 고정 outbound IP relay URL. 설정하면 proxy는 이 URL만 호출하고, 토큰 없이는 호출하지 않는다
 - `BCCARD_EATPL_RELAY_TOKEN`: 선택값, relay `Authorization: Bearer` 시크릿. gpu01 `k-skill-proxy` `.env`와 Lightsail relay env에만 저장한다. 사용자·클라이언트는 Lightsail을 직접 호출하지 않는다
 - `BCCARD_EATPL_API_TIMEOUT_MS`: 선택값, 기본 20000

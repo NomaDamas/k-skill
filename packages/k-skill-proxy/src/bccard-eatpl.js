@@ -1,6 +1,5 @@
 "use strict";
 
-const DEFAULT_BASE_URL = "https://dev-api.paybooc.ai/api/mer";
 const DEFAULT_TIMEOUT_MS = 20000;
 
 function trimOrNull(value) {
@@ -43,14 +42,17 @@ function createTraceNumberFactory({ instNm, now = () => new Date() } = {}) {
   };
 }
 
-function buildBccardEatplSearchUrl(baseUrl = DEFAULT_BASE_URL) {
+function buildBccardEatplSearchUrl(baseUrl) {
+  if (!baseUrl) {
+    throw new Error("buildBccardEatplSearchUrl requires an explicit baseUrl.");
+  }
   return new URL(`${String(baseUrl).replace(/\/+$/, "")}/v1/search`);
 }
 
 async function fetchBccardEatplSearch({
   query,
   instNm,
-  baseUrl = DEFAULT_BASE_URL,
+  baseUrl = null,
   relayUrl = null,
   relayToken = null,
   nextTraceNumber,
@@ -59,6 +61,12 @@ async function fetchBccardEatplSearch({
 } = {}) {
   if (!instNm) {
     const error = new Error("BCCARD_EATPL_INST_NM is not configured on the proxy server.");
+    error.code = "upstream_not_configured";
+    error.statusCode = 503;
+    throw error;
+  }
+  if (!relayUrl && !baseUrl) {
+    const error = new Error("BCCARD_EATPL_API_BASE_URL is not configured on the proxy server.");
     error.code = "upstream_not_configured";
     error.statusCode = 503;
     throw error;
@@ -123,7 +131,6 @@ async function fetchBccardEatplSearch({
     query,
     attribution: "eat.pl 잇플 · BC카드 결제 데이터 기반",
     upstream: {
-      url: url.toString(),
       status_code: response.status,
       provider: relayUrl ? "bccard-eatpl-relay" : "bccard-eatpl"
     }
@@ -131,7 +138,6 @@ async function fetchBccardEatplSearch({
 }
 
 module.exports = {
-  DEFAULT_BASE_URL,
   buildBccardEatplSearchUrl,
   createTraceNumberFactory,
   fetchBccardEatplSearch,

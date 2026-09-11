@@ -36,7 +36,7 @@ test("posts server-side credentials and returns eatpl data", async () => {
   const result = await fetchBccardEatplSearch({
     query: normalizeBccardEatplSearchQuery({ location: "서울 종로구", genre: "카페" }),
     instNm: "bccard",
-    baseUrl: "https://dev-api.paybooc.ai/api/mer",
+    baseUrl: "https://api.paybooc.ai/api/mer",
     nextTraceNumber: () => "bccard202608260000000001",
     fetchImpl: async (url, options) => {
       calls.push({ url: String(url), options });
@@ -47,7 +47,7 @@ test("posts server-side credentials and returns eatpl data", async () => {
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
   });
-  assert.equal(calls[0].url, "https://dev-api.paybooc.ai/api/mer/v1/search");
+  assert.equal(calls[0].url, "https://api.paybooc.ai/api/mer/v1/search");
   assert.equal(JSON.parse(calls[0].options.body).trnsTrceNo, "bccard202608260000000001");
   assert.equal(JSON.parse(calls[0].options.body).instNm, "bccard");
   assert.equal(result.items[0].merUrl, "https://web.paybooc.ai/mer/web/profile/test");
@@ -88,6 +88,21 @@ test("can send the search through an authenticated fixed-egress relay", async ()
     merTpbuzNm: "일반한식"
   });
   assert.equal(result.upstream.provider, "bccard-eatpl-relay");
+  assert.equal(result.upstream.url, undefined);
+});
+
+test("refuses to call upstream directly without a configured base URL", async () => {
+  await assert.rejects(
+    () => fetchBccardEatplSearch({
+      query: normalizeBccardEatplSearchQuery({ location: "서울 종로구" }),
+      instNm: "kskill",
+      nextTraceNumber: () => "kskill202608260000000001",
+      fetchImpl: async () => {
+        throw new Error("upstream must not be called without a base URL");
+      }
+    }),
+    (error) => error.statusCode === 503 && error.code === "upstream_not_configured"
+  );
 });
 
 test("refuses to call the relay without a bearer token", async () => {
@@ -118,7 +133,7 @@ test("proxy route hides institution credentials, caches, and rejects invalid inp
   const app = buildServer({
     env: {
       BCCARD_EATPL_INST_NM: "bccard-test",
-      BCCARD_EATPL_API_BASE_URL: "https://dev-api.paybooc.ai/api/mer",
+      BCCARD_EATPL_API_BASE_URL: "https://api.paybooc.ai/api/mer",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     },
     now: () => new Date("2026-08-26T00:00:00Z")

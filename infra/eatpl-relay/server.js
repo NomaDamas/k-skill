@@ -4,13 +4,11 @@ const http = require("node:http");
 const crypto = require("node:crypto");
 
 const DEFAULT_PORT = 8080;
-const DEFAULT_UPSTREAM_BASE_URL = "https://dev-api.paybooc.ai/api/mer";
-const UPSTREAM_URL = `${DEFAULT_UPSTREAM_BASE_URL}/v1/search`;
 const MAX_BODY_BYTES = 16 * 1024;
 
 function resolveUpstreamUrl(env = {}) {
-  const base = String(env.BCCARD_EATPL_API_BASE_URL || DEFAULT_UPSTREAM_BASE_URL).trim().replace(/\/+$/, "");
-  return `${base}/v1/search`;
+  const base = String(env.BCCARD_EATPL_API_BASE_URL || "").trim().replace(/\/+$/, "");
+  return base ? `${base}/v1/search` : null;
 }
 
 function constantTimeEqual(left, right) {
@@ -86,7 +84,7 @@ function createServer({
     if (request.method !== "POST" || request.url !== "/v1/search") {
       return json(response, 404, { error: "not_found" });
     }
-    if (!relayToken || !instNm) {
+    if (!relayToken || !instNm || !upstreamUrl) {
       return json(response, 503, { error: "relay_not_configured" });
     }
     const providedToken = parseBearer(request.headers.authorization);
@@ -110,6 +108,7 @@ function createServer({
       for await (const chunk of request) {
         bytes += Buffer.byteLength(chunk);
         if (bytes > MAX_BODY_BYTES) {
+          json(response, 413, { error: "payload_too_large" });
           request.destroy();
           return;
         }
@@ -171,7 +170,6 @@ if (require.main === module) {
 
 module.exports = {
   MAX_BODY_BYTES,
-  UPSTREAM_URL,
   createServer,
   formatTraceNumber,
   normalizeQuery,
