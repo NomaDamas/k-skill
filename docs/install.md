@@ -148,6 +148,9 @@ npx -y @nomadamas/k-skill@0 instruct <skill-name>
 명령을 실행하면 `npx`가 호환되는 최신 `0.x` 버전을 가져온다.
 
 ```bash
+# 설치된 CLI 버전
+npx -y @nomadamas/k-skill@0 version
+
 # 배포된 스킬 목록
 npx -y @nomadamas/k-skill@0 list
 
@@ -179,6 +182,7 @@ npm 접근이 제한되거나 반복 호출 비용을 피해야 하면 선택적
 
 ```bash
 npm install -g @nomadamas/k-skill@0
+k-skill version
 k-skill list
 k-skill instruct railway-timetable
 k-skill exec kosis-stats scripts/run_kosis_stats.py -- --help

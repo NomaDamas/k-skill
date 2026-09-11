@@ -10,6 +10,7 @@ const {
 } = require("../src/assemble");
 const { runBundledScript } = require("../src/execute");
 const { detectRuntime } = require("../src/detect");
+const { version } = require("../package.json");
 
 function usage() {
   return [
@@ -23,6 +24,11 @@ function usage() {
     "  path <skill> <file> Print the absolute path of a bundled asset",
     "  files <skill>      Print local paths of the skill's bundled helper files",
     "  list               List bundled skills",
+    "  version            Print the installed CLI version",
+    "",
+    "Options:",
+    "  -h, --help         Show this help",
+    "  -v, -V, --version  Print the installed CLI version",
     "",
     "Runtime detection: DOLSHOI_ACTION_BROKER_URL enables Dolshoi mode;",
     "CLOAKBROWSER_PEEK_TOKEN marks CloakBrowser availability.",
@@ -34,6 +40,11 @@ function main() {
 
   if (!command || command === "--help" || command === "-h") {
     console.log(usage());
+    return 0;
+  }
+
+  if (command === "version" || command === "--version" || command === "-V" || command === "-v") {
+    console.log(version);
     return 0;
   }
 
