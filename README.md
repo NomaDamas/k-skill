@@ -35,7 +35,7 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 
 ## 어떤 걸 할 수 있나
 
-총 123개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
+총 125개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
 
 ### 🚉 이동·교통·여행
 
@@ -167,6 +167,7 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 | [KAMIS 농수축산물 가격 조회](docs/features/kamis-food-price.md) | `kamis-food-price` | KAMIS 공식 농수축산물 도매·소매 가격과 기간 비교값 조회 (프록시 경유) |
 | [근처 술집 조회](docs/features/kakao-bar-nearby.md) | `kakao-bar-nearby` | 현재 위치 기준 영업 상태·메뉴·좌석·전화번호가 포함된 근처 술집 조회 |
 | [올라포케 역삼 포케](docs/features/hola-poke-yeoksam.md) | `hola-poke-yeoksam` | 올라포케 역삼점 메뉴, 매장 정보, 이벤트 참여 흐름 안내 |
+| [BC카드 eat.pl 맛집 검색](docs/features/bccard-eatpl-search.md) | `bccard-eatpl-search` | 지역·역·동네 기준 맛집·음식점·카페 검색. 최근 1개월 결제 데이터 기반 매출 상위와 상세 링크 |
 
 ### ⚽ 스포츠·경기
 
@@ -188,6 +189,12 @@ npx --yes skills add NomaDamas/k-skill --skill railway-timetable -g
 | [로또 당첨 확인](docs/features/lotto-results.md) | `lotto-results` | 로또 최신 회차, 특정 회차, 번호 대조 |
 | [조선왕조실록 검색](docs/features/joseon-sillok-search.md) | `joseon-sillok-search` | 조선왕조실록 키워드 검색과 왕별/연도별 필터, 기사 발췌 조회 |
 | [국가유산 검색·행사 조회](docs/features/korean-heritage-search.md) | `korean-heritage-search` | 국가유산청 공식 Open API로 국가유산 목록·상세정보·좌표와 월별 국가유산 활용 행사 조회 |
+
+### ⛪ 종교
+
+| 할 수 있는 일 | 스킬 이름 | 설명 |
+| --- | --- | --- |
+| [종교시설 찾기](docs/features/religious-facility-search.md) | `religious-facility-search` | 동네·역명·랜드마크 기준 근처 교회·성당·사찰 거리순 조회와 주소·전화·카카오맵 링크 정리 (사용자 키 불필요) |
 
 ### 🎓 교육·장학·학술
 

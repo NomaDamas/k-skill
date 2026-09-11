@@ -1,0 +1,9 @@
+{
+  "name": "religious-facility-search",
+  "description": "Use when the user asks 근처 교회 찾기, 성당 위치, 절·사찰 찾기, 종교시설 조회, or church/cathedral/temple lookup by Korean neighborhood, station, or landmark. 공식 Kakao Local API를 k-skill-proxy 경유로 호출해 종교시설을 거리순으로 조회하고 주소·전화·카카오맵 링크를 정리한다. 사용자 API 키가 필요 없는 조회 전용 스킬이다.",
+  "profiles": [
+    "proxy",
+    "lookup"
+  ],
+  "frontmatter": "name: religious-facility-search\ndescription: Use when the user asks 근처 교회 찾기, 성당 위치, 절·사찰 찾기, 종교시설 조회, or church/cathedral/temple lookup by Korean neighborhood, station, or landmark. 공식 Kakao Local API를 k-skill-proxy 경유로 호출해 종교시설을 거리순으로 조회하고 주소·전화·카카오맵 링크를 정리한다. 사용자 API 키가 필요 없는 조회 전용 스킬이다.\nlicense: MIT\nmetadata:\n  category: religion\n  locale: ko-KR\n  phase: v1"
+}

@@ -202,6 +202,10 @@
 - 공중화장실정보 파일 소개: https://file.localdata.go.kr/file/public_restroom_info/info
 - 공중화장실정보 전국 CSV: https://file.localdata.go.kr/file/download/public_restroom_info/info
 - 공중화장실정보 지역별 CSV: https://file.localdata.go.kr/file/download/public_restroom_info/info?orgCode=<시도코드>
+- 공식 Kakao Local keyword 검색(k-skill-proxy 경유): `/v1/kakao-map/search/keyword?q=..&x=..&y=..&radius=..&sort=distance` — `religious-facility-search`가 기준점 해석과 종교시설 거리순 조회에 쓴다. `category_name`의 `종교` 노드로 필터하고 거리는 공식 `distance` 필드를 쓴다. upstream이 API 키를 요구하므로 프록시 편입 규칙에 따라 `k-skill-proxy`를 경유한다(사용자 키 불필요). `kakao-map` 스킬과 같은 라우트.
+- 카카오맵 모바일 검색(무인증): https://m.map.kakao.com/actions/searchView — `public-restroom-nearby`가 결과 HTML의 `data-cid`에서 장소 id를 추출한다. 브라우저 `User-Agent`가 없으면 403. (`religious-facility-search`는 공식 Kakao Local API로 옮겨 더 이상 이 경로를 쓰지 않는다.)
+- 카카오맵 장소 패널 JSON(무인증): https://place-api.map.kakao.com/places/panel3/<confirmId> — 이름·좌표·주소·전화·홈페이지와 `category.name2 == 종교` 분류를 제공한다. `appVersion`, `pf`, `Origin`, `Referer` 헤더가 필요하다. API key가 필요 없으므로 `k-skill-proxy`를 경유하지 않는다.
+- 서울특별시 종로구 교회 현황: https://www.data.go.kr/data/15117640/fileData.do — `religious-facility-search` discovery에서 확인한 참고 출처. 지자체별 파일데이터만 있고 전국 표준데이터가 없어 주 경로로 쓰지 않는다.
 - 서울특별시 지하철 실시간 도착정보: https://www.data.go.kr/data/15058052/openapi.do
 - 서울 실시간 도시데이터(`citydata_ppltn`): https://data.seoul.go.kr/dataList/OA-21778/A/1/datasetView.do
 - 서울 공공자전거 따릉이 실시간 대여정보(`bikeList`) 및 대여소 정보(`tbCycleStationInfo`): https://data.seoul.go.kr

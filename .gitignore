@@ -13,6 +13,10 @@ dist/
 .omo/
 .gjc/
 .private/
+.env.local
+infra/eatpl-relay/.env
+infra/eatpl-relay/.env.*
+!infra/eatpl-relay/.env.example
 
 .agents/
 .cache/

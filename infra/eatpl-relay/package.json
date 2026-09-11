@@ -1,0 +1,13 @@
+{
+  "name": "k-skill-eatpl-relay",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Authenticated fixed-egress relay for the BC Card eat.pl partner API",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/server.test.js"
+  }
+}
