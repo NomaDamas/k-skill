@@ -283,7 +283,7 @@ test("every top-level skill is a generated CLI stub", () => {
     .filter((name) => fs.existsSync(path.join(repoRoot, name, "SKILL.md")))
     .sort();
 
-  assert.equal(skillDirs.length, 125);
+  assert.equal(skillDirs.length, 126);
 
   for (const skillName of skillDirs) {
     const skill = readRaw(path.join(skillName, "SKILL.md"));
@@ -380,7 +380,7 @@ test("trademark-reviewed skills publish the combined legal disclaimer", () => {
     fs.existsSync(path.join(repoRoot, skillName, "references", "DISCLAIMER.md")),
   );
 
-  assert.equal(reviewedSkills.length, 43, "expected the complete trademark-reviewed skill set");
+  assert.equal(reviewedSkills.length, 44, "expected the complete trademark-reviewed skill set");
 
   for (const skillName of reviewedSkills) {
     const disclaimerPath = path.join(skillName, "references", "DISCLAIMER.md");

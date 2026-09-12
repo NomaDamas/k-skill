@@ -129,6 +129,7 @@
     "./seoul-subway-arrival",
     "./seoul-weather-risk",
     "./sh-notice-search",
+    "./sharenuri-facility-search",
     "./store-longevity-radar",
     "./subway-lost-property",
     "./ticket-availability",
