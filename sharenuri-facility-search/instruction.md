@@ -92,7 +92,7 @@ npx -y @nomadamas/k-skill@0 exec sharenuri-facility-search scripts/sharenuri_sea
   sigungu --ctrd 11
 
 npx -y @nomadamas/k-skill@0 exec sharenuri-facility-search scripts/sharenuri_search.py -- \
-  search --query 회의실 --sido 서울특별시 --sigg 11680 --free --json
+  --json search --query 회의실 --sido 서울특별시 --sigg 11680 --free
 ```
 
 ### 3. 상세정보와 예약 경로 확인
