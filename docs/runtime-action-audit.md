@@ -1,6 +1,6 @@
 # Runtime Action Audit
 
-2026-09-10 기준 top-level `SKILL.md` 126개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
+2026-09-10 기준 top-level `SKILL.md` 127개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
 
 ## Mode definitions
 
@@ -12,7 +12,7 @@
 - **legal** (7): 공식 법률·정부 표면의 로그인/인증/서류 준비를 진행하고 `clarify` 후 제출·입찰·수수료 결제
 - **operations** (1): k-skill 설치·업데이트·복구·런타임 연결을 실제 적용하고 검증
 - **local** (12): 요청 산출물을 로컬에서 실제 생성·변환·정리
-- **lookup** (66): 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
+- **lookup** (67): 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
 
 ## Complete catalog
 
@@ -111,6 +111,7 @@
 | `mfds-food-safety` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `myrealtrip-search` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
 | `mofa-travel-safety` | `lookup` | 외교부 국가·지역별 공식 여행경보 조회 완료 |
+| `morning-market-briefing` | `lookup` | 공개 시장 데이터를 관측일·출처와 함께 조회하고, 미확인·지연 수치는 본문에서 제외 |
 | `naming-house` | `local` | 요청 산출물을 로컬에서 실제 생성·변환·정리 |
 | `national-pension-workplace` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `naver-ad-performance` | `account` | 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify` |

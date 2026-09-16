@@ -136,6 +136,7 @@ npx -y @nomadamas/k-skill@0 update
 | [대신증권 리포트 조회](docs/features/daishin-report-search.md) | `daishin-report-search` | GitHub Pages에 공개된 대신증권 리포트 HTML 미러에서 최신 리포트 목록, 원문, 설명 페이지, Rating/Target 표를 조회 |
 | [국가데이터처 KOSIS 통계 조회](docs/features/kosis-stats.md) | `kosis-stats` | 국가데이터처가 운영하는 KOSIS(국가통계포털) Open API로 통계표 검색·메타·데이터·대용량 자료 조회 (조회 전용) |
 | [한국은행 ECOS 경제통계 조회](docs/features/bok-ecos-stats.md) | `bok-ecos-stats` | 한국은행 ECOS Open API로 기준금리·환율·소비자물가지수·통화량 시계열과 100대 핵심지표 조회 |
+| [모닝 마켓 브리핑](docs/features/morning-market-briefing.md) | `morning-market-briefing` | 미국 재무부 공식 금리 CSV와 FRED 공개 시계열로 한국장 개장 전 모닝 브리핑(Rates/FX/Commodity/Equity, Vol/한국 증시)을 작성. 수치마다 기준시점·출처·검증상태를 Data Ledger로 남겨 출처 역추적과 검수를 지원 (로그인·API 키 불필요) |
 
 ### 💊 건강·의료
 
