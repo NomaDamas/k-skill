@@ -31,7 +31,7 @@
     "cli"
   ],
   "scripts": {
-    "lint": "node --check bin/k-skill.js && node --check src/assemble.js && node --check src/detect.js && node --check src/execute.js && node --check src/update.js && node --check test/cli.test.js && node --check test/update.test.js",
+    "lint": "node --check bin/k-skill.js && node --check src/analytics.js && node --check src/metrics.js && node --check src/assemble.js && node --check src/detect.js && node --check src/execute.js && node --check src/update.js && node --check test/analytics.test.js && node --check test/cli.test.js && node --check test/update.test.js",
     "test": "node --test"
   }
 }
