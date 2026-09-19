@@ -1,0 +1,18 @@
+{
+  "purpose": "usage_statistics_only",
+  "event": "cli_invocation",
+  "collected_properties": [
+    "command",
+    "skill_name",
+    "cli_version",
+    "runtime_mode",
+    "success",
+    "analytics_schema_version"
+  ],
+  "excluded_data": [
+    "command_arguments",
+    "command_input",
+    "file_contents"
+  ],
+  "opt_out_environment_variable": "KSKILL_ANALYTICS_DISABLED"
+}

@@ -12,6 +12,10 @@ Claude Code, Codex, OpenCode, OpenClaw/ClawHub 등 각종 코딩 에이전트 �
 공개 API 프록시를 사용하는 스킬의 개인정보 처리 기준은
 [k-skill-proxy 개인정보 처리방침](https://k-skill-proxy.nomadamas.org/privacy)에서 확인할 수 있습니다.
 
+CLI 사용량 분석은 [CLI usage analytics](docs/usage-analytics.md)에 적힌
+사용량 통계 목적으로만 수집합니다. 명령어 인자·원문 입력·파일 내용·인증정보는
+수집하지 않으며, `KSKILL_ANALYTICS_DISABLED=1`로 거부할 수 있습니다.
+
 > **철도 통합 시간표는 조회 전용 스킬입니다.** KTX는 코레일 공식 계획 시간표를 조회하며 로그인·예약·예약대기·결제·취소는 수행하지 않습니다.
 
 ## 설치
