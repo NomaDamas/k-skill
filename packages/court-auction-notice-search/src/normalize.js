@@ -191,6 +191,57 @@ function normalizeNoticeDetailRow(rawRow, includeRaw) {
   return out;
 }
 
+/**
+ * Normalize one row of the PGJ153 부동산 기일별검색 schedule
+ * (`data.dlt_rletDxdySrchLst`) into the shared English-key shape.
+ *
+ * The upstream submission has no date key, so every row carries the sale
+ * schedule metadata the calendar view groups by `saleDate` client-side.
+ */
+function normalizeAuctionCalendarRow(rawRow, includeRaw) {
+  const row = ensureRow(rawRow);
+  const bidDvsCd = nullIfBlank(row.bidDvsCd);
+  const out = {
+    courtCode: nullIfBlank(row.cortOfcCd),
+    courtName: nullIfBlank(row.cortOfcNm),
+    courtBranchName: nullIfBlank(row.cortSptNm),
+    judgeDeptCode: nullIfBlank(row.jdbnCd),
+    judgeDeptName: nullIfBlank(row.cortAuctnJdbnNm),
+    bidTypeCode: bidDvsCd,
+    bidTypeName: (bidDvsCd ? describeBidTypeCode(bidDvsCd) : "") || null,
+    saleDate: formatYmd(row.dspslDxdyYmd),
+    userSaleDate: nullIfBlank(row.userDspslDxdyYmd),
+    bidStartDate: formatYmd(row.bidBgngYmd),
+    bidEndDate: formatYmd(row.bidEndYmd),
+    userBidPeriod: nullIfBlank(row.userBidYmd),
+    saleTimes: collectSaleTimes(row),
+    salePlace: nullIfBlank(row.dspslPlcNm),
+    noticeFile: nullIfBlank(row.pbancFile)
+  };
+  if (includeRaw) {
+    out.raw = { ...row };
+  }
+  return out;
+}
+
+function normalizeAuctionCalendarResponse(rawPayload, options = {}) {
+  const data = rawPayload && typeof rawPayload === "object" ? rawPayload.data : null;
+  const list =
+    data && Array.isArray(data.dlt_rletDxdySrchLst) ? data.dlt_rletDxdySrchLst : [];
+
+  const includeRaw = options.includeRaw !== false;
+  const items = list.map((row) => normalizeAuctionCalendarRow(row, includeRaw));
+
+  return {
+    requestedDate: options.requestedDate || null,
+    requestedMonth: options.requestedMonth || null,
+    requestedCourtCode: options.requestedCourtCode || null,
+    requestedBidType: options.requestedBidType || null,
+    count: items.length,
+    items
+  };
+}
+
 function normalizeCourtCodesResponse(rawPayload) {
   const data = rawPayload && typeof rawPayload === "object" ? rawPayload.data : null;
   const list = data && Array.isArray(data.result) ? data.result : [];
@@ -459,6 +510,8 @@ module.exports = {
   normalizeNoticeRow,
   normalizeNoticeDetailResponse,
   normalizeNoticeDetailRow,
+  normalizeAuctionCalendarResponse,
+  normalizeAuctionCalendarRow,
   normalizeCourtCodesResponse,
   normalizeCaseDetailResponse,
   normalizePropertySearchResponse,

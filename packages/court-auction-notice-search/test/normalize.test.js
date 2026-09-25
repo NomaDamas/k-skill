@@ -8,6 +8,8 @@ const path = require("node:path");
 const {
   normalizeNoticeListResponse,
   normalizeNoticeDetailResponse,
+  normalizeAuctionCalendarResponse,
+  normalizeAuctionCalendarRow,
   normalizeCaseDetailResponse,
   normalizeCourtCodesResponse,
   parseAmount,
@@ -185,4 +187,66 @@ test("normalizeCaseDetailResponse extracts case basic info, items, schedule, cla
 test("normalizeCaseDetailResponse strips raw when includeRaw=false", () => {
   const result = normalizeCaseDetailResponse(caseFoundSample, { includeRaw: false });
   assert.equal(result.raw, undefined);
+});
+
+test("normalizeAuctionCalendarResponse normalizes PGJ153 부동산 schedule rows", () => {
+  const auctionCalendarSample = loadFixture("auction-calendar-sample.json");
+  const result = normalizeAuctionCalendarResponse(auctionCalendarSample, {
+    requestedDate: "2026-05-21",
+    requestedCourtCode: "B000210",
+    requestedBidType: { code: "000331", name: "기일입찰" }
+  });
+
+  assert.equal(result.count, 4);
+  assert.equal(result.requestedDate, "2026-05-21");
+  assert.equal(result.requestedMonth, null);
+  assert.equal(result.requestedCourtCode, "B000210");
+  assert.deepEqual(result.requestedBidType, { code: "000331", name: "기일입찰" });
+
+  const first = result.items[0];
+  assert.equal(first.courtCode, "B000210");
+  assert.equal(first.courtName, "서울중앙지방법원");
+  assert.equal(first.courtBranchName, "서울중앙지방법원");
+  assert.equal(first.judgeDeptCode, "ENC_jdbn1");
+  assert.equal(first.judgeDeptName, "경매1계");
+  assert.equal(first.bidTypeCode, "000331");
+  assert.equal(first.bidTypeName, "기일입찰");
+  assert.equal(first.saleDate, "2026-05-08");
+  assert.equal(first.bidStartDate, "2026-05-08");
+  assert.equal(first.bidEndDate, "2026-05-08");
+  assert.deepEqual(first.saleTimes, ["10:00", "14:00"]);
+  assert.equal(first.salePlace, "서울중앙지방법원 경매법정 (4별관 211호)");
+  assert.equal(first.noticeFile, "B000210_20260508_1.pdf");
+  assert.equal(first.raw.dspslDxdyYmd, "20260508");
+
+  const period = result.items[3];
+  assert.equal(period.bidTypeCode, "000332");
+  assert.equal(period.bidTypeName, "기간입찰");
+  assert.equal(period.saleDate, "2026-06-11");
+  assert.equal(period.userBidPeriod, "20260608 ~ 20260610");
+  assert.equal(period.userSaleDate, "2026.06.11");
+});
+
+test("normalizeAuctionCalendarResponse handles empty payloads and strips raw on demand", () => {
+  const empty = normalizeAuctionCalendarResponse({ status: 200, data: {} });
+  assert.equal(empty.count, 0);
+  assert.deepEqual(empty.items, []);
+  assert.equal(empty.requestedMonth, null);
+
+  const sample = normalizeAuctionCalendarResponse(loadFixture("auction-calendar-sample.json"), {
+    includeRaw: false
+  });
+  for (const item of sample.items) {
+    assert.equal(item.raw, undefined);
+  }
+});
+
+test("normalizeAuctionCalendarRow tolerates sparse rows without throwing", () => {
+  const row = normalizeAuctionCalendarRow({}, true);
+  assert.equal(row.courtCode, null);
+  assert.equal(row.saleDate, null);
+  assert.equal(row.bidTypeCode, null);
+  assert.equal(row.bidTypeName, null);
+  assert.deepEqual(row.saleTimes, []);
+  assert.deepEqual(row.raw, {});
 });

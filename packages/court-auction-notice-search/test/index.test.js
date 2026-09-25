@@ -12,6 +12,9 @@ const {
   getCaseByCaseNumber,
   searchProperties,
   buildPropertySearchBody,
+  searchByAuctionDate,
+  searchByAuctionMonth,
+  buildAuctionCalendarBody,
   getCourtCodes,
   getUsageCodes,
   getRegionCodes,
@@ -541,6 +544,11 @@ test("ENDPOINT_PATHS exposes the discovered courtauction.go.kr endpoints", () =>
   assert.equal(ENDPOINT_PATHS.caseDetail, "/pgj/pgj15A/selectAuctnCsSrchRslt.on");
   assert.equal(ENDPOINT_PATHS.courts, "/pgj/pgjComm/selectCortOfcCdLst.on");
   assert.equal(ENDPOINT_PATHS.propertySearch, "/pgj/pgjsearch/searchControllerMain.on");
+  assert.equal(
+    ENDPOINT_PATHS.auctionCalendar,
+    "/pgj/pgj153/selectDxdyRletSrchRslt.on",
+    "Workflow D 부동산 기일별검색 (PGJ153M01)"
+  );
 });
 
 test("isPlaywrightFallbackAvailable is a boolean (no crash even when modules are absent)", () => {
@@ -648,4 +656,191 @@ test("searchProperties constructs and safely closes a BrowserOS/runtime CDP fall
   assert.equal(result.items.length, 2);
   assert.equal(disconnectCalls.disconnect, 1, "fallback CDP browser is disconnected on cleanup");
   assert.equal(disconnectCalls.close, 0, "searchProperties never closes the user-owned browser");
+});
+
+// --- Workflow D — 매각기일 일별/월별 캘린더 (Issue #185, PGJ153M01) ---
+
+test("buildAuctionCalendarBody matches the PGJ153M01 dma_srchRletDxdy dataMap", () => {
+  assert.deepEqual(buildAuctionCalendarBody({ courtCode: "B000210" }), {
+    dma_srchRletDxdy: {
+      cortOfcCd: "B000210",
+      bidDvsCd: "000331"
+    }
+  });
+
+  // courtCode is optional (empty → server default), like the other workflows.
+  assert.deepEqual(buildAuctionCalendarBody({}), {
+    dma_srchRletDxdy: { cortOfcCd: "", bidDvsCd: "000331" }
+  });
+
+  // bidType is resolved through the shared codetable; the site's default
+  // radio (index 0) is 기일입찰.
+  assert.equal(
+    buildAuctionCalendarBody({ courtCode: "B000210", bidType: "period" }).dma_srchRletDxdy.bidDvsCd,
+    "000332"
+  );
+  assert.equal(
+    buildAuctionCalendarBody({ courtCode: "B000210", bidType: "기간입찰" }).dma_srchRletDxdy.bidDvsCd,
+    "000332"
+  );
+
+  assert.throws(() => buildAuctionCalendarBody({ courtCode: "NOPE" }), /courtCode must look like/);
+});
+
+test("searchByAuctionDate posts auctionCalendar and filters the flat schedule to the requested day", async () => {
+  const client = makeFakeClient((endpoint, body) => {
+    assert.equal(endpoint, "auctionCalendar");
+    assert.deepEqual(body, {
+      dma_srchRletDxdy: { cortOfcCd: "B000210", bidDvsCd: "000331" }
+    });
+    return loadFixture("auction-calendar-sample.json");
+  });
+
+  const result = await searchByAuctionDate({
+    date: "2026-05-21",
+    courtCode: "B000210",
+    client
+  });
+
+  assert.equal(client.calls.length, 1);
+  assert.equal(result.requestedDate, "2026-05-21");
+  assert.equal(result.requestedMonth, null);
+  assert.equal(result.requestedCourtCode, "B000210");
+  assert.deepEqual(result.requestedBidType, { code: "000331", name: "기일입찰" });
+  assert.equal(result.count, 2);
+  assert.deepEqual(
+    result.items.map((item) => item.judgeDeptName),
+    ["경매2계", "경매3계"]
+  );
+  assert.deepEqual(result.judgeDeptNames, ["경매2계", "경매3계"]);
+  assert.equal(result.items[0].saleDate, "2026-05-21");
+  assert.equal(result.items[0].courtName, "서울중앙지방법원");
+  assert.equal(result.items[0].bidTypeName, "기일입찰");
+  assert.deepEqual(result.items[0].saleTimes, ["10:00"]);
+  assert.equal(result.items[0].raw.dspslDxdyYmd, "20260521");
+});
+
+test("searchByAuctionDate accepts compact YYYYMMDD and returns an empty day without extra calls", async () => {
+  const client = makeFakeClient(() => loadFixture("auction-calendar-sample.json"));
+
+  const empty = await searchByAuctionDate({ date: "20260522", courtCode: "B000210", client });
+  assert.equal(empty.count, 0);
+  assert.deepEqual(empty.items, []);
+  assert.deepEqual(empty.judgeDeptNames, []);
+  assert.equal(client.calls.length, 1);
+
+  await assert.rejects(
+    () => searchByAuctionDate({ date: "2026-05", client: makeFakeClient(() => ({})) }),
+    /date must be YYYY-MM-DD or YYYYMMDD/
+  );
+});
+
+test("searchByAuctionMonth fans a single upstream schedule out across every day of the month", async () => {
+  const client = makeFakeClient((endpoint) => {
+    assert.equal(endpoint, "auctionCalendar");
+    return loadFixture("auction-calendar-sample.json");
+  });
+
+  const result = await searchByAuctionMonth({
+    yearMonth: "2026-05",
+    courtCode: "B000210",
+    client
+  });
+
+  assert.equal(client.calls.length, 1, "month view must not burst the site with per-day calls");
+  assert.equal(result.requestedMonth, "2026-05");
+  assert.equal(result.requestedDate, null);
+  assert.equal(result.count, 3, "only May rows survive the client-side month filter");
+  assert.equal(result.days.length, 31, "one bucket per calendar day of May");
+
+  const may8 = result.days[7];
+  assert.equal(may8.date, "2026-05-08");
+  assert.equal(may8.count, 1);
+  assert.deepEqual(may8.judgeDeptNames, ["경매1계"]);
+  assert.equal(may8.items[0].noticeFile, "B000210_20260508_1.pdf");
+  assert.deepEqual(may8.items[0].saleTimes, ["10:00", "14:00"]);
+
+  const may21 = result.days[20];
+  assert.equal(may21.date, "2026-05-21");
+  assert.equal(may21.count, 2);
+  assert.deepEqual(may21.judgeDeptNames, ["경매2계", "경매3계"]);
+
+  const may10 = result.days[9];
+  assert.equal(may10.date, "2026-05-10");
+  assert.equal(may10.count, 0);
+  assert.deepEqual(may10.items, []);
+});
+
+test("searchByAuctionMonth keeps 기간입찰 rows in their own June day bucket", async () => {
+  const client = makeFakeClient(() => loadFixture("auction-calendar-sample.json"));
+
+  const result = await searchByAuctionMonth({ yearMonth: "202606", courtCode: "B000210", client });
+
+  assert.equal(client.calls.length, 1);
+  assert.equal(result.requestedMonth, "2026-06");
+  assert.equal(result.count, 1);
+  assert.equal(result.days.length, 30);
+
+  const june11 = result.days.find((day) => day.date === "2026-06-11");
+  assert.equal(june11.count, 1);
+  assert.equal(june11.items[0].bidTypeCode, "000332");
+  assert.equal(june11.items[0].bidTypeName, "기간입찰");
+  assert.equal(june11.items[0].bidStartDate, "2026-06-08");
+  assert.equal(june11.items[0].bidEndDate, "2026-06-10");
+  assert.equal(june11.items[0].userBidPeriod, "20260608 ~ 20260610");
+});
+
+test("searchByAuctionMonth accepts a month alias and strips raw on demand", async () => {
+  const client = makeFakeClient(() => loadFixture("auction-calendar-sample.json"));
+
+  const result = await searchByAuctionMonth({
+    month: "2026-05",
+    courtCode: "B000210",
+    client,
+    includeRaw: false
+  });
+
+  assert.equal(result.items.length, 3);
+  for (const item of result.items) {
+    assert.equal(item.raw, undefined);
+  }
+  for (const day of result.days) {
+    for (const item of day.items) {
+      assert.equal(item.raw, undefined);
+    }
+  }
+  assert.equal(result.requestedCourtCode, "B000210");
+});
+
+test("searchByAuctionMonth tolerates an empty schedule response and still fans out the month", async () => {
+  const client = makeFakeClient(() => ({
+    status: 200,
+    data: { ipcheck: true, dlt_rletDxdySrchLst: [] }
+  }));
+
+  const result = await searchByAuctionMonth({ yearMonth: "2026-07", courtCode: "B000210", client });
+
+  assert.equal(result.count, 0);
+  assert.equal(result.days.length, 31);
+  assert.ok(result.days.every((day) => day.count === 0 && day.items.length === 0));
+});
+
+test("searchByAuctionMonth rejects malformed month inputs before any network call", async () => {
+  const client = makeFakeClient(() => loadFixture("auction-calendar-sample.json"));
+
+  await assert.rejects(
+    () => searchByAuctionMonth({ yearMonth: "2026-05-01", client }),
+    /yearMonth must be YYYY-MM or YYYYMM/
+  );
+  await assert.rejects(
+    () => searchByAuctionMonth({ yearMonth: "202613", client }),
+    /yearMonth month must be between 01 and 12/
+  );
+  await assert.rejects(
+    () => searchByAuctionMonth({ yearMonth: "", client }),
+    /yearMonth is required/
+  );
+  await assert.rejects(() => searchByAuctionMonth({ client }), /yearMonth is required/);
+
+  assert.equal(client.calls.length, 0);
 });

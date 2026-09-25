@@ -25,6 +25,7 @@ const {
 const {
   normalizeNoticeListResponse,
   normalizeNoticeDetailResponse,
+  normalizeAuctionCalendarResponse,
   normalizeCourtCodesResponse,
   normalizeCaseDetailResponse,
   normalizePropertySearchResponse
@@ -440,6 +441,139 @@ async function searchProperties(params = {}) {
   });
 }
 
+// --- Workflow D — 매각기일 일별/월별 캘린더 -------------------------------
+//
+// PGJ153M01 (`/pgj/pgj153/selectDxdyRletSrchRslt.on`) is a flat sale-schedule
+// lookup: its WebSquare submission dataMap (`dma_srchRletDxdy`) only carries
+// `cortOfcCd` + `bidDvsCd`, with no date key. Day and month views are therefore
+// assembled client-side from the returned `dspslDxdyYmd` rows.
+
+const DEFAULT_AUCTION_CALENDAR_BID_TYPE = "000331";
+
+function toYearMonth(input, label) {
+  if (input === null || input === undefined || input === "") {
+    throw new Error(`${label} is required (YYYY-MM or YYYYMM)`);
+  }
+  const value = String(input).trim();
+  const compact = value.replace(/[^0-9]/g, "");
+  if (!/^\d{6}$/.test(compact)) {
+    throw new Error(`${label} must be YYYY-MM or YYYYMM, got "${input}"`);
+  }
+  const month = Number(compact.slice(4, 6));
+  if (month < 1 || month > 12) {
+    throw new Error(`${label} month must be between 01 and 12, got "${input}"`);
+  }
+  return compact;
+}
+
+function describeCalendarBidType(code) {
+  if (!code) return null;
+  return { code, name: describeBidTypeCode(code) };
+}
+
+function buildAuctionCalendarBody(params = {}) {
+  const courtCodeRaw =
+    params.courtCode === undefined || params.courtCode === null
+      ? ""
+      : String(params.courtCode).trim();
+  const courtCode = courtCodeRaw === "" ? "" : ensureCourtCode(courtCodeRaw);
+  const bidTypeCode = resolveBidTypeCode(params.bidType) || DEFAULT_AUCTION_CALENDAR_BID_TYPE;
+
+  return {
+    dma_srchRletDxdy: {
+      cortOfcCd: courtCode,
+      bidDvsCd: bidTypeCode
+    }
+  };
+}
+
+function enumerateMonthDays(yearMonthCompact) {
+  const year = Number(yearMonthCompact.slice(0, 4));
+  const month = Number(yearMonthCompact.slice(4, 6));
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const days = [];
+  for (let day = 1; day <= lastDay; day += 1) {
+    days.push(
+      `${yearMonthCompact.slice(0, 4)}-${yearMonthCompact.slice(4, 6)}-${String(day).padStart(2, "0")}`
+    );
+  }
+  return days;
+}
+
+/**
+ * Client-side day fan-out: turn the flat PGJ153 schedule rows into one bucket
+ * per calendar day of the requested month (days without sales get an empty
+ * `items` array) so callers can render a 매각기일 calendar without more calls.
+ */
+function fanOutAuctionCalendarDays(items, yearMonthCompact) {
+  const byDay = new Map();
+  for (const item of items) {
+    if (!item || !item.saleDate) continue;
+    if (!byDay.has(item.saleDate)) byDay.set(item.saleDate, []);
+    byDay.get(item.saleDate).push(item);
+  }
+
+  return enumerateMonthDays(yearMonthCompact).map((date) => {
+    const dayItems = byDay.get(date) || [];
+    return {
+      date,
+      count: dayItems.length,
+      judgeDeptNames: [
+        ...new Set(dayItems.map((item) => item.judgeDeptName).filter(Boolean))
+      ],
+      items: dayItems
+    };
+  });
+}
+
+async function searchByAuctionDate(params = {}) {
+  const saleDate = formatCompactDate(toYmd(params.date, "date"));
+  const body = buildAuctionCalendarBody(params);
+  const client = ensureClient(params.client, params);
+  const raw = await client.postJson("auctionCalendar", body);
+
+  const normalized = normalizeAuctionCalendarResponse(raw, {
+    requestedDate: saleDate,
+    requestedCourtCode: body.dma_srchRletDxdy.cortOfcCd || null,
+    requestedBidType: describeCalendarBidType(body.dma_srchRletDxdy.bidDvsCd),
+    includeRaw: params.includeRaw !== false
+  });
+
+  normalized.items = normalized.items.filter((item) => item.saleDate === saleDate);
+  normalized.count = normalized.items.length;
+  normalized.judgeDeptNames = [
+    ...new Set(normalized.items.map((item) => item.judgeDeptName).filter(Boolean))
+  ];
+  return normalized;
+}
+
+async function searchByAuctionMonth(params = {}) {
+  const yearMonth = toYearMonth(
+    params.yearMonth !== undefined ? params.yearMonth : params.month,
+    "yearMonth"
+  );
+  const body = buildAuctionCalendarBody(params);
+  const client = ensureClient(params.client, params);
+  // One upstream call: PGJ153 has no server-side date filter, so the day
+  // fan-out happens entirely client-side from this single schedule response.
+  const raw = await client.postJson("auctionCalendar", body);
+
+  const normalized = normalizeAuctionCalendarResponse(raw, {
+    requestedMonth: formatCompactMonth(yearMonth),
+    requestedCourtCode: body.dma_srchRletDxdy.cortOfcCd || null,
+    requestedBidType: describeCalendarBidType(body.dma_srchRletDxdy.bidDvsCd),
+    includeRaw: params.includeRaw !== false
+  });
+
+  const monthPrefix = `${formatCompactMonth(yearMonth)}-`;
+  normalized.items = normalized.items.filter(
+    (item) => item.saleDate && item.saleDate.startsWith(monthPrefix)
+  );
+  normalized.count = normalized.items.length;
+  normalized.days = fanOutAuctionCalendarDays(normalized.items, yearMonth);
+  return normalized;
+}
+
 async function getCourtCodes(options = {}) {
   const client = ensureClient(options.client, options);
   const raw = await client.postJson("courts", {});
@@ -480,6 +614,9 @@ module.exports = {
   getCaseByCaseNumber,
   searchProperties,
   buildPropertySearchBody,
+  searchByAuctionDate,
+  searchByAuctionMonth,
+  buildAuctionCalendarBody,
   getCourtCodes,
   getBidTypes,
   getUsageCodes,

@@ -13,6 +13,10 @@ const ENDPOINT_PATHS = Object.freeze({
   noticeDetail: "/pgj/pgj143/selectRletDspslPbancDtl.on",
   caseDetail: "/pgj/pgj15A/selectAuctnCsSrchRslt.on",
   propertySearch: "/pgj/pgjsearch/searchControllerMain.on",
+  // Workflow D (PGJ153M01 기일별검색 — 부동산). No date key in the submission
+  // dataMap (`dma_srchRletDxdy` carries only cortOfcCd + bidDvsCd), so callers
+  // fan the returned flat schedule out across days client-side.
+  auctionCalendar: "/pgj/pgj153/selectDxdyRletSrchRslt.on",
   courts: "/pgj/pgjComm/selectCortOfcCdLst.on"
 });
 
@@ -24,6 +28,8 @@ const ENDPOINT_REFERER_HINT = Object.freeze({
     "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml&pgjId=159M00",
   propertySearch:
     "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml&pgjId=151F00",
+  auctionCalendar:
+    "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ153M01.xml&pgjId=153M01",
   courts: "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01"
 });
 
@@ -35,6 +41,8 @@ const ENDPOINT_WARMUP_PATH = Object.freeze({
     "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml&pgjId=159M00",
   propertySearch:
     "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml&pgjId=151F00",
+  auctionCalendar:
+    "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ153M01.xml&pgjId=153M01",
   courts: "/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ143M01.xml&pgjId=143M01"
 });
 
