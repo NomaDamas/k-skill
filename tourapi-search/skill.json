@@ -1,0 +1,8 @@
+{
+  "name": "tourapi-search",
+  "description": "Use when the user asks for 한국관광공사 TourAPI 관광정보 조회, 관광지·축제·숙박·음식점 검색, or official Korea Tourism Organization tourism metadata by region, keyword, or category. Read-only TourAPI 4.0 (KorService2) lookup with a user-supplied KSKILL_TOURAPI_KEY; returns 소개문·주소·좌표·이용시간·이미지 요약.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: tourapi-search\ndescription: Use when the user asks for 한국관광공사 TourAPI 관광정보 조회, 관광지·축제·숙박·음식점 검색, or official Korea Tourism Organization tourism metadata by region, keyword, or category. Read-only TourAPI 4.0 (KorService2) lookup with a user-supplied KSKILL_TOURAPI_KEY; returns 소개문·주소·좌표·이용시간·이미지 요약.\nlicense: MIT\nmetadata:\n  category: travel\n  locale: ko-KR\n  phase: v1"
+}
