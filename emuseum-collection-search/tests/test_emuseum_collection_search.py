@@ -183,6 +183,56 @@ class ParsingTest(unittest.TestCase):
         self.assertEqual(payload["items"][0]["name"], "백자 달항아리")
         self.assertEqual(payload["items"][0]["management_number"], "", "id가 없으면 관리번호도 비어 있다")
 
+    def test_item_id_is_not_reused_as_management_number(self):
+        payload = emuseum.parse_response(
+            json.dumps(
+                {
+                    "response": {
+                        "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
+                        "body": {
+                            "items": {"item": [{"relicId": "1001", "relicName": "청자 매병"}]},
+                            "numOfRows": 10,
+                            "pageNo": 1,
+                            "totalCount": 1,
+                        },
+                    }
+                }
+            ).encode("utf-8")
+        )
+        item = payload["items"][0]
+        self.assertEqual(item["id"], "1001")
+        self.assertEqual(
+            item["management_number"], "", "관리번호가 응답에 없으면 id로 채우지 않고 비워 둔다"
+        )
+
+    def test_unrecognized_json_error_object_raises(self):
+        with self.assertRaises(emuseum.EmuseumError) as ctx:
+            emuseum.parse_response(
+                json.dumps({"error": "invalid serviceKey"}).encode("utf-8")
+            )
+        self.assertIn("봉투", str(ctx.exception))
+
+    def test_nested_json_response_error_object_raises(self):
+        with self.assertRaises(emuseum.EmuseumError):
+            emuseum.parse_response(
+                json.dumps({"response": {"error": "invalid serviceKey"}}).encode("utf-8")
+            )
+
+    def test_unrecognized_xml_error_document_raises(self):
+        with self.assertRaises(emuseum.EmuseumError):
+            emuseum.parse_response(
+                b'<?xml version="1.0"?><error><message>invalid key</message></error>'
+            )
+
+    def test_body_with_only_pagination_is_empty_success(self):
+        payload = emuseum.parse_response(
+            json.dumps(
+                {"response": {"body": {"totalCount": 0, "pageNo": 1, "numOfRows": 10}}}
+            ).encode("utf-8")
+        )
+        self.assertEqual(payload["items"], [])
+        self.assertEqual(payload["total_count"], 0)
+
 
 class SearchFlowTest(unittest.TestCase):
     def test_search_sends_expected_params_and_returns_payload(self):
@@ -295,6 +345,31 @@ class SearchFlowTest(unittest.TestCase):
         self.assertNotIn("super-secret", output)
         payload = json.loads(output)
         self.assertEqual(payload["mode"], "direct")
+
+    def test_dry_run_without_key_prints_request_url(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with mock.patch.dict(os.environ, {}, clear=True), \
+                mock.patch.object(emuseum, "http_get") as http_mock, \
+                contextlib.redirect_stdout(stdout), \
+                contextlib.redirect_stderr(stderr):
+            code = emuseum.run(
+                [
+                    "search",
+                    "--query",
+                    "청자",
+                    "--dry-run",
+                    "--secrets-path",
+                    "/tmp/missing-emuseum-secrets",
+                ]
+            )
+        self.assertEqual(code, 0, stderr.getvalue())
+        http_mock.assert_not_called()
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["mode"], "direct")
+        self.assertIn("/selectRelicList.do", payload["url"])
+        self.assertIn("relicName=", payload["url"])
+        self.assertIn("serviceKey=REDACTED", payload["url"])
 
     def test_invalid_limit_returns_two(self):
         stderr = io.StringIO()

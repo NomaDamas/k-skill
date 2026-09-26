@@ -290,8 +290,8 @@ def normalize_item(raw: dict[str, Any]) -> dict[str, Any]:
         "image_url": _as_text(pick("imageUrl", "imgUrl", "image", "relicImage", "photoUrl")),
         "detail_url": _as_text(pick("detailUrl", "url", "linkUrl", "homepage", "relicUrl")),
     }
-    if not item["management_number"]:
-        item["management_number"] = item["id"]
+    # Absent fields stay blank. The item id is an internal identifier, not a
+    # management number, so it must never be substituted for a missing one.
     return item
 
 
@@ -325,6 +325,41 @@ def _looks_like_item(mapping: dict[str, Any]) -> bool:
     return bool(keys & {"relicname", "name", "title", "relicid", "managementnumber"})
 
 
+# Container/pagination keys that identify a recognizable OpenAPI response body.
+ITEM_CONTAINER_KEYS = ("items", "item", "list", "relics", "relicList", "data", "rows")
+PAGINATION_KEYS = (
+    "totalCount",
+    "totalCnt",
+    "total_count",
+    "total",
+    "pageNo",
+    "pageIndex",
+    "page",
+    "numOfRows",
+    "pageSize",
+    "pageUnit",
+    "page_size",
+)
+
+
+def _looks_like_body(body: Any) -> bool:
+    """True when a decoded JSON node is a plausible response body.
+
+    A bare list of items, a dict carrying an item container, pagination
+    metadata, or a single item shape all count. Anything else (for example a
+    JSON error object) is not a recognized envelope and must fail loudly.
+    """
+    if isinstance(body, list):
+        return True
+    if not isinstance(body, dict):
+        return False
+    normalized = {_key_norm(key) for key in body.keys()}
+    known = {_key_norm(key) for key in ITEM_CONTAINER_KEYS + PAGINATION_KEYS}
+    if normalized & known:
+        return True
+    return _looks_like_item(body)
+
+
 def _extract_items_node(body: Any) -> Any:
     if isinstance(body, list):
         return body
@@ -341,14 +376,27 @@ def _extract_items_node(body: Any) -> Any:
     return []
 
 
-def _split_json_envelope(data: Any) -> tuple[Any, Any]:
+def _split_json_envelope(data: Any) -> tuple[Any, Any, bool]:
+    """Split a decoded JSON node into ``(header, body, recognized)``.
+
+    ``recognized`` is False when the node is not a known data.go.kr style
+    envelope and does not look like a response body. Callers must treat that as
+    a malformed response instead of an empty success.
+    """
     if isinstance(data, dict):
         response = data.get("response")
         if isinstance(response, dict):
-            return response.get("header"), response.get("body", response)
+            body = response.get("body", response)
+            header = response.get("header")
+            recognized = header is not None or "body" in response or _looks_like_body(body)
+            return header, body, recognized
         if "body" in data or "header" in data:
-            return data.get("header"), data.get("body", data)
-    return None, data
+            return data.get("header"), data.get("body", data), True
+        if _looks_like_body(data):
+            return None, data, True
+    elif isinstance(data, list):
+        return None, data, True
+    return None, data, False
 
 
 def _payload(
@@ -370,7 +418,11 @@ def _parse_json_response(text: str) -> dict[str, Any]:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
         raise EmuseumError("e뮤지엄 API가 올바른 JSON을 반환하지 않았습니다.") from exc
-    header, body = _split_json_envelope(data)
+    header, body, recognized = _split_json_envelope(data)
+    if not recognized:
+        raise EmuseumError(
+            "e뮤지엄 API 응답에서 알려진 봉투(items/body/header) 구조를 찾지 못했습니다."
+        )
     _check_header(header)
     raw_items = _coerce_item_list(_extract_items_node(body))
     total = _int_or_none(_pick(body, "totalCount", "totalCnt", "total_count", "total"))
@@ -419,11 +471,16 @@ def _parse_xml_response(text: str) -> dict[str, Any]:
         item_els = _find_children(items_container, "item")
     if not item_els:
         item_els = [el for el in body_el.iter() if _local_name(el.tag).lower() == "item"]
+    total_el = _find_child(body_el, "totalCount", "totalCnt", "total")
+    if header_el is None and body_el is root and not item_els and total_el is None:
+        raise EmuseumError(
+            "e뮤지엄 API 응답에서 알려진 XML 봉투(items/body/header) 구조를 찾지 못했습니다."
+        )
     raw_items = [
         {_local_name(child.tag): _element_text(child) for child in list(item_el)}
         for item_el in item_els
     ]
-    total = _int_or_none(_element_text(_find_child(body_el, "totalCount", "totalCnt", "total")))
+    total = _int_or_none(_element_text(total_el))
     page = _int_or_none(_element_text(_find_child(body_el, "pageNo", "pageIndex", "page"))) or 1
     page_size = _int_or_none(
         _element_text(_find_child(body_el, "numOfRows", "pageSize", "pageUnit"))
@@ -607,19 +664,20 @@ def run(argv: list[str] | None = None) -> int:
     search_path = resolve_search_path(args)
     proxy_mode = is_proxy_mode(base_url)
 
-    if not api_key and not proxy_mode:
-        print(_missing_key_message(), file=sys.stderr)
-        return 1
-
     if args.dry_run:
+        preview_key = api_key or ""
         params = build_query_params(
-            api_key=api_key or "",
+            api_key=preview_key,
             query=args.query,
             era=args.era,
             museum=args.museum,
             page=args.page,
             limit=args.limit,
         )
+        if not preview_key and not proxy_mode:
+            # Keyless direct preview: show where serviceKey would go without
+            # requiring or inventing a key.
+            params["serviceKey"] = "REDACTED"
         payload = {
             "mode": "proxy" if proxy_mode else "direct",
             "base_url": base_url,
@@ -633,6 +691,10 @@ def run(argv: list[str] | None = None) -> int:
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
+
+    if not api_key and not proxy_mode:
+        print(_missing_key_message(), file=sys.stderr)
+        return 1
 
     try:
         payload = search_collection(
