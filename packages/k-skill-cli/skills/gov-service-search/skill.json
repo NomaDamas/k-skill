@@ -1,0 +1,13 @@
+{
+  "name": "gov-service-search",
+  "description": "정부24 공공서비스(혜택) 정보 OpenAPI(data.go.kr 15113968)로 키워드·소관기관·분야·지역 기준으로 지원금·민원·정부서비스를 검색하고, 신청 방법·소관기관·온라인 신청 URL·지원조건을 조회한다. 조회 전용.",
+  "profiles": [
+    "vault",
+    "lookup"
+  ],
+  "stub_notice": {
+    "heading": "Access, credentials, and failure modes",
+    "body": "정부24 공공서비스(혜택) 정보 OpenAPI(공공데이터포털 dataset 15113968, `https://api.odcloud.kr/api/gov24/v3/{serviceList,serviceDetail,supportConditions}`)를 조회하는 읽기 전용 스킬이다. 기본 경로는 `KSKILL_GOV24_API_KEY` BYOK 직접 호출이고, 인증키는 HTTP `Authorization: Infuser <키>` 헤더로만 보내며 URL·로그에 남기지 않는다. 키 발급: <https://www.data.go.kr/data/15113968/openapi.do> 활용신청(무료, 자동승인) 후 Decoding(원문) 키 사용. `--via-proxy`는 `/v1/gov24/*` 프록시 route가 배포된 뒤에만 동작한다. 키가 없으면 `--dry-run`으로 요청만 확인하고 사용자에게 발급을 안내하며 결과를 만들어내지 않는다. 인증 실패(401/403, code 20/30/31), quota 초과(22/23), 5xx, 비-JSON 응답, 빈 결과는 각각 명시적 실패 모드로 보고하고 성공으로 처리하지 않는다. 신청·발급·결제 같은 쓰기 동작은 하지 않는다."
+  },
+  "frontmatter": "name: gov-service-search\ndescription: 정부24 공공서비스(혜택) 정보 OpenAPI(data.go.kr 15113968)로 키워드·소관기관·분야·지역 기준으로 지원금·민원·정부서비스를 검색하고, 신청 방법·소관기관·온라인 신청 URL·지원조건을 조회한다. 조회 전용.\nlicense: MIT\nmetadata:\n  category: civic\n  locale: ko-KR\n  phase: v1"
+}

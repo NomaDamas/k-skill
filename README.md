@@ -88,6 +88,7 @@ npx -y @nomadamas/k-skill@0 update
 | [지급명령 신청 보조](docs/features/court-payment-order-assistant.md) | `court-payment-order-assistant` | 법원 전자소송 지급명령 신청에 필요한 채권자·채무자·청구원인·증빙 정보를 정리하고 초안/체크리스트와 로그인 이후 브라우저 handoff를 준비 |
 | [국회 의안·표결 조회](docs/features/assembly-bill-vote-search.md) | `assembly-bill-vote-search` | 열린국회정보 Open API로 의안 검색·상세와 국회의원 본회의 표결 조회 (프록시 경유, 조회 전용) |
 | [공무국외출장 보고서 조회](docs/features/gov-overseas-trip-report.md) | `gov-overseas-trip-report` | 선관위·권익위·정보공개포털·대구/대전/경기/경북 의회 등 공개 표면에서 국외출장/훈련 보고서·현황을 조회하고, 표 밖 기관은 discover로 능동 탐색(로그인 벽 제외, 판정 아님) |
+| [정부24 공공서비스(혜택) 검색](docs/features/gov-service-search.md) | `gov-service-search` | 정부24 공공서비스(혜택) 정보 OpenAPI(data.go.kr 15113968)로 키워드·소관기관·분야·지역 기준으로 지원금·민원·정부서비스를 검색하고, 신청 방법·소관기관·온라인 신청 URL·지원조건을 조회한다. 조회 전용 |
 | [공유누리 공공시설 검색](docs/features/sharenuri-facility-search.md) | `sharenuri-facility-search` | 공유누리 공개 통합검색으로 전국 공공개방자원(회의실·체육시설·숙소·물품 등) 키워드·지역·무료 여부 조회와 상세정보·예약 경로 안내 (인증키·로그인 불필요) |
 
 ### 🏢 사업·상권·세무
