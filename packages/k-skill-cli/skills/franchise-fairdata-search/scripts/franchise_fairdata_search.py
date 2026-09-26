@@ -73,6 +73,17 @@ SOURCE = "공정거래위원회 가맹정보 OpenAPI (apis.data.go.kr)"
 DEFAULT_NUM_OF_ROWS = 100
 DEFAULT_MAX_PAGES = 30
 DEFAULT_TIMEOUT = 30
+# How many name matches to collect when resolving a single brand/HQ for a
+# detail lookup. Two is enough to detect that a partial match is ambiguous
+# without paying for a full result list.
+AMBIGUITY_PROBE_LIMIT = 2
+
+# fetch_pages stop reasons. `exhausted` means the whole dataset was scanned, so
+# a client-side name match set is definitive. `limit`/`max_pages` mean the scan
+# was cut short and may be incomplete.
+STOP_EXHAUSTED = "exhausted"
+STOP_LIMIT = "limit"
+STOP_MAX_PAGES = "max_pages"
 
 MISSING_KEY_MSG = (
     f"{API_KEY_ENV_PRIMARY} (또는 {API_KEY_ENV_FALLBACK}) 가 없습니다. "
@@ -568,31 +579,53 @@ def fetch_pages(
     matcher: Optional[Callable[[Mapping[str, Any]], bool]] = None,
     limit: Optional[int] = None,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    """Page through one dataset, optionally filtering rows client-side."""
+    """Page through one dataset, optionally filtering rows client-side.
+
+    The returned meta always states whether the scan finished (`complete`),
+    why it stopped (`stop_reason`), and how many rows were scanned, so callers
+    never have to guess whether a client-side match set is exhaustive.
+    """
     collected: List[Dict[str, Any]] = []
     total: Optional[int] = None
     pages = 0
-    for page in range(1, max(1, ctx.max_pages) + 1):
+    scanned = 0
+    stop_reason = STOP_EXHAUSTED
+    max_pages = max(1, ctx.max_pages)
+    for page in range(1, max_pages + 1):
         payload = ctx.fetch(ctx.url(service_key, year=year, extra=extra, page=page), ctx.timeout)
         page_total, rows = normalize_payload(payload)
         total = page_total if page_total is not None else total
         pages = page
+        scanned += len(rows)
+        hit_limit = False
         for row in rows:
             if matcher is None or matcher(row):
                 collected.append(row)
                 if limit is not None and len(collected) >= limit:
+                    hit_limit = True
                     break
-        if limit is not None and len(collected) >= limit:
+        if hit_limit:
+            stop_reason = STOP_LIMIT
             break
         if not rows:
+            stop_reason = STOP_EXHAUSTED
             break
         if total is not None and page * ctx.num_of_rows >= total:
+            stop_reason = STOP_EXHAUSTED
             break
+    else:
+        # Ran out of page budget before the dataset signalled its end.
+        stop_reason = STOP_MAX_PAGES
     meta = {
         "pages_fetched": pages,
         "total_count": total,
         "num_of_rows": ctx.num_of_rows,
         "max_pages": ctx.max_pages,
+        "scanned_rows": scanned,
+        "matched_count": len(collected),
+        "limit": limit,
+        "stop_reason": stop_reason,
+        "complete": stop_reason == STOP_EXHAUSTED,
     }
     return collected, meta
 
@@ -620,6 +653,36 @@ def search_hq(ctx: QueryContext, *, name: str, year: str, limit: int) -> Tuple[L
         matcher=lambda row: name_matches(row.get("jnghdqrtrsConmNm"), needle),
         limit=limit,
     )
+
+
+def incomplete_warning(meta: Mapping[str, Any], *, subject: str, empty: bool = False) -> Optional[str]:
+    """Explain a non-exhaustive client-side name search, or None if complete."""
+    if meta.get("complete", True):
+        return None
+    if meta.get("stop_reason") == STOP_LIMIT:
+        return (
+            f"{subject} 검색이 limit({meta.get('limit')})에 도달해 일부만 확인했습니다. "
+            "--limit/--max-pages/--num-of-rows 를 늘려 다시 확인하세요."
+        )
+    prefix = (
+        f"{subject} 검색에서 일치 항목을 찾지 못했지만"
+        if empty
+        else f"{subject} 검색이"
+    )
+    return (
+        f"{prefix} --max-pages({meta.get('max_pages')}) 안에서 끝나지 않아 "
+        "전체 목록을 확인하지 못했습니다. --max-pages/--num-of-rows 를 늘려 다시 확인하세요."
+    )
+
+
+def search_status(
+    rows: Sequence[Mapping[str, Any]], meta: Mapping[str, Any], *, subject: str
+) -> Tuple[str, List[str]]:
+    """Map a name search to an explicit result value plus incompleteness warnings."""
+    if meta.get("complete", True):
+        return ("ok" if rows else "empty"), []
+    warning = incomplete_warning(meta, subject=subject, empty=not rows)
+    return "partial", [warning] if warning else []
 
 
 def summarize_stores(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
@@ -801,6 +864,38 @@ def _render_hq_text(rows: Sequence[Mapping[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def _render_hq_detail_text(details: Sequence[Mapping[str, Any]]) -> str:
+    if not details:
+        return ""
+    lines: List[str] = []
+    for section in details:
+        if section.get("status") == "error":
+            lines.append(f"[상세] 조회 실패: {section.get('error')}")
+            continue
+        rows = section.get("rows") or []
+        if not rows:
+            lines.append("[상세] 상세 데이터가 없습니다.")
+            continue
+        for row in rows:
+            address = " ".join(
+                part
+                for part in (
+                    _text_or_none(row.get("lctnAddr")),
+                    _text_or_none(row.get("lctnDaddr")),
+                )
+                if part
+            )
+            lines.append(
+                f"[상세] {row.get('jnghdqrtrsConmNm') or '-'} · "
+                f"대표 {row.get('jnghdqrtrsRprsvNm') or '-'} · "
+                f"기업규모 {row.get('entScaleNm') or '-'} · "
+                f"주소 {address or '-'} · "
+                f"브랜드수 {row.get('brandCnt') or '-'} · "
+                f"가맹본부관리번호 {row.get('jnghdqrtrsMnno') or '-'}"
+            )
+    return "\n".join(lines)
+
+
 def _render_stores_text(rows: Sequence[Mapping[str, Any]]) -> str:
     if not rows:
         return "가맹점/직영점 데이터가 없습니다."
@@ -888,17 +983,43 @@ def _resolve_year(args: argparse.Namespace, today: Optional[_datetime.date] = No
     return normalize_year(args.year, default=default_year(today))
 
 
+def _candidate_label(rows: Sequence[Mapping[str, Any]]) -> str:
+    return ", ".join(
+        f"{_text_or_none(row.get('brandNm')) or '?'}"
+        f"({_text_or_none(row.get('brandMnno')) or '?'})"
+        for row in rows
+    )
+
+
 def _resolve_brand_mnno(args: argparse.Namespace, ctx: QueryContext, year: str) -> Tuple[str, Dict[str, Any]]:
     explicit = _text_or_none(getattr(args, "brand_mnno", None))
     if explicit:
         return normalize_brand_mnno(explicit), {"matched_by": "brand_mnno", "meta": {}}
     if not getattr(args, "brand", None):
         raise HelperError("--brand 또는 --brand-mnno 중 하나가 필요합니다.")
-    rows, meta = search_brands(ctx, name=args.brand, year=year, limit=1)
+    rows, meta = search_brands(ctx, name=args.brand, year=year, limit=AMBIGUITY_PROBE_LIMIT)
+    if len(rows) > 1:
+        raise HelperError(
+            f"'{args.brand}' 부분일치 브랜드가 여러 개입니다: {_candidate_label(rows)}. "
+            "다른 브랜드의 지표가 섞이지 않도록 --brand-mnno 로 브랜드관리번호를 직접 지정하세요."
+        )
     if not rows:
+        if not meta.get("complete", True):
+            raise HelperError(
+                f"{year}년 브랜드 목록에서 '{args.brand}'를 찾지 못했고 "
+                f"--max-pages({meta.get('max_pages')}) 안에서 끝까지 확인하지 못했습니다. "
+                "--max-pages/--num-of-rows 를 늘리거나 --brand-mnno 를 직접 지정하세요."
+            )
         raise HelperError(
             f"{year}년 브랜드 목록에서 '{args.brand}'와 일치하는 브랜드를 찾지 못했습니다. "
             "--year 를 바꾸거나 --brand-mnno 를 직접 지정하세요."
+        )
+    if not meta.get("complete", True):
+        raise HelperError(
+            f"'{args.brand}' 브랜드 1건({_candidate_label(rows)})을 찾았지만 "
+            f"{year}년 목록을 --max-pages({meta.get('max_pages')}) 안에서 끝까지 확인하지 못해 "
+            "다른 일치 항목이 더 있을 수 있습니다. "
+            "--max-pages/--num-of-rows 를 늘리거나 --brand-mnno 를 직접 지정하세요."
         )
     return normalize_brand_mnno(rows[0].get("brandMnno")), {"matched_by": "brand_name", "meta": meta}
 
@@ -956,16 +1077,24 @@ def run(
             if (code := _need_key()) is not None:
                 return code
             rows, meta = search_brands(ctx, name=args.name, year=year, limit=max(1, args.limit))
+            result, warnings = search_status(rows, meta, subject="브랜드")
             payload = _base_payload("brands", year=year, checked_at=checked_at)
             payload.update(
                 {
-                    "result": "ok" if rows else "empty",
+                    "result": result,
                     "query": {"name": args.name},
                     "rows": rows,
                     "meta": meta,
                 }
             )
-            print(_render_brand_text(rows) if args.text else json.dumps(payload, ensure_ascii=False, indent=2))
+            if warnings:
+                payload["warnings"] = warnings
+            if args.text:
+                print(_render_brand_text(rows))
+                if warnings:
+                    print("\n".join(warnings), file=sys.stderr)
+            else:
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0
 
         if args.command == "hq":
@@ -988,16 +1117,28 @@ def run(
                         details.append(
                             _section(ctx, "hq_detail", year=year, extra={"jnghdqrtrsMnno": hq_mnno})
                         )
+            result, warnings = search_status(rows, meta, subject="가맹본부")
             payload.update(
                 {
-                    "result": "ok" if rows else "empty",
+                    "result": result,
                     "query": {"name": args.name},
                     "rows": rows,
                     "meta": meta,
                     "details": details,
                 }
             )
-            print(_render_hq_text(rows) if args.text else json.dumps(payload, ensure_ascii=False, indent=2))
+            if warnings:
+                payload["warnings"] = warnings
+            if args.text:
+                text = _render_hq_text(rows)
+                detail_text = _render_hq_detail_text(details)
+                if args.detail and detail_text:
+                    text = f"{text}\n{detail_text}"
+                print(text)
+                if warnings:
+                    print("\n".join(warnings), file=sys.stderr)
+            else:
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0
 
         if args.command in {"stores", "changes", "sales"}:
@@ -1052,6 +1193,7 @@ def run(
         if (code := _need_key()) is not None:
             return code
 
+        warnings: List[str] = []
         if _text_or_none(args.brand_mnno):
             candidates = [{"brandMnno": normalize_brand_mnno(args.brand_mnno)}]
             resolution = {"matched_by": "brand_mnno", "meta": {}}
@@ -1060,8 +1202,16 @@ def run(
                 ctx, name=args.brand, year=year, limit=max(1, args.limit)
             )
             resolution = {"matched_by": "brand_name", "meta": meta}
-            if not args.all:
-                candidates = candidates[:1]
+            incomplete = incomplete_warning(meta, subject="브랜드", empty=not candidates)
+            if len(candidates) > 1 and not args.all:
+                raise HelperError(
+                    f"'{args.brand}' 부분일치 브랜드가 여러 개입니다: {_candidate_label(candidates)}. "
+                    "--all 로 모두 리포트하거나 --brand-mnno 로 하나를 지정하세요."
+                )
+            if not args.all and incomplete:
+                raise HelperError(incomplete)
+            if incomplete:
+                warnings.append(incomplete)
         else:
             raise HelperError("report 에는 --brand 또는 --brand-mnno 가 필요합니다.")
 
@@ -1069,24 +1219,28 @@ def run(
         if not candidates:
             payload.update(
                 {
-                    "result": "empty",
+                    "result": "partial" if warnings else "empty",
                     "query": {"brand": args.brand, "brand_mnno": args.brand_mnno},
                     "resolution": resolution,
                     "reports": [],
                 }
             )
+            if warnings:
+                payload["warnings"] = warnings
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0
 
         reports = [build_report(ctx, brand=brand, year=year) for brand in candidates]
         payload.update(
             {
-                "result": "ok",
+                "result": "partial" if warnings else "ok",
                 "query": {"brand": args.brand, "brand_mnno": args.brand_mnno},
                 "resolution": resolution,
                 "reports": reports,
             }
         )
+        if warnings:
+            payload["warnings"] = warnings
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
     except (HelperError, ApiError) as error:

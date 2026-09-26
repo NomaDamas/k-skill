@@ -92,11 +92,13 @@ npx -y @nomadamas/k-skill@0 exec franchise-fairdata-search scripts/franchise_fai
 
 기본은 구조화 JSON이고 `--text`는 사람용 요약이다. 주요 키:
 
-- 상단: `command`, `result`(`ok`/`empty`/`dry_run`/`error`), `source`, `year`, `checked_at`, `coverage.datasets`, `coverage.notes`
-- `brands`/`hq`: `rows`(upstream 필드 원문), `meta`(`pages_fetched`, `total_count`), `query`
-- `stores`/`changes`/`sales`: `brand_mnno`, `resolution`, `section.status`(`ok`/`empty`/`error`)
-- `report`: `reports[]` — 각 항목에 `brand`, `summary`(stores/changes/sales 집계), `sections`(stores/changes/sales/compare/hq_detail), `failures[]`
+- 상단: `command`, `result`(`ok`/`empty`/`partial`/`dry_run`/`error`), `source`, `year`, `checked_at`, `coverage.datasets`, `coverage.notes`
+- `brands`/`hq`: `rows`(upstream 필드 원문), `query`, `meta`(`pages_fetched`, `total_count`, `scanned_rows`, `matched_count`, `limit`, `max_pages`, `stop_reason`, `complete`), 그리고 검색이 잘렸으면 `warnings[]`
+- `stores`/`changes`/`sales`: `brand_mnno`, `resolution`(`matched_by`와 `meta`), `section.status`(`ok`/`empty`/`error`)
+- `report`: `reports[]` — 각 항목에 `brand`, `summary`(stores/changes/sales 집계), `sections`(stores/changes/sales/compare/hq_detail), `failures[]` — 이름 검색이 잘렸으면 상단 `result`가 `partial`이고 `warnings[]`가 붙는다
 - `datasets`: `datasets`와 `field_labels`(upstream 코드 → 한글 의미)
+
+이름 검색은 upstream 필터가 없어 목록을 페이지로 훑는 **클라이언트 측 부분일치**다. `meta.complete=false`(예: `--max-pages` 도달, `limit` 도달)이면 전체를 확인하지 못한 것이므로 `result=partial`과 `warnings[]`로 드러낸다. `--text`에서는 같은 경고를 stderr로 출력한다. `hq --detail --text`는 목록 뒤에 `[상세]` 줄(대표자·기업규모·주소·브랜드수·가맹본부관리번호)을 덧붙인다.
 
 필드는 안정성을 위해 **upstream 코드(camelCase)** 를 그대로 유지하고 `FIELD_LABELS`/`--datasets`로 의미를 표시한다. `stores` 집계는 조회된 지역/업종 행의 단순 합이며 upstream 공식 총계가 아니다(`summary.stores.totals_basis`에 명시).
 
@@ -104,9 +106,11 @@ npx -y @nomadamas/k-skill@0 exec franchise-fairdata-search scripts/franchise_fai
 
 1. `--brand-mnno`가 있으면 이름 검색 없이 바로 상세 데이터셋을 호출한다.
 2. `--brand`만 있으면 `brand_list`(15125467)를 페이지로 넘기며 이름을 해석한 뒤 상세를 호출한다.
-3. `report`는 브랜드별 stores → changes → sales → compare → (가능하면) hq_detail 순으로 시도하고, **일부 데이터셋 실패는 나머지를 막지 않는다**(`failures`에 사유 기록).
-4. 0건/`NODATA_ERROR(03)`이면 `empty`로 명시한다. 기준년도를 바꾸거나 `--brand-mnno` 직접 지정을 안내한다.
-5. 인증/쿼터/차단 오류에는 비공식 대체 데이터를 쓰지 않는다.
+3. `--brand` 이름이 여러 브랜드에 부분일치하면 첫 항목을 고르지 않고 **여러 후보를 나열한 뒤 `--brand-mnno` 직접 지정**을 안내하며 종료한다(exit 1). `report`는 `--all`로 모두 리포트하거나 `--brand-mnno`로 하나를 지정해야 한다.
+4. 이름 검색이 `--max-pages`/`limit` 안에서 끝나지 않으면(`meta.complete=false`) 일부를 조용히 반환하지 않는다. 목록 명령은 `result=partial`+`warnings`로 표시하고, 상세 명령(`stores`/`changes`/`sales`)·`report`(단일)은 검색 범위를 넓히거나 `--brand-mnno`를 쓰도록 안내하며 종료한다.
+5. `report`는 브랜드별 stores → changes → sales → compare → (가능하면) hq_detail 순으로 시도하고, **일부 데이터셋 실패는 나머지를 막지 않는다**(`failures`에 사유 기록).
+6. 0건/`NODATA_ERROR(03)`이면 `empty`로 명시한다. 기준년도를 바꾸거나 `--brand-mnno` 직접 지정을 안내한다.
+7. 인증/쿼터/차단 오류에는 비공식 대체 데이터를 쓰지 않는다.
 
 ## Failure modes
 
@@ -119,7 +123,9 @@ npx -y @nomadamas/k-skill@0 exec franchise-fairdata-search scripts/franchise_fai
 - `03`/`NODATA_ERROR`: 해당 기준년도/브랜드 공시 없음(빈 결과).
 - 응답이 JSON이 아님: 점검·차단·게이트웨이 오류 가능성. 캐시하지 않는다.
 - 연결 실패/타임아웃: 네트워크 또는 data.go.kr 상태 확인 후 재시도.
-- 빈 이름 매칭: 이름 표기 차이. `--year` 변경 또는 `--brand-mnno` 직접 지정.
+- 빈 이름 매칭(전체 스캔 완료, `meta.complete=true`): 이름 표기 차이. `--year` 변경 또는 `--brand-mnno` 직접 지정.
+- 이름 부분일치 다수: 다른 브랜드 지표가 섞이지 않도록 첫 항목을 고르지 않고 후보를 나열하며 종료. `--brand-mnno` 직접 지정(`report`는 `--all`).
+- 이름 검색 미완료(`meta.complete=false`, `--max-pages`/`limit` 도달): `result=partial`+`warnings[]` 또는 상세 명령에서 명시적 실패. `--max-pages`/`--num-of-rows`를 늘리거나 `--brand-mnno` 직접 지정.
 
 ## Done when
 
