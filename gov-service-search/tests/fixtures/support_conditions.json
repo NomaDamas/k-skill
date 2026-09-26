@@ -1,0 +1,48 @@
+{
+  "fixture_meta": {
+    "kind": "hand-written synthetic sample",
+    "dataset": "data.go.kr 15113968 행정안전부_대한민국 공공서비스(혜택) 정보",
+    "endpoint": "GET https://api.odcloud.kr/api/gov24/v3/supportConditions?cond[서비스ID::EQ]=...",
+    "note": "실제 API 응답이 아니라 supportConditions_model 필드에 맞춘 결정적 합성 입력이다."
+  },
+  "payload": {
+    "page": 1,
+    "perPage": 10,
+    "totalCount": 2,
+    "currentCount": 2,
+    "matchCount": 2,
+    "data": [
+      {
+        "서비스ID": "SYN-LIST-0001",
+        "서비스명": "청년월세지원",
+        "JA0101": "",
+        "JA0102": "Y",
+        "JA0110": 19,
+        "JA0111": 34,
+        "JA0201": "",
+        "JA0202": "Y",
+        "JA0203": "",
+        "JA0204": "",
+        "JA0205": "",
+        "JA0412": "Y",
+        "JA0320": "Y",
+        "JA0322": "",
+        "JA2101": ""
+      },
+      {
+        "서비스ID": "SYN-LIST-0005",
+        "서비스명": "기초생활보장 생계급여",
+        "JA0101": "",
+        "JA0102": "",
+        "JA0110": 0,
+        "JA0111": 0,
+        "JA0201": "Y",
+        "JA0202": "",
+        "JA0203": "",
+        "JA0204": "",
+        "JA0205": "",
+        "JA0410": "Y"
+      }
+    ]
+  }
+}

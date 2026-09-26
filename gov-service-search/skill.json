@@ -1,0 +1,9 @@
+{
+  "name": "gov-service-search",
+  "description": "정부24 공공서비스(혜택) 정보 OpenAPI(data.go.kr 15113968)로 키워드·소관기관·분야·지역 기준으로 지원금·민원·정부서비스를 검색하고, 신청 방법·소관기관·온라인 신청 URL·지원조건을 조회한다. 조회 전용.",
+  "profiles": [
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: gov-service-search\ndescription: 정부24 공공서비스(혜택) 정보 OpenAPI(data.go.kr 15113968)로 키워드·소관기관·분야·지역 기준으로 지원금·민원·정부서비스를 검색하고, 신청 방법·소관기관·온라인 신청 URL·지원조건을 조회한다. 조회 전용.\nlicense: MIT\nmetadata:\n  category: civic\n  locale: ko-KR\n  phase: v1"
+}
