@@ -54,6 +54,13 @@ const {
 } = require("../src/coupang");
 const { parseXmlItems } = require("../src/molit");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
+const {
+  classifyDataGoKrReasonCode,
+  isOperationalUpstreamError,
+  logUpstreamError,
+  sanitizeUpstreamSnippet,
+  sanitizeUpstreamUrl
+} = require("../src/data-go-kr-errors");
 
 test("makeCacheKey requires a non-empty route to prevent cross-route collisions", () => {
   assert.throws(() => makeCacheKey({ q: "강남" }), /route/);
@@ -6698,7 +6705,7 @@ test("lh-notice search does not cache upstream XML auth errors so retries self-h
 
   const first = await app.inject({ method: "GET", url: "/v1/lh-notice/search" });
   assert.equal(first.statusCode, 502);
-  assert.equal(first.json().error, "upstream_error");
+  assert.equal(first.json().error, "upstream_configuration_error");
   assert.equal(first.json().upstream_code, "30");
 
   mode = "ok";
@@ -6825,7 +6832,7 @@ test("lh-notice detail does not cache upstream XML auth errors so retries self-h
 
   const first = await app.inject({ method: "GET", url: detailUrl });
   assert.equal(first.statusCode, 502);
-  assert.equal(first.json().error, "upstream_error");
+  assert.equal(first.json().error, "upstream_configuration_error");
   assert.equal(first.json().upstream_code, "30");
   assert.equal(first.json().proxy.cache.hit, false);
   assert.equal(fetchCalls.length, 1, "first call must hit upstream exactly once");
@@ -7562,4 +7569,214 @@ test("health endpoint reports buildingRegisterConfigured from DATA_GO_KR_API_KEY
 
   assert.equal(offBody.upstreams.buildingRegisterConfigured, false);
   assert.equal(onBody.upstreams.buildingRegisterConfigured, true);
+});
+
+// ---------------------------------------------------------------------------
+// k-skill#641: consistent upstream error classification and attribution.
+// LH registration errors, KRX auth/rate limits, AirKorea 429, and Naver
+// Shopping 404 must not all collapse into a generic 502/500.
+// ---------------------------------------------------------------------------
+
+test("data.go.kr reason codes distinguish registration errors from quota and transient failures", () => {
+  assert.deepEqual(classifyDataGoKrReasonCode("30"), {
+    error: "upstream_configuration_error",
+    statusCode: 502
+  });
+  assert.deepEqual(classifyDataGoKrReasonCode("22"), {
+    error: "upstream_quota_exceeded",
+    statusCode: 503,
+    retryAfterSeconds: 3600
+  });
+  assert.equal(classifyDataGoKrReasonCode("10"), null);
+  assert.equal(classifyDataGoKrReasonCode(""), null);
+  assert.equal(classifyDataGoKrReasonCode(undefined), null);
+
+  assert.equal(isOperationalUpstreamError("upstream_configuration_error"), true);
+  assert.equal(isOperationalUpstreamError("upstream_rate_limited"), true);
+  assert.equal(isOperationalUpstreamError("upstream_error"), false);
+});
+
+test("logUpstreamError logs operator-actionable errors at error level and transient failures at warn", () => {
+  const entries = { error: [], warn: [] };
+  const logger = {
+    error: (fields, message) => entries.error.push({ fields, message }),
+    warn: (fields, message) => entries.warn.push({ fields, message })
+  };
+
+  logUpstreamError(logger, {
+    route: "/v1/lh-notice/detail",
+    errorCode: "upstream_configuration_error",
+    message: "SERVICE_KEY_IS_NOT_REGISTERED_ERROR (serviceKey=secret-value)",
+    upstreamCode: "30"
+  });
+  logUpstreamError(logger, {
+    route: "/v1/korean-stock/search",
+    errorCode: "upstream_error",
+    message: "KRX API HTTP 오류 (status: 500)"
+  });
+
+  assert.equal(entries.error.length, 1);
+  assert.equal(entries.error[0].fields.upstreamError, "upstream_configuration_error");
+  assert.equal(entries.error[0].fields.upstreamCode, "30");
+  assert.doesNotMatch(entries.error[0].fields.upstreamMessage, /secret-value/);
+  assert.match(entries.error[0].fields.upstreamMessage, /serviceKey=\[REDACTED\]/);
+  assert.equal(entries.warn.length, 1);
+  assert.equal(entries.warn[0].fields.upstreamError, "upstream_error");
+});
+
+test("upstream attribution helpers drop query values and blank credential-like assignments", () => {
+  assert.equal(
+    sanitizeUpstreamUrl("https://ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=secret&source=shp_gui"),
+    "https://ns-portal.shopping.naver.com/api/v2/shopping-paged-slot"
+  );
+  assert.equal(sanitizeUpstreamUrl("not a url"), null);
+  assert.equal(sanitizeUpstreamSnippet("serviceKey=abc123&message=rate limited"), "serviceKey=[REDACTED]&message=rate limited");
+});
+
+test("unmatched route usage logs a normalized path sample but never for matched routes", () => {
+  const unmatched = buildRouteUsageFields({
+    route: "__unmatched__",
+    statusCode: 404,
+    query: {},
+    errorCode: "Not Found",
+    unmatchedPath: "/v1/no-such-route"
+  });
+  assert.equal(unmatched.unmatchedPath, "/v1/no-such-route");
+  assert.equal(unmatched.errorCode, "Not Found");
+
+  const matched = buildRouteUsageFields({
+    route: "/v1/kr-whois/domain",
+    statusCode: 404,
+    query: {},
+    unmatchedPath: "/v1/no-such-route"
+  });
+  assert.equal(matched.unmatchedPath, undefined);
+});
+
+test("lh-notice quota reason code maps to 503 with Retry-After instead of a transient 502", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    JSON.stringify({
+      response: {
+        header: { resultCode: "22", resultMsg: "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR" }
+      }
+    }),
+    { status: 200, headers: { "content-type": "application/json" } }
+  );
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({ method: "GET", url: "/v1/lh-notice/search" });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_quota_exceeded");
+  assert.equal(response.json().upstream_code, "22");
+  assert.equal(response.headers["retry-after"], "3600");
+});
+
+test("korean stock base-info maps KRX 403 to an operator-actionable configuration error", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("forbidden", { status: 403, statusText: "Forbidden" });
+  const app = buildServer({ env: { KRX_API_KEY: "krx-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/base-info?market=KOSPI&code=005930&bas_dd=20260404"
+  });
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_configuration_error");
+});
+
+test("korean stock search maps KRX 429 to upstream_rate_limited with Retry-After", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("slow down", {
+    status: 429,
+    headers: { "retry-after": "30" }
+  });
+  const app = buildServer({ env: { KRX_API_KEY: "krx-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90&bas_dd=20260404"
+  });
+  assert.equal(response.statusCode, 429);
+  assert.equal(response.json().error, "upstream_rate_limited");
+  assert.equal(response.headers["retry-after"], "30");
+});
+
+test("fine dust route maps AirKorea 429 to upstream_rate_limited with Retry-After", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("too many requests", {
+    status: 429,
+    headers: { "content-type": "text/plain", "retry-after": "120" }
+  });
+  const app = buildServer({ env: { AIR_KOREA_OPEN_API_KEY: "airkorea-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  });
+
+  assert.equal(response.statusCode, 429, "AirKorea 429 must not degrade to a global 500");
+  assert.equal(response.json().error, "upstream_rate_limited");
+  assert.equal(response.headers["retry-after"], "120");
+  assert.doesNotMatch(response.body, /airkorea-key|serviceKey=/);
+});
+
+test("naver shopping official API maps upstream 404 to upstream_not_found", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    JSON.stringify({ errorMessage: "not found" }),
+    { status: 404, headers: { "content-type": "application/json" } }
+  );
+  const app = buildServer({
+    env: { NAVER_SEARCH_CLIENT_ID: "client-id", NAVER_SEARCH_CLIENT_SECRET: "client-secret" }
+  });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=%ED%85%8C%EC%8A%A4%ED%8A%B8%20%EC%83%81%ED%92%88"
+  });
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.json().error, "upstream_not_found");
+  assert.equal(response.json().upstream.status_code, 404);
+  assert.doesNotMatch(response.body, /client-secret/);
+});
+
+test("naver shopping BFF maps upstream 404 to upstream_not_found without changing surface", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("<html>not found</html>", {
+    status: 404,
+    headers: { "content-type": "text/html" }
+  });
+  const app = buildServer({ env: {} });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=%ED%85%8C%EC%8A%A4%ED%8A%B8%20%EC%83%81%ED%92%88"
+  });
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_not_found");
+});
+
+test("naver shopping BFF maps upstream 429 to upstream_rate_limited with Retry-After", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("too many", {
+    status: 429,
+    headers: { "retry-after": "45" }
+  });
+  const app = buildServer({ env: {} });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=%ED%85%8C%EC%8A%A4%ED%8A%B8%20%EC%83%81%ED%92%88"
+  });
+  assert.equal(response.statusCode, 429);
+  assert.equal(response.json().error, "upstream_rate_limited");
+  assert.equal(response.headers["retry-after"], "45");
 });

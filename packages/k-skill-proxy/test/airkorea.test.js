@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 
 const {
   buildReport,
+  extractOperationFromUrl,
   fetchFineDustReport,
   pickStation
 } = require("../src/airkorea");
@@ -142,6 +143,41 @@ test("fetchFineDustReport falls back to direct measurement lookup when station-i
     "getMsrstnList",
     "getMsrstnAcctoRltmMesureDnsty"
   ]);
+});
+
+test("extractOperationFromUrl returns the last path segment", () => {
+  assert.equal(
+    extractOperationFromUrl("http://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList"),
+    "getMsrstnList"
+  );
+  assert.equal(
+    extractOperationFromUrl("http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty/"),
+    "getMsrstnAcctoRltmMesureDnsty"
+  );
+  assert.equal(extractOperationFromUrl("not a url"), null);
+});
+
+test("fetchFineDustReport surfaces AirKorea 429 with operation and Retry-After metadata", async () => {
+  const fetchImpl = async () => new Response("slow down", {
+    status: 429,
+    headers: { "retry-after": "90" }
+  });
+
+  await assert.rejects(
+    () => fetchFineDustReport({
+      regionHint: "서울 강남구",
+      serviceKey: "test-key",
+      fetchImpl
+    }),
+    (error) => {
+      assert.equal(error.code, "upstream_rate_limited");
+      assert.equal(error.statusCode, 429);
+      assert.equal(error.upstreamStatus, 429);
+      assert.equal(error.operation, "getMsrstnList");
+      assert.equal(error.retryAfterSeconds, 90);
+      return true;
+    }
+  );
 });
 
 test("fetchFineDustReport returns a helpful 400 when district tokens do not map to station names", async () => {

@@ -513,6 +513,28 @@ test("fetchLhNoticeList surfaces upstream 401 as upstream_not_authorized (status
   );
 });
 
+test("fetchLhNoticeList surfaces HTTP 403 as upstream_configuration_error", async () => {
+  const mockFetch = async () => ({
+    ok: false,
+    status: 403,
+    headers: { get: () => "text/plain" },
+    text: async () => "Forbidden"
+  });
+
+  await assert.rejects(
+    fetchLhNoticeList({
+      serviceKey: "bad",
+      filters: { page: 1, pageSize: 50 },
+      fetchImpl: mockFetch
+    }),
+    (err) => {
+      assert.equal(err.code, "upstream_configuration_error");
+      assert.equal(err.statusCode, 502);
+      return true;
+    }
+  );
+});
+
 test("fetchLhNoticeList surfaces XML SERVICE_KEY error envelopes with upstreamCode", async () => {
   const mockFetch = async () => ({
     ok: true,
@@ -528,7 +550,7 @@ test("fetchLhNoticeList surfaces XML SERVICE_KEY error envelopes with upstreamCo
       fetchImpl: mockFetch
     }),
     (err) => {
-      assert.equal(err.code, "upstream_error");
+      assert.equal(err.code, "upstream_configuration_error");
       assert.equal(err.statusCode, 502);
       assert.equal(err.upstreamCode, "30");
       assert.match(err.message, /SERVICE_KEY/);

@@ -1,5 +1,6 @@
 // allow: SIZE_OK - Cohesive AirKorea station/measurement adapter with one shared fallback and redaction contract.
 const { fetchWithRetry } = require("./fetch-with-retry");
+const { parseRetryAfterSeconds } = require("./data-go-kr-errors");
 
 const STATION_SERVICE_URL = "http://apis.data.go.kr/B552584/MsrstnInfoInqireSvc";
 const MEASUREMENT_SERVICE_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc";
@@ -9,6 +10,15 @@ const GRADE_LABELS = {
   "3": "나쁨",
   "4": "매우나쁨"
 };
+
+function extractOperationFromUrl(baseUrl) {
+  try {
+    const pathname = new URL(baseUrl).pathname.replace(/\/+$/, "");
+    return pathname.split("/").filter(Boolean).pop() || null;
+  } catch {
+    return null;
+  }
+}
 
 function extractItems(payload) {
   if (Array.isArray(payload)) {
@@ -209,6 +219,7 @@ async function fetchJson(baseUrl, params, { fetchImpl = global.fetch, headers = 
   }
 
   url.search = searchParams.toString();
+  const operation = extractOperationFromUrl(baseUrl);
   let response;
   try {
     response = await fetchWithRetry(url, {
@@ -220,17 +231,37 @@ async function fetchJson(baseUrl, params, { fetchImpl = global.fetch, headers = 
     const error = new Error("AirKorea upstream request failed.");
     error.statusCode = 502;
     error.code = "upstream_fetch_failed";
+    error.operation = operation;
     throw error;
   }
 
   if (!response.ok) {
-    if (response.status === 403) {
-      throw new Error(
-        "AirKorea upstream returned 403 Forbidden. 기술문서 기준 후보 원인: 활용신청 후 동기화 대기(1~2시간), 활용신청하지 않은 API 호출, 서비스키 인코딩/서비스키 오류, 등록하지 않은 도메인 또는 IP.",
-      );
+    // Rate limiting must not degrade into the global handler's default 500.
+    // Classify it explicitly and keep the upstream status/operation available
+    // for structured attribution logs (the service key is never recorded).
+    if (response.status === 429) {
+      const error = new Error(`AirKorea upstream rate limited with HTTP 429 for ${operation}.`);
+      error.statusCode = 429;
+      error.code = "upstream_rate_limited";
+      error.upstreamStatus = 429;
+      error.operation = operation;
+      error.retryAfterSeconds = parseRetryAfterSeconds(response.headers?.get?.("retry-after")) || 60;
+      throw error;
     }
 
-    throw new Error(`AirKorea upstream request failed with HTTP ${response.status}.`);
+    if (response.status === 403) {
+      const error = new Error(
+        "AirKorea upstream returned 403 Forbidden. 기술문서 기준 후보 원인: 활용신청 후 동기화 대기(1~2시간), 활용신청하지 않은 API 호출, 서비스키 인코딩/서비스키 오류, 등록하지 않은 도메인 또는 IP.",
+      );
+      error.upstreamStatus = 403;
+      error.operation = operation;
+      throw error;
+    }
+
+    const error = new Error(`AirKorea upstream request failed with HTTP ${response.status}.`);
+    error.upstreamStatus = response.status;
+    error.operation = operation;
+    throw error;
   }
 
   return JSON.parse(await response.text());
@@ -425,6 +456,8 @@ module.exports = {
   MEASUREMENT_SERVICE_URL,
   buildReport,
   extractItems,
+  extractOperationFromUrl,
+  parseRetryAfterSeconds,
   fetchFineDustReport,
   fetchCtprvnMeasurementPayload,
   fetchMeasurementPayload,

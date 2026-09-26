@@ -1,4 +1,5 @@
 const { fetchWithRetry } = require("./fetch-with-retry");
+const { parseRetryAfterSeconds } = require("./data-go-kr-errors");
 
 const KRX_MARKETS = ["KOSPI", "KOSDAQ", "KONEX"];
 
@@ -142,8 +143,23 @@ async function krxRequest(url, apiKey, fetchImpl = global.fetch) {
 
   if (!response.ok) {
     const error = new Error(`KRX API HTTP 오류 (status: ${response.status}): ${response.statusText}`);
-    error.code = "upstream_error";
-    error.statusCode = 502;
+    error.upstreamStatus = response.status;
+    if (response.status === 401 || response.status === 403) {
+      // The KRX API reports a rejected AUTH_KEY / contract as 401/403. Classify
+      // it as an operator-actionable configuration error instead of a transient 502.
+      error.code = "upstream_configuration_error";
+      error.statusCode = 502;
+    } else if (response.status === 429) {
+      error.code = "upstream_rate_limited";
+      error.statusCode = 429;
+      const retryAfter = parseRetryAfterSeconds(response.headers?.get?.("retry-after"));
+      if (retryAfter) {
+        error.retryAfterSeconds = retryAfter;
+      }
+    } else {
+      error.code = "upstream_error";
+      error.statusCode = 502;
+    }
     throw error;
   }
 
@@ -229,11 +245,15 @@ function buildBaseInfoSnapshotCacheKey({ market, basDd }) {
 }
 
 function serializeKrxError(error) {
-  return {
+  const serialized = {
     code: error?.code || "proxy_error",
     status_code: error?.statusCode || 502,
     message: error?.message || "Unknown KRX upstream error."
   };
+  if (error?.retryAfterSeconds) {
+    serialized.retry_after_seconds = error.retryAfterSeconds;
+  }
+  return serialized;
 }
 
 async function fetchBaseInfoSnapshot({
@@ -329,5 +349,6 @@ module.exports = {
   fetchBaseInfo,
   fetchTradeInfo,
   getCurrentKstDate,
+  parseRetryAfterSeconds,
   searchStocks
 };

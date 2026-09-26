@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const Fastify = require("fastify");
 const { LogController } = Fastify;
+const { logUpstreamError } = require("./data-go-kr-errors");
 const {
   isAssemblyErrorBody,
   normalizeAssemblyBillDetailQuery,
@@ -325,7 +326,8 @@ function buildRouteUsageFields({
   query = {},
   clientIp = null,
   attributionSalt = null,
-  errorCode = null
+  errorCode = null,
+  unmatchedPath = null
 }) {
   const fields = { routeUsage: true, route, statusCode };
   if (statusCode >= 400) {
@@ -339,6 +341,13 @@ function buildRouteUsageFields({
     }
     if (errorCode) {
       fields.errorCode = errorCode;
+    }
+    // Unmatched requests are otherwise indistinguishable. Log the normalized
+    // path sample, but only for paths already admitted to the bounded
+    // unmatchedPathStats map so arbitrary scanner input cannot grow Loki
+    // label cardinality without bound (see the onResponse hook below).
+    if (route === "__unmatched__" && unmatchedPath) {
+      fields.unmatchedPath = unmatchedPath;
     }
   }
   return fields;
@@ -2247,12 +2256,15 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     // without bound.
     const route = matchedRoute || "__unmatched__";
     routeUsageStats.set(route, (routeUsageStats.get(route) || 0) + 1);
+    let unmatchedPath = null;
     if (!matchedRoute) {
       const normalizedPath = normalizeUnmatchedPath(request.url);
       if (unmatchedPathStats.has(normalizedPath)) {
         unmatchedPathStats.set(normalizedPath, unmatchedPathStats.get(normalizedPath) + 1);
+        unmatchedPath = normalizedPath;
       } else if (unmatchedPathStats.size < 100) {
         unmatchedPathStats.set(normalizedPath, 1);
+        unmatchedPath = normalizedPath;
       }
     }
     app.log.info(buildRouteUsageFields({
@@ -2261,7 +2273,8 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       query: request.query || {},
       clientIp: config.trustProxyHops > 0 ? request.ip : null,
       attributionSalt: trimOrNull(env.KSKILL_PROXY_ATTRIBUTION_SALT),
-      errorCode: reply.errorCode
+      errorCode: reply.errorCode,
+      unmatchedPath
     }), "route usage");
   });
 
@@ -2478,7 +2491,22 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    const report = await app.provider(normalized);
+    let report;
+    try {
+      report = await app.provider(normalized);
+    } catch (error) {
+      // Attribute AirKorea failures (status + operation, never the service key)
+      // before the global handler turns them into a response.
+      logUpstreamError(request.log, {
+        route: "/v1/fine-dust/report",
+        errorCode: error.code || "proxy_error",
+        message: error.message,
+        upstreamStatus: error.upstreamStatus,
+        operation: error.operation
+      });
+      throw error;
+    }
+
     const payload = {
       ...report,
       proxy: {
@@ -3784,15 +3812,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     });
 
     if (result.error) {
-      const logUpstreamError = result.error === "upstream_configuration_error"
-        ? request.log.error.bind(request.log)
-        : request.log.warn.bind(request.log);
-      logUpstreamError({
+      // Consolidated attribution helper: operator-actionable errors log at
+      // error level, transient upstream failures at warn level.
+      logUpstreamError(request.log, {
         route: "/v1/real-estate/:assetType/:dealType",
-        upstreamError: result.error,
-        upstreamMessage: result.message,
+        errorCode: result.error,
+        message: result.message,
         upstreamCode: result.upstream_code
-      }, "real estate upstream error");
+      });
       reply.code(result.status_code || 502);
       if (result.retry_after) {
         reply.header("retry-after", String(result.retry_after));
@@ -4073,12 +4100,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         filters: normalized
       });
     } catch (error) {
-      request.log.warn({
-        route: "/v1/korean-stock/base-info",
-        upstreamError: error.code || "proxy_error",
-        upstreamMessage: error.message
-      }, "KRX upstream error");
+      logUpstreamError(request.log, {
+        route: "/v1/lh-notice/search",
+        errorCode: error.code,
+        message: error.message,
+        upstreamCode: error.upstreamCode
+      });
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      if (error.retryAfterSeconds) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       return {
         error: error.code || "proxy_error",
         message: error.message,
@@ -4159,12 +4190,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         filters: normalized
       });
     } catch (error) {
-      request.log.warn({
-        route: "/v1/korean-stock/trade-info",
-        upstreamError: error.code || "proxy_error",
-        upstreamMessage: error.message
-      }, "KRX upstream error");
+      logUpstreamError(request.log, {
+        route: "/v1/lh-notice/detail",
+        errorCode: error.code,
+        message: error.message,
+        upstreamCode: error.upstreamCode
+      });
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      if (error.retryAfterSeconds) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       return {
         error: error.code || "proxy_error",
         message: error.message,
@@ -4422,6 +4457,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     try {
       result = await fetcher({ ...normalized, serviceKey: config.molitApiKey });
     } catch (error) {
+      logUpstreamError(request.log, {
+        route,
+        errorCode: error.code,
+        message: error.message,
+        upstreamCode: error.upstreamCode
+      });
       reply.code(502);
       return {
         error: "proxy_error",
@@ -4434,11 +4475,23 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       upstream_forbidden: 502,
       upstream_timeout: 504,
       upstream_invalid_response: 502,
-      upstream_error: 502
+      upstream_error: 502,
+      upstream_configuration_error: 502,
+      upstream_quota_exceeded: 503,
+      upstream_rate_limited: 429
     };
 
     if (result && result.error) {
+      logUpstreamError(request.log, {
+        route,
+        errorCode: result.error,
+        message: result.message,
+        upstreamCode: result.upstream_code
+      });
       reply.code(keyedErrorStatus[result.error] || 502);
+      if (result.retry_after) {
+        reply.header("retry-after", String(result.retry_after));
+      }
       return {
         ...result,
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }, requested_at: new Date().toISOString() }
@@ -5361,7 +5414,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         cacheTtlMs: config.cacheTtlMs
       });
     } catch (error) {
+      logUpstreamError(request.log, {
+        route: "/v1/korean-stock/search",
+        errorCode: error.code,
+        message: error.message,
+        upstreamStatus: error.upstreamStatus
+      });
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      if (error.retryAfterSeconds) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       return {
         error: error.code || "proxy_error",
         message: error.message
@@ -5439,7 +5501,21 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         clientSecret: config.naverSearchClientSecret
       });
     } catch (error) {
+      // Record upstream URL (origin+pathname only), status, and a redacted body
+      // snippet so a 404/contract change is diagnosable without leaking the
+      // search query or API credentials into logs.
+      logUpstreamError(request.log, {
+        route: "/v1/naver-shopping/search",
+        errorCode: error.code,
+        message: error.message,
+        upstreamStatus: error.upstreamStatusCode,
+        upstreamUrl: error.upstreamUrl,
+        bodySnippet: error.upstreamBodySnippet
+      });
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      if (error.retryAfterSeconds) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       const payload = {
         error: error.code || "proxy_error",
         message: error.message,
@@ -6314,7 +6390,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         apiKey: config.krxApiKey
       });
     } catch (error) {
+      logUpstreamError(request.log, {
+        route: "/v1/korean-stock/base-info",
+        errorCode: error.code,
+        message: error.message,
+        upstreamStatus: error.upstreamStatus
+      });
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      if (error.retryAfterSeconds) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       return {
         error: error.code || "proxy_error",
         message: error.message
@@ -6407,7 +6492,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         apiKey: config.krxApiKey
       });
     } catch (error) {
+      logUpstreamError(request.log, {
+        route: "/v1/korean-stock/trade-info",
+        errorCode: error.code,
+        message: error.message,
+        upstreamStatus: error.upstreamStatus
+      });
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
+      if (error.retryAfterSeconds) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       return {
         error: error.code || "proxy_error",
         message: error.message
@@ -6463,6 +6557,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     if (error.sidoName) {
       payload.sido_name = error.sidoName;
+    }
+
+    if (error.retryAfterSeconds) {
+      reply.header("retry-after", String(error.retryAfterSeconds));
     }
 
     reply.code(statusCode).send(payload);

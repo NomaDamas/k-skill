@@ -2,6 +2,7 @@
 // Proxies data.go.kr XML endpoints for Korean real estate transaction data.
 
 const { fetchWithRetry } = require("./fetch-with-retry");
+const { classifyDataGoKrReasonCode } = require("./data-go-kr-errors");
 
 const MOLIT_BASE_URL = "http://apis.data.go.kr/1613000";
 
@@ -80,23 +81,18 @@ function parseXmlItems(xmlText) {
   if (resultCode !== "000") {
     const msgMatch = xmlText.match(/<resultMsg>([^<]*)<\/resultMsg>/);
     const resultMsg = msgMatch ? msgMatch[1].trim() : `API error code ${resultCode}`;
-    if (resultCode === "22") {
-      return {
-        error: "upstream_quota_exceeded",
+    const classification = classifyDataGoKrReasonCode(resultCode);
+    if (classification) {
+      const result = {
+        error: classification.error,
         message: resultMsg,
-        status_code: 503,
-        retry_after: 3600,
+        status_code: classification.statusCode,
         upstream_code: resultCode
       };
-    }
-
-    if (["20", "30", "31"].includes(resultCode)) {
-      return {
-        error: "upstream_configuration_error",
-        message: resultMsg,
-        status_code: 502,
-        upstream_code: resultCode
-      };
+      if (classification.retryAfterSeconds) {
+        result.retry_after = classification.retryAfterSeconds;
+      }
+      return result;
     }
 
     return { error: `molit_api_${resultCode}`, message: resultMsg };

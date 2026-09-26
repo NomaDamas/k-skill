@@ -12,6 +12,8 @@
 // Error payloads can also arrive as XML from the common data.go.kr error path, e.g.
 // unregistered ServiceKey, so both JSON and XML fault paths must be handled.
 
+const { classifyDataGoKrReasonCode } = require("./data-go-kr-errors");
+
 const LH_UPSTREAM_BASE_URL = "http://apis.data.go.kr/B552555";
 const LH_LIST_PATH = "lhLeaseNoticeInfo1/lhLeaseNoticeInfo1";
 const LH_DETAIL_PATH = "lhLeaseNoticeDtlInfo1/getLeaseNoticeDtlInfo1";
@@ -264,14 +266,33 @@ function parseXmlErrorEnvelope(xmlText) {
   };
 }
 
-function buildError({ message, statusCode, code, upstreamCode }) {
+function buildError({ message, statusCode, code, upstreamCode, retryAfterSeconds }) {
   const error = new Error(message);
   error.statusCode = statusCode;
   error.code = code;
   if (upstreamCode) {
     error.upstreamCode = upstreamCode;
   }
+  if (retryAfterSeconds) {
+    error.retryAfterSeconds = retryAfterSeconds;
+  }
   return error;
+}
+
+// data.go.kr gateway errors arrive either as an XML <OpenAPI_ServiceResponse>
+// envelope or as a non-success result code inside the JSON envelope. Reuse the
+// shared classifier so SERVICE_KEY_IS_NOT_REGISTERED_ERROR (reason 30) and quota
+// errors are separated from transient upstream failures instead of all becoming
+// a generic 502. See src/data-go-kr-errors.js.
+function buildEnvelopeError({ message, upstreamCode, fallbackMessage }) {
+  const classification = classifyDataGoKrReasonCode(upstreamCode);
+  return buildError({
+    message: message || fallbackMessage,
+    statusCode: classification?.statusCode || 502,
+    code: classification?.error || "upstream_error",
+    upstreamCode,
+    retryAfterSeconds: classification?.retryAfterSeconds
+  });
 }
 
 // Parse the LH JSON envelope into { totalCount, items, raw }.
@@ -295,11 +316,10 @@ function extractNoticeEnvelope(parsed) {
     // otherwise-valid responses. See tests `extractNoticeEnvelope treats
     // array-envelope CMN.CODE="…" as success` for coverage.
     if (code && code !== "SUCCESS" && code !== "0" && code !== "00" && code !== "000") {
-      throw buildError({
-        message: errMsg || `LH upstream rejected the request (${code}).`,
-        statusCode: 502,
-        code: "upstream_error",
-        upstreamCode: code
+      throw buildEnvelopeError({
+        message: errMsg,
+        upstreamCode: code,
+        fallbackMessage: `LH upstream rejected the request (${code}).`
       });
     }
 
@@ -321,11 +341,10 @@ function extractNoticeEnvelope(parsed) {
     const header = response.header || {};
     const headerCode = trimOrNull(header.resultCode);
     if (headerCode && !["00", "000", "0"].includes(headerCode)) {
-      throw buildError({
-        message: trimOrNull(header.resultMsg) || `LH upstream rejected the request (${headerCode}).`,
-        statusCode: 502,
-        code: "upstream_error",
-        upstreamCode: headerCode
+      throw buildEnvelopeError({
+        message: trimOrNull(header.resultMsg),
+        upstreamCode: headerCode,
+        fallbackMessage: `LH upstream rejected the request (${headerCode}).`
       });
     }
 
@@ -418,29 +437,33 @@ async function fetchLhUpstream({ url, fetchImpl = global.fetch, timeoutMs = 2000
   if (!response.ok) {
     const xmlError = parseXmlErrorEnvelope(text);
     if (xmlError) {
-      throw buildError({
-        message: xmlError.message,
-        statusCode: response.status === 401 ? 503 : 502,
-        code: response.status === 401 ? "upstream_not_authorized" : "upstream_error",
-        upstreamCode: xmlError.code
-      });
+      if (response.status === 401) {
+        throw buildError({
+          message: xmlError.message,
+          statusCode: 503,
+          code: "upstream_not_authorized",
+          upstreamCode: xmlError.code
+        });
+      }
+      throw buildEnvelopeError({ message: xmlError.message, upstreamCode: xmlError.code });
     }
+    const isUnauthorized = response.status === 401;
+    const isForbidden = response.status === 403;
     throw buildError({
       message: `LH upstream responded with HTTP ${response.status}: ${text.slice(0, 200)}`,
-      statusCode: response.status === 401 ? 503 : 502,
-      code: response.status === 401 ? "upstream_not_authorized" : "upstream_error"
+      statusCode: isUnauthorized ? 503 : 502,
+      code: isUnauthorized
+        ? "upstream_not_authorized"
+        : isForbidden
+          ? "upstream_configuration_error"
+          : "upstream_error"
     });
   }
 
   // data.go.kr sometimes returns 200 + XML envelope carrying the real error.
   const xmlError = parseXmlErrorEnvelope(text);
   if (xmlError) {
-    throw buildError({
-      message: xmlError.message,
-      statusCode: 502,
-      code: "upstream_error",
-      upstreamCode: xmlError.code
-    });
+    throw buildEnvelopeError({ message: xmlError.message, upstreamCode: xmlError.code });
   }
 
   let parsed;

@@ -1,3 +1,5 @@
+const { parseRetryAfterSeconds } = require("./data-go-kr-errors");
+
 const NAVER_SHOPPING_BASE_URL = "https://search.shopping.naver.com";
 const NAVER_SHOPPING_BFF_BASE_URL = "https://ns-portal.shopping.naver.com";
 const NAVER_SHOPPING_SEARCH_PATH = "/api/v2/shopping-paged-slot";
@@ -6,6 +8,23 @@ const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 40;
 const ALLOWED_SORTS = new Set(["rel", "date", "price_asc", "price_dsc", "review"]);
 const LOCALLY_SORTABLE_BFF_SORTS = new Set(["price_asc", "price_dsc", "review"]);
+
+// Classify an upstream HTTP status into a proxy error code so the same status
+// means the same thing across Naver Shopping providers (official Search API and
+// the public BFF). 404 signals an upstream contract/path change; 401/403 are
+// operator-actionable key/approval problems; 429 is rate limiting.
+function classifyNaverUpstreamStatus(status) {
+  if (status === 404) {
+    return "upstream_not_found";
+  }
+  if (status === 429) {
+    return "upstream_rate_limited";
+  }
+  if (status === 401 || status === 403) {
+    return "upstream_configuration_error";
+  }
+  return "upstream_error";
+}
 
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
@@ -750,10 +769,14 @@ async function fetchNaverShoppingOpenApiSearch({
 
   if (!response.ok) {
     const error = new Error(`Naver Search API responded with ${response.status}.`);
-    error.code = "upstream_error";
+    error.code = classifyNaverUpstreamStatus(response.status);
     error.statusCode = response.status >= 400 && response.status < 500 ? response.status : 502;
     error.upstreamStatusCode = response.status;
     error.upstreamBodySnippet = body.slice(0, 200);
+    error.upstreamUrl = url.toString();
+    if (response.status === 429) {
+      error.retryAfterSeconds = parseRetryAfterSeconds(response.headers?.get?.("retry-after")) || 60;
+    }
     throw error;
   }
 
@@ -918,10 +941,14 @@ async function fetchNaverShoppingSearch({ query, limit, page, sort, clientId = n
 
   if (!response.ok) {
     const error = new Error(`Naver Shopping upstream responded with ${response.status}.`);
-    error.code = "upstream_error";
-    error.statusCode = 502;
+    error.code = classifyNaverUpstreamStatus(response.status);
+    error.statusCode = response.status === 429 ? 429 : 502;
     error.upstreamStatusCode = response.status;
     error.upstreamBodySnippet = body.slice(0, 200);
+    error.upstreamUrl = url.toString();
+    if (response.status === 429) {
+      error.retryAfterSeconds = parseRetryAfterSeconds(response.headers?.get?.("retry-after")) || 60;
+    }
     throw error;
   }
 
@@ -945,6 +972,7 @@ async function fetchNaverShoppingSearch({ query, limit, page, sort, clientId = n
 
 module.exports = {
   buildNaverShoppingOpenApiUrl,
+  classifyNaverUpstreamStatus,
   buildNaverShoppingSearchUrl,
   fetchNaverShoppingOpenApiSearch,
   fetchNaverShoppingSearch,
