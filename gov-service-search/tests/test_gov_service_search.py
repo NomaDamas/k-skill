@@ -226,6 +226,20 @@ class ErrorMappingTests(unittest.TestCase):
         message = mod.describe_upstream_error(429, "application/json", '{"code": -429, "msg": "too many requests"}')
         self.assertIn("한도", message)
 
+    def test_http_status_guidance_survives_an_upstream_message(self):
+        # 인증·한도 상태는 본문 메시지가 있어도 상태별 안내를 유지해야 한다.
+        for status in (401, 403):
+            message = mod.describe_upstream_error(
+                status, "application/json", '{"msg": "Unregistered key"}'
+            )
+            self.assertIn("활용신청", message, f"{status} 응답이 인증 안내를 잃었다")
+            self.assertIn("Unregistered key", message)
+        quota = mod.describe_upstream_error(
+            429, "application/json", '{"msg": "quota exceeded for today"}'
+        )
+        self.assertIn("한도", quota)
+        self.assertIn("quota exceeded for today", quota)
+
     def test_http_500_maps_to_upstream_down(self):
         message = mod.describe_upstream_error(500, "text/html", "<html>500</html>")
         self.assertIn("upstream", message)

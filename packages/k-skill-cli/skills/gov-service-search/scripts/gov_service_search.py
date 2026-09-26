@@ -355,12 +355,16 @@ def describe_upstream_error(
 
     # HTTP >= 400
     text = _message_text(payload)
-    if text:
-        return _describe_code(payload.get("code") if isinstance(payload, dict) else None, text)
+    code = payload.get("code") if isinstance(payload, dict) else None
+    # Status-specific guidance wins over the generic message path: a 401/403 with a
+    # message must still tell the user to check key approval/registration, and a 429
+    # must still point at the quota, instead of collapsing into a generic upstream error.
     if status in (401, 403):
-        return AUTH_ERROR_MSG
+        return f"{AUTH_ERROR_MSG} (upstream: {text})" if text else AUTH_ERROR_MSG
     if status == 429 or (status == 400 and _matches(body, RATE_PATTERNS)):
-        return QUOTA_MSG
+        return f"{QUOTA_MSG} (upstream: {text})" if text else QUOTA_MSG
+    if text:
+        return _describe_code(code, text)
     if status >= 500:
         return f"{UPSTREAM_DOWN_MSG} (HTTP {status})"
     return (
