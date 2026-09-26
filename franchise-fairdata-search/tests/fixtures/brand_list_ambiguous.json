@@ -1,0 +1,34 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100006",
+            "jnghdqrtrsMnno": "HDR_20080000001",
+            "jnghdqrtrsRprsvNm": "홍길동",
+            "brandNm": "테스트치킨",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "치킨",
+            "majrGdsNm": "후라이드치킨"
+          },
+          {
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100777",
+            "jnghdqrtrsMnno": "HDR_20080000777",
+            "jnghdqrtrsRprsvNm": "박영희",
+            "brandNm": "테스트피자",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "피자",
+            "majrGdsNm": "페퍼로니피자"
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

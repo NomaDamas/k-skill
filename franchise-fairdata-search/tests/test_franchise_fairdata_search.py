@@ -199,7 +199,26 @@ class PagingTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["brandMnno"], "BRD_20080100006")
         self.assertEqual(meta["total_count"], 2)
+        self.assertTrue(meta["complete"])
+        self.assertEqual(meta["stop_reason"], "exhausted")
         self.assertEqual(fetcher.operations, ["getBrandinfo", "getBrandinfo"])
+
+    def test_fetch_pages_marks_incomplete_at_max_pages(self):
+        fetcher = FakeFetcher({"getBrandinfo": load_fixture("brand_list_page1.json")})
+        ctx = fair.QueryContext(
+            api_key=TEST_KEY,
+            api_base=fair.DEFAULT_API_BASE,
+            fetch=fetcher,
+            timeout=30,
+            num_of_rows=1,
+            max_pages=1,
+        )
+        rows, meta = fair.fetch_pages(ctx, "brand_list", year=YEAR)
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(meta["complete"])
+        self.assertEqual(meta["stop_reason"], "max_pages")
+        self.assertEqual(meta["matched_count"], 1)
+        self.assertEqual(len(fetcher.operations), 1)
 
 
 class SummarizeTests(unittest.TestCase):
@@ -239,6 +258,59 @@ class RunBrandsTests(unittest.TestCase):
         payload = json.loads(out)
         self.assertEqual(payload["result"], "empty")
         self.assertEqual(payload["rows"], [])
+
+    def test_brands_partial_when_max_pages_reached(self):
+        pages = {
+            1: load_fixture("brand_list_page1.json"),
+            2: load_fixture("brand_list_page2.json"),
+        }
+
+        def route(url):
+            return pages[int(urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)["pageNo"][0])]
+
+        fetcher = FakeFetcher({"getBrandinfo": route})
+        code, out, _ = run_cli(
+            [
+                "brands",
+                "--name",
+                "테스트치킨",
+                "--year",
+                YEAR,
+                "--num-of-rows",
+                "1",
+                "--max-pages",
+                "1",
+            ],
+            fetch=fetcher,
+        )
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        self.assertEqual(payload["result"], "partial")
+        self.assertFalse(payload["meta"]["complete"])
+        self.assertEqual(payload["meta"]["stop_reason"], "max_pages")
+        self.assertTrue(payload["warnings"])
+        self.assertEqual(fetcher.operations, ["getBrandinfo"])
+
+    def test_brands_partial_text_warns_on_stderr(self):
+        fetcher = FakeFetcher({"getBrandinfo": load_fixture("brand_list_page1.json")})
+        code, out, err = run_cli(
+            [
+                "brands",
+                "--name",
+                "테스트치킨",
+                "--year",
+                YEAR,
+                "--num-of-rows",
+                "1",
+                "--max-pages",
+                "1",
+                "--text",
+            ],
+            fetch=fetcher,
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("조건에 맞는 브랜드가 없습니다", out)
+        self.assertIn("--max-pages", err)
 
     def test_missing_key_exits_one(self):
         fetcher = FakeFetcher({"getBrandinfo": load_fixture("brand_list.json")})
@@ -287,6 +359,22 @@ class RunHqTests(unittest.TestCase):
         self.assertEqual(payload["details"][0]["status"], "ok")
         self.assertEqual(payload["details"][0]["rows"][0]["entScaleNm"], "중소기업")
 
+    def test_hq_detail_text_includes_address_and_scale(self):
+        fetcher = FakeFetcher(
+            {
+                "getjnghdqrtrsListinfo": load_fixture("hq_list.json"),
+                "getjnghdqrtrsGnlinfo2": load_fixture("hq_detail.json"),
+            }
+        )
+        code, out, _ = run_cli(
+            ["hq", "--name", "테스트", "--year", YEAR, "--detail", "--text"], fetch=fetcher
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("테스트에프앤비", out)
+        self.assertIn("중소기업", out)
+        self.assertIn("서울특별시 강남구 테스트로 1 3층", out)
+        self.assertIn("가맹본부관리번호 HDR_20080000001", out)
+
 
 class RunDetailCommandTests(unittest.TestCase):
     def test_stores_by_brand_mnno(self):
@@ -319,6 +407,41 @@ class RunDetailCommandTests(unittest.TestCase):
         )
         self.assertEqual(code, 0)
         self.assertIn("계약해지 3", out)
+
+    def test_stores_ambiguous_brand_name_refuses_instead_of_picking_first(self):
+        fetcher = FakeFetcher(
+            {
+                "getBrandinfo": load_fixture("brand_list_ambiguous.json"),
+                "getbrandFrcsDmsstus2": load_fixture("stores.json"),
+            }
+        )
+        code, out, err = run_cli(["stores", "--brand", "테스트", "--year", YEAR], fetch=fetcher)
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("여러 개", err)
+        self.assertIn("--brand-mnno", err)
+        self.assertEqual(fetcher.operations, ["getBrandinfo"])
+
+    def test_stores_incomplete_brand_search_refuses(self):
+        fetcher = FakeFetcher({"getBrandinfo": load_fixture("brand_list_page1.json")})
+        code, out, err = run_cli(
+            [
+                "stores",
+                "--brand",
+                "테스트치킨",
+                "--year",
+                YEAR,
+                "--num-of-rows",
+                "1",
+                "--max-pages",
+                "1",
+            ],
+            fetch=fetcher,
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("max-pages", err)
+        self.assertEqual(fetcher.operations, ["getBrandinfo"])
 
     def test_brand_compare_required_message_when_missing(self):
         fetcher = FakeFetcher({})
@@ -380,6 +503,66 @@ class RunReportTests(unittest.TestCase):
         payload = json.loads(out)
         self.assertEqual(payload["result"], "empty")
         self.assertEqual(payload["reports"], [])
+
+    def test_report_ambiguous_brand_requires_disambiguation(self):
+        routes = self._routes()
+        routes["getBrandinfo"] = load_fixture("brand_list_ambiguous.json")
+        fetcher = FakeFetcher(routes)
+        code, out, err = run_cli(["report", "--brand", "테스트", "--year", YEAR], fetch=fetcher)
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("여러 개", err)
+        self.assertNotIn("getbrandFrcsDmsstus2", fetcher.operations)
+
+    def test_report_single_with_truncated_search_refuses(self):
+        routes = self._routes()
+        routes["getBrandinfo"] = load_fixture("brand_list_ambiguous.json")
+        fetcher = FakeFetcher(routes)
+        code, out, err = run_cli(
+            ["report", "--brand", "테스트", "--year", YEAR, "--limit", "1"], fetch=fetcher
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("limit", err)
+
+    def test_report_all_warns_when_search_truncated(self):
+        routes = self._routes()
+        routes["getBrandinfo"] = load_fixture("brand_list_ambiguous.json")
+        fetcher = FakeFetcher(routes)
+        code, out, _ = run_cli(
+            ["report", "--brand", "테스트", "--year", YEAR, "--all", "--limit", "1"],
+            fetch=fetcher,
+        )
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        self.assertEqual(payload["result"], "partial")
+        self.assertEqual(len(payload["reports"]), 1)
+        self.assertTrue(payload["warnings"])
+
+    def test_report_all_partial_when_empty_and_incomplete(self):
+        routes = self._routes()
+        routes["getBrandinfo"] = load_fixture("brand_list_page1.json")
+        fetcher = FakeFetcher(routes)
+        code, out, _ = run_cli(
+            [
+                "report",
+                "--brand",
+                "테스트치킨",
+                "--year",
+                YEAR,
+                "--all",
+                "--num-of-rows",
+                "1",
+                "--max-pages",
+                "1",
+            ],
+            fetch=fetcher,
+        )
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        self.assertEqual(payload["result"], "partial")
+        self.assertEqual(payload["reports"], [])
+        self.assertTrue(payload["warnings"])
 
     def test_report_dry_run_uses_placeholder_and_no_network(self):
         fetcher = FakeFetcher({})
