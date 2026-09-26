@@ -218,6 +218,25 @@ class ParsingTest(unittest.TestCase):
                 json.dumps({"response": {"error": "invalid serviceKey"}}).encode("utf-8")
             )
 
+    def test_error_object_inside_recognized_body_raises(self):
+        # 봉투는 인식되지만 body 가 item container 도 pagination 도 item 도 아니면
+        # 성공한 빈 결과로 감추지 않고 실패로 드러낸다.
+        for payload in (
+            {"body": {"error": "invalid serviceKey"}},
+            {"header": {"resultCode": "00"}, "body": {"errorMessage": "invalid serviceKey"}},
+            {"response": {"header": {"resultCode": "00"}, "body": {"message": "denied"}}},
+        ):
+            with self.subTest(payload=payload):
+                with self.assertRaises(emuseum.EmuseumError):
+                    emuseum.parse_response(json.dumps(payload).encode("utf-8"))
+
+    def test_empty_body_object_is_empty_success(self):
+        payload = emuseum.parse_response(
+            json.dumps({"response": {"header": {"resultCode": "03"}, "body": {}}}).encode("utf-8")
+        )
+        self.assertEqual(payload["items"], [])
+        self.assertEqual(payload["total_count"], 0)
+
     def test_unrecognized_xml_error_document_raises(self):
         with self.assertRaises(emuseum.EmuseumError):
             emuseum.parse_response(

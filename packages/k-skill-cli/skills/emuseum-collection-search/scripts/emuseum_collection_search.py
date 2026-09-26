@@ -424,6 +424,14 @@ def _parse_json_response(text: str) -> dict[str, Any]:
             "e뮤지엄 API 응답에서 알려진 봉투(items/body/header) 구조를 찾지 못했습니다."
         )
     _check_header(header)
+    if isinstance(body, dict) and body and not _looks_like_body(body):
+        # A recognized envelope whose body is neither an item container, pagination
+        # metadata, nor an item shape is a malformed/error payload (for example
+        # {"error": "invalid serviceKey"}). Returning an empty success would hide it.
+        raise EmuseumError(
+            "e뮤지엄 API 응답 body 에서 알 수 없는 구조를 받았습니다: "
+            + ", ".join(sorted(str(key) for key in body))[:200]
+        )
     raw_items = _coerce_item_list(_extract_items_node(body))
     total = _int_or_none(_pick(body, "totalCount", "totalCnt", "total_count", "total"))
     page = _int_or_none(_pick(body, "pageNo", "pageIndex", "page")) or 1
