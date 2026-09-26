@@ -1,0 +1,24 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": {
+          "rcvWeek": "08:30~17:00",
+          "rcvSat": "08:30~12:00",
+          "emyDayYn": "Y",
+          "emyDayTelNo1": "02-3410-2114",
+          "emyNgtYn": "Y",
+          "emyNgtTelNo1": "02-3410-2222",
+          "noTrmtSun": "일요일 휴진",
+          "noTrmtHoli": "공휴일 휴진",
+          "parkQty": "500",
+          "parkXpnsYn": "Y(유료)"
+        }
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

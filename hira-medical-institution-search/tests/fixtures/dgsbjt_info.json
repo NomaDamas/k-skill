@@ -1,0 +1,17 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          { "dgsbjtCd": "01", "dgsbjtCdNm": "내과", "dgsbjtPrSdrCnt": "20", "cdiagDrCnt": "3" },
+          { "dgsbjtCd": "10", "dgsbjtCdNm": "소아청소년과", "dgsbjtPrSdrCnt": "8", "cdiagDrCnt": "1" },
+          { "dgsbjtCd": "08", "dgsbjtCdNm": "신경외과", "dgsbjtPrSdrCnt": "6", "cdiagDrCnt": "0" }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 3
+    }
+  }
+}

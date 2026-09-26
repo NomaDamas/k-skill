@@ -1,0 +1,16 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          { "srchCd": "01", "srchCdNm": "호흡기질환" },
+          { "srchCd": "07", "srchCdNm": "중증외상" }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

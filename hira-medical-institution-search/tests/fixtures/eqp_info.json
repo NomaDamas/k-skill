@@ -1,0 +1,25 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": {
+          "yadmNm": "서울삼성병원",
+          "clCdNm": "상급종합병원",
+          "addr": "서울특별시 강남구 일원로 81",
+          "telno": "02-3410-2114",
+          "hospUrl": "https://www.samsunghospital.com",
+          "sidoCdNm": "서울",
+          "sgguCdNm": "강남구",
+          "emdongNm": "일원동",
+          "estbDd": "19941201",
+          "parkQty": "500",
+          "permSbdCnt": "1900"
+        }
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

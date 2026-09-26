@@ -1,0 +1,17 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          { "oftCd": "C1", "oftCdNm": "CT", "oftCnt": "3" },
+          { "oftCd": "M1", "oftCdNm": "MRI", "oftCnt": "2" },
+          { "oftCd": "X1", "oftCdNm": "일반방사선장치", "oftCnt": "12" }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 3
+    }
+  }
+}

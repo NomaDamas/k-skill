@@ -1,0 +1,28 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "ykiho": "YKIHO-AAA",
+            "yadmNm": "서울삼성병원",
+            "clCdNm": "상급종합병원",
+            "addr": "서울특별시 강남구 일원로 81",
+            "telno": "02-3410-2114"
+          },
+          {
+            "ykiho": "YKIHO-BBB",
+            "yadmNm": "삼성서울의원",
+            "clCdNm": "의원",
+            "addr": "서울특별시 강남구 테헤란로 1",
+            "telno": "02-000-0000"
+          }
+        ]
+      },
+      "numOfRows": 20,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

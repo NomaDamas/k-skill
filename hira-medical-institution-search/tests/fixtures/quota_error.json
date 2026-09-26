@@ -1,0 +1,5 @@
+{
+  "response": {
+    "header": { "resultCode": "22", "resultMsg": "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR" }
+  }
+}

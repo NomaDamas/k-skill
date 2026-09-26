@@ -1,0 +1,5 @@
+{
+  "response": {
+    "header": { "resultCode": "20", "resultMsg": "SERVICE_ACCESS_DENIED_ERROR" }
+  }
+}

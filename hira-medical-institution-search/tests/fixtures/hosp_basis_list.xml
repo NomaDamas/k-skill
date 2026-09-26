@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <header>
+    <resultCode>00</resultCode>
+    <resultMsg>NORMAL SERVICE.</resultMsg>
+  </header>
+  <body>
+    <items>
+      <item>
+        <ykiho>XMLYKIHO0001</ykiho>
+        <yadmNm>부산대학교병원</yadmNm>
+        <clCdNm>상급종합병원</clCdNm>
+        <addr>부산광역시 서구 구덕로 179</addr>
+        <telno>051-240-7000</telno>
+        <hospUrl>https://www.pnuh.or.kr</hospUrl>
+        <sidoCdNm>부산</sidoCdNm>
+        <sgguCdNm>서구</sgguCdNm>
+        <emdongNm>아미동</emdongNm>
+      </item>
+    </items>
+    <numOfRows>10</numOfRows>
+    <pageNo>1</pageNo>
+    <totalCount>1</totalCount>
+  </body>
+</response>
