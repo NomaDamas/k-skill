@@ -194,6 +194,7 @@ npx -y @nomadamas/k-skill@0 update
 | [로또 당첨 확인](docs/features/lotto-results.md) | `lotto-results` | 로또 최신 회차, 특정 회차, 번호 대조 |
 | [조선왕조실록 검색](docs/features/joseon-sillok-search.md) | `joseon-sillok-search` | 조선왕조실록 키워드 검색과 왕별/연도별 필터, 기사 발췌 조회 |
 | [국가유산 검색·행사 조회](docs/features/korean-heritage-search.md) | `korean-heritage-search` | 국가유산청 공식 Open API로 국가유산 목록·상세정보·좌표와 월별 국가유산 활용 행사 조회 |
+| [e뮤지엄 소장품 검색 / eMuseum Collection Search](docs/features/emuseum-collection-search.md) | `emuseum-collection-search` | Search National Museum of Korea e뮤지엄 OpenAPI collection (소장품) metadata by object name, era, and owning museum, returning description, museum, image URL, and management number. Read-only research lookup with a user BYOK key or a proxy-routed base URL |
 
 ### ⛪ 종교
 

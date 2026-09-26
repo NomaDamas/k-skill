@@ -1,0 +1,9 @@
+{
+  "name": "emuseum-collection-search",
+  "description": "Search National Museum of Korea e뮤지엄 OpenAPI collection (소장품) metadata by object name, era, and owning museum, returning description, museum, image URL, and management number. Read-only research lookup with a user BYOK key or a proxy-routed base URL.",
+  "profiles": [
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: emuseum-collection-search\ndescription: Search National Museum of Korea e뮤지엄 OpenAPI collection (소장품) metadata by object name, era, and owning museum, returning description, museum, image URL, and management number. Read-only research lookup with a user BYOK key or a proxy-routed base URL.\nlicense: MIT\nmetadata:\n  category: culture\n  locale: ko-KR\n  phase: v1"
+}

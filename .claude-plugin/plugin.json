@@ -33,6 +33,7 @@
     "./delivery-tracking",
     "./donation-place-search",
     "./emergency-room-beds",
+    "./emuseum-collection-search",
     "./ev-charger-nearby",
     "./ev-subsidy-status",
     "./express-bus-booking",
