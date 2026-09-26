@@ -67,6 +67,7 @@ e뮤지엄 OpenAPI 안내 페이지의 operation 이름/파라미터가 바뀌�
 4. 상류 장애·쿼터·파싱 오류가 나면 **다른 데이터셋이나 웹 스크래핑으로 대체하지 않고**
    typed failure를 그대로 보고한다.
 5. 빈 결과는 성공(`items: []`)으로 유지하고 소장품명/시대/기관 조건을 바꾸도록 안내한다.
+   단, 응답 봉투를 식별할 수 없으면 빈 결과가 아니라 **malformed response 실패**로 보고한다.
 
 ## 키 발급 / 인증
 
@@ -156,7 +157,8 @@ e뮤지엄 소장품 검색 — 소장품명 "청자" · 시대 고려
 ```
 
 `source.url`에는 키가 포함되지 않는다. 응답에 없는 값(설명·이미지·관리번호 등)은 빈
-문자열로 두고 추정하지 않는다.
+문자열로 두고 추정하지 않는다. 특히 관리번호가 응답에 없으면 항목 `id`를 관리번호로
+대신 채우지 않고 빈 문자열로 남긴다. `id`는 내부 식별자이고 관리번호와 다른 값이다.
 
 ## Done when
 
@@ -175,7 +177,9 @@ e뮤지엄 소장품 검색 — 소장품명 "청자" · 시대 고려
 - **quota exceeded**: HTTP 429 또는 `resultCode` 22. exit 1 + 쿼터/재시도 안내.
 - **upstream failure**: HTTP 5xx, timeout, network 오류. exit 1 + 재시도 안내. traceback 없음.
 - **endpoint moved**: HTTP 404. `--base-url`/`--search-path` 조정 안내.
-- **empty/malformed response**: 빈 body, 잘못된 JSON/XML. exit 1 + 파싱 오류 메시지.
+- **empty/malformed response**: 빈 body, 잘못된 JSON/XML, 또는 `items`/`body`/`header`
+  봉투를 식별할 수 없는 응답(예: JSON 오류 객체). 성공한 빈 결과로 처리하지 않고
+  exit 1 + 파싱/봉투 오류 메시지.
 - **API error code**: `resultCode` 01/02/04/05/10/11/12/31 등. exit 1 + 코드/메시지.
 - **empty result**: 성공이지만 `items: []`. exit 0 + 조건 변경 안내.
 - **현재 전시/실물 상태**: 응답에 없다. 추정하지 않고 공식 안내로 넘긴다.
