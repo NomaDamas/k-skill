@@ -1,0 +1,19 @@
+{
+  "query": {
+    "page": 1,
+    "perPage": 10,
+    "countryNm": "존재하지않는국가"
+  },
+  "items": [],
+  "total_count": 0,
+  "current_count": 0,
+  "source": "mofa_travel_alarm_0404",
+  "proxy": {
+    "name": "k-skill-proxy",
+    "cache": {
+      "hit": false,
+      "ttl_ms": 300000
+    },
+    "requested_at": "2026-09-26T00:00:00.000Z"
+  }
+}

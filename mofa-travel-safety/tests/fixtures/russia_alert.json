@@ -1,0 +1,38 @@
+{
+  "query": {
+    "page": 1,
+    "perPage": 10,
+    "countryIsoAlp2": "RU"
+  },
+  "items": [
+    {
+      "country_nm": "러시아",
+      "country_iso_alp2": "RU",
+      "alarm_lvl": 4,
+      "region_ty": "일부",
+      "remark": "우크라이나 접경 지역 등 일부 지역 여행경보 4단계",
+      "written_dt": "2026-06-30",
+      "dang_map_download_url": "https://www.0404.go.kr/dev/images/map/RUSSIA.png"
+    },
+    {
+      "country_nm": "러시아",
+      "country_iso_alp2": "RU",
+      "alarm_lvl": 2,
+      "region_ty": "그 외",
+      "remark": "그 외 지역 여행경보 2단계",
+      "written_dt": "2026-06-30",
+      "dang_map_download_url": "https://www.0404.go.kr/dev/images/map/RUSSIA2.png"
+    }
+  ],
+  "total_count": 2,
+  "current_count": 2,
+  "source": "mofa_travel_alarm_0404",
+  "proxy": {
+    "name": "k-skill-proxy",
+    "cache": {
+      "hit": false,
+      "ttl_ms": 300000
+    },
+    "requested_at": "2026-09-26T00:00:00.000Z"
+  }
+}
