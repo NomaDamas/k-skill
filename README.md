@@ -189,6 +189,7 @@ npx -y @nomadamas/k-skill@0 update
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
 | [영화관 검색](docs/features/korean-cinema-search.md) | `korean-cinema-search` | CGV·메가박스·롯데시네마 영화관, 상영작, 시간표, 잔여석 조회 |
+| [KOBIS 영화정보·박스오피스 조회](docs/features/kobis-movie-search.md) | `kobis-movie-search` | 영화진흥위원회 KOBIS OpenAPI로 일별/주간 박스오피스, 영화 상세정보, 영화명·감독·영화인·영화사 검색을 조회한다 |
 | [공연 일정·잔여석 조회](docs/features/ticket-availability.md) | `ticket-availability` | YES24·인터파크 공연의 회차별 일정과 등급별 잔여석 수를 단일 HTTP 호출로 조회 (조회 전용, 예매·결제 없음) |
 | [KOPIS 공연 조회](docs/features/kopis-performance-search.md) | `kopis-performance-search` | KOPIS 공연·시설 목록과 상세 조회 (프록시 경유). 예매·결제는 공식 예매처 |
 | [로또 당첨 확인](docs/features/lotto-results.md) | `lotto-results` | 로또 최신 회차, 특정 회차, 번호 대조 |
