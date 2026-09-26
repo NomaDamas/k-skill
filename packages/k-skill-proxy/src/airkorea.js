@@ -250,9 +250,16 @@ async function fetchJson(baseUrl, params, { fetchImpl = global.fetch, headers = 
     }
 
     if (response.status === 403) {
+      // 403 from data.go.kr means the request is rejected for an
+      // operator-actionable reason (utilization not approved, wrong key, or
+      // unregistered domain/IP), not a transient outage. Classify it so the
+      // fine-dust route logs it at error level and the global handler surfaces
+      // it instead of collapsing it into an unclassified 500.
       const error = new Error(
         "AirKorea upstream returned 403 Forbidden. 기술문서 기준 후보 원인: 활용신청 후 동기화 대기(1~2시간), 활용신청하지 않은 API 호출, 서비스키 인코딩/서비스키 오류, 등록하지 않은 도메인 또는 IP.",
       );
+      error.statusCode = 403;
+      error.code = "upstream_forbidden";
       error.upstreamStatus = 403;
       error.operation = operation;
       throw error;

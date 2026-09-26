@@ -180,6 +180,29 @@ test("fetchFineDustReport surfaces AirKorea 429 with operation and Retry-After m
   );
 });
 
+test("fetchFineDustReport classifies AirKorea 403 as operator-actionable upstream_forbidden", async () => {
+  const fetchImpl = async () => new Response("Forbidden", {
+    status: 403,
+    headers: { "content-type": "text/plain" }
+  });
+
+  await assert.rejects(
+    () => fetchFineDustReport({
+      stationName: "강남구",
+      serviceKey: "test-key",
+      fetchImpl
+    }),
+    (error) => {
+      assert.equal(error.code, "upstream_forbidden");
+      assert.equal(error.statusCode, 403);
+      assert.equal(error.upstreamStatus, 403);
+      assert.equal(error.operation, "getMsrstnAcctoRltmMesureDnsty");
+      assert.match(error.message, /403 Forbidden/);
+      return true;
+    }
+  );
+});
+
 test("fetchFineDustReport returns a helpful 400 when district tokens do not map to station names", async () => {
   const fetchImpl = async (url) => {
     const text = String(url);

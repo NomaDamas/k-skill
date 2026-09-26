@@ -119,6 +119,13 @@ npx -y @nomadamas/k-skill@0 exec fine-dust-location scripts/fine_dust.py -- repo
 - 사용자는 후보 중 하나를 선택해 `stationName` 으로 다시 조회합니다
 - 측정소 목록 API가 403 이어도 `getCtprvnRltmMesureDnsty` 와 측정소별 실측 API 조합으로 우회합니다
 
+## 오류 분류
+
+- AirKorea 가 403 을 돌려주고 fallback 으로도 우회하지 못하면(활용신청 미승인, 서비스키 오류, 미등록 도메인/IP 등 운영 조치가 필요한 원인)
+  프록시는 이를 `upstream_forbidden` (HTTP 403) 으로 분류합니다. 일시적 장애가 아니므로 generic 500/502 로 뭉개지 않고
+  운영 로그에 error 레벨로 남깁니다.
+- 반대로 429 는 `upstream_rate_limited` (HTTP 429, `Retry-After`), 네트워크/타임아웃 실패는 `upstream_fetch_failed` (HTTP 502), 그 외 일시적 upstream 5xx 응답은 generic 500 (`proxy_error`, warn) 으로 구분합니다.
+
 ## 주의할 점
 
 - 실시간 수치라 조회 시각을 같이 적어야 합니다

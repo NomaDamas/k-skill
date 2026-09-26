@@ -80,6 +80,8 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/fine-dust/report' \
 - regionHint 가 너무 넓거나 단일 측정소를 확정할 수 없는 경우
 - 프록시 서버가 내려가 있거나 upstream key가 비어 있는 경우
 - 측정소명과 지역명이 달라 직접 fallback 이 필요한 경우
+- AirKorea key 가 해당 API 활용신청 승인을 받지 못했거나 서비스키/등록 도메인·IP 가 잘못된 경우
+  (HTTP 403, `upstream_forbidden`) — 일반 500 이 아니므로 proxy key 의 활용신청 승인 여부를 점검한다
 
 ## Notes
 

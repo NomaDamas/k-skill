@@ -7593,6 +7593,7 @@ test("data.go.kr reason codes distinguish registration errors from quota and tra
 
   assert.equal(isOperationalUpstreamError("upstream_configuration_error"), true);
   assert.equal(isOperationalUpstreamError("upstream_rate_limited"), true);
+  assert.equal(isOperationalUpstreamError("upstream_forbidden"), true);
   assert.equal(isOperationalUpstreamError("upstream_error"), false);
 });
 
@@ -7722,6 +7723,25 @@ test("fine dust route maps AirKorea 429 to upstream_rate_limited with Retry-Afte
   assert.equal(response.statusCode, 429, "AirKorea 429 must not degrade to a global 500");
   assert.equal(response.json().error, "upstream_rate_limited");
   assert.equal(response.headers["retry-after"], "120");
+  assert.doesNotMatch(response.body, /airkorea-key|serviceKey=/);
+});
+
+test("fine dust route maps AirKorea 403 to operator-actionable upstream_forbidden", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("Forbidden", {
+    status: 403,
+    headers: { "content-type": "text/plain" }
+  });
+  const app = buildServer({ env: { AIR_KOREA_OPEN_API_KEY: "airkorea-key" } });
+  t.after(async () => { global.fetch = originalFetch; await app.close(); });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  });
+
+  assert.equal(response.statusCode, 403, "AirKorea 403 must not degrade to a global 500");
+  assert.equal(response.json().error, "upstream_forbidden");
   assert.doesNotMatch(response.body, /airkorea-key|serviceKey=/);
 });
 
