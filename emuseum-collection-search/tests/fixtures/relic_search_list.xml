@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <header>
+    <resultCode>00</resultCode>
+    <resultMsg>NORMAL SERVICE.</resultMsg>
+  </header>
+  <body>
+    <items>
+      <item>
+        <relicId>2001</relicId>
+        <relicName>금동 미륵보살 반가사유상</relicName>
+        <eraName>삼국시대</eraName>
+        <museumName>국립중앙박물관</museumName>
+        <managementNumber>본관 2001</managementNumber>
+        <description>삼국시대 금동 반가사유상이다.</description>
+        <imageUrl>https://www.emuseum.go.kr/image/2001.jpg</imageUrl>
+        <detailUrl>https://www.emuseum.go.kr/relic/2001</detailUrl>
+      </item>
+    </items>
+    <numOfRows>10</numOfRows>
+    <pageNo>1</pageNo>
+    <totalCount>1</totalCount>
+  </body>
+</response>

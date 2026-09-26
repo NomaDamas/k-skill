@@ -1,0 +1,37 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "NORMAL SERVICE."
+    },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "relicId": "1001",
+            "relicName": "청자 상감운학문 매병",
+            "eraName": "고려",
+            "museumName": "국립중앙박물관",
+            "managementNumber": "덕수 1234",
+            "description": "<p>고려시대 청자 매병이다.</p><p>상감 기법이 쓰였다.</p>",
+            "imageUrl": "https://www.emuseum.go.kr/image/1001.jpg",
+            "detailUrl": "https://www.emuseum.go.kr/relic/1001"
+          },
+          {
+            "relicId": "1002",
+            "relicName": "백자 달항아리",
+            "eraName": "조선",
+            "museumName": "국립중앙박물관",
+            "managementNumber": "신수 5678",
+            "description": "조선 후기의 백자 항아리.",
+            "imageUrl": "",
+            "detailUrl": "https://www.emuseum.go.kr/relic/1002"
+          }
+        ]
+      },
+      "numOfRows": 10,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}
