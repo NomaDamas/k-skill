@@ -1,0 +1,8 @@
+{
+  "name": "hira-medical-institution-search",
+  "description": "건강보험심사평가원(HIRA) 병원정보서비스·의료기관별상세정보 OpenAPI를 BYOK 인증키로 조회해 병원·의원·약국의 위치·진료과목·장비·특수진료 정보를 요약하는 read-only 스킬.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: hira-medical-institution-search\ndescription: 건강보험심사평가원(HIRA) 병원정보서비스·의료기관별상세정보 OpenAPI를 BYOK 인증키로 조회해 병원·의원·약국의 위치·진료과목·장비·특수진료 정보를 요약하는 read-only 스킬.\nlicense: MIT\nmetadata:\n  category: public-health\n  locale: ko-KR\n  phase: v1"
+}
