@@ -387,6 +387,51 @@ class RunDetailCommandTests(unittest.TestCase):
         self.assertEqual(payload["result"], "ok")
         self.assertEqual(len(payload["section"]["rows"]), 2)
 
+    def test_stores_partial_when_page_budget_truncates(self):
+        # 상세 조회가 페이지 예산에서 잘리면 합계를 완전한 값처럼 반환하지 않는다.
+        fetcher = FakeFetcher({"getbrandFrcsDmsstus2": load_fixture("stores.json")})
+        code, out, err = run_cli(
+            [
+                "stores",
+                "--brand-mnno",
+                "BRD_20080100006",
+                "--year",
+                YEAR,
+                "--num-of-rows",
+                "1",
+                "--max-pages",
+                "1",
+            ],
+            fetch=fetcher,
+        )
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        self.assertEqual(payload["result"], "partial")
+        self.assertEqual(payload["section"]["status"], "partial")
+        self.assertFalse(payload["section"]["meta"]["complete"])
+        self.assertTrue(payload["warnings"])
+        self.assertIn("max-pages", payload["warnings"][0])
+
+    def test_stores_partial_text_warns_on_stderr(self):
+        fetcher = FakeFetcher({"getbrandFrcsDmsstus2": load_fixture("stores.json")})
+        code, out, err = run_cli(
+            [
+                "stores",
+                "--brand-mnno",
+                "BRD_20080100006",
+                "--year",
+                YEAR,
+                "--num-of-rows",
+                "1",
+                "--max-pages",
+                "1",
+                "--text",
+            ],
+            fetch=fetcher,
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("max-pages", err)
+
     def test_stores_by_brand_name_resolves_management_number(self):
         fetcher = FakeFetcher(
             {
@@ -493,6 +538,32 @@ class RunReportTests(unittest.TestCase):
         self.assertEqual(report["sections"]["stores"]["status"], "ok")
         self.assertEqual(len(report["failures"]), 1)
         self.assertEqual(report["failures"][0]["section"], "changes")
+
+    def test_report_marks_partial_sections_and_warns(self):
+        # 페이지 예산이 잘린 섹션은 합계가 부분값임을 리포트가 드러내야 한다.
+        fetcher = FakeFetcher(self._routes())
+        code, out, _ = run_cli(
+            [
+                "report",
+                "--brand-mnno",
+                "BRD_20080100006",
+                "--year",
+                YEAR,
+                "--num-of-rows",
+                "1",
+                "--max-pages",
+                "1",
+            ],
+            fetch=fetcher,
+        )
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        report = payload["reports"][0]
+        self.assertEqual(payload["result"], "partial")
+        self.assertIn("stores", report["partial_sections"])
+        self.assertTrue(report["summary"]["stores"]["partial"])
+        self.assertTrue(report["summary"]["stores"]["completeness_note"])
+        self.assertTrue(report["warnings"])
 
     def test_report_empty_when_brand_not_found(self):
         routes = self._routes()

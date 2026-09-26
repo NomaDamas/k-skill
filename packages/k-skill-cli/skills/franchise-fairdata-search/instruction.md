@@ -94,8 +94,8 @@ npx -y @nomadamas/k-skill@0 exec franchise-fairdata-search scripts/franchise_fai
 
 - 상단: `command`, `result`(`ok`/`empty`/`partial`/`dry_run`/`error`), `source`, `year`, `checked_at`, `coverage.datasets`, `coverage.notes`
 - `brands`/`hq`: `rows`(upstream 필드 원문), `query`, `meta`(`pages_fetched`, `total_count`, `scanned_rows`, `matched_count`, `limit`, `max_pages`, `stop_reason`, `complete`), 그리고 검색이 잘렸으면 `warnings[]`
-- `stores`/`changes`/`sales`: `brand_mnno`, `resolution`(`matched_by`와 `meta`), `section.status`(`ok`/`empty`/`error`)
-- `report`: `reports[]` — 각 항목에 `brand`, `summary`(stores/changes/sales 집계), `sections`(stores/changes/sales/compare/hq_detail), `failures[]` — 이름 검색이 잘렸으면 상단 `result`가 `partial`이고 `warnings[]`가 붙는다
+- `stores`/`changes`/`sales`: `brand_mnno`, `resolution`(`matched_by`와 `meta`), `section.status`(`ok`/`partial`/`empty`/`error`), `section.warnings[]` — 페이지 예산(`--max-pages`)에 걸려 잘렸으면 `partial`이고 상단 `warnings[]`에도 같은 경고가 실린다
+- `report`: `reports[]` — 각 항목에 `brand`, `summary`(stores/changes/sales 집계, 잘린 섹션은 `partial=true`와 `completeness_note`), `sections`(stores/changes/sales/compare/hq_detail), `failures[]`, `partial_sections[]`, `warnings[]` — 이름 검색이나 섹션 조회가 잘렸으면 상단 `result`가 `partial`이다
 - `datasets`: `datasets`와 `field_labels`(upstream 코드 → 한글 의미)
 
 이름 검색은 upstream 필터가 없어 목록을 페이지로 훑는 **클라이언트 측 부분일치**다. `meta.complete=false`(예: `--max-pages` 도달, `limit` 도달)이면 전체를 확인하지 못한 것이므로 `result=partial`과 `warnings[]`로 드러낸다. `--text`에서는 같은 경고를 stderr로 출력한다. `hq --detail --text`는 목록 뒤에 `[상세]` 줄(대표자·기업규모·주소·브랜드수·가맹본부관리번호)을 덧붙인다.

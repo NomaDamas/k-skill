@@ -745,12 +745,14 @@ def _section(
             "meta": {},
             "error": str(error),
         }
+    status, warnings = search_status(rows, meta, subject=spec["title"])
     return {
-        "status": "ok" if rows else "empty",
+        "status": status,
         "dataset_id": spec["dataset_id"],
         "title": spec["title"],
         "rows": rows,
         "meta": meta,
+        "warnings": warnings,
         "error": None,
     }
 
@@ -774,18 +776,39 @@ def build_report(
             ctx, "hq_detail", year=year, extra={"jnghdqrtrsMnno": hq_mnno}
         )
     summary: Dict[str, Any] = {}
-    if sections.get("stores", {}).get("status") == "ok":
-        summary["stores"] = summarize_stores(sections["stores"]["rows"])
-    if sections.get("changes", {}).get("status") == "ok":
-        summary["changes"] = summarize_changes(sections["changes"]["rows"])
-    if sections.get("sales", {}).get("status") == "ok":
-        summary["sales"] = summarize_sales(sections["sales"]["rows"])
+    partial_sections = sorted(
+        name for name, value in sections.items() if value.get("status") == "partial"
+    )
+    warnings = [
+        warning
+        for name in ("stores", "changes", "sales", "compare", "hq_detail")
+        for warning in sections.get(name, {}).get("warnings", [])
+    ]
+    for name, summarize in (
+        ("stores", summarize_stores),
+        ("changes", summarize_changes),
+        ("sales", summarize_sales),
+    ):
+        section = sections.get(name)
+        if section and section.get("status") in {"ok", "partial"}:
+            summary[name] = summarize(section["rows"])
+            if section.get("status") == "partial":
+                # 잘린 페이지 예산으로 만든 합계를 완전한 값처럼 쓰지 않도록 표시한다.
+                summary[name]["partial"] = True
+                summary[name]["completeness_note"] = section["warnings"][0]
     failures = [
         {"section": name, "error": value["error"]}
         for name, value in sections.items()
         if value.get("status") == "error"
     ]
-    return {"brand": dict(brand), "summary": summary, "sections": sections, "failures": failures}
+    return {
+        "brand": dict(brand),
+        "summary": summary,
+        "sections": sections,
+        "failures": failures,
+        "partial_sections": partial_sections,
+        "warnings": warnings,
+    }
 
 
 # --------------------------------------------------------------------------
@@ -1118,6 +1141,10 @@ def run(
                             _section(ctx, "hq_detail", year=year, extra={"jnghdqrtrsMnno": hq_mnno})
                         )
             result, warnings = search_status(rows, meta, subject="가맹본부")
+            for detail in details:
+                warnings.extend(detail.get("warnings", []))
+            if warnings:
+                result = "partial"
             payload.update(
                 {
                     "result": result,
@@ -1164,6 +1191,8 @@ def run(
                     "section": section,
                 }
             )
+            if section.get("warnings"):
+                payload["warnings"] = section["warnings"]
             if args.text:
                 if section["status"] == "error":
                     print(section["error"], file=sys.stderr)
@@ -1174,6 +1203,8 @@ def run(
                     "sales": _render_sales_text,
                 }[args.command]
                 print(renderer(section["rows"]))
+                if section.get("warnings"):
+                    print("\n".join(section["warnings"]), file=sys.stderr)
             else:
                 if section["status"] == "error":
                     print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -1231,6 +1262,8 @@ def run(
             return 0
 
         reports = [build_report(ctx, brand=brand, year=year) for brand in candidates]
+        for report in reports:
+            warnings.extend(report.get("warnings", []))
         payload.update(
             {
                 "result": "partial" if warnings else "ok",
