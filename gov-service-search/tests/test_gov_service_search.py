@@ -236,6 +236,24 @@ class ErrorMappingTests(unittest.TestCase):
         self.assertIsNotNone(message)
         self.assertIn("JSON", message)
 
+    def test_json_array_200_is_not_a_success(self):
+        message = mod.describe_upstream_error(200, "application/json", "[]")
+        self.assertIsNotNone(message)
+        self.assertIn("봉투", message)
+
+    def test_object_without_data_array_is_not_a_success(self):
+        message = mod.describe_upstream_error(200, "application/json", '{"code": 0, "msg": "ok"}')
+        self.assertIsNotNone(message)
+        self.assertIn("봉투", message)
+
+    def test_data_that_is_not_an_array_is_rejected(self):
+        message = mod.describe_upstream_error(200, "application/json", '{"data": {}}')
+        self.assertIsNotNone(message)
+        self.assertIn("봉투", message)
+
+    def test_data_envelope_is_accepted(self):
+        self.assertIsNone(mod.describe_upstream_error(200, "application/json", '{"code": 0, "data": []}'))
+
     def test_redact_secret_removes_key(self):
         text = f"GET /x?key={FAKE_KEY} failed"
         self.assertNotIn(FAKE_KEY, mod.redact_secret(text, FAKE_KEY))
@@ -340,6 +358,18 @@ class ConditionTests(unittest.TestCase):
         self.assertFalse(match["gender"])
         self.assertFalse(match["income"])
         self.assertFalse(match["matched"])
+
+    def test_gender_restricted_row_rejects_the_other_gender(self):
+        first = self.row()
+        self.assertTrue(mod.evaluate_condition_match(first, gender_code="JA0102")["gender"])
+        self.assertFalse(mod.evaluate_condition_match(first, gender_code="JA0101")["gender"])
+
+    def test_gender_is_unconstrained_when_no_gender_code_present(self):
+        second = fixture_payload("support_conditions.json")["data"][1]
+        for code in ("JA0101", "JA0102"):
+            match = mod.evaluate_condition_match(second, gender_code=code)
+            self.assertTrue(match["gender"], code)
+            self.assertTrue(match["matched"], code)
 
     def test_income_is_unconstrained_when_no_income_code_present(self):
         match = mod.evaluate_condition_match({"서비스ID": "X"}, income_code="JA0201")
@@ -449,6 +479,19 @@ class RunIntegrationTests(unittest.TestCase):
         self.assertTrue(first["match"]["income"])
         self.assertIn("여성", first["labels"])
 
+    def test_conditions_gender_unrestricted_matches_any_requested_gender(self):
+        rc, out, err = self._run(
+            ["conditions", "--service-id", "SYN-LIST-0005", "--gender", "남", "--secrets-path", NO_SECRETS],
+            opener_returning(FakeResponse(self.conditions_body)),
+            env={"KSKILL_GOV24_API_KEY": FAKE_KEY},
+        )
+        self.assertEqual(rc, 0, err)
+        payload = json.loads(out)
+        matches = {row["서비스ID"]: row["match"] for row in payload["data"]}
+        self.assertTrue(matches["SYN-LIST-0005"]["gender"])
+        self.assertTrue(matches["SYN-LIST-0005"]["matched"])
+        self.assertFalse(matches["SYN-LIST-0001"]["gender"])
+
     def test_conditions_invalid_age_exits_2_without_network(self):
         def opener(*args, **kwargs):  # pragma: no cover - must not be called
             raise AssertionError("network must not be used for invalid input")
@@ -522,6 +565,26 @@ class RunIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(rc, 5)
         self.assertIn("JSON", err)
+
+    def test_json_array_200_exits_5_instead_of_empty_success(self):
+        rc, out, err = self._run(
+            ["list", "--text", "--secrets-path", NO_SECRETS],
+            opener_returning(FakeResponse("[]")),
+            env={"KSKILL_GOV24_API_KEY": FAKE_KEY},
+        )
+        self.assertEqual(rc, 5)
+        self.assertEqual(out, "")
+        self.assertIn("봉투", err)
+
+    def test_object_without_data_array_exits_5_instead_of_empty_success(self):
+        rc, out, err = self._run(
+            ["list", "--secrets-path", NO_SECRETS],
+            opener_returning(FakeResponse('{"code": 0, "msg": "ok"}')),
+            env={"KSKILL_GOV24_API_KEY": FAKE_KEY},
+        )
+        self.assertEqual(rc, 5)
+        self.assertEqual(out, "")
+        self.assertIn("봉투", err)
 
     def test_via_proxy_uses_proxy_route_and_needs_no_key(self):
         calls = []

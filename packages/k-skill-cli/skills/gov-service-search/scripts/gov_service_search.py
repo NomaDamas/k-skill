@@ -313,6 +313,16 @@ def _matches(text: str, patterns: Tuple[str, ...]) -> bool:
     return any(pattern in lowered for pattern in patterns)
 
 
+def is_error_envelope(payload: Any) -> bool:
+    """odcloud 오류 봉투: `code`가 0/None이 아닌 JSON 객체."""
+    return isinstance(payload, dict) and payload.get("code") not in (None, 0, "0")
+
+
+def has_data_envelope(payload: Any) -> bool:
+    """문서화된 성공 응답 계약: JSON 객체이며 `data`가 배열이어야 한다."""
+    return isinstance(payload, dict) and isinstance(payload.get("data"), list)
+
+
 def describe_upstream_error(
     status: int,
     content_type: str,
@@ -332,10 +342,15 @@ def describe_upstream_error(
                 f"upstream이 JSON이 아닌 응답을 반환했습니다 "
                 f"(status={status}, content-type={content_type!r}). 본문 앞부분: {body[:300]!r}"
             )
-        if isinstance(payload, dict) and payload.get("code") not in (None, 0, "0"):
+        if is_error_envelope(payload):
             code = payload.get("code")
             text = _message_text(payload) or str(payload.get("code"))
             return _describe_code(code, text)
+        if not has_data_envelope(payload):
+            return (
+                f"upstream이 문서화된 JSON 응답 봉투(객체 + `data` 배열)를 반환하지 않았습니다 "
+                f"(status={status}, content-type={content_type!r}). 본문 앞부분: {body[:300]!r}"
+            )
         return None
 
     # HTTP >= 400
@@ -635,7 +650,8 @@ def evaluate_condition_match(
     checks: Dict[str, Any] = {}
 
     if gender_code:
-        checks["gender"] = _is_set(row.get(gender_code))
+        present = [code for code in GENDER_CODES if _is_set(row.get(code))]
+        checks["gender"] = gender_code in present if present else True
 
     if age is not None:
         start = _as_int(row.get(AGE_START_CODE)) or 0
@@ -955,15 +971,12 @@ def run(argv: Optional[List[str]] = None, opener: Any = None) -> int:
 
     error_message = describe_upstream_error(status, content_type, body)
     if error_message:
-        if payload is None and status < 400:
+        if status < 400 and not is_error_envelope(payload):
             exit_code = 5
         else:
             exit_code = 6
         print(f"[error] {redact_secret(error_message, api_key)}", file=sys.stderr)
         return exit_code
-
-    if not isinstance(payload, dict):
-        payload = {"data": payload}
 
     payload["operation"] = operation
     payload["query"] = query
