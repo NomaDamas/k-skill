@@ -1,0 +1,24 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100099",
+            "jnghdqrtrsMnno": "HDR_20080000099",
+            "jnghdqrtrsRprsvNm": "김철수",
+            "brandNm": "다른브랜드",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "커피",
+            "majrGdsNm": "아메리카노"
+          }
+        ]
+      },
+      "numOfRows": 1,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

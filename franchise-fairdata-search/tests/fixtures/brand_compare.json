@@ -1,0 +1,43 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": {
+          "crrncyUnitCdNm": "원",
+          "jngBizCrtraYr": "2023",
+          "brandMnno": "BRD_20080100006",
+          "jnghdqrtrsMnno": "HDR_20080000001",
+          "brno": "1234567890",
+          "crno": "1101112345678",
+          "jnghdqrtrsConmNm": "테스트에프앤비",
+          "brandNm": "테스트치킨",
+          "jnghdqrtrsRprsvNm": "홍길동",
+          "indutyLclasNm": "외식",
+          "indutyMlsfcNm": "치킨",
+          "indutySclasNm": "치킨",
+          "jngBizStrtDate": "20080101",
+          "depoAmtScopeVal": "5백만원 이상~1천만원 미만",
+          "depoSystemYn": "Y",
+          "insrncYn": "Y",
+          "cprscYn": "N",
+          "detAssrncCtrtYn": "N",
+          "rlvtNthgYn": "N",
+          "jngAmtScopeVal": "1천만원 이상~3천만원 미만",
+          "eduAmtScopeVal": "1백만원 이상~3백만원 미만",
+          "assrncAmtScopeVal": "5백만원 이상~1천만원 미만",
+          "etcAmtScopeVal": "해당없음",
+          "smtnAmtScopeVal": "3천만원 이상~5천만원 미만",
+          "storCrtraAr": "66제곱미터 이상~99제곱미터 미만",
+          "intrrAmtScopeVal": "3천만원 이상~5천만원 미만",
+          "unitArIntrrAmtScopeVal": "30만원 이상~50만원 미만",
+          "frstCtrtYycnt": "3",
+          "etCtrtYycnt": "2"
+        }
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

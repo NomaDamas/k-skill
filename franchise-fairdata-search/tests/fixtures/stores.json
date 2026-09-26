@@ -1,0 +1,38 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "allFrcsDmsCnt": "60",
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100006",
+            "jnghdqrtrsMnno": "HDR_20080000001",
+            "acntgYr": "2022",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "치킨",
+            "areaNm": "서울특별시",
+            "frcsCnt": "50",
+            "dmsCnt": "10"
+          },
+          {
+            "allFrcsDmsCnt": "40",
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100006",
+            "jnghdqrtrsMnno": "HDR_20080000001",
+            "acntgYr": "2022",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "치킨",
+            "areaNm": "경기도",
+            "frcsCnt": "35",
+            "dmsCnt": "5"
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

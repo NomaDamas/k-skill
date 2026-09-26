@@ -1,0 +1,34 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": {
+          "hmpgUrladr": "https://example.invalid/testfnb",
+          "areaNm": "서울특별시",
+          "jngBizCrtraYr": "2023",
+          "jnghdqrtrsMnno": "HDR_20080000001",
+          "jnghdqrtrsConmNm": "테스트에프앤비",
+          "brno": "1234567890",
+          "crno": "1101112345678",
+          "indvdlCorpSeCd": "11",
+          "bzmnRgsDate": "20080101",
+          "corpRgDate": "20080102",
+          "jnghdqrtrsRprsTelno": "02-0000-0000",
+          "jnghdqrtrsRprsFxno": "02-0000-0001",
+          "jnghdqrtrsRprsvNm": "홍길동",
+          "jnghdqrtrsOzip": "06236",
+          "lctnAddr": "서울특별시 강남구 테스트로 1",
+          "lctnDaddr": "3층",
+          "brandCnt": "2",
+          "affltsCnt": "1",
+          "jngInstNm": "한국프랜차이즈산업협회",
+          "entScaleNm": "중소기업"
+        }
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "arFyerAvrgSlsAmtScopeVal": "3백만원 이상~3백5십만원 미만",
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100006",
+            "jnghdqrtrsMnno": "HDR_20080000001",
+            "acntgYr": "2022",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "치킨",
+            "areaNm": "서울특별시",
+            "frcsCnt": "50",
+            "fyerAvrgSlsAmtScopeVal": "2억원 이상~2억5천만원 미만"
+          },
+          {
+            "arFyerAvrgSlsAmtScopeVal": "2백8십만원 이상~3백만원 미만",
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100006",
+            "jnghdqrtrsMnno": "HDR_20080000001",
+            "acntgYr": "2022",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "치킨",
+            "areaNm": "경기도",
+            "frcsCnt": "35",
+            "fyerAvrgSlsAmtScopeVal": "1억8천만원 이상~2억원 미만"
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

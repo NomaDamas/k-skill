@@ -1,0 +1,28 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": {
+          "frcsAvrgBsnDycnt": "900",
+          "jngBizCrtraYr": "2023",
+          "brandMnno": "BRD_20080100006",
+          "jnghdqrtrsMnno": "HDR_20080000001",
+          "acntgYr": "2022",
+          "indutyLclasNm": "외식",
+          "indutyMlsfcNm": "치킨",
+          "ystFrcsCnt": "100",
+          "newFrcsCnt": "10",
+          "ctrtEndFrcsCnt": "5",
+          "ctrtCncltnFrcsCnt": "3",
+          "cntrrChgCnt": "1",
+          "yndFrcsCnt": "102",
+          "bsnProgrsFrcsCnt": "99"
+        }
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "indvdlCorpSeCd": "11",
+            "jngBizCrtraYr": "2023",
+            "jnghdqrtrsMnno": "HDR_20080000001",
+            "jnghdqrtrsConmNm": "테스트에프앤비",
+            "brno": "1234567890",
+            "crno": "1101112345678",
+            "jnghdqrtrsRprsvNm": "홍길동"
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

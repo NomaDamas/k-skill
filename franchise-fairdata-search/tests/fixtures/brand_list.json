@@ -1,0 +1,40 @@
+{
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "jngBizStrtDate": "20080101",
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100006",
+            "jnghdqrtrsMnno": "HDR_20080000001",
+            "brno": "1234567890",
+            "crno": "1101112345678",
+            "jnghdqrtrsRprsvNm": "홍길동",
+            "brandNm": "테스트치킨",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "치킨",
+            "majrGdsNm": "후라이드치킨"
+          },
+          {
+            "jngBizStrtDate": "20150301",
+            "jngBizCrtraYr": "2023",
+            "brandMnno": "BRD_20080100099",
+            "jnghdqrtrsMnno": "HDR_20080000099",
+            "brno": "9876543210",
+            "crno": "1101198765432",
+            "jnghdqrtrsRprsvNm": "김철수",
+            "brandNm": "다른브랜드",
+            "indutyLclasNm": "외식",
+            "indutyMlsfcNm": "커피",
+            "majrGdsNm": "아메리카노"
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

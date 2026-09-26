@@ -1,0 +1,7 @@
+{
+  "cmmMsgHeader": {
+    "errMsg": "SERVICE_KEY_IS_NOT_REGISTERED_ERROR",
+    "returnAuthMsg": "등록되지 않은 인증키",
+    "returnReasonCode": "30"
+  }
+}
