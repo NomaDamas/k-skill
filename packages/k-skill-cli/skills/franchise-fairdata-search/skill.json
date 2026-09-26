@@ -1,0 +1,9 @@
+{
+  "name": "franchise-fairdata-search",
+  "description": "공정위 FairData/공공데이터포털 가맹정보 OpenAPI로 프랜차이즈 브랜드·가맹본부 공시를 조회한다. 브랜드명·가맹본부명으로 관리번호를 찾고 가맹점수·직영점수, 평균매출 범위, 신규·계약종료·계약해지 등 변경현황을 창업 검토용 사실 리포트로 정리한다(조회 전용, 점수화 없음). Use when the user asks 프랜차이즈 브랜드 가맹점 수, 평균매출, 정보공개서 공시, 가맹본부 실사. Not for 사업자 일반 실사(biz-health-check) or 매출 추정·전망.",
+  "profiles": [
+    "vault",
+    "lookup"
+  ],
+  "frontmatter": "name: franchise-fairdata-search\ndescription: 공정위 FairData/공공데이터포털 가맹정보 OpenAPI로 프랜차이즈 브랜드·가맹본부 공시를 조회한다. 브랜드명·가맹본부명으로 관리번호를 찾고 가맹점수·직영점수, 평균매출 범위, 신규·계약종료·계약해지 등 변경현황을 창업 검토용 사실 리포트로 정리한다(조회 전용, 점수화 없음). Use when the user asks 프랜차이즈 브랜드 가맹점 수, 평균매출, 정보공개서 공시, 가맹본부 실사. Not for 사업자 일반 실사(biz-health-check) or 매출 추정·전망.\nlicense: MIT\nmetadata:\n  category: business\n  locale: ko-KR\n  phase: v1"
+}

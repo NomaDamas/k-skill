@@ -70,6 +70,7 @@ npx -y @nomadamas/k-skill@0 update
 | [한국 부동산 실거래가 조회](docs/features/real-estate-search.md) | `real-estate-search` | 아파트/오피스텔/빌라/단독주택 실거래가·전월세·지역코드 조회 |
 | [한국 주택 공시가격 조회](docs/features/housing-official-price.md) | `housing-official-price` | realtyprice.kr 공개 웹 데이터 표면에서 공동주택·개별주택 정부 공시가격 이력을 직접 조회 (공식 문서화된 OpenAPI 아님) |
 | [개별공시지가 조회](docs/features/gongsijiga-search.md) | `gongsijiga-search` | realtyprice.kr 공개 API에서 지번 단위 개별공시지가(원/㎡) 다년도 추이·전년 대비 변동률 조회 |
+| [공정위 가맹정보(FairData) 프랜차이즈 조회](docs/features/franchise-fairdata-search.md) | `franchise-fairdata-search` | 공정위 FairData/공공데이터포털 가맹정보 OpenAPI로 프랜차이즈 브랜드·가맹본부 공시를 조회한다. 브랜드명·가맹본부명으로 관리번호를 찾고 가맹점수·직영점수, 평균매출 범위, 신규·계약종료·계약해지 등 변경현황을 창업 검토용 사실 리포트로 정리한다(조회 전용, 점수화 없음) |
 | [건축물대장 표제부 조회](docs/features/building-register-search.md) | `building-register-search` | 주소·PNU·법정동 코드와 필지로 주용도·연면적·층수·사용승인일 조회 (공공데이터포털 15134735, 프록시 경유) |
 | [LH 청약 공고문 조회](docs/features/lh-notice-search.md) | `lh-notice-search` | 한국토지주택공사(LH) 임대/분양/주거복지(신혼희망타운)/토지/상가 공고를 지역·상태·공고유형·키워드로 조회하고 마감 여부를 KST 기준으로 표시 |
 | [SH 청약·주택 공고문 조회](docs/features/sh-notice-search.md) | `sh-notice-search` | 서울주택도시개발공사(SH) 공개 공고/공지 게시판을 직접 조회해 키워드·공고 종류별 목록, 상세 본문, 첨부 미리보기 메타데이터 확인 |
