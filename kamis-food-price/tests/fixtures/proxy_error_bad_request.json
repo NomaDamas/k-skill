@@ -1,0 +1,4 @@
+{
+  "error": "bad_request",
+  "message": "p_regday must be YYYY-MM-DD."
+}

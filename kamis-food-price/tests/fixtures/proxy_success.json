@@ -1,0 +1,46 @@
+{
+  "query": {
+    "p_productclscode": "01",
+    "p_itemcategorycode": "200",
+    "p_countycode": "1101",
+    "p_convert_kg_yn": "N"
+  },
+  "items": [
+    {
+      "item_name": "배추",
+      "kind_name": "봄배추",
+      "rank": "상",
+      "unit": "1kg",
+      "dpr1": "3,500",
+      "dpr2": "3,200",
+      "dpr3": "3,000",
+      "dpr4": "2,900",
+      "dpr5": "3,100",
+      "dpr6": "2,500",
+      "dpr7": "3,000"
+    },
+    {
+      "item_name": "무",
+      "kind_name": "봄무",
+      "rank": "상",
+      "unit": "1kg",
+      "dpr1": "-",
+      "dpr2": "1,800",
+      "dpr3": "",
+      "dpr4": null,
+      "dpr5": "1,700",
+      "dpr6": "1,600",
+      "dpr7": "1,650"
+    }
+  ],
+  "upstream": {
+    "error_code": "000"
+  },
+  "proxy": {
+    "name": "k-skill-proxy",
+    "cache": {
+      "hit": false,
+      "ttl_ms": 60000
+    }
+  }
+}

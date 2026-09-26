@@ -1,0 +1,4 @@
+{
+  "error": "upstream_not_configured",
+  "message": "KAMIS_API_KEY is not configured on the proxy server."
+}
