@@ -36,7 +36,7 @@
   - 발급: <https://www.data.go.kr/data/15113968/openapi.do> → "활용신청" → 승인 후 마이페이지의 인증키 사용.
   - 인증키는 Encoding/Decoding 두 형태로 표시된다. helper는 **HTTP `Authorization: Infuser <키>` 헤더**만 쓰므로 **Decoding(원문) 키**를 넣는다. URL에 키를 넣지 않으므로 로그·dry-run 출력에 키가 남지 않는다.
 - `KSKILL_PROXY_BASE_URL` — `--via-proxy`로 self-host/별도 프록시를 쓸 때만 설정. 비우면 기본 hosted `https://k-skill-proxy.nomadamas.org` (프록시 route가 배포된 뒤에만 유효).
-- 프록시 운영자는 `GOV24_UPSTREAM_KEY`(또는 `DATA_GO_KR_API_KEY`)에 같은 조건의 키를 두고 `15113968` 활용신청을 추가해 둔다.
+- 프록시 운영자는 프록시 서버 환경에 두는 data.go.kr provisioning 키(기존 `DATA_GO_KR_API_KEY` 관례)에 `15113968` 활용신청 승인 상태를 추가해 둔다.
 
 ### Credential resolution order (`--via-proxy`가 아닐 때)
 
