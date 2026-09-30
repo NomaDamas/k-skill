@@ -1,0 +1,217 @@
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+import { collect, collectWindows, parse, pointWindows, rangeWindows, request } from './collect.mjs';
+import { ENGINE, PACKET_VERSION, SOURCE_URL, TENOR_META, TENORS, analyze, classify, csvRead, date, days, kstToday, sha256, shift, type Observation, type Packet, type Receipt, type Tenor } from './core.mjs';
+import { collectPolicyRate, commonSnapshots, dashboard, eventQueryWindows, monthComparisonDates, onOrAfter, onOrBefore, previousMonthEnd, previousQuarterEnd, previousYearEnd, trend, type PolicyRate } from './modes.mjs';
+import { analyzeNews, newsRead } from './news.mjs';
+import { validateArtifacts, writeArtifacts } from './render.mjs';
+import { analyzeUst, collectUst, parseUstXml, UST_ENGINE, ustMonthUrl, ustMonths } from './ust.mjs';
+import { analyzeDual, DUAL_ENGINE, dualChat, validateDualArtifacts, writeDualArtifacts, type DualPacket } from './dual.mjs';
+import { analyzeSchedule, readSchedule, type ScheduleEvidence } from './schedule.mjs';
+
+const cliPath=fileURLToPath(new URL('./cli.mjs', import.meta.url));
+let checks=0;const check=(fn:()=>void):void=>{fn();checks++;},run=promisify(execFile);
+const baseValues:Record<Tenor,number>={2:3,3:3.1,5:3.2,10:3.3,20:3.4,30:3.5};
+const currentValues:Record<Tenor,number>={2:2.95,3:3,5:3.15,10:3.25,20:3.35,30:3.45};
+const rowsAt=(day:string,values:Record<Tenor,number>):Observation[]=>TENORS.map(tenor=>({date:day,tenor,value:values[tenor]}));
+const obs=[...rowsAt('2026-09-11',baseValues),...rowsAt('2026-09-18',currentValues)];
+const csvFor=(rows:Observation[]):string=>['date,tenor,yield_pct',...rows.map(r=>`${r.date},${r.tenor},${r.value}`)].join('\n');
+const receiptsFor=(rows:Observation[]):Receipt[]=>{const raw=csvFor(rows);return TENORS.map(tenor=>{const own=rows.filter(r=>r.tenor===tenor),meta=TENOR_META[tenor];return {tenor,sourceId:'사용자 제공 CSV: fixture.csv',sourceUrl:'',statCode:'USER_CSV',itemCode:meta.itemCode,itemName:meta.itemName,unit:'연%',cycle:'D',retrievedAt:'2026-09-18T09:00:00.000Z',status:'input',raw:[raw],rawSha256:[sha256(raw)],count:own.length,first:own[0]?.date??null,last:own.at(-1)?.date??null,windows:[]};});};
+const packetFor=(rows:Observation[]=obs):Packet=>({version:PACKET_VERSION,engine:ENGINE,asOf:'2026-09-18',base:'2026-09-11',maxLag:7,observations:rows,receipts:receiptsFor(rows),label:'테스트'});
+const packet=packetFor(),analysis=analyze(packet);
+const newsInput={version:1,observationDate:'2026-09-18',retrievedAt:'2026-09-18T12:00:00.000Z',articles:[{publisher:'연합인포맥스',title:'[채권-마감] 금리 하락…외국인 선물 매수',url:'https://news.einfomax.co.kr/news/articleView.html?idxno=4359540',publishedAt:'2026-09-18T09:00:00.000Z',sourceType:'market-close',marketDirection:'lower',relation:'explicit',factor:'외국인의 국채선물 순매수',evidenceSummary:'연합인포맥스는 외국인 국채선물 순매수를 금리 하락의 시장 배경으로 전했다.'}]},newsEvidence=newsRead(JSON.stringify(newsInput)),newsAnalysis=analyzeNews(newsEvidence,analysis);
+check(()=>{assert.equal(analysis.status,'READY');assert.deepEqual(analysis.changes,[-5,-10,-5,-5,-5,-5]);assert.equal(analysis.spreads.find(s=>s.name==='10년−3년')?.change,5);assert.equal(analysis.movement,'Bull 스티프닝');});
+check(()=>{assert.equal(newsAnalysis.status,'SOURCED');assert.equal(newsAnalysis.confidence,'HIGH');assert.equal(newsAnalysis.curveDirection,'lower');assert.equal(newsAnalysis.eligible.length,1);assert.match(newsAnalysis.commentary[0],/외국인의 국채선물 순매수/);});
+check(()=>{const mismatch=structuredClone(newsInput);mismatch.articles[0].marketDirection='higher';const result=analyzeNews(newsRead(JSON.stringify(mismatch)),analysis);assert.equal(result.status,'UNATTRIBUTED');assert.equal(result.excluded.length,1);assert.match(result.notes[0],/방향과 불일치/);});
+check(()=>{const bad=structuredClone(newsInput);bad.articles[0].url='https://example.com/article';assert.throws(()=>newsRead(JSON.stringify(bad)),/Unapproved/);});
+check(()=>{const bad={...structuredClone(newsInput),unexpected:true};assert.throws(()=>newsRead(JSON.stringify(bad)),/Unknown news evidence field/);});
+check(()=>{const bad=structuredClone(newsInput) as typeof newsInput&{articles:Array<(typeof newsInput.articles)[number]&{unexpected?:boolean}>};bad.articles[0].unexpected=true;assert.throws(()=>newsRead(JSON.stringify(bad)),/Unknown news article field/);});
+check(()=>{const bad=structuredClone(newsInput);bad.articles[0].publisher='임의매체';assert.throws(()=>newsRead(JSON.stringify(bad)),/Publisher\/host mismatch/);});
+check(()=>{const bad=structuredClone(newsInput);bad.retrievedAt='2026-09-18T08:59:59.000Z';assert.throws(()=>newsRead(JSON.stringify(bad)),/date alignment mismatch/);});
+check(()=>{const bad=structuredClone(newsInput);bad.articles.push(structuredClone(bad.articles[0]));assert.throws(()=>newsRead(JSON.stringify(bad)),/Duplicate/);});
+check(()=>{const bad=structuredClone(newsEvidence);bad.articles[0].sourceFingerprint='0'.repeat(64);assert.throws(()=>newsRead(JSON.stringify(bad)),/fingerprint/);});
+check(()=>{const contextual=structuredClone(newsInput);contextual.articles[0].publisher='한국은행';contextual.articles[0].url='https://www.bok.or.kr/portal/bbs/B0000217/view.do?nttId=10000000';contextual.articles[0].sourceType='official-release';contextual.articles[0].marketDirection='context';contextual.articles[0].relation='contextual';const result=analyzeNews(newsRead(JSON.stringify(contextual)),analysis);assert.equal(result.status,'CONTEXT_ONLY');assert.equal(result.context.length,1);assert.equal(result.eligible.length,0);});
+check(()=>{const wrongDate=structuredClone(newsInput);wrongDate.observationDate='2026-09-17';wrongDate.articles[0].publishedAt='2026-09-17T09:00:00.000Z';assert.throws(()=>analyzeNews(newsRead(JSON.stringify(wrongDate)),analysis),/current common observation/);});
+check(()=>{assert.equal(analysis.current.values?.length,6);assert.deepEqual(TENORS,[2,3,5,10,20,30]);});
+check(()=>{assert.equal(classify(5,5),'평행 상승');assert.equal(classify(-5,-5),'평행 하락');assert.equal(classify(-2,3),'혼합 움직임 / 스티프닝');});
+check(()=>assert.throws(()=>date('2025-02-29'),/Invalid date/));check(()=>assert.equal(date('2024-02-29'),'2024-02-29'));
+check(()=>assert.equal(kstToday(new Date('2026-09-20T15:30:00Z')),'2026-09-21'));
+check(()=>assert.throws(()=>csvRead('date,tenor,yield_pct\n2026-01-01,3,3.0\n2026-01-01,3,3.1'),/Conflicting/));
+check(()=>assert.throws(()=>csvRead('date,tenor,yield_pct\n2026-01-01,3,NaN'),/Invalid CSV/));
+check(()=>{assert.throws(()=>csvRead('date,tenor,yield_pct\n2026-01-01,3,3.0 '),/Invalid CSV/);assert.throws(()=>csvRead(' date,tenor,yield_pct\n2026-01-01,3,3.0'),/header/);});
+check(()=>assert.throws(()=>analyze({...packet,base:'2025-01-01'}),/366/));check(()=>assert.throws(()=>analyze({...packet,maxLag:15}),/0..14/));
+check(()=>assert.throws(()=>analyze({...packet,label:'bad\nheading'}),/invalid evidence/));
+check(()=>{const x=analyze({...packet,asOf:'2026-09-26'});assert.equal(x.status,'INCOMPLETE');assert.match(x.notes[0],/허용 7일 초과/);});
+check(()=>{const x=analyze({...packet,asOf:'2026-09-25'});assert.equal(x.status,'READY');});
+check(()=>{const rows=obs.filter(r=>r.date<='2026-09-12'),x=analyze({...packet,asOf:'2026-09-12',observations:rows,receipts:receiptsFor(rows)});assert.equal(x.status,'INCOMPLETE');assert.match(x.notes.join(' '),/같은 관측일/);});
+check(()=>{const bad=structuredClone(packet);bad.receipts[0].unit='bp';assert.throws(()=>analyze(bad),/metadata mismatch/);});
+check(()=>{const bad=structuredClone(packet);bad.receipts[0].rawSha256[0]='0'.repeat(64);assert.throws(()=>analyze(bad),/raw source hash/);});
+check(()=>{const bad=structuredClone(packet);bad.receipts[0].count++;assert.throws(()=>analyze(bad),/count\/range/);});
+check(()=>{const bad=structuredClone(packet);bad.observations[0].value+=.01;assert.throws(()=>analyze(bad),/do not match source raw data/);});
+check(()=>{const bad=structuredClone(packet);const raw=bad.receipts[0].raw[0].replace('2026-09-11,2,3','2026-09-11,2,3.01');bad.receipts[0].raw=[raw];bad.receipts[0].rawSha256=[sha256(raw)];assert.throws(()=>analyze(bad),/do not match source raw data/);});
+check(()=>{const bad=structuredClone(packet);bad.receipts[0].retrievedAt='2026-09-18';assert.throws(()=>analyze(bad),/Invalid source receipt/);});
+
+check(()=>{const w=rangeWindows('2026-01-01','2026-01-25');assert.equal(w.length,3);assert.deepEqual(w.at(-1),{from:'2026-01-21',to:'2026-01-25'});});
+check(()=>assert.equal(pointWindows(['2026-09-18','2026-09-18'],7).length,1));
+check(()=>{const w=pointWindows(['2026-09-18'],14);assert.equal(w.length,2);assert.ok(w.every(x=>(Date.parse(x.to)-Date.parse(x.from))/86400000+1<=10));});
+check(()=>{for(let length=1;length<=100;length++){const end=shift('2023-12-15',length-1),w=rangeWindows('2023-12-15',end);assert.equal(w[0].from,'2023-12-15');assert.equal(w.at(-1)?.to,end);assert.equal(w.reduce((sum,x)=>sum+days(x.to,x.from)+1,0),length);assert.ok(w.every(x=>days(x.to,x.from)+1<=10));}});
+check(()=>{for(let lag=0;lag<=14;lag++){const w=pointWindows(['2024-03-01'],lag);assert.equal(w[0].from,shift('2024-03-01',-lag));assert.equal(w.at(-1)?.to,'2024-03-01');}});
+check(()=>{assert.equal(previousMonthEnd('2026-01-15'),'2025-12-31');assert.equal(previousQuarterEnd('2026-04-01'),'2026-03-31');assert.equal(previousYearEnd('2026-01-01'),'2025-12-31');});
+check(()=>{assert.deepEqual(monthComparisonDates('2026-08','2026-09','2026-09-22'),{base:'2026-08-31',asOf:'2026-09-22'});assert.deepEqual(monthComparisonDates('2026-07','2026-08','2026-09-22'),{base:'2026-07-31',asOf:'2026-08-31'});assert.throws(()=>monthComparisonDates('2026-09','2026-10','2026-09-22'),/future/);assert.throws(()=>monthComparisonDates('2026-09','2026-09','2026-09-22'),/earlier/);});
+check(()=>{const w=eventQueryWindows('2026-09-01','2026-09-30',14);assert.equal(w[0].from,'2026-08-17');assert.equal(w.at(-1)?.to,'2026-09-15');assert.ok(w.every(x=>days(x.to,x.from)+1<=10));});
+const modeObs=[...rowsAt('2026-08-31',Object.fromEntries(TENORS.map(t=>[t,baseValues[t]-.1])) as Record<Tenor,number>),...rowsAt('2026-09-10',Object.fromEntries(TENORS.map(t=>[t,baseValues[t]+.02])) as Record<Tenor,number>),...obs];
+check(()=>assert.equal(commonSnapshots(modeObs).length,4));check(()=>assert.equal(onOrBefore(modeObs,'2026-09-17',7).actual,'2026-09-11'));
+check(()=>assert.equal(onOrAfter(modeObs,'2026-09-12',7).actual,'2026-09-18'));
+check(()=>assert.throws(()=>onOrBefore(modeObs,'2026-09-18',-1),/0..14/));
+const policy:PolicyRate={date:'2026-09-18',value:3,unit:'연%',status:'live',retrievedAt:'2026-09-18T09:00:00Z',sourceUrl:SOURCE_URL,statCode:'722Y001',itemCode:'0101000',rawSha256:'a'.repeat(64)};
+const dash=dashboard('2026-09-18',modeObs,7,policy);
+check(()=>{assert.equal(dash.result,'READY');assert.equal(dash.references.previousSession.actual,'2026-09-11');assert.equal(dash.references.previousMonthEnd.actual,'2026-08-31');assert.equal(dash.policyGap3YBp,0);assert.equal(dash.spreads['30Y-10Y'],20);});
+const trendRows=['2026-09-14','2026-09-15','2026-09-16','2026-09-17','2026-09-18'].flatMap((d,i)=>rowsAt(d,Object.fromEntries(TENORS.map(t=>[t,baseValues[t]+i*.01])) as Record<Tenor,number>)),trendResult=trend(trendRows,5);
+check(()=>{assert.equal(trendResult.result,'READY');assert.equal(trendResult.actualSessions,5);assert.equal(trendResult.stats[0].netChangeBp,4);});
+check(()=>assert.equal(trend(trendRows.slice(0,-TENORS.length),5).result,'INCOMPLETE'));
+check(()=>{assert.equal(trend(rowsAt('2026-09-18',baseValues),5).result,'INCOMPLETE');assert.equal(trend([],5).result,'BLOCKED');});
+
+const ecos=(tenor:Tenor,time='20260918',value='3.15')=>JSON.stringify({StatisticSearch:{list_total_count:1,row:[{STAT_CODE:'817Y002',STAT_NAME:'1.3.2.1. 시장금리(일별)',ITEM_CODE1:TENOR_META[tenor].itemCode,ITEM_NAME1:TENOR_META[tenor].itemName,UNIT_NAME:'연%',TIME:time,DATA_VALUE:value}]}});
+check(()=>assert.equal(parse(ecos(30),30,'2026-09-18','2026-09-18')[0].value,3.15));
+check(()=>{const doc=JSON.parse(ecos(20));doc.StatisticSearch.row[0].UNIT_NAME='bp';assert.throws(()=>parse(JSON.stringify(doc),20,'2026-09-18','2026-09-18'),/metadata/);});
+check(()=>{const doc=JSON.parse(ecos(2));doc.StatisticSearch.list_total_count=2;assert.throws(()=>parse(JSON.stringify(doc),2,'2026-09-18','2026-09-18'),/Incomplete/);});
+check(()=>{const doc=JSON.parse(ecos(3));doc.StatisticSearch.row[0].DATA_VALUE='0x10';assert.throws(()=>parse(JSON.stringify(doc),3,'2026-09-18','2026-09-18'),/metadata/);});
+check(()=>{const doc=JSON.parse(ecos(5));doc.StatisticSearch.list_total_count=2;doc.StatisticSearch.row.push({...doc.StatisticSearch.row[0]});assert.throws(()=>parse(JSON.stringify(doc),5,'2026-09-18','2026-09-18'),/duplicate/);});
+let tries=0;await request('x',(async()=>{tries++;return new Response(tries<3?'':'{}',{status:tries<3?503:200});}) as typeof fetch,async()=>{});check(()=>assert.equal(tries,3));
+let fatalTries=0;await assert.rejects(()=>request('x',(async()=>{fatalTries++;return new Response('',{status:404});}) as typeof fetch,async()=>{}),/HTTP 404/);check(()=>assert.equal(fatalTries,1));
+let semanticTries=0;const semanticRequest=await request('x',(async()=>{semanticTries++;const raw=semanticTries<3?ecos(3).replace('"UNIT_NAME":"연%"','"UNIT_NAME":"bp"'):ecos(3);return new Response(raw,{status:200});}) as typeof fetch,async()=>{},raw=>{parse(raw,3,'2026-09-18','2026-09-18');});check(()=>{assert.equal(semanticTries,3);assert.equal(semanticRequest.attempts,3);});
+
+const root=await mkdtemp(join(tmpdir(),'curve-v3-'));
+try{
+  const first=join(root,'first'),second=join(root,'second');await writeArtifacts(first,packet);await validateArtifacts(first);checks++;
+  const replay=JSON.parse(await readFile(join(first,'evidence.mjson'),'utf8')) as Packet;await writeArtifacts(second,replay);await validateArtifacts(second);for(const f of ['brief.md','market-table.csv','report.html','evidence.mjson','status.mjson','manifest.mjson'])assert.equal(await readFile(join(first,f),'utf8'),await readFile(join(second,f),'utf8'));checks++;
+  const report=await readFile(join(first,'report.html'),'utf8'),csv=await readFile(join(first,'market-table.csv'),'utf8');check(()=>{assert.match(report,/30년/);assert.match(report,/10년−5년/);assert.equal(csv.trim().split(/\r?\n/).length,11);assert.doesNotMatch(report,/NaN|undefined/);});
+  const newsFirst=join(root,'news-first'),newsSecond=join(root,'news-second'),newsPacket:Packet={...packet,newsEvidence};await writeArtifacts(newsFirst,newsPacket);await validateArtifacts(newsFirst);const embedded=JSON.parse(await readFile(join(newsFirst,'evidence.mjson'),'utf8')) as Packet;await writeArtifacts(newsSecond,embedded);await validateArtifacts(newsSecond);for(const f of ['brief.md','market-table.csv','report.html','evidence.mjson','status.mjson','manifest.mjson'])assert.equal(await readFile(join(newsFirst,f),'utf8'),await readFile(join(newsSecond,f),'utf8'));const newsPage=await readFile(join(newsFirst,'report.html'),'utf8'),newsBrief=await readFile(join(newsFirst,'brief.md'),'utf8');check(()=>{assert.match(newsPage,/시장 배경/);assert.ok(newsPage.includes(newsEvidence.articles[0].url));assert.match(newsPage,/class="value-label/);assert.doesNotMatch(newsPage,/원문 SHA-256|근거 SHA-256/);assert.ok(!newsPage.includes(newsEvidence.articles[0].sourceFingerprint));assert.match(newsBrief,/SOURCED/);});checks++;
+
+  const yields:Record<string,string>=Object.fromEntries(TENORS.map(t=>[TENOR_META[t].itemCode,String(currentValues[t])])),fakeEcos=async(url:URL|string|Request)=>{const value=String(url),item=Object.keys(yields).find(code=>value.endsWith(`/${code}`))!,current=value.includes('/20260911/20260918/'),TIME=current?'20260918':'20260911',tenor=TENORS.find(t=>TENOR_META[t].itemCode===item)!;return new Response(ecos(tenor,TIME,yields[item]),{status:200});};
+  const cache=join(root,'cache'),clock=new Date('2026-09-18T12:00:00Z'),live=await collect('2026-09-11','2026-09-18',7,cache,true,fakeEcos as typeof fetch,clock);check(()=>{assert.equal(live.observations.length,12);assert.ok(live.receipts.every(r=>r.status==='live'));});
+  let transientBadRows=0;const semanticFetch=(async(url:URL|string|Request)=>{const response=await fakeEcos(url);if(String(url).endsWith(`/${TENOR_META[3].itemCode}`)&&String(url).includes('/20260911/20260918/')&&++transientBadRows<3)return new Response((await response.text()).replace('"UNIT_NAME":"연%"','"UNIT_NAME":"bp"'),{status:200});return response;}) as typeof fetch;const semanticCollected=await collect('2026-09-11','2026-09-18',7,join(root,'semantic-retry'),false,semanticFetch,clock);check(()=>{assert.equal(transientBadRows,3);assert.equal(semanticCollected.receipts.find(r=>r.tenor===3)?.windows.find(w=>w.to==='2026-09-18')?.attempts,3);assert.equal(semanticCollected.observations.length,12);});
+  check(()=>{const bad=structuredClone(packetFor(live.observations));bad.receipts=structuredClone(live.receipts);bad.receipts[0].windows[0].attempts=0;assert.throws(()=>analyze(bad),/invalid source window/);});
+  check(()=>{const bad=structuredClone(packetFor(live.observations));bad.receipts=structuredClone(live.receipts);bad.receipts[0].raw.pop();bad.receipts[0].rawSha256.pop();assert.throws(()=>analyze(bad),/window\/raw mismatch/);});
+  const unavailable=(async()=>new Response('',{status:404})) as typeof fetch,recovered=await collect('2026-09-11','2026-09-18',7,cache,true,unavailable,clock);check(()=>{assert.equal(recovered.observations.length,12);assert.ok(recovered.receipts.every(r=>r.status==='cache'));});
+  const noCacheDir=join(root,'no-cache');await collect('2026-09-11','2026-09-18',7,noCacheDir,false,fakeEcos as typeof fetch,clock);await assert.rejects(()=>readdir(noCacheDir),/ENOENT/);checks++;
+  let reversedCalls=0;await assert.rejects(()=>collect('2026-09-18','2026-09-11',7,join(root,'reversed'),false,(async()=>{reversedCalls++;return new Response('{}',{status:200});}) as typeof fetch,clock),/Base must precede/);check(()=>assert.equal(reversedCalls,0));
+  const files=await readdir(cache),cacheFile=join(cache,files.find(x=>!x.startsWith('policy-'))!);const cached=JSON.parse(await readFile(cacheFile,'utf8'));cached.digest='0'.repeat(64);await writeFile(cacheFile,JSON.stringify(cached));const rejected=await collect('2026-09-11','2026-09-18',7,cache,true,unavailable,clock);check(()=>assert.ok(rejected.observations.length<12));
+
+  const policyRaw=JSON.stringify({StatisticSearch:{list_total_count:1,row:[{STAT_CODE:'722Y001',STAT_NAME:'1.3.1. 한국은행 기준금리 및 여수신금리',ITEM_CODE1:'0101000',ITEM_NAME1:'한국은행 기준금리',UNIT_NAME:'연%',TIME:'20260918',DATA_VALUE:'3'}]}}),policyFetch=(async()=>new Response(policyRaw,{status:200})) as typeof fetch;
+  const policyCache=join(root,'policy-cache'),pLive=await collectPolicyRate('2026-09-18',policyCache,true,policyFetch,clock);check(()=>{assert.equal(pLive?.value,3);assert.equal(pLive?.status,'live');});const pCache=await collectPolicyRate('2026-09-18',policyCache,true,unavailable,clock);check(()=>assert.equal(pCache?.status,'cache'));
+  const noPolicyCacheDir=join(root,'no-policy-cache');await collectPolicyRate('2026-09-18',noPolicyCacheDir,false,policyFetch,clock);await assert.rejects(()=>readdir(noPolicyCacheDir),/ENOENT/);checks++;
+  const policyCollision=join(root,'policy-write-collision');await mkdir(policyCollision);await mkdir(join(policyCollision,'policy-2026-09-11-2026-09-18.mjson'));const policyDespiteCacheFailure=await collectPolicyRate('2026-09-18',policyCollision,true,policyFetch,clock);check(()=>{assert.equal(policyDespiteCacheFailure?.status,'live');assert.ok(policyDespiteCacheFailure?.cacheWriteError);});const policyCollisionFiles=await readdir(policyCollision);check(()=>assert.ok(policyCollisionFiles.every(x=>!x.endsWith('.tmp'))));
+  const invalidPolicy=policyRaw.replace('"DATA_VALUE":"3"','"DATA_VALUE":"0x10"'),badPolicy=await collectPolicyRate('2026-09-18',join(root,'bad-policy'),false,(async()=>new Response(invalidPolicy,{status:200})) as typeof fetch,clock);check(()=>assert.equal(badPolicy,null));
+  const ranged=await collectWindows([{from:'2026-09-11',to:'2026-09-18'}],join(root,'range-cache'),false,fakeEcos as typeof fetch,clock);check(()=>assert.equal(ranged.receipts.length,6));
+  const unwritable=join(root,'cache-write-collision');await mkdir(unwritable);for(const t of TENORS)await mkdir(join(unwritable,`${t}-2026-09-18-2026-09-18.mjson`));const singleEcos=async(url:URL|string|Request)=>{const value=String(url),item=Object.keys(yields).find(code=>value.endsWith(`/${code}`))!,tenor=TENORS.find(t=>TENOR_META[t].itemCode===item)!;return new Response(ecos(tenor,'20260918',yields[item]),{status:200});},cacheWriteFailure=await collectWindows([{from:'2026-09-18',to:'2026-09-18'}],unwritable,true,singleEcos as typeof fetch,clock);check(()=>{assert.equal(cacheWriteFailure.observations.length,6);assert.ok(cacheWriteFailure.receipts.every(x=>x.status==='live'&&x.windows[0].error?.includes('cache write failed')));});const cacheWriteAnalysis=analyze({version:PACKET_VERSION,engine:ENGINE,base:'2026-09-17',asOf:'2026-09-18',maxLag:1,observations:cacheWriteFailure.observations,receipts:cacheWriteFailure.receipts,label:'캐시 저장 실패 테스트'});check(()=>assert.match(cacheWriteAnalysis.notes.join(' '),/로컬 캐시 저장 실패/));const collisionFiles=await readdir(unwritable);check(()=>assert.ok(collisionFiles.every(x=>!x.endsWith('.tmp'))));
+  await assert.rejects(()=>collectWindows([{from:'2026-09-11',to:'2026-09-18'}],join(root,'bad-clock'),false,fakeEcos as typeof fetch,new Date('invalid')),/Invalid collection clock/);checks++;
+
+  const inputFile=join(root,'input.csv'),csvRows=['date,tenor,yield_pct',...obs.map(r=>`${r.date},${r.tenor},${r.value}`)].join('\n');await writeFile(inputFile,csvRows);const cli=await run(process.execPath,[cliPath,'--input',inputFile,'--base','2026-09-11','--as-of','2026-09-18'],{cwd:root});check(()=>{const parsed=JSON.parse(cli.stdout);assert.equal(parsed.result,'READY');assert.equal(parsed.rates.length,6);assert.doesNotMatch(cli.stdout,/report\.html/);});
+  const newsFile=join(root,'news.mjson');await writeFile(newsFile,JSON.stringify(newsInput));const cliNews=await run(process.execPath,[cliPath,'--input',inputFile,'--base','2026-09-11','--as-of','2026-09-18','--news-evidence',newsFile],{cwd:root});check(()=>{const parsed=JSON.parse(cliNews.stdout);assert.equal(parsed.news.status,'SOURCED');assert.equal(parsed.news.confidence,'HIGH');});const template=await run(process.execPath,[cliPath,'--news-template','2026-09-18'],{cwd:root});check(()=>assert.equal(newsRead(template.stdout).observationDate,'2026-09-18'));
+  try{await run(process.execPath,[cliPath,'--base','2026-09-11','--base','2026-09-12','--as-of','2026-09-18'],{cwd:root});assert.fail('duplicate option accepted');}catch(e){assert.match(String((e as {stderr?:string}).stderr),/Duplicate option/);checks++;}
+  try{await run(process.execPath,[cliPath,'--input',inputFile],{cwd:root});assert.fail('implicit input dates accepted');}catch(e){assert.match(String((e as {stderr?:string}).stderr),/requires explicit/);checks++;}
+  const cliReject=async(argv:string[],pattern:RegExp):Promise<void>=>{try{await run(process.execPath,[cliPath,...argv],{cwd:root});assert.fail(`CLI accepted ${argv.join(' ')}`);}catch(e){assert.match(String((e as {stderr?:string}).stderr),pattern);checks++;}};
+  await cliReject(['--base','2026-09-18','--as-of','2026-09-18'],/precede/);await cliReject(['--base','2020-01-01','--as-of','2022-01-01'],/366/);await cliReject(['--preset','dashboard','--lookback-sessions','5'],/mutually exclusive/);await cliReject(['--replay','missing.mjson','--base','2026-09-11'],/accepts only/);await cliReject(['--from-month','2026-09','--to-month','2026-09'],/earlier/);await cliReject(['--market','kr','--json'],/only needed/);
+  const third=join(root,'third');await writeArtifacts(third,packet);const statusPath=join(third,'status.mjson'),manifestPath=join(third,'manifest.mjson');await writeFile(statusPath,(await readFile(statusPath,'utf8')).replace('"usable": true','"usable": false'));const alteredManifest=JSON.parse(await readFile(manifestPath,'utf8'));alteredManifest.files['status.mjson']=sha256(await readFile(statusPath,'utf8'));await writeFile(manifestPath,JSON.stringify(alteredManifest,null,2)+'\n');await assert.rejects(()=>validateArtifacts(third),/not reproducible/);checks++;
+  const fourth=join(root,'fourth');await writeArtifacts(fourth,packet);const incompleteManifest=JSON.parse(await readFile(join(fourth,'manifest.mjson'),'utf8'));delete incompleteManifest.files['status.mjson'];await writeFile(join(fourth,'manifest.mjson'),JSON.stringify(incompleteManifest,null,2)+'\n');await assert.rejects(()=>validateArtifacts(fourth),/file contract/);checks++;
+  await writeFile(join(first,'brief.md'),(await readFile(join(first,'brief.md'),'utf8'))+'tampered');await assert.rejects(()=>validateArtifacts(first),/hash mismatch/);checks++;
+}finally{await rm(root,{recursive:true,force:true});}
+const ustFixture=(dates:string[]):string=>`<?xml version="1.0"?><feed xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"><title type="text">DailyTreasuryYieldCurveRateData</title>${dates.map((d,i)=>`<entry><content><m:properties><d:NEW_DATE m:type="Edm.DateTime">${d}T00:00:00</d:NEW_DATE>${TENORS.map(t=>`<d:BC_${t}YEAR m:type="Edm.Double">${(4+t/100+i/100).toFixed(2)}</d:BC_${t}YEAR>`).join('')}</m:properties></content></entry>`).join('')}</feed>`;
+const ustRaw=ustFixture(['2026-09-11','2026-09-18']);
+check(()=>{const rows=parseUstXml(ustRaw,'2026-09');assert.equal(rows.length,2);assert.equal(rows[0].yields[10],4.1);assert.equal(rows[1].yields[30],4.31);});
+check(()=>assert.throws(()=>parseUstXml(ustRaw,'2026-08'),/month\/date mismatch/));
+check(()=>assert.throws(()=>parseUstXml(ustFixture(['2026-09-11','2026-09-11']),'2026-09'),/duplicate observation/));
+check(()=>assert.throws(()=>parseUstXml(ustRaw.replace('<d:BC_10YEAR m:type="Edm.Double">4.10</d:BC_10YEAR>','<d:BC_10YEAR m:type="Edm.Double">400bp</d:BC_10YEAR>'),'2026-09'),/Invalid UST 10Y yield/));
+const ustMissingTenor=ustRaw.replace('<d:BC_20YEAR m:type="Edm.Double">4.20</d:BC_20YEAR>','<d:BC_20YEAR m:null="true" />');
+check(()=>{const rows=parseUstXml(ustMissingTenor,'2026-09');assert.equal(rows.length,1);assert.equal(rows[0].date,'2026-09-18');});
+check(()=>assert.equal(ustMonthUrl('2026-09').endsWith('202609'),true));
+check(()=>assert.deepEqual(ustMonths('2026-08-31','2026-09-01',7),['2026-08','2026-09']));
+const dualRoot=await mkdtemp(join(tmpdir(),'ktb-ust-'));
+try{
+  let requests=0;
+  const fetcher=(async()=>{requests++;return new Response(ustRaw,{status:200,headers:{'Content-Type':'application/xml'}});}) as typeof fetch;
+  const us=await collectUst('2026-09-11','2026-09-18',7,join(dualRoot,'cache'),true,fetcher,new Date('2026-09-18T23:00:00.000Z'));
+  check(()=>{assert.equal(requests,1);assert.equal(us.engine,UST_ENGINE);assert.equal(analyzeUst(us).status,'READY');assert.equal(analyzeUst(us).changes?.[10],1);});
+  const refreshed=await collectUst('2026-09-11','2026-09-18',7,join(dualRoot,'cache'),true,fetcher,new Date('2026-09-19T07:00:00.000Z'));
+  check(()=>{assert.equal(requests,2);assert.equal(refreshed.sources[0].status,'live');});
+  const offline=(async()=>new Response('',{status:503})) as typeof fetch;
+  const historicalCache=join(dualRoot,'historical-cache'),historicalRaw=ustFixture(['2026-08-11','2026-08-18']),historicalFetch=(async()=>new Response(historicalRaw,{status:200})) as typeof fetch;
+  const historicalLive=await collectUst('2026-08-11','2026-08-18',7,historicalCache,true,historicalFetch,new Date('2026-09-23T00:00:00.000Z'));
+  check(()=>assert.equal(historicalLive.sources[0].status,'live',JSON.stringify(historicalLive.sources[0])));
+  const historical=await collectUst('2026-08-11','2026-08-18',7,historicalCache,true,offline,new Date('2026-09-23T12:00:00.000Z'));
+  check(()=>assert.equal(historical.sources[0].status,'cache'));
+  const noUstCache=join(dualRoot,'no-ust-cache');await collectUst('2026-09-11','2026-09-18',7,noUstCache,false,fetcher,new Date('2026-09-18T23:00:00.000Z'));await assert.rejects(()=>readdir(noUstCache),/ENOENT/);checks++;
+  const ustCollision=join(dualRoot,'ust-cache-collision');await mkdir(ustCollision);await mkdir(join(ustCollision,'ust-2026-09.mjson'));
+  const collisionResult=await collectUst('2026-09-11','2026-09-18',7,ustCollision,true,fetcher,new Date('2026-09-18T23:00:00.000Z'));
+  check(()=>{assert.equal(collisionResult.sources[0].status,'live');assert.equal(analyzeUst(collisionResult).status,'READY');});
+  const ustCollisionFiles=await readdir(ustCollision);check(()=>assert.ok(!ustCollisionFiles.some(x=>x.endsWith('.tmp'))));
+  let malformedCalls=0;const malformedThenValid=(async()=>{malformedCalls++;return new Response(malformedCalls<3?'<html>temporary response</html>':ustRaw,{status:200});}) as typeof fetch;
+  const retried=await collectUst('2026-09-11','2026-09-18',7,join(dualRoot,'retry-cache'),false,malformedThenValid,new Date('2026-09-18T23:00:00.000Z'));
+  check(()=>{assert.equal(malformedCalls,3);assert.equal(retried.sources[0].status,'live');assert.equal(analyzeUst(retried).status,'READY');});
+  const cached=await collectUst('2026-09-11','2026-09-18',7,join(dualRoot,'cache'),true,offline,new Date('2026-09-19T09:00:00.000Z'));
+  check(()=>assert.equal(cached.sources[0].status,'cache'));
+  const blocked=await collectUst('2026-09-11','2026-09-18',7,join(dualRoot,'empty-cache'),false,offline,new Date('2026-09-19T01:00:00.000Z'));
+  check(()=>{assert.equal(blocked.sources[0].status,'failed');assert.equal(analyzeUst(blocked).status,'BLOCKED');assert.match(analyzeUst(blocked).notes.join(' '),/수집 실패/);});
+  check(()=>{const bad=structuredClone(blocked);bad.sources[0].error='failed\n## injected section';assert.throws(()=>analyzeUst(bad),/Invalid failed UST source receipt/);});
+  const incompleteUs=structuredClone(us);incompleteUs.sources[0].raw=ustMissingTenor;incompleteUs.sources[0].sha256=sha256(ustMissingTenor);
+  check(()=>{const a=analyzeUst(incompleteUs);assert.equal(a.status,'INCOMPLETE');assert.match(a.notes.join(' '),/만기 결측이 있는 1개 관측일/);});
+  const partial=analyzeDual({version:1,engine:DUAL_ENGINE,ktb:packet,ust:blocked});
+  check(()=>assert.equal(partial.status,'INCOMPLETE'));
+  const partialChat=dualChat({version:1,engine:DUAL_ENGINE,ktb:packet,ust:blocked},partial);
+  check(()=>{assert.match(partialChat,/\*\*상태:\*\* 일부 자료 부족, 확인된 값만 표시 \(INCOMPLETE\)/);assert.match(partialChat,/UST는 비교 가능한 두 관측일이 부족합니다/);assert.match(partialChat,/공통 관측일이 없어 계산 불가/);assert.doesNotMatch(partialChat,/NaN|undefined|계산 불가bp/);});
+  const emptyKtb=packetFor([]),fullyBlocked: DualPacket={version:1,engine:DUAL_ENGINE,ktb:emptyKtb,ust:blocked};
+  const blockedChat=dualChat(fullyBlocked);
+  check(()=>{assert.match(blockedChat,/자료 확인 불가 \(BLOCKED\)/);assert.equal((blockedChat.match(/^\| \d+년 \|/gm)??[]).length,6);assert.doesNotMatch(blockedChat,/NaN|undefined/);});
+  const partialOut=join(dualRoot,'partial');await writeDualArtifacts(partialOut,{version:1,engine:DUAL_ENGINE,ktb:packet,ust:blocked});await validateDualArtifacts(partialOut);
+  const partialBrief=await readFile(join(partialOut,'brief.md'),'utf8');check(()=>{assert.match(partialBrief,/INCOMPLETE/);assert.match(partialBrief,/UST 원천 수집 실패/);assert.match(partialBrief,/계산 불가 \(/);assert.doesNotMatch(partialBrief,/계산 불가bp/);});
+  for(const [label,evidence] of [['partial', {version:1,engine:DUAL_ENGINE,ktb:packet,ust:blocked}],['blocked',fullyBlocked]] as const){
+    const original=label==='partial'?partialOut:join(dualRoot,'blocked');if(label==='blocked')await writeDualArtifacts(original,evidence);
+    const replayed=join(dualRoot,`${label}-replay`),saved=JSON.parse(await readFile(join(original,'evidence.mjson'),'utf8')) as DualPacket;await writeDualArtifacts(replayed,saved);await validateDualArtifacts(replayed);
+    for(const name of ['brief.md','market-table.csv','report.html','evidence.mjson','status.mjson','manifest.mjson'])assert.equal(await readFile(join(original,name),'utf8'),await readFile(join(replayed,name),'utf8'));checks++;
+  }
+  check(()=>{const tampered=structuredClone(us);tampered.sources[0].sha256='0'.repeat(64);assert.throws(()=>analyzeUst(tampered),/checksum/);});
+  check(()=>{const bad=structuredClone(us);bad.sources[0].url='https://example.com/';assert.throws(()=>analyzeUst(bad),/identity/);});
+  const dual: DualPacket={version:1,engine:DUAL_ENGINE,ktb:packet,ust:us}, result=analyzeDual(dual);
+  check(()=>{assert.equal(result.status,'READY');assert.equal(result.cross.current.actual,'2026-09-18');assert.equal(result.cross.current.gapBp,86);});
+  const lagged=structuredClone(dual);lagged.ktb.asOf='2026-09-19';lagged.ust.asOf='2026-09-19';
+  const laggedChat=dualChat(lagged);check(()=>{assert.match(laggedChat,/요청일 2026-09-19보다 1일 전/);assert.match(laggedChat,/분석 완료 \(READY\)/);});
+  const chat=dualChat(dual,result),sections=['**상태:**','**핵심 변화**','| 만기 |','**커브·한미 차이**','**주요 일정**','**확인 사항**','**출처:**'];
+  check(()=>{for(const variant of [chat,partialChat,blockedChat]){const positions=sections.map(s=>variant.indexOf(s));assert.ok(positions.every(i=>i>=0));assert.deepEqual(positions,[...positions].sort((a,b)=>a-b));assert.equal((variant.match(/^\| \d+년 \|/gm)??[]).length,6);assert.doesNotMatch(variant,/NaN|undefined/);}assert.match(chat,/KTB 3년 -10\.00bp, 10년 -5\.00bp/);assert.match(chat,/UST 3년 \+1\.00bp, 10년 \+1\.00bp/);assert.match(chat,/공통 관측일 2026-09-18/);assert.match(chat,/https:\/\/ecos\.bok\.or\.kr\//);assert.match(chat,/home\.treasury\.gov/);});
+  const first=join(dualRoot,'first'),second=join(dualRoot,'second');await writeDualArtifacts(first,dual);await validateDualArtifacts(first);
+  const replay=JSON.parse(await readFile(join(first,'evidence.mjson'),'utf8')) as DualPacket;await writeDualArtifacts(second,replay);await validateDualArtifacts(second);
+  for(const name of ['brief.md','market-table.csv','report.html','evidence.mjson','status.mjson','manifest.mjson'])assert.equal(await readFile(join(first,name),'utf8'),await readFile(join(second,name),'utf8'));checks++;
+  const html=await readFile(join(first,'report.html'),'utf8');check(()=>{assert.match(html,/한국 국고채/);assert.match(html,/미국 국채 par/);assert.match(html,/공통 관측일/);assert.ok(html.includes(us.sources[0].url.replaceAll('&','&amp;')));assert.doesNotMatch(html,/NaN|undefined/);});
+  const schedule:ScheduleEvidence={version:1,anchorDate:'2026-09-18',checkedAt:'2026-09-18T23:00:00.000Z',events:[
+    {date:'2026-09-21',market:'KR',kind:'auction',tenor:5,sourceUrl:'https://ktb.moef.go.kr/mnbyIsuCldr.do',sourceExcerpt:'2026.09.21. | 5년물',sourceDateText:'2026.09.21.'},
+    {date:'2026-09-23',market:'US',kind:'auction',tenor:5,sourceUrl:'https://home.treasury.gov/system/files/221/TentativeAuctionScheduleQ22026.pdf',sourceExcerpt:'5-Year NOTE Thursday, September 17, 2026 Wednesday, September 23, 2026 Wednesday, September 30, 2026',sourceDateText:'Wednesday, September 23, 2026'},
+    {date:'2026-10-22',market:'KR',kind:'policy',sourceUrl:'https://www.bok.or.kr/portal/singl/crncyPolicyDrcMtg/listYear.do?menuNo=200755&mtgSe=A',sourceExcerpt:'2026 통화정책방향 결정회의 일정 및 자료 10월 22일(목)',sourceDateText:'10월 22일'},
+    {date:'2026-10-28',market:'US',kind:'policy',sourceUrl:'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm',sourceExcerpt:'2026 FOMC Meetings October 27-28',sourceDateText:'October 27-28'}
+  ]};
+  const scheduled=readSchedule(JSON.stringify(schedule),'2026-09-18');check(()=>{const a=analyzeSchedule(scheduled,'2026-09-18');assert.equal(a.status,'VERIFIED');assert.deepEqual(a.events.map(e=>e.date),['2026-09-21','2026-09-23','2026-10-22','2026-10-28']);assert.equal(analyzeSchedule(undefined,'2026-09-18').status,'UNVERIFIED');});
+  const scheduledDual: DualPacket={...dual,schedule:scheduled},scheduledChat=dualChat(scheduledDual);check(()=>{assert.match(scheduledChat,/2026-09-21 \(KR\) 국고채 5년물 입찰/);assert.match(scheduledChat,/2026-09-23 \(US\) 미국 국채 5년물 입찰/);assert.match(scheduledChat,/2026-10-22 \(KR\) 한국은행 통화정책방향 결정회의/);assert.match(scheduledChat,/2026-10-28 \(US\) FOMC 금리 결정/);assert.match(scheduledChat,/분석 완료 \(READY\)/);});
+  check(()=>{const bad=structuredClone(schedule);bad.events[0].date='2026-09-22';assert.throws(()=>analyzeSchedule(bad,'2026-09-18'),/quoted date/);});
+  check(()=>{const bad=structuredClone(schedule);bad.events[1].sourceUrl='https://home.treasury.gov.evil.example/schedule';assert.throws(()=>analyzeSchedule(bad,'2026-09-18'),/host/);});
+  check(()=>{const bad=structuredClone(schedule);bad.events[1].date='2026-09-17';bad.events[1].sourceDateText='Thursday, September 17, 2026';assert.throws(()=>analyzeSchedule(bad,'2026-09-18'),/event date/);});
+  check(()=>{const bad=structuredClone(schedule);bad.events[1].date='2026-09-30';bad.events[1].sourceDateText='Wednesday, September 30, 2026';assert.throws(()=>analyzeSchedule(bad,'2026-09-18'),/second date/);});
+  check(()=>{const bad=structuredClone(schedule);bad.events[1].sourceExcerpt=bad.events[1].sourceExcerpt.replaceAll('Wednesday, September 23','Tuesday, September 23');bad.events[1].sourceDateText='Tuesday, September 23, 2026';assert.throws(()=>analyzeSchedule(bad,'2026-09-18'),/quoted date/);});
+  check(()=>{const bad=structuredClone(schedule);bad.events[1].sourceExcerpt='5-Year NOTE Wednesday, September 23, 2026';assert.throws(()=>analyzeSchedule(bad,'2026-09-18'),/announcement, auction, and settlement/);});
+  check(()=>{const bad=structuredClone(schedule);bad.events.push({...bad.events[0]});assert.throws(()=>analyzeSchedule(bad,'2026-09-18'),/Duplicate/);});
+  check(()=>{const bad=structuredClone(schedule);bad.checkedAt='2026-10-18T00:00:00.000Z';assert.throws(()=>analyzeSchedule(bad,'2026-09-18'),/too far/);});
+  const scheduleOut=join(dualRoot,'scheduled'),scheduleReplay=join(dualRoot,'scheduled-replay');await writeDualArtifacts(scheduleOut,scheduledDual);await validateDualArtifacts(scheduleOut);const scheduleSaved=JSON.parse(await readFile(join(scheduleOut,'evidence.mjson'),'utf8')) as DualPacket;await writeDualArtifacts(scheduleReplay,scheduleSaved);await validateDualArtifacts(scheduleReplay);for(const name of ['brief.md','market-table.csv','report.html','evidence.mjson','status.mjson','manifest.mjson'])assert.equal(await readFile(join(scheduleOut,name),'utf8'),await readFile(join(scheduleReplay,name),'utf8'));const scheduleHtml=await readFile(join(scheduleOut,'report.html'),'utf8');check(()=>{assert.match(scheduleHtml,/주요 일정/);assert.match(scheduleHtml,/국고채 5년물 입찰/);assert.match(scheduleHtml,/FOMC 금리 결정/);});
+  const scheduledCli=await run(process.execPath,[cliPath,'--market','both','--replay',join(scheduleOut,'evidence.mjson')],{cwd:dualRoot});check(()=>{assert.match(scheduledCli.stdout,/\*\*주요 일정\*\*/);assert.match(scheduledCli.stdout,/2026-10-28 \(US\) FOMC 금리 결정/);});
+  const jsonCli=await run(process.execPath,[cliPath,'--market','both','--replay',join(scheduleOut,'evidence.mjson'),'--json'],{cwd:dualRoot});check(()=>{const parsed=JSON.parse(jsonCli.stdout);assert.ok(Array.isArray(parsed.markets));});
+  const altered=structuredClone(dual);altered.ust.sources[0].raw=altered.ust.sources[0].raw.replace('4.10','4.11');check(()=>assert.throws(()=>analyzeDual(altered),/checksum/));
+  const noCommon=structuredClone(dual);noCommon.ust.sources[0].raw=ustFixture(['2026-09-12','2026-09-19']);noCommon.ust.sources[0].sha256=sha256(noCommon.ust.sources[0].raw);noCommon.ust.asOf='2026-09-19';noCommon.ktb.asOf='2026-09-19';const gap=analyzeDual(noCommon);check(()=>assert.equal(gap.cross.current.gapBp,null));
+  const partialCurveRows=[...obs,{date:'2026-09-19',tenor:10 as Tenor,value:3.21}],partialCurve=packetFor(partialCurveRows);
+  partialCurve.asOf='2026-09-19';const ustNewDate=structuredClone(us);ustNewDate.asOf='2026-09-19';ustNewDate.sources[0].raw=ustFixture(['2026-09-11','2026-09-18','2026-09-19']);ustNewDate.sources[0].sha256=sha256(ustNewDate.sources[0].raw);
+  const aligned=analyzeDual({version:1,engine:DUAL_ENGINE,ktb:partialCurve,ust:ustNewDate});
+  check(()=>{assert.equal(aligned.ktb.current.actual,'2026-09-18');assert.equal(aligned.cross.current.actual,'2026-09-18');assert.equal(aligned.cross.current.gapBp,86);});
+  await writeFile(join(first,'brief.md'),(await readFile(join(first,'brief.md'),'utf8')+'tampered'));await assert.rejects(()=>validateDualArtifacts(first),/mismatch/);checks++;
+}finally{await rm(dualRoot,{recursive:true,force:true});}
+console.log(`PASS: ${checks} deterministic pipeline checks`);
