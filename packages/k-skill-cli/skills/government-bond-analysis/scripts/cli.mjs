@@ -99,9 +99,9 @@ async function main() {
     const market = typeof a.market === 'string' ? a.market : 'kr';
     if (!['kr', 'both'].includes(market))
         throw Error('--market must be kr or both');
-    if (a.text === true && a.mjson === true)
+    if (a.text === true && a.json === true)
         throw Error('--text and --json are mutually exclusive');
-    if (market === 'kr' && a.mjson === true)
+    if (market === 'kr' && a.json === true)
         throw Error('--json is only needed with --market both; Korean mode already defaults to JSON');
     if (typeof a['news-template'] === 'string') {
         if (Object.keys(a).some(k => k !== 'news-template'))
@@ -162,7 +162,7 @@ async function main() {
             await writeDualArtifacts(out, dual);
             console.log(JSON.stringify({ result: result.status, out, files: ['report.html', 'brief.md', 'market-table.csv', 'evidence.mjson', 'status.mjson', 'manifest.mjson'] }, null, 2));
         }
-        else if (a.mjson === true)
+        else if (a.json === true)
             console.log(JSON.stringify(dualSummary(dual, result), null, 2));
         else
             console.log(dualChat(dual, result));

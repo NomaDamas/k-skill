@@ -223,6 +223,7 @@ try {
     await cliReject(['--preset', 'dashboard', '--lookback-sessions', '5'], /mutually exclusive/);
     await cliReject(['--replay', 'missing.mjson', '--base', '2026-09-11'], /accepts only/);
     await cliReject(['--from-month', '2026-09', '--to-month', '2026-09'], /earlier/);
+    await cliReject(['--market', 'kr', '--json'], /only needed/);
     const third = join(root, 'third');
     await writeArtifacts(third, packet);
     const statusPath = join(third, 'status.mjson'), manifestPath = join(third, 'manifest.mjson');
@@ -375,6 +376,8 @@ try {
     check(() => { assert.match(scheduleHtml, /주요 일정/); assert.match(scheduleHtml, /국고채 5년물 입찰/); assert.match(scheduleHtml, /FOMC 금리 결정/); });
     const scheduledCli = await run(process.execPath, [cliPath, '--market', 'both', '--replay', join(scheduleOut, 'evidence.mjson')], { cwd: dualRoot });
     check(() => { assert.match(scheduledCli.stdout, /\*\*주요 일정\*\*/); assert.match(scheduledCli.stdout, /2026-10-28 \(US\) FOMC 금리 결정/); });
+    const jsonCli = await run(process.execPath, [cliPath, '--market', 'both', '--replay', join(scheduleOut, 'evidence.mjson'), '--json'], { cwd: dualRoot });
+    check(() => { const parsed = JSON.parse(jsonCli.stdout); assert.ok(Array.isArray(parsed.markets)); });
     const altered = structuredClone(dual);
     altered.ust.sources[0].raw = altered.ust.sources[0].raw.replace('4.10', '4.11');
     check(() => assert.throws(() => analyzeDual(altered), /checksum/));
