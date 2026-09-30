@@ -136,10 +136,12 @@ npx -y @nomadamas/k-skill@0 update
 | --- | --- | --- |
 | [한국 주식 정보 조회](docs/features/korean-stock-search.md) | `korean-stock-search` | KRX 상장 종목 검색, 기본정보, 일별 시세 조회 |
 | [금감원 DART 전자공시 조회](docs/features/k-dart.md) | `k-dart` | 공시검색, 기업개황, 재무제표, 배당, 증자/감자, 감사의견, 주요사항보고서 등 14개 endpoint |
+| [국내·해외 기업분석](docs/features/company-analysis.md) | `company-analysis` | 공개 공시·실적발표를 대조해 3대 재무제표의 변화, 사업·경쟁구도, 주요 일정과 조회 시점 주가를 6개 섹션의 채팅 분석으로 정리 (로그인·API 키 불필요) |
 | [토스증권 조회](docs/features/toss-investment.md) | `toss-investment` | 토스증권 공식 Open API(OAuth2)로 계좌·보유주식·시세·주문조회 등 조회 전용 |
 | [대신증권 리포트 조회](docs/features/daishin-report-search.md) | `daishin-report-search` | GitHub Pages에 공개된 대신증권 리포트 HTML 미러에서 최신 리포트 목록, 원문, 설명 페이지, Rating/Target 표를 조회 |
 | [국가데이터처 KOSIS 통계 조회](docs/features/kosis-stats.md) | `kosis-stats` | 국가데이터처가 운영하는 KOSIS(국가통계포털) Open API로 통계표 검색·메타·데이터·대용량 자료 조회 (조회 전용) |
 | [한국은행 ECOS 경제통계 조회](docs/features/bok-ecos-stats.md) | `bok-ecos-stats` | 한국은행 ECOS Open API로 기준금리·환율·소비자물가지수·통화량 시계열과 100대 핵심지표 조회 |
+| [한·미 국채시장 분석](docs/features/government-bond-analysis.md) | `government-bond-analysis` | 한국·미국 국채 금리와 커브 변화, 같은 관측일의 10년 금리차, 공식 입찰·통화정책 일정을 검증해 고정된 형식으로 정리 |
 | [멀티에셋 모닝 브리핑](docs/features/multi-asset-morning-briefing.md) | `multi-asset-morning-briefing` | 미국·한국 최근 완료 세션을 독립 확인하고 글로벌 주식·금리·FX·원자재·변동성과 한국 전달 경로, 향후 5거래일 일정을 근거 링크가 있는 7개 섹션으로 작성 (로그인·API 키 불필요) |
 | [사건별 시장반응 리서치](docs/features/market-event-impact.md) | `market-event-impact` | GS Quant의 event_study·event_impact_analysis·CalendarAlignment 구조에서 영감을 받아 정례·비정형 사건의 핵심 변화와 시장 해석, 교차자산 전달경로를 조사하고 이벤트 스터디는 보조 증거로 제시하며 유사사례·다음 촉매까지 정리 (로그인·API 키 불필요) |
 
