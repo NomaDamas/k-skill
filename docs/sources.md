@@ -285,3 +285,8 @@
 - 한국은행 ECOS `802Y001`: https://ecos.bok.or.kr/api — 한국 최근 완료 세션과 KOSPI·KOSDAQ 종가를 독립 확인하는 공식 원천.
 - FRED 공개 CSV: https://fred.stlouisfed.org/graph/fredgraph.csv?id=<ID1>,<ID2> — `multi-asset-morning-briefing`의 보조 fallback. helper는 ZIP 멤버를 전부 날짜 기준으로 병합하고 시리즈별 `stale`·`lag_days`를 보고하므로 목표 세션과 다른 값은 브리핑에서 제외한다.
 - JS 챌린지로 보호되는 시장 데이터 집계 사이트는 `multi-asset-morning-briefing`의 조회 경로에서 제외하고 공식 정적 endpoint를 우선한다.
+- DART 공개 공시 원문: https://dart.fss.or.kr/ — `company-analysis`가 회사명·접수번호·정정 여부와 연결 재무제표 목차를 확인한다. `dsaf001/main.do?rcpNo=<접수번호>`의 목차와 `report/viewer.do` 하위 표를 동일 접수번호·문서번호·목차 위치로 묶는다. OpenDART API는 개인 인증키가 필요해 이 스킬의 기본 경로에서 제외한다.
+- KIND 공개 공시·IR: https://kind.krx.co.kr/ — `company-analysis`의 국내 보조 원천. 개별 공시의 기업·게시일·원문을 대조한다.
+- SEC EDGAR 공개 데이터 API: https://www.sec.gov/search-filings/edgar-application-programming-interfaces — `company-analysis`의 미국 제출 이력·XBRL 원천. `companyfacts` 값은 accession·form·filed·기간·단위로 개별 공시와 연결하고 SEC 접근 정책을 따른다.
+- Nasdaq 공개 종목 JSON: https://api.nasdaq.com/api/quote/ — `company-analysis`의 나스닥 상장 종목 표시 주가 후보. 종목·시장·거래일/시각과 수집 시각을 분리해 검증하며 구조가 바뀌면 가격을 제외한다.
+- 네이버증권 모바일 공개 JSON: https://m.stock.naver.com/api/stock/ — `company-analysis`의 한국 종목 표시 주가 후보인 제3자 비공식 표면. 종목코드·시장·거래일/시각·응답 구조가 검증되지 않으면 가격을 제외하며 안정성을 보장하는 공식 API로 취급하지 않는다.
