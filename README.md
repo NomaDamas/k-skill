@@ -135,6 +135,7 @@ npx -y @nomadamas/k-skill@0 update
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
 | [한국 주식 정보 조회](docs/features/korean-stock-search.md) | `korean-stock-search` | KRX 상장 종목 검색, 기본정보, 일별 시세 조회 |
+| [한국 채권 종목 조회·비교](docs/features/korean-bond-search.md) | `korean-bond-search` | GS Quant의 Instrument/Data 구조화 방식에서 영감을 받아 한국 채권을 표준 Bond Instrument 필드로 정리하고, 발행조건·잔액·CALL/PUT·CB/EB/BW를 출처·확인시각과 함께 검색·비교 (로그인·API 키 불필요) |
 | [금감원 DART 전자공시 조회](docs/features/k-dart.md) | `k-dart` | 공시검색, 기업개황, 재무제표, 배당, 증자/감자, 감사의견, 주요사항보고서 등 14개 endpoint |
 | [국내·해외 기업분석](docs/features/company-analysis.md) | `company-analysis` | 공개 공시·실적발표를 대조해 3대 재무제표의 변화, 사업·경쟁구도, 주요 일정과 조회 시점 주가를 6개 섹션의 채팅 분석으로 정리 (로그인·API 키 불필요) |
 | [토스증권 조회](docs/features/toss-investment.md) | `toss-investment` | 토스증권 공식 Open API(OAuth2)로 계좌·보유주식·시세·주문조회 등 조회 전용 |

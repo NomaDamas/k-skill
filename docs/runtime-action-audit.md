@@ -82,6 +82,7 @@ top-level `SKILL.md` 전체를 돌쇠 우선 실행 계약으로 전수 검토�
 | `kleague-results` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `kopis-performance-search` | `lookup` | KOPIS 공연·시설 목록과 상세 조회 완료 |
 | `korea-weather` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `korean-bond-search` | `lookup` | 채권 후보를 식별하고 출처·확인시각이 보존된 발행조건과 옵션을 비교 |
 | `korean-character-count` | `local` | 요청 산출물을 로컬에서 실제 생성·변환·정리 |
 | `korean-cinema-search` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
 | `korean-heritage-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |

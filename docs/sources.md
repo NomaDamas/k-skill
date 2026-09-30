@@ -108,6 +108,9 @@
 - KRX OPEN API 메인: https://openapi.krx.co.kr/contents/OPP/MAIN/main/index.cmd
 - KRX 종목 기본정보 API (KOSPI): http://data-dbg.krx.co.kr/svc/apis/sto/stk_isu_base_info
 - KRX 일별 매매정보 API (KOSPI): http://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd
+- SEIBro 채권정보: https://seibro.or.kr/websquare/control.jsp?w2xPath=/IPORTAL/user/bond/BIP_CNTS02001V.xml&menuNo=285 — `korean-bond-search`의 1차 원천. WebSquare 화면의 HTTP 200만으로 조회 성공을 판단하지 않고, 공식 상세 화면 확인 또는 실제 내보내기 파일을 사용한다.
+- 금융감독원 DART: https://dart.fss.or.kr/ — `korean-bond-search`가 CB·EB·BW 발행 여부와 조건을 원문으로 보강할 때 사용한다.
+- 한국거래소 KRX: https://global.krx.co.kr/ — `korean-bond-search`에서 상장 정보가 필요하고 SEIBro 값이 비어 있을 때 보강 원천으로 사용한다.
 - 잡코리아 공개 채용공고 검색: https://www.jobkorea.co.kr/Search/?stext=<검색어> — `job-posting-match`가 로그인 없이 `/Recruit/GI_Read/<id>` 링크가 포함된 공개 결과를 직접 조회한다.
 - 사람인 공개 채용공고 검색: https://www.saramin.co.kr/zf_user/search/recruit?searchword=<검색어> — `job-posting-match`가 로그인 없이 `rec_idx`가 포함된 공개 결과를 직접 조회한다.
 - MOLIT 아파트 매매 실거래가 API: https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade

@@ -1,0 +1,9 @@
+{
+  "name": "korean-bond-search",
+  "description": "GS Quant의 Instrument/Data 구조화 방식에서 영감을 받아 한국 채권을 표준 Bond Instrument 필드로 정리하고, 종목명·발행사·ISIN으로 발행조건·잔액·CALL/PUT·CB/EB/BW를 출처와 함께 검색·비교한다. Use for Korean bond lookup or comparison. Not for live quotes, YTM, credit opinions, or investment advice.",
+  "profiles": [
+    "lookup",
+    "browser"
+  ],
+  "frontmatter": "name: korean-bond-search\ndescription: GS Quant의 Instrument/Data 구조화 방식에서 영감을 받아 한국 채권을 표준 Bond Instrument 필드로 정리하고, 종목명·발행사·ISIN으로 발행조건·잔액·CALL/PUT·CB/EB/BW를 출처와 함께 검색·비교한다. Use for Korean bond lookup or comparison. Not for live quotes, YTM, credit opinions, or investment advice.\nlicense: MIT\nmetadata:\n  category: finance\n  locale: ko-KR\n  phase: v1"
+}
