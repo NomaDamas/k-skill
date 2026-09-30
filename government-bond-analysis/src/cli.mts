@@ -62,8 +62,8 @@ function snapshotSpreads(s:CurveSnapshot):Record<string,number|null>{const sprea
 async function main():Promise<void>{
   const a=args(process.argv.slice(2));if(a.help){console.log(usage);return;}
   const market=typeof a.market==='string'?a.market:'kr';if(!['kr','both'].includes(market))throw Error('--market must be kr or both');
-  if(a.text===true&&a.mjson===true)throw Error('--text and --json are mutually exclusive');
-  if(market==='kr'&&a.mjson===true)throw Error('--json is only needed with --market both; Korean mode already defaults to JSON');
+  if(a.text===true&&a.json===true)throw Error('--text and --json are mutually exclusive');
+  if(market==='kr'&&a.json===true)throw Error('--json is only needed with --market both; Korean mode already defaults to JSON');
   if(typeof a['news-template']==='string'){if(Object.keys(a).some(k=>k!=='news-template'))throw Error('--news-template cannot be combined with other options');console.log(newsTemplate(date(a['news-template']),new Date().toISOString()));return;}
   const hasMonth=typeof a['from-month']==='string'||typeof a['to-month']==='string';
   const hasInput=typeof a.input==='string',hasReplay=typeof a.replay==='string';
@@ -96,7 +96,7 @@ async function main():Promise<void>{
     if(typeof a.out==='string'){
       const out=resolve(a.out);await writeDualArtifacts(out,dual);
       console.log(JSON.stringify({result:result.status,out,files:['report.html','brief.md','market-table.csv','evidence.mjson','status.mjson','manifest.mjson']},null,2));
-    }else if(a.mjson===true)console.log(JSON.stringify(dualSummary(dual,result),null,2));
+    }else if(a.json===true)console.log(JSON.stringify(dualSummary(dual,result),null,2));
     else console.log(dualChat(dual,result));
     if(result.status!=='READY')process.exitCode=2;
     return;
