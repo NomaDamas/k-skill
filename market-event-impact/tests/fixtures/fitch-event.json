@@ -1,0 +1,41 @@
+{
+  "events": [
+    {
+      "event_id": "fitch-us-downgrade-2023-08-01",
+      "event_name": "2023년 피치 미국 국가신용등급 강등",
+      "aliases": ["피치 미국 신용등급 강등", "Fitch US sovereign downgrade"],
+      "event_type": "sovereign_credit",
+      "event_structure": "point_event",
+      "region": "US",
+      "event_date": "2023-08-01",
+      "event_time_local": "17:13",
+      "event_timezone": "America/New_York",
+      "source": {
+        "name": "Fitch Ratings — U.S. rating action, 1 Aug 2023",
+        "url": "https://www.fitchratings.com/research/sovereigns/fitch-downgrades-united-states-long-term-ratings-to-aa-from-aaa-outlook-stable-01-08-2023"
+      },
+      "event_sequence": [
+        {
+          "date": "2023-08-01",
+          "time_local": "17:13",
+          "timezone": "America/New_York",
+          "stage": "rating_action",
+          "event": "피치가 미국 장기 외화표시 IDR을 AAA에서 AA+로 강등하고 부정적 관찰대상을 해제, 전망을 안정적으로 부여",
+          "source": {
+            "name": "Fitch Ratings",
+            "url": "https://www.fitchratings.com/research/sovereigns/fitch-downgrades-united-states-long-term-ratings-to-aa-from-aaa-outlook-stable-01-08-2023"
+          }
+        },
+        {
+          "date": "2023-08-02",
+          "stage": "overlapping_catalyst",
+          "event": "미 재무부가 분기 국채 발행 규모 확대 계획을 발표",
+          "source": {
+            "name": "U.S. Treasury — Quarterly Refunding",
+            "url": "https://home.treasury.gov/news/press-releases/jy1671"
+          }
+        }
+      ]
+    }
+  ]
+}

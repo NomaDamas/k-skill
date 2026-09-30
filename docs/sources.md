@@ -289,6 +289,8 @@
 - 한국은행 ECOS `802Y001`: https://ecos.bok.or.kr/api — 한국 최근 완료 세션과 KOSPI·KOSDAQ 종가를 독립 확인하는 공식 원천.
 - FRED 공개 CSV: https://fred.stlouisfed.org/graph/fredgraph.csv?id=<ID1>,<ID2> — `multi-asset-morning-briefing`의 보조 fallback. helper는 ZIP 멤버를 전부 날짜 기준으로 병합하고 시리즈별 `stale`·`lag_days`를 보고하므로 목표 세션과 다른 값은 브리핑에서 제외한다.
 - JS 챌린지로 보호되는 시장 데이터 집계 사이트는 `multi-asset-morning-briefing`의 조회 경로에서 제외하고 공식 정적 endpoint를 우선한다.
+- `market-event-impact`의 사건 원천은 해당 사건의 정부·중앙은행·규제기관·거래소·기업 공식 발표를 우선한다. 예: 연준 FOMC(https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm), 미국 노동통계국 CPI(https://www.bls.gov/cpi/), 한국은행 통화정책(https://www.bok.or.kr/portal/main/main.do). 당시 시장 해석과 예상치는 Reuters(https://www.reuters.com/) 등 보도와 분리해 기록한다.
+- `market-event-impact`의 가격 원천은 해당 시장의 거래소·공식 시계열을 우선한다. 미국 재무부 금리(https://home.treasury.gov/resource-center/data-chart-center/interest-rates), Cboe VIX(https://www.cboe.com/tradable_products/vix/vix_historical_data/), FRED(https://fred.stlouisfed.org/) 등의 관측시각·시간대·가격종류를 보존한다. Investing.com 역사적 데이터(https://www.investing.com/)는 공식 확정 종가가 부족할 때 보조로 사용하며 사건 자체의 근거로 쓰지 않는다.
 - DART 공개 공시 원문: https://dart.fss.or.kr/ — `company-analysis`가 회사명·접수번호·정정 여부와 연결 재무제표 목차를 확인한다. `dsaf001/main.do?rcpNo=<접수번호>`의 목차와 `report/viewer.do` 하위 표를 동일 접수번호·문서번호·목차 위치로 묶는다. OpenDART API는 개인 인증키가 필요해 이 스킬의 기본 경로에서 제외한다.
 - KIND 공개 공시·IR: https://kind.krx.co.kr/ — `company-analysis`의 국내 보조 원천. 개별 공시의 기업·게시일·원문을 대조한다.
 - SEC EDGAR 공개 데이터 API: https://www.sec.gov/search-filings/edgar-application-programming-interfaces — `company-analysis`의 미국 제출 이력·XBRL 원천. `companyfacts` 값은 accession·form·filed·기간·단위로 개별 공시와 연결하고 SEC 접근 정책을 따른다.

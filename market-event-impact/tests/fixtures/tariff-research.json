@@ -1,0 +1,171 @@
+{
+  "research": [
+    {
+      "event_id": "us-reciprocal-tariff-2025-04-02",
+      "event_name": "2025년 미국 상호관세 발표와 무역긴장 전개",
+      "event_type": "trade_policy",
+      "region": "US",
+      "event_date": "2025-04-02",
+      "event_features": {
+        "shock_mechanisms": ["tariff_escalation", "retaliation_risk", "policy_uncertainty", "global_demand_shock"],
+        "affected_channels": ["equity", "rates", "fx", "commodity", "volatility"],
+        "market_shock_pattern": {"equity":"down", "rates":"down", "fx":"mixed", "commodity":"down", "volatility":"up"}
+      },
+      "overview": {
+        "summary": "미국은 2025년 4월 2일 광범위한 추가 관세와 국가별 상호관세를 발표했다. 대통령의 발표 시각은 16:06 ET로 미국 현물 주식시장 종가(16:00 ET) 이후다. 이후 중국의 보복 발표와 미국의 90일 유예가 이어져 단일 발표가 아닌 전개형 무역정책 충격으로 다룬다.",
+        "expected": false,
+        "surprise_assessment": "관세 발표가 예고돼 있었더라도 광범위한 10% 기본관세와 높은 국가별 세율의 범위·강도는 시장의 우려를 웃돌았다. 핵심 surprise는 관세 자체보다 적용 범위와 보복 가능성이었다.",
+        "classification": "보복과 정책 유예가 연속된 전개형 무역정책·정책불확실성 충격",
+        "source": {"name":"The White House — Executive Order 14257", "url":"https://www.whitehouse.gov/presidential-actions/2025/04/regulating-imports-with-a-reciprocal-tariff-to-rectify-trade-practices-that-contribute-to-large-and-persistent-annual-united-states-goods-trade-deficits/"}
+      },
+      "what_changed": [
+        {
+          "channel":"미국 관세 범위와 시행 일정",
+          "finding":"미국은 수입품에 10% 추가 관세를 발표하고, 별도 국가별 세율은 4월 9일부터 적용하도록 했다. 기본세율은 4월 5일 시행됐다.",
+          "significance":"발표 당일 가격은 시행 전이라도 향후 수입비용·기업 마진·교역량의 불확실성을 먼저 반영할 수 있다.",
+          "source":{"name":"The White House — Executive Order 14257", "url":"https://www.whitehouse.gov/presidential-actions/2025/04/regulating-imports-with-a-reciprocal-tariff-to-rectify-trade-practices-that-contribute-to-large-and-persistent-annual-united-states-goods-trade-deficits/"}
+        },
+        {
+          "channel":"보복과 다일 전개",
+          "finding":"중국은 4월 4일 미국산 수입품에 34% 추가 관세를 발표했고 4월 10일 시행한다고 밝혔다.",
+          "significance":"D+1 이후 가격에는 최초 발표뿐 아니라 보복·재보복 위험이 함께 들어가 단일 발표 효과로 분리할 수 없다.",
+          "source":{"name":"중국 재정부 관세세칙위원회", "url":"https://gss.mof.gov.cn/gzdt/zhengcefabu/202504/t20250404_3961451.htm"}
+        },
+        {
+          "channel":"미·중 관세 상호 인상",
+          "finding":"미국은 4월 8일 대중 추가 관세율을 34%에서 84%로 높였고, 중국도 4월 9일 미국산 수입품의 추가 관세를 84%로 높여 4월 10일부터 적용한다고 발표했다.",
+          "significance":"양국의 보복이 실제 세율 인상으로 가속돼, 위험회피 구간은 최초 미국 발표만으로 설명되지 않는다.",
+          "source":{"name":"중국 재정부 관세세칙위원회 — 4월 9일 조정", "url":"https://gss.mof.gov.cn/gzdt/zhengcejiedu/202504/t20250409_3961685.htm"}
+        },
+        {
+          "channel":"정책 경로의 급반전",
+          "finding":"미국은 4월 9일 중국산 수입품의 추가 관세를 125%로 높이는 동시에 중국 외 국가별 상호관세를 90일간 유예하고 10% 기본관세를 유지한다고 발표했다. 대부분 조치는 4월 10일부터 적용됐다.",
+          "significance":"중국과의 긴장은 악화됐지만 다른 교역국에는 유예를 발표해, 같은 날 시장에는 악화와 완화 신호가 동시에 전달됐다.",
+          "source":{"name":"The White House — Executive Order 14266", "url":"https://www.whitehouse.gov/presidential-actions/2025/04/modifying-reciprocal-tariff-rates-to-reflect-trading-partner-retaliation-and-alignment/"}
+        }
+      ],
+      "market_interpretation": [
+        {
+          "channel":"성장·위험선호",
+          "finding":"4월 3일 미국 주식과 국제 주식이 급락하고 원유와 달러도 약세를 보였으며, 미 국채수익률은 하락하고 변동성은 뛰었다. Reuters는 이를 예상보다 강한 관세 발표와 성장 둔화 우려에 연결했다.",
+          "significance":"주식·원유 하락과 단기 국채금리 하락은 발표 직후 시장이 인플레이션 단독 충격보다 교역·성장 하방위험을 크게 가격에 반영한 흐름과 일치한다.",
+          "source":{"name":"Reuters — Dollar slides after U.S. tariffs", "url":"https://www.investing.com/news/economy-news/dollar-slides-as-traders-rush-into-safe-havens-after-us-tariffs-3964053"}
+        },
+        {
+          "channel":"달러와 통화시장",
+          "finding":"EUR/USD 뉴욕 정오 기준값은 4월 2일 1.0868에서 4월 3일 1.1052로 상승했다. USD/KRW도 FRED 뉴욕 정오 매입환율 기준 1,462.06원에서 1,450.55원으로 낮아졌다.",
+          "significance":"달러 약세는 전통적인 달러 안전자산 강세와 달랐다. 미국 정책 불확실성의 가격 반영과 일관되지만, 동시 움직임만으로 원인을 확정하지 않는다. USD/KRW 값은 서울 종가가 아니다.",
+          "source":{"name":"Reuters — Dollar slides after U.S. tariffs", "url":"https://www.investing.com/news/economy-news/dollar-slides-as-traders-rush-into-safe-havens-after-us-tariffs-3964053"}
+        },
+        {
+          "channel":"이벤트 창 내 상반된 정책 뉴스",
+          "finding":"S&P 500은 4월 3일 4.84% 하락했고, 4월 9일 중국 외 국가 유예 발표 뒤에는 9.5% 반등했다. 반면 중국 대상 추가 관세는 125%로 높아졌고 한국 코스피는 다음 날 6.6% 올랐다.",
+          "significance":"D+5는 최초 충격과 중국에 대한 추가 긴장, 다른 국가에 대한 유예에 따른 강한 되돌림을 함께 포함한다. 반등을 모든 관세의 철회나 최초 발표의 긍정 효과로 읽으면 안 된다.",
+          "source":{"name":"Associated Press — April 9 tariff pause rally", "url":"https://apnews.com/article/e8e54a68397e6829e1d27552a1d7bfb9"}
+        },
+        {
+          "channel":"장기금리의 후속 반전",
+          "finding":"미 10년물 수익률은 이벤트 기준일 대비 4월 3일 14bp 하락했지만 4월 10일에는 기준일보다 20bp 높았다. 같은 기간 2년물은 기준일보다 7bp 낮았다.",
+          "significance":"초기 안전자산 매수·성장 우려만으로 후속 금리경로를 설명할 수 없다. 4월 10일까지는 장기물 매도와 커브 스티프닝이 겹친 복합 국면이었고, 10년물은 그 주에 이례적으로 급등했다.",
+          "source":{"name":"Reuters — April 11 U.S. bond and dollar selloff", "url":"https://www.investing.com/news/economy-news/trading-day-a-crushing-week-for-us-bonds-dollar-3982264"}
+        }
+      ],
+      "transmission": [
+        {
+          "from":"상호관세 발표·보복 위험",
+          "to":"주식·원유 하락 및 변동성 상승",
+          "status":"CONFIRMED",
+          "evidence":"Reuters는 관세 발표 뒤 주식·원유 하락과 변동성 급등을 직접 보도했다. 일별 자료에서 S&P 500은 4월 3일 -4.84%, WTI는 -6.50%, VIX는 21.51에서 30.02로 상승했다. 일별 변화는 장중 인과효과가 아니다.",
+          "source":{"name":"Reuters — Dollar slides after U.S. tariffs", "url":"https://www.investing.com/news/economy-news/dollar-slides-as-traders-rush-into-safe-havens-after-us-tariffs-3964053"}
+        },
+        {
+          "from":"성장 하방위험 재평가",
+          "to":"미 국채 단기금리 하락",
+          "status":"CONSISTENT",
+          "evidence":"미 2년물 수익률은 4월 2일 3.91%에서 4월 3일 3.71%로 20bp 하락했다. 이는 성장 우려와 완화 기대 경로에 부합하지만, 금리 변동의 단일 원인으로 단정하지 않는다.",
+          "source":{"name":"FRED DGS2", "url":"https://fred.stlouisfed.org/data/DGS2"}
+        },
+        {
+          "from":"미국의 90일 관세 유예 발표",
+          "to":"한국 주식시장 급반등",
+          "status":"CONFIRMED",
+          "evidence":"연합뉴스는 미국의 일시 유예 뒤 코스피가 4월 10일 6.6% 상승했다고 보도했다. 이는 관세 위험 프리미엄 축소와 일치하나, 한국 현물시장은 미국 발표 시점에 열려 있지 않았다.",
+          "source":{"name":"연합뉴스 — 관세 유예 뒤 서울 증시", "url":"https://m-en.yna.co.kr/view/AEN20250410007451320"}
+        }
+      ],
+      "catalysts": [
+        {
+          "date":"2025-04-04",
+          "event":"미국 3월 고용보고서",
+          "why_it_matters":"당시 D+1 가격창의 별도 성장 촉매였다. 비농업고용은 22만8천 명 증가했고 실업률은 4.2%로 큰 변화가 없어, 관세 충격만으로 그날 시장변화를 설명할 수 없다.",
+          "source":{"name":"U.S. Bureau of Labor Statistics", "url":"https://www.bls.gov/news.release/archives/empsit_04042025.htm"}
+        },
+        {
+          "date":"2025-04-05",
+          "event":"미국 기본 10% 추가 관세 시행",
+          "why_it_matters":"발표된 정책이 실제 통관 비용에 적용되는 첫 시점이어서 적용 범위·면제·공급망 전가가 다음 확인 대상이었다.",
+          "source":{"name":"The White House — Executive Order 14257", "url":"https://www.whitehouse.gov/presidential-actions/2025/04/regulating-imports-with-a-reciprocal-tariff-to-rectify-trade-practices-that-contribute-to-large-and-persistent-annual-united-states-goods-trade-deficits/"}
+        },
+        {
+          "date":"2025-04-09",
+          "event":"3월 FOMC 회의록",
+          "why_it_matters":"관세 불확실성이 성장·물가와 향후 금리경로를 어떻게 바꾸는지 확인할 정책 자료였다. 같은 날 관세 유예 발표가 추가돼 금리·주식 반응은 복합 뉴스에 노출됐다.",
+          "source":{"name":"Federal Reserve — April 2025 calendar", "url":"https://www.federalreserve.gov/newsevents/2025-april.htm"}
+        },
+        {
+          "date":"2025-04-09",
+          "event":"미국, 국가별 관세 90일 유예 발표",
+          "why_it_matters":"중국은 유예에서 제외되고 대중 관세는 125%로 인상됐지만, 다른 교역국은 90일 유예 대상이었다. 실제 발표 뒤 미국 주식은 급반등했으므로 D+5 누적 반응은 순수한 최초 충격이 아니다.",
+          "source":{"name":"The White House — Executive Order 14266", "url":"https://www.whitehouse.gov/presidential-actions/2025/04/modifying-reciprocal-tariff-rates-to-reflect-trading-partner-retaliation-and-alignment/"}
+        },
+        {
+          "date":"2025-04-10",
+          "event":"미·중 상호 관세 인상 조치 적용",
+          "why_it_matters":"미국의 대중 125% 추가 관세와 중국의 대미 84% 추가 관세가 이날 발효됐다. D+5 관측은 관세 경로가 여전히 악화된 상태에서 발생한 CPI·시장 재가격을 포함한다.",
+          "source":{"name":"The White House — Executive Order 14266", "url":"https://www.whitehouse.gov/presidential-actions/2025/04/modifying-reciprocal-tariff-rates-to-reflect-trading-partner-retaliation-and-alignment/"}
+        },
+        {
+          "date":"2025-04-10",
+          "event":"미국 3월 CPI",
+          "why_it_matters":"헤드라인 CPI는 전월 대비 -0.1%, 전년 대비 2.4%였다. 조사기간이 관세 시행 전이므로 관세 전가효과의 증거가 아니라 물가의 기존 출발점이다.",
+          "source":{"name":"U.S. Bureau of Labor Statistics", "url":"https://www.bls.gov/news.release/archives/cpi_04102025.htm"}
+        }
+      ],
+      "historical_analogue_pool": [
+        {
+          "date":"2018-03-22",
+          "event":"미국의 중국산 수입품 관세 조치 발표",
+          "event_type":"trade_policy",
+          "shock_mechanisms":["tariff_escalation","retaliation_risk","policy_uncertainty"],
+          "affected_channels":["equity","rates","fx","volatility"],
+          "market_shock_pattern":{"equity":"down","rates":"down","fx":"mixed","volatility":"up"},
+          "similarity":"관세 발표가 무역전쟁 우려를 키우며 주식 하락·국채 선호·변동성 상승으로 이어졌다.",
+          "difference":"중국 대상의 제한된 조치였고 같은 날 예정된 FOMC 금리인상 해석이 혼재했다.",
+          "source":{"name":"Reuters via Yahoo Finance", "url":"https://finance.yahoo.com/news/us-stocks-stocks-tumble-worst-204110408.html"}
+        },
+        {
+          "date":"2019-05-05",
+          "event":"미국의 대중 관세 인상 위협",
+          "event_type":"trade_policy",
+          "shock_mechanisms":["tariff_escalation","policy_uncertainty","negotiation_risk"],
+          "affected_channels":["equity","rates","fx","volatility"],
+          "market_shock_pattern":{"equity":"down","rates":"down","fx":"mixed","volatility":"up"},
+          "similarity":"주말 중 관세 위협이 커진 뒤 다음 거래일 중국·유럽 주식과 미국 주가지수 선물이 하락했다.",
+          "difference":"새로운 광범위 관세체계의 발표가 아니라 기존 미중 협상 중 관세율 인상 위협이었다.",
+          "source":{"name":"Reuters via Investing.com", "url":"https://www.investing.com/news/stock-market-news/global-shares-oil-drop-after-trump-tariff-threat-1856987"}
+        },
+        {
+          "date":"2019-08-23",
+          "event":"중국의 대미 보복관세 발표",
+          "event_type":"trade_policy",
+          "shock_mechanisms":["tariff_escalation","retaliation_risk","policy_uncertainty"],
+          "affected_channels":["equity","fx","commodity","volatility"],
+          "market_shock_pattern":{"equity":"down","fx":"mixed","commodity":"down","volatility":"up"},
+          "similarity":"중국의 보복이 교역갈등을 키워 원유 가격과 위험자산에 하방 압력을 줬다.",
+          "difference":"미국의 전면 관세 발표가 아니라 중국의 특정 미국산 원유 관세 등 보복 조치가 촉발점이었다.",
+          "source":{"name":"Reuters via Investing.com", "url":"https://www.investing.com/news/commodities-news/oil-spills-into-uschina-trade-war-prices-slump-1962658"}
+        }
+      ]
+    }
+  ]
+}

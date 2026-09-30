@@ -143,6 +143,7 @@ npx -y @nomadamas/k-skill@0 update
 | [한국은행 ECOS 경제통계 조회](docs/features/bok-ecos-stats.md) | `bok-ecos-stats` | 한국은행 ECOS Open API로 기준금리·환율·소비자물가지수·통화량 시계열과 100대 핵심지표 조회 |
 | [한·미 국채시장 분석](docs/features/government-bond-analysis.md) | `government-bond-analysis` | 한국·미국 국채 금리와 커브 변화, 같은 관측일의 10년 금리차, 공식 입찰·통화정책 일정을 검증해 고정된 형식으로 정리 |
 | [멀티에셋 모닝 브리핑](docs/features/multi-asset-morning-briefing.md) | `multi-asset-morning-briefing` | 미국·한국 최근 완료 세션을 독립 확인하고 글로벌 주식·금리·FX·원자재·변동성과 한국 전달 경로, 향후 5거래일 일정을 근거 링크가 있는 7개 섹션으로 작성 (로그인·API 키 불필요) |
+| [사건별 시장반응 리서치](docs/features/market-event-impact.md) | `market-event-impact` | GS Quant의 event_study·event_impact_analysis·CalendarAlignment 구조에서 영감을 받아 정례·비정형 사건의 핵심 변화와 시장 해석, 교차자산 전달경로를 조사하고 이벤트 스터디는 보조 증거로 제시하며 유사사례·다음 촉매까지 정리 (로그인·API 키 불필요) |
 
 ### 💊 건강·의료
 

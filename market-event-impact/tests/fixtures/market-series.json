@@ -1,0 +1,188 @@
+{
+  "series": [
+    {
+      "symbol": "UST2Y",
+      "region": "US",
+      "asset_class": "rates",
+      "unit": "pct",
+      "observation_timezone": "America/New_York",
+      "observation_time": "16:00",
+      "market_timezone": "America/New_York",
+      "price_type": "market_close",
+      "roles": ["short_rates", "government_bond", "safe_haven"],
+      "selection_priority": 10,
+      "source": {"name": "fixture", "url": "https://example.test/ust2y"},
+      "observations": [
+        {"date": "2023-03-09", "value": 5.05},
+        {"date": "2023-03-10", "value": 4.59},
+        {"date": "2023-03-13", "value": 4.03},
+        {"date": "2023-03-14", "value": 4.20},
+        {"date": "2023-03-15", "value": 3.89},
+        {"date": "2023-03-16", "value": 4.14},
+        {"date": "2023-03-17", "value": 3.81},
+        {"date": "2026-09-14", "value": 4.60},
+        {"date": "2026-09-15", "value": 4.67},
+        {"date": "2026-09-16", "value": 4.73},
+        {"date": "2026-09-17", "value": 4.74},
+        {"date": "2026-09-18", "value": 4.72},
+        {"date": "2026-09-21", "value": 4.71},
+        {"date": "2026-09-22", "value": 4.70},
+        {"date": "2026-09-23", "value": 4.69}
+      ]
+    },
+    {
+      "symbol": "UST10Y",
+      "region": "US",
+      "asset_class": "rates",
+      "unit": "pct",
+      "observation_timezone": "America/New_York",
+      "observation_time": "16:00",
+      "market_timezone": "America/New_York",
+      "price_type": "market_close",
+      "roles": ["long_rates", "government_bond", "curve"],
+      "source": {"name": "fixture", "url": "https://example.test/ust10y"},
+      "observations": [
+        {"date": "2026-09-14", "value": 4.20},
+        {"date": "2026-09-15", "value": 4.25},
+        {"date": "2026-09-16", "value": 4.26},
+        {"date": "2026-09-17", "value": 4.25},
+        {"date": "2026-09-18", "value": 4.24},
+        {"date": "2026-09-21", "value": 4.23},
+        {"date": "2026-09-22", "value": 4.22},
+        {"date": "2026-09-23", "value": 4.21}
+      ]
+    },
+    {
+      "symbol": "KOSPI",
+      "region": "KR",
+      "asset_class": "equity",
+      "unit": "index",
+      "observation_timezone": "Asia/Seoul",
+      "observation_time": "15:30",
+      "market_timezone": "Asia/Seoul",
+      "price_type": "market_close",
+      "roles": ["broad_equity", "affected_equity"],
+      "source": {"name": "fixture", "url": "https://example.test/kospi"},
+      "observations": [
+        {"date": "2026-09-15", "value": 3000},
+        {"date": "2026-09-16", "value": 3010},
+        {"date": "2026-09-17", "value": 2980},
+        {"date": "2026-09-18", "value": 2990},
+        {"date": "2026-09-21", "value": 3020},
+        {"date": "2026-09-22", "value": 3030},
+        {"date": "2026-09-23", "value": 3040},
+        {"date": "2026-09-24", "value": 3035}
+      ]
+    },
+    {
+      "symbol": "DXY",
+      "region": "US",
+      "asset_class": "fx",
+      "unit": "index",
+      "observation_timezone": "America/New_York",
+      "observation_time": "17:00",
+      "market_timezone": "America/New_York",
+      "price_type": "daily_close",
+      "roles": ["fx", "safe_haven"],
+      "source": {"name": "fixture", "url": "https://example.test/dxy"},
+      "observations": [
+        {"date": "2026-09-14", "value": 99.80},
+        {"date": "2026-09-15", "value": 100.00},
+        {"date": "2026-09-16", "value": 100.15},
+        {"date": "2026-09-17", "value": 100.10},
+        {"date": "2026-09-18", "value": 100.05},
+        {"date": "2026-09-21", "value": 100.20},
+        {"date": "2026-09-22", "value": 100.25},
+        {"date": "2026-09-23", "value": 100.30}
+      ]
+    },
+    {
+      "symbol": "USDKRW",
+      "region": "KR",
+      "asset_class": "fx",
+      "unit": "krw_per_usd",
+      "observation_timezone": "America/New_York",
+      "observation_time": "12:00",
+      "market_timezone": "Asia/Seoul",
+      "price_type": "noon_buying_rate",
+      "roles": ["fx"],
+      "source": {"name": "fixture", "url": "https://example.test/usdkrw"},
+      "observations": [
+        {"date": "2026-09-15", "value": 1385},
+        {"date": "2026-09-16", "value": 1390},
+        {"date": "2026-09-17", "value": 1395},
+        {"date": "2026-09-18", "value": 1392},
+        {"date": "2026-09-21", "value": 1388},
+        {"date": "2026-09-22", "value": 1386},
+        {"date": "2026-09-23", "value": 1384},
+        {"date": "2026-09-24", "value": 1382}
+      ]
+    },
+    {
+      "symbol": "KRE",
+      "region": "US",
+      "asset_class": "equity",
+      "unit": "index",
+      "observation_timezone": "America/New_York",
+      "observation_time": "16:00",
+      "market_timezone": "America/New_York",
+      "price_type": "adjusted_close",
+      "roles": ["bank_equity", "affected_equity"],
+      "selection_priority": 20,
+      "source": {"name": "fixture", "url": "https://example.test/kre"},
+      "observations": [
+        {"date": "2023-03-09", "value": 51.00},
+        {"date": "2023-03-10", "value": 48.70},
+        {"date": "2023-03-13", "value": 42.80},
+        {"date": "2023-03-14", "value": 44.10},
+        {"date": "2023-03-15", "value": 43.00},
+        {"date": "2023-03-16", "value": 44.20},
+        {"date": "2023-03-17", "value": 43.50}
+      ]
+    },
+    {
+      "symbol": "CDX_IG",
+      "region": "US",
+      "asset_class": "credit",
+      "unit": "bp",
+      "observation_timezone": "America/New_York",
+      "observation_time": "16:00",
+      "market_timezone": "America/New_York",
+      "price_type": "market_close",
+      "roles": ["credit"],
+      "selection_priority": 20,
+      "source": {"name": "fixture", "url": "https://example.test/cdx"},
+      "observations": [
+        {"date": "2023-03-09", "value": 67},
+        {"date": "2023-03-10", "value": 73},
+        {"date": "2023-03-13", "value": 84},
+        {"date": "2023-03-14", "value": 80},
+        {"date": "2023-03-15", "value": 88},
+        {"date": "2023-03-16", "value": 82},
+        {"date": "2023-03-17", "value": 78}
+      ]
+    },
+    {
+      "symbol": "VIX",
+      "region": "US",
+      "asset_class": "volatility",
+      "unit": "index",
+      "observation_timezone": "America/New_York",
+      "observation_time": "16:00",
+      "market_timezone": "America/New_York",
+      "price_type": "market_close",
+      "roles": ["volatility"],
+      "selection_priority": 20,
+      "source": {"name": "fixture", "url": "https://example.test/vix"},
+      "observations": [
+        {"date": "2023-03-09", "value": 22.61},
+        {"date": "2023-03-10", "value": 24.80},
+        {"date": "2023-03-13", "value": 26.52},
+        {"date": "2023-03-14", "value": 23.73},
+        {"date": "2023-03-15", "value": 26.14},
+        {"date": "2023-03-16", "value": 22.99},
+        {"date": "2023-03-17", "value": 25.51}
+      ]
+    }
+  ]
+}
