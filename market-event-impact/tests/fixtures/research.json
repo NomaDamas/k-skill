@@ -1,0 +1,238 @@
+{
+  "research": [
+    {
+      "event_id": "fomc-2026-09-16",
+      "event_name": "September 2026 FOMC decision",
+      "event_type": "monetary_policy",
+      "region": "US",
+      "event_family": "FOMC",
+      "event_date": "2026-09-16",
+      "decision": {
+        "summary": "연준은 기준금리를 동결했다. 동결 자체는 사전 예상과 일치해 결정만 놓고 본 서프라이즈는 제한적이었다.",
+        "expected": true,
+        "surprise_assessment": "시장이 새롭게 반영한 핵심은 동결 여부가 아니라 향후 인하 속도와 최종금리 경로였다.",
+        "event_type": "동결보다 향후 정책경로 재가격이 중심인 이벤트",
+        "source": {"name": "fixture FOMC statement", "url": "https://example.test/fomc-statement"}
+      },
+      "what_changed": [
+        {
+          "channel": "성명서",
+          "finding": "인플레이션 진전에 대한 표현이 이전보다 신중해졌다.",
+          "significance": "조기 인하의 문턱이 높아졌다는 신호로 해석될 수 있다.",
+          "source": {"name": "fixture statement comparison", "url": "https://example.test/statement-redline"}
+        },
+        {
+          "channel": "SEP·점도표",
+          "finding": "위원들의 중간 정책금리 경로가 이전 전망보다 높아졌다.",
+          "significance": "동결 결정과 별개로 향후 완화 속도가 느려질 가능성을 보여줬다.",
+          "source": {"name": "fixture SEP", "url": "https://example.test/sep"}
+        },
+        {
+          "channel": "Powell 기자회견",
+          "finding": "인하 재개에는 물가 둔화에 대한 추가 확신이 필요하다는 조건이 강조됐다.",
+          "significance": "다음 회의보다 데이터 의존적인 경로가 중요해졌다.",
+          "source": {"name": "fixture press conference", "url": "https://example.test/presser"}
+        }
+      ],
+      "market_interpretation": [
+        {
+          "channel": "정책금리 경로",
+          "finding": "단기물 금리가 장기물보다 크게 상승했다.",
+          "significance": "시장이 장기 성장률보다 가까운 시기의 정책금리 경로를 더 크게 재가격한 움직임과 일관된다.",
+          "source": {"name": "fixture market wrap", "url": "https://example.test/market-wrap"}
+        },
+        {
+          "channel": "인플레이션·고용",
+          "finding": "향후 인하 여부가 다음 CPI와 고용지표에 더 민감해졌다.",
+          "significance": "이번 회의 해석은 후속 데이터에 의해 빠르게 뒤집힐 수 있다.",
+          "source": {"name": "fixture policy analysis", "url": "https://example.test/policy-analysis"}
+        }
+      ],
+      "transmission": [
+        {
+          "from": "더 높은 정책금리 경로",
+          "to": "미국 단기금리 상승",
+          "status": "consistent",
+          "evidence": "UST 2Y가 D-1 대비 6bp 올라 UST 10Y의 1bp 상승을 웃돌았다.",
+          "source": {"name": "fixture Treasury data", "url": "https://example.test/treasury"}
+        },
+        {
+          "from": "미국 단기금리 상승",
+          "to": "달러 강세",
+          "status": "limited",
+          "evidence": "DXY 상승폭은 0.15%에 그쳐 금리 반응보다 제한적이었다.",
+          "source": {"name": "fixture FX data", "url": "https://example.test/dxy"}
+        },
+        {
+          "from": "달러·미국 할인율 상승",
+          "to": "원화와 한국 주식 부담",
+          "status": "consistent",
+          "evidence": "다음 한국 거래일 USD/KRW는 0.36% 상승했고 KOSPI는 1.00% 하락했다.",
+          "source": {"name": "fixture Korea market data", "url": "https://example.test/korea-market"}
+        }
+      ],
+      "catalysts": [
+        {
+          "date": "2026-10-02",
+          "event": "미국 고용보고서(NFP)",
+          "why_it_matters": "노동시장 둔화 여부가 인하 재개 조건을 바꿀 수 있다.",
+          "source": {"name": "fixture BLS calendar", "url": "https://example.test/nfp-calendar"}
+        },
+        {
+          "date": "2026-10-07",
+          "event": "FOMC 의사록",
+          "why_it_matters": "점도표 분산과 위원별 정책경로 판단의 배경을 확인할 수 있다.",
+          "source": {"name": "fixture Federal Reserve calendar", "url": "https://example.test/minutes-calendar"}
+        },
+        {
+          "date": "2026-10-13",
+          "event": "미국 CPI",
+          "why_it_matters": "물가 둔화에 대한 추가 확신이라는 연준의 조건을 직접 시험한다.",
+          "source": {"name": "fixture BLS calendar", "url": "https://example.test/cpi-calendar"}
+        },
+        {
+          "date": "2026-10-28",
+          "event": "다음 FOMC",
+          "why_it_matters": "고용·물가 데이터가 실제 정책경로 변경으로 이어졌는지 확인한다.",
+          "source": {"name": "fixture Federal Reserve calendar", "url": "https://example.test/fomc-calendar"}
+        }
+      ],
+      "historical_context": {
+        "include": true,
+        "reason": "결정은 예상과 같았지만 향후 정책경로가 시장을 움직인 사례와 비교했습니다.",
+        "comparisons": [
+          {
+            "date": "2025-03-19",
+            "event": "FOMC 동결",
+            "similarity": "결정보다 점도표와 기자회견이 단기금리를 움직였다는 점이다.",
+            "difference": "당시에는 달러 반응이 더 강했다는 점이다.",
+            "source": {"name": "fixture historical study", "url": "https://example.test/history-1"}
+          },
+          {
+            "date": "2025-09-17",
+            "event": "FOMC 동결",
+            "similarity": "데이터 의존성과 인하 조건이 핵심이었다는 점이다.",
+            "difference": "당시 장기금리 반응은 이번보다 컸다는 점이다.",
+            "source": {"name": "fixture historical study", "url": "https://example.test/history-2"}
+          },
+          {
+            "date": "2026-06-17",
+            "event": "FOMC 동결",
+            "similarity": "동결이 예상됐고 정책경로 재가격이 중심이었다는 점이다.",
+            "difference": "이번에는 한국 주식의 다음 거래일 반응이 더 뚜렷했다는 점이다.",
+            "source": {"name": "fixture historical study", "url": "https://example.test/history-3"}
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "svb-failure-2023-03-10",
+      "event_name": "실리콘밸리은행(SVB) 파산",
+      "event_type": "financial_stress",
+      "region": "US",
+      "event_date": "2023-03-10",
+      "overview": {
+        "summary": "미국 규제당국은 예금 인출과 유동성 악화가 이어진 Silicon Valley Bank를 폐쇄했다. 이는 예정된 거시지표가 아니라 은행 시스템의 자금조달 안정성을 재평가하게 만든 신용·유동성 사건이었다.",
+        "expected": false,
+        "surprise_assessment": "폐쇄 자체와 손실 인식 속도가 사전 예상보다 빨랐고, 시장의 핵심 서프라이즈는 개별 은행 문제가 지역은행 전반의 예금·유동성 위험으로 번질 가능성이었다.",
+        "classification": "지역은행에서 시작된 금융스트레스와 정책경로 재가격 이벤트",
+        "source": {"name": "fixture regulator release", "url": "https://example.test/svb-regulator"}
+      },
+      "what_changed": [
+        {
+          "channel": "은행 상태",
+          "finding": "자본조달 계획 발표 이후 예금 인출이 가속됐고 규제당국이 은행을 폐쇄했다.",
+          "significance": "유동성 문제가 독립적인 자본조달 실패에서 시스템 전염 가능성으로 바뀌었다.",
+          "source": {"name": "fixture regulator release", "url": "https://example.test/svb-regulator"}
+        },
+        {
+          "channel": "정책 대응",
+          "finding": "당국은 예금자 보호와 은행권 유동성 공급 방안을 준비했다.",
+          "significance": "신용위험 확대와 정책 백스톱 기대가 동시에 가격에 반영될 조건이 형성됐다.",
+          "source": {"name": "fixture policy release", "url": "https://example.test/svb-policy"}
+        }
+      ],
+      "market_interpretation": [
+        {
+          "channel": "금리경로",
+          "finding": "미국 2년물 금리가 급락했다.",
+          "significance": "시장은 금융안정 위험이 추가 긴축 여력을 제한할 가능성을 가격에 반영했다.",
+          "source": {"name": "fixture market wrap", "url": "https://example.test/svb-market"}
+        },
+        {
+          "channel": "은행·신용위험",
+          "finding": "지역은행 주가는 하락하고 신용스프레드와 변동성은 상승했다.",
+          "significance": "충격이 단일 은행 주가가 아니라 은행권과 신용시장으로 전달됐음을 보여준다.",
+          "source": {"name": "fixture market wrap", "url": "https://example.test/svb-market"}
+        }
+      ],
+      "transmission": [
+        {
+          "from": "예금 유출과 은행 폐쇄",
+          "to": "지역은행 주가 하락",
+          "status": "confirmed",
+          "evidence": "KRE가 D-1 대비 D0에 하락하고 다음 거래일 낙폭이 확대됐다.",
+          "source": {"name": "fixture KRE", "url": "https://example.test/kre"}
+        },
+        {
+          "from": "금융안정 위험",
+          "to": "신용스프레드·VIX 상승",
+          "status": "consistent",
+          "evidence": "CDX IG와 VIX가 함께 상승해 위험회피가 주식 밖으로 확산됐다.",
+          "source": {"name": "fixture risk data", "url": "https://example.test/svb-risk"}
+        },
+        {
+          "from": "금융스트레스",
+          "to": "미국 단기금리 급락",
+          "status": "consistent",
+          "evidence": "UST 2Y가 D0에 46bp 하락해 향후 긴축경로가 빠르게 낮아졌다.",
+          "source": {"name": "fixture Treasury data", "url": "https://example.test/ust2y"}
+        }
+      ],
+      "catalysts": [
+        {
+          "date": "2023-03-12",
+          "event": "미국 당국의 예금자 보호·유동성 대책",
+          "why_it_matters": "정책 백스톱의 범위가 은행권 전염 위험을 제한하는지 확인한다.",
+          "source": {"name": "fixture policy calendar", "url": "https://example.test/svb-policy"}
+        },
+        {
+          "date": "2023-03-22",
+          "event": "FOMC 결정",
+          "why_it_matters": "금융안정 위험이 실제 정책금리 경로에 반영되는지 확인한다.",
+          "source": {"name": "fixture Fed calendar", "url": "https://example.test/fomc-calendar-2023"}
+        }
+      ],
+      "historical_context": {
+        "include": true,
+        "reason": "예금 유출과 유동성 충격이 은행주·신용·단기금리에 함께 전달된 사례와 비교했습니다.",
+        "comparisons": [
+          {
+            "date": "2008-03-16",
+            "event": "Bear Stearns 구제",
+            "matching_basis": "금융기관 유동성 충격과 정책 백스톱",
+            "similarity": "금융불안이 단기금리와 변동성에 즉시 반영됐다는 점이다.",
+            "difference": "당시에는 투자은행과 도매자금시장이 충격의 중심이었다.",
+            "source": {"name": "fixture historical source", "url": "https://example.test/bear-stearns"}
+          },
+          {
+            "date": "2008-09-15",
+            "event": "Lehman Brothers 파산",
+            "matching_basis": "은행 파산과 시스템 전염 위험",
+            "similarity": "은행주·신용스프레드·변동성이 동시에 악화됐다는 점이다.",
+            "difference": "Lehman 충격은 글로벌 결제·자금시장 전염 규모가 훨씬 컸다.",
+            "source": {"name": "fixture historical source", "url": "https://example.test/lehman"}
+          },
+          {
+            "date": "2019-09-17",
+            "event": "미국 레포시장 경색",
+            "matching_basis": "달러 유동성 경색과 중앙은행 대응",
+            "similarity": "유동성 부족이 정책 대응 기대와 단기금리에 영향을 줬다는 점이다.",
+            "difference": "당시에는 예금 손실 우려보다 단기자금시장 기능이 핵심이었다.",
+            "source": {"name": "fixture historical source", "url": "https://example.test/repo-stress"}
+          }
+        ]
+      }
+    }
+  ]
+}

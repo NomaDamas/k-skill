@@ -1,0 +1,6 @@
+{
+  "name": "company-analysis",
+  "description": "국내·해외 상장기업의 공개 공시와 실적발표를 대조해 3대 재무제표의 변화, 사업·경쟁구도, 주요 일정과 조회 시점 주가를 여섯 섹션의 한국어 채팅 분석으로 정리한다. 기업분석·실적발표 정리·수치 검증에 사용하며 매매 추천이나 PDF 보고서는 만들지 않는다.",
+  "profiles": ["lookup"],
+  "frontmatter": "name: company-analysis\ndescription: 국내·해외 상장기업의 공개 공시와 실적발표를 대조해 3대 재무제표의 변화, 사업·경쟁구도, 주요 일정과 조회 시점 주가를 여섯 섹션의 한국어 채팅 분석으로 정리한다. 기업분석·실적발표 정리·수치 검증에 사용하며 매매 추천이나 PDF 보고서는 만들지 않는다.\nlicense: MIT\nmetadata:\n  category: finance\n  locale: ko-KR\n  phase: v1"
+}

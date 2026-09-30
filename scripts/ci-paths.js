@@ -86,7 +86,17 @@ function listNodeTestFiles() {
   const cliTests = walkFiles(path.join(repoRoot, "packages", "k-skill-cli", "test"), (_full, name) =>
     name.endsWith(".js"),
   );
-  return [...rootTests, ...cliTests];
+  const governmentBondHarness = path.join(
+    repoRoot,
+    "government-bond-analysis",
+    "scripts",
+    "harness.mjs",
+  );
+  return [
+    ...rootTests,
+    ...cliTests,
+    ...(fs.existsSync(governmentBondHarness) ? [governmentBondHarness] : []),
+  ];
 }
 
 function listRootPythonTestModules() {

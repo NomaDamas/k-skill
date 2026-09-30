@@ -1,0 +1,64 @@
+{
+  "events": [
+    {
+      "event_id": "fomc-2026-09-16",
+      "event_name": "September 2026 FOMC decision",
+      "event_type": "monetary_policy",
+      "adapter": "FOMC",
+      "aliases": ["2026년 9월 FOMC", "September FOMC"],
+      "region": "US",
+      "event_family": "FOMC",
+      "event_date": "2026-09-16",
+      "event_time_local": "14:00",
+      "event_timezone": "America/New_York",
+      "actual": "hold",
+      "consensus": "hold",
+      "previous": "hold",
+      "source": {"name": "fixture", "url": "https://example.test/fomc"}
+    },
+    {
+      "event_id": "ecb-2026-10-29",
+      "event_name": "October 2026 ECB decision",
+      "event_type": "monetary_policy",
+      "adapter": "ECB",
+      "aliases": ["2026년 10월 ECB"],
+      "region": "EU",
+      "event_family": "ECB",
+      "event_date": "2026-10-29",
+      "event_time_local": "14:15",
+      "event_timezone": "Europe/Frankfurt",
+      "source": {"name": "fixture", "url": "https://example.test/ecb"}
+    },
+    {
+      "event_id": "fomc-2026-10-28",
+      "event_name": "October 2026 FOMC decision",
+      "event_type": "monetary_policy",
+      "adapter": "FOMC",
+      "aliases": ["2026년 10월 FOMC", "October FOMC"],
+      "region": "US",
+      "event_family": "FOMC",
+      "event_date": "2026-10-28",
+      "event_time_local": "14:00",
+      "event_timezone": "America/New_York",
+      "source": {"name": "fixture", "url": "https://example.test/fomc-next"}
+    },
+    {
+      "event_id": "svb-failure-2023-03-10",
+      "event_name": "실리콘밸리은행(SVB) 파산",
+      "event_type": "financial_stress",
+      "event_structure": "developing_event",
+      "aliases": ["SVB 파산", "SVB 사태", "Silicon Valley Bank collapse"],
+      "region": "US",
+      "event_date": "2023-03-10",
+      "event_time_local": "11:15",
+      "event_timezone": "America/New_York",
+      "event_sequence": [
+        {"date": "2023-03-09", "stage": "prelude", "event": "채권매각 손실 및 자본조달 이슈 공개", "source": {"name": "fixture news", "url": "https://example.test/svb-prelude"}},
+        {"date": "2023-03-10", "time_local": "11:15", "timezone": "America/New_York", "stage": "trigger", "event": "규제당국의 은행 폐쇄", "source": {"name": "fixture FDIC", "url": "https://example.test/svb-regulator"}},
+        {"date": "2023-03-12", "stage": "policy_response", "event": "예금자 보호 및 유동성 대책 발표", "source": {"name": "fixture Federal Reserve", "url": "https://example.test/svb-policy"}},
+        {"date": "2023-03-13", "stage": "market_reopen", "event": "주말 이후 첫 시장 재개", "source": {"name": "fixture market data", "url": "https://example.test/svb-reopen"}}
+      ],
+      "source": {"name": "fixture regulator release", "url": "https://example.test/svb-regulator"}
+    }
+  ]
+}

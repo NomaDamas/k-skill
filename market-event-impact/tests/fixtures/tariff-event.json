@@ -1,0 +1,77 @@
+{
+  "events": [
+    {
+      "event_id": "us-reciprocal-tariff-2025-04-02",
+      "event_name": "2025년 미국 상호관세 발표와 무역긴장 전개",
+      "event_type": "trade_policy",
+      "event_structure": "developing_event",
+      "event_date": "2025-04-02",
+      "event_time_local": "16:06",
+      "event_timezone": "America/New_York",
+      "region": "US",
+      "aliases": ["미국 상호관세 발표", "2025 reciprocal tariffs", "Liberation Day tariffs"],
+      "source": {
+        "name": "The White House — Executive Order 14257",
+        "url": "https://www.whitehouse.gov/presidential-actions/2025/04/regulating-imports-with-a-reciprocal-tariff-to-rectify-trade-practices-that-contribute-to-large-and-persistent-annual-united-states-goods-trade-deficits/"
+      },
+      "event_sequence": [
+        {
+          "date": "2025-04-02",
+          "time_local": "16:06",
+          "timezone": "America/New_York",
+          "stage": "announcement",
+          "event": "백악관에서 상호관세 조치 발표",
+          "source": {
+            "name": "GovInfo — Presidential Daily Diary",
+            "url": "https://www.govinfo.gov/app/details/DCPD-202500423"
+          }
+        },
+        {
+          "date": "2025-04-04",
+          "stage": "retaliation",
+          "event": "중국, 미국산 수입품에 34% 추가 관세 발표(4월 10일 시행)",
+          "source": {
+            "name": "중국 재정부 관세세칙위원회",
+            "url": "https://gss.mof.gov.cn/gzdt/zhengcefabu/202504/t20250404_3961451.htm"
+          }
+        },
+        {
+          "date": "2025-04-05",
+          "stage": "implementation",
+          "event": "미국의 기본 10% 추가 관세 시행",
+          "source": {
+            "name": "The White House — Executive Order 14257",
+            "url": "https://www.whitehouse.gov/presidential-actions/2025/04/regulating-imports-with-a-reciprocal-tariff-to-rectify-trade-practices-that-contribute-to-large-and-persistent-annual-united-states-goods-trade-deficits/"
+          }
+        },
+        {
+          "date": "2025-04-08",
+          "stage": "escalation",
+          "event": "미국, 중국산 수입품의 추가 관세율을 34%에서 84%로 인상 발표",
+          "source": {
+            "name": "The White House — Executive Order 14266 background",
+            "url": "https://www.whitehouse.gov/presidential-actions/2025/04/modifying-reciprocal-tariff-rates-to-reflect-trading-partner-retaliation-and-alignment/"
+          }
+        },
+        {
+          "date": "2025-04-09",
+          "stage": "retaliation",
+          "event": "중국, 미국산 수입품 추가 관세율을 34%에서 84%로 인상 발표(4월 10일 시행)",
+          "source": {
+            "name": "중국 재정부 관세세칙위원회",
+            "url": "https://gss.mof.gov.cn/gzdt/zhengcejiedu/202504/t20250409_3961685.htm"
+          }
+        },
+        {
+          "date": "2025-04-09",
+          "stage": "policy_response",
+          "event": "미국, 중국 관세율을 125%로 추가 인상하는 한편 다른 국가별 상호관세를 90일 유예(4월 10일 시행)",
+          "source": {
+            "name": "The White House — Executive Order 14266",
+            "url": "https://www.whitehouse.gov/presidential-actions/2025/04/modifying-reciprocal-tariff-rates-to-reflect-trading-partner-retaliation-and-alignment/"
+          }
+        }
+      ]
+    }
+  ]
+}
