@@ -81,6 +81,7 @@ const {
   searchCoupangProducts
 } = require("./coupang");
 const { searchRegionCode } = require("./region-lookup");
+const { classifyUpstreamFailure } = require("./upstream-errors");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
 const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require("./national-pension");
 const { normalizeFscCorpQuery, fetchFscCorpOutline } = require("./fsc-corp");
@@ -6446,12 +6447,27 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   });
 
   app.setErrorHandler((error, request, reply) => {
-    const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+    const upstreamFailure = classifyUpstreamFailure(error);
+    const statusCode = upstreamFailure
+      ? upstreamFailure.statusCode
+      : error.statusCode && error.statusCode >= 400
+        ? error.statusCode
+        : 500;
     request.log[getErrorLogLevel(statusCode)](error);
     const payload = {
-      error: error.code || (statusCode >= 500 ? "proxy_error" : "request_error"),
+      error: upstreamFailure
+        ? upstreamFailure.error
+        : error.code || (statusCode >= 500 ? "proxy_error" : "request_error"),
       message: error.message
     };
+
+    if (upstreamFailure) {
+      payload.upstream = {
+        failure: upstreamFailure.error,
+        cause: upstreamFailure.cause,
+        route: request.url
+      };
+    }
 
     if (Array.isArray(error.candidateStations)) {
       payload.candidate_stations = error.candidateStations;

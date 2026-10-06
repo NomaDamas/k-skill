@@ -54,6 +54,7 @@ const {
 } = require("../src/coupang");
 const { parseXmlItems } = require("../src/molit");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
+const { classifyUpstreamFailure } = require("../src/upstream-errors");
 
 test("makeCacheKey requires a non-empty route to prevent cross-route collisions", () => {
   assert.throws(() => makeCacheKey({ q: "강남" }), /route/);
@@ -7562,4 +7563,113 @@ test("health endpoint reports buildingRegisterConfigured from DATA_GO_KR_API_KEY
 
   assert.equal(offBody.upstreams.buildingRegisterConfigured, false);
   assert.equal(onBody.upstreams.buildingRegisterConfigured, true);
+});
+
+function upstreamFetchFailure(code) {
+  const error = new TypeError("fetch failed");
+  error.cause = Object.assign(new Error(code), { code });
+  return error;
+}
+
+function upstreamTimeoutFailure() {
+  const error = new Error("The operation was aborted due to timeout");
+  error.name = "TimeoutError";
+  error.code = "ABORT_ERR";
+  return error;
+}
+
+test("classifyUpstreamFailure separates unreachable, timeout, and opaque failures", () => {
+  assert.deepEqual(classifyUpstreamFailure(upstreamFetchFailure("ECONNREFUSED")), {
+    error: "upstream_unreachable",
+    cause: "ECONNREFUSED",
+    statusCode: 503
+  });
+  assert.deepEqual(classifyUpstreamFailure(upstreamFetchFailure("ENOTFOUND")), {
+    error: "upstream_unreachable",
+    cause: "ENOTFOUND",
+    statusCode: 503
+  });
+  assert.deepEqual(classifyUpstreamFailure(upstreamFetchFailure("ETIMEDOUT")), {
+    error: "upstream_timeout",
+    cause: "ETIMEDOUT",
+    statusCode: 504
+  });
+  assert.deepEqual(classifyUpstreamFailure(upstreamTimeoutFailure()), {
+    error: "upstream_timeout",
+    cause: "ABORT_ERR",
+    statusCode: 504
+  });
+
+  const bare = new TypeError("fetch failed");
+  assert.deepEqual(classifyUpstreamFailure(bare), {
+    error: "upstream_unreachable",
+    cause: null,
+    statusCode: 503
+  });
+
+  assert.equal(classifyUpstreamFailure(new Error("bad request")), null);
+  assert.equal(classifyUpstreamFailure(undefined), null);
+});
+
+test("data.go.kr and KOSIS connect failures answer 503 upstream_unreachable with a cause", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("ECONNREFUSED");
+  };
+
+  const app = buildServer({
+    env: {
+      KMA_OPEN_API_KEY: "kma-key",
+      KOSIS_API_KEY: "kosis-key",
+      DATA_GO_KR_API_KEY: "data-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const weather = await app.inject({ method: "GET", url: "/v1/korea-weather/forecast?nx=60&ny=127" });
+  assert.equal(weather.statusCode, 503);
+  assert.equal(weather.json().error, "upstream_unreachable");
+  assert.equal(weather.json().upstream.cause, "ECONNREFUSED");
+  assert.match(weather.json().upstream.route, /korea-weather/);
+
+  const kosis = await app.inject({ method: "GET", url: "/v1/kosis/search?q=%EC%9D%B8%EA%B5%AC" });
+  assert.equal(kosis.statusCode, 503);
+  assert.equal(kosis.json().error, "upstream_unreachable");
+  assert.equal(kosis.json().upstream.cause, "ECONNREFUSED");
+
+  const holiday = await app.inject({ method: "GET", url: "/v1/korean-holiday/calendar?year=2026&month=10" });
+  assert.equal(holiday.statusCode, 503);
+  assert.equal(holiday.json().error, "upstream_unreachable");
+});
+
+test("upstream connect timeouts answer 504 upstream_timeout", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamTimeoutFailure();
+  };
+
+  const app = buildServer({
+    env: {
+      KMA_OPEN_API_KEY: "kma-key",
+      KOSIS_API_KEY: "kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const weather = await app.inject({ method: "GET", url: "/v1/korea-weather/forecast?nx=60&ny=127" });
+  assert.equal(weather.statusCode, 504);
+  assert.equal(weather.json().error, "upstream_timeout");
+  assert.equal(weather.json().upstream.cause, "ABORT_ERR");
+
+  const kosis = await app.inject({ method: "GET", url: "/v1/kosis/search?q=%EC%9D%B8%EA%B5%AC" });
+  assert.equal(kosis.statusCode, 504);
+  assert.equal(kosis.json().error, "upstream_timeout");
 });
