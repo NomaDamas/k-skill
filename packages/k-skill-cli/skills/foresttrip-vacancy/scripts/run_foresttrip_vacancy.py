@@ -31,6 +31,14 @@ MAX_CONCURRENCY = 5
 DEFAULT_WEEK_RANGE = 1
 CATEGORY_CODES = {"01", "02"}
 RESERVE_ROOM_MARKER = "예비"
+LOGIN_FORM_SELECTOR = "#mmberId"
+LOGIN_SUBMIT_SELECTOR = "input.loginBtn"
+RESERVATION_SIDO_SELECTOR = "#srchSido"
+RESERVATION_INSTT_SELECTOR = "#srchInstt"
+SESSION_RETRY_HINT = (
+    "Fix the credentials, then rerun with --refresh-session so a stale cached "
+    "session is not reused."
+)
 
 
 @dataclass
@@ -208,6 +216,34 @@ def save_session_cache(path: Path, session: Session) -> None:
         pass
 
 
+def has_element(page: Any, selector: str) -> bool:
+    """Return True when the selector resolves to at least one node on the page."""
+    return page.locator(selector).count() > 0
+
+
+def login_failure_message() -> str:
+    return (
+        "foresttrip login failed: the login form is still present after submitting credentials. "
+        "Check KSKILL_FORESTTRIP_ID and KSKILL_FORESTTRIP_PASSWORD. "
+        "If CAPTCHA or additional authentication is required, complete it on the official "
+        "foresttrip.go.kr login screen and retry. " + SESSION_RETRY_HINT
+    )
+
+
+def reservation_page_failure_message(page: Any) -> str:
+    missing = [
+        selector
+        for selector in (RESERVATION_SIDO_SELECTOR, RESERVATION_INSTT_SELECTOR)
+        if not has_element(page, selector)
+    ]
+    return (
+        "foresttrip reservation page did not expose " + ", ".join(missing) + ". "
+        "The login session may have expired or 숲나들e changed the page markup. "
+        + SESSION_RETRY_HINT
+        + " If it persists, the helper's session bootstrap needs an update."
+    )
+
+
 def bootstrap_session(*, forest_id: str, forest_pw: str, ttl_sec: int = 600) -> Session:
     try:
         from playwright.sync_api import Error as PlaywrightError  # type: ignore[reportMissingImports]
@@ -228,17 +264,31 @@ def bootstrap_session(*, forest_id: str, forest_pw: str, ttl_sec: int = 600) -> 
             ) from exc
         page = browser.new_page()
         page.goto(LOGIN_URL)
-        page.fill("#mmberId", forest_id)
+        page.fill(LOGIN_FORM_SELECTOR, forest_id)
         page.fill("#gnrlMmberPssrd", forest_pw)
-        page.click("input.loginBtn")
+        page.click(LOGIN_SUBMIT_SELECTOR)
         page.wait_for_load_state("networkidle")
         page.goto(RSRVT_PAGE)
         page.wait_for_load_state("networkidle")
 
+        failure: str | None = None
+        if has_element(page, LOGIN_FORM_SELECTOR):
+            failure = login_failure_message()
+        elif not has_element(page, RESERVATION_SIDO_SELECTOR) or not has_element(
+            page, RESERVATION_INSTT_SELECTOR
+        ):
+            failure = reservation_page_failure_message(page)
+        if failure is not None:
+            browser.close()
+            raise SystemExit(failure)
+
         csrf_locator = page.locator('input[name="_csrf"]')
         if csrf_locator.count() == 0:
             browser.close()
-            raise SystemExit("login succeeded page did not expose a CSRF token")
+            raise SystemExit(
+                "foresttrip login appeared to succeed but the reservation page did not "
+                "expose a CSRF token. " + SESSION_RETRY_HINT
+            )
         csrf = csrf_locator.first.get_attribute("value") or ""
 
         forests: dict[str, str] = {}
