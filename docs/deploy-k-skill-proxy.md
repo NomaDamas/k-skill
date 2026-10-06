@@ -120,6 +120,60 @@ The expected production value is `KSKILL_PROXY_TRUST_PROXY_HOPS=1`. If the key i
 
 The `.env` file stays on `gpu01` and must not be copied into the repository.
 
+## Upstream connectivity triage
+
+`/v1/*` routes that call `apis.data.go.kr`, `kosis.kr`, or another public
+upstream can answer `5xx` because the upstream is unreachable rather than
+because the proxy is broken. Since issue #700 the proxy separates those cases
+instead of returning an opaque `500 proxy_error` / `"fetch failed"` pair:
+
+| Response | Meaning |
+| --- | --- |
+| `503 upstream_unreachable` | DNS or connect failure (`ENOTFOUND`, `ECONNREFUSED`, `ECONNRESET`, …) |
+| `504 upstream_timeout` | connect/response timeout (`UND_ERR_CONNECT_TIMEOUT`, `AbortSignal.timeout`, …) |
+| `502 upstream_error` / `upstream_fetch_failed` | upstream reachable and returned an error payload |
+
+`upstream.cause` names the underlying socket code and `upstream.route` the
+requested path, so a single curl identifies the failing hop.
+
+Triage order when a representative route fails:
+
+```bash
+# 1. Does the upstream family answer at all? KMA/AirKorea/MOLIT/KOSIS all
+#    resolve into the 27.101.0.0/16 netblock.
+for h in apis.data.go.kr kosis.kr; do
+  getent hosts "$h"
+  timeout 12 curl -sS -o /dev/null -w "$h %{http_code} connect=%{time_connect} total=%{time_total}\n" "https://$h/" \
+    || echo "unreachable: $h"
+done
+
+# 2. Compare with an upstream on a different network (api.odcloud.kr/NTS works).
+timeout 12 curl -sS -o /dev/null -w "odcloud %{http_code}\n" "https://api.odcloud.kr/"
+
+# 3. Confirm the proxy itself is up and the upstream flags are on.
+curl -fsS http://127.0.0.1:8080/health
+curl -fsS https://k-skill-proxy.nomadamas.org/health
+
+# 4. Re-run the failing routes and read upstream.cause.
+curl -sS --get "https://k-skill-proxy.nomadamas.org/v1/korea-weather/forecast" \
+  --data-urlencode 'nx=60' --data-urlencode 'ny=127'
+curl -sS --get "https://k-skill-proxy.nomadamas.org/v1/kosis/search" \
+  --data-urlencode 'query=인구'
+```
+
+Interpretation:
+
+- If the `27.101.0.0/16` hosts time out from both the Mac and gpu01 while a
+  different-network upstream answers, the fault is on the path to that netblock
+  (ISP routing or the upstream edge), not in the proxy. Report it and wait for
+  the upstream; the proxy will keep answering `503 upstream_unreachable` /
+  `504 upstream_timeout` with a populated `upstream.cause`.
+- If only one route fails while its siblings answer, inspect that route's
+  upstream module (`packages/k-skill-proxy/src/*.js`) and its service-key flag
+  in `/health`.
+- After the upstream recovers, re-run the commands above plus the `/health` and
+  `/privacy` smoke tests.
+
 ## Required runtime env (gpu01)
 
 Cloudflare Tunnel forwards to `127.0.0.1:8080`. Fastify must trust that one hop
