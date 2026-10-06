@@ -7599,6 +7599,11 @@ test("classifyUpstreamFailure separates unreachable, timeout, and opaque failure
     cause: "ABORT_ERR",
     statusCode: 504
   });
+  assert.deepEqual(classifyUpstreamFailure(new DOMException("The operation was aborted due to timeout", "TimeoutError")), {
+    error: "upstream_timeout",
+    cause: "TimeoutError",
+    statusCode: 504
+  });
 
   const bare = new TypeError("fetch failed");
   assert.deepEqual(classifyUpstreamFailure(bare), {

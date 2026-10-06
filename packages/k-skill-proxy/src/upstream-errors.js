@@ -22,8 +22,14 @@ const TIMEOUT_CAUSE_CODES = new Set([
   "UND_ERR_BODY_TIMEOUT"
 ]);
 
+// Only string socket codes are meaningful; DOMException timeouts/aborts carry
+// numeric legacy codes (23/20) that would hide the useful `error.name`.
+function stringCode(value) {
+  return typeof value === "string" && value ? value : null;
+}
+
 function failureCode(error) {
-  return error?.cause?.code || error?.code || null;
+  return stringCode(error?.cause?.code) || stringCode(error?.code);
 }
 
 function isTimeoutFailure(error) {

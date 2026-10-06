@@ -174,7 +174,7 @@ Interpretation:
 - After the upstream recovers, re-run the commands above plus the `/health` and
   `/privacy` smoke tests.
 
-
+## Required runtime env (gpu01)
 
 Cloudflare Tunnel forwards to `127.0.0.1:8080`. Fastify must trust that one hop
 or every external client shares a single rate-limit bucket (`request.ip` becomes
