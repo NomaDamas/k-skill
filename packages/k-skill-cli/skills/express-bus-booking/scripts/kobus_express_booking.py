@@ -25,6 +25,8 @@ from typing import Iterable
 BASE_URL = "https://www.kobus.co.kr"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125 Safari/537.36"
 FN_SATS_RE = re.compile(r"fnSatsChc\((.*?)\)", re.DOTALL)
+COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+MIN_SATS_ARGS = 14
 ARG_RE = re.compile(r"'([^']*)'")
 FORM_RE = re.compile(r"<form\b([^>]*)>(.*?)</form>", re.DOTALL | re.IGNORECASE)
 INPUT_RE = re.compile(r"<input\b([^>]+)>", re.DOTALL | re.IGNORECASE)
@@ -129,9 +131,14 @@ def search(op: urllib.request.OpenerDirector, depart: str, arrive: str, date: st
         timeout,
     )
     schedules: list[Schedule] = []
-    for idx, m in enumerate(FN_SATS_RE.finditer(body), 1):
+    # KOBUS는 예비 행 템플릿을 HTML 주석 안의 fnSatsChc(deprTime, ...) 호출로 남겨 둔다.
+    # 주석을 먼저 제거하고, 인용부호 없는 자리표시자 호출(인수 부족)은 운행편에서 제외한다.
+    visible = COMMENT_RE.sub("", body)
+    for idx, m in enumerate(FN_SATS_RE.finditer(visible), 1):
         args = ARG_RE.findall(m.group(1))
-        context = strip_tags(body[max(0, m.start() - 900) : m.start() + 900])
+        if len(args) < MIN_SATS_ARGS:
+            continue
+        context = strip_tags(visible[max(0, m.start() - 900) : m.start() + 900])
         departure = args[1][:2] + ":" + args[1][2:4] if len(args) > 1 and len(args[1]) >= 4 else None
         schedules.append(
             Schedule(
