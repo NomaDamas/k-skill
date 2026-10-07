@@ -46,6 +46,8 @@ Runtime mode: generic
 - **점수·등급·"위험" 같은 해석 라벨을 산출하지 않는다.** 각 항목의 사실 + 출처 + 조회시각만 병렬한다. 판단은 사용자 몫이다.
 - 한 항목 조회가 실패해도 전체를 막지 않고 그 항목만 정직하게 강등한다(`unavailable` + 사유).
 - 단품 helper를 찾지 못하면(개별 설치 등) 해당 섹션만 건너뛰고 나머지를 진행한다.
+- 국세청 상태 정상과 부정당제재 0건은 특정 입찰공고의 참가자격 판정이 아니다. 지역/면허·업종/실적/등록·인증 등 해당 공고의 요건을 공식 최종 원문과 따로 대조한다.
+- 부정당제재는 성공한 0건(`no_active_sanctions`)과 조회 실패(`lookup_failed` 또는 `unavailable`)를 구분하고, `data.upstream_response`와 `data.coverage.checked_at`을 보존한다. 캐시 hit이면 재조회 시각이 아니라 원래 upstream 확인시각으로 설명한다.
 
 ## When to use
 

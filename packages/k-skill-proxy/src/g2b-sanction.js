@@ -75,23 +75,25 @@ async function fetchG2bSanctions({ bizno, serviceKey, fetchImpl = global.fetch }
   try {
     response = await doFetch(url.toString(), { signal: AbortSignal.timeout(20000) });
   } catch (err) {
-    return { error: "upstream_timeout", message: `Upstream request failed: ${err.message}` };
+    return { lookup_status: "lookup_failed", error: "upstream_timeout", message: `Upstream request failed: ${err.message}` };
   }
 
   if (response.status === 401 || response.status === 403) {
     return {
+      lookup_status: "lookup_failed",
       error: "upstream_forbidden",
       message: `Procurement upstream returned ${response.status}. The proxy key may not be approved for service 15129466.`,
     };
   }
   if (!response.ok) {
-    return { error: "upstream_error", message: `Upstream returned ${response.status}` };
+    return { lookup_status: "lookup_failed", error: "upstream_error", message: `Upstream returned ${response.status}` };
   }
 
   const text = await response.text();
   const gatewayAuthError = parseGatewayAuthError(text);
   if (gatewayAuthError) {
     return {
+      lookup_status: "lookup_failed",
       error: "upstream_forbidden",
       message: `Procurement upstream rejected the request (${gatewayAuthError}). The proxy key may not be approved for service 15129466.`,
     };
@@ -101,10 +103,11 @@ async function fetchG2bSanctions({ bizno, serviceKey, fetchImpl = global.fetch }
   try {
     payload = JSON.parse(text);
   } catch {
-    return { error: "upstream_invalid_response", message: "Procurement upstream did not return valid JSON." };
+    return { lookup_status: "lookup_failed", error: "upstream_invalid_response", message: "Procurement upstream did not return valid JSON." };
   }
   if (isAuthResultCode(payload?.response?.header?.resultCode)) {
     return {
+      lookup_status: "lookup_failed",
       error: "upstream_forbidden",
       message: `Procurement upstream rejected the request (${payload.response.header.resultMsg || "auth error"}). The proxy key may not be approved for service 15129466.`,
     };
@@ -114,13 +117,15 @@ async function fetchG2bSanctions({ bizno, serviceKey, fetchImpl = global.fetch }
   try {
     extracted = extractSanctionItems(payload);
   } catch (err) {
-    return { error: "upstream_error", message: `Procurement upstream error response: ${err.message}` };
+    return { lookup_status: "lookup_failed", error: "upstream_error", message: `Procurement upstream error response: ${err.message}` };
   }
 
+  const checkedAt = new Date().toISOString();
   return {
     bizno,
     total_count: extracted.totalCount,
     active_sanctions: extracted.items,
+    lookup_status: extracted.totalCount > 0 ? "active_sanctions_found" : "no_active_sanctions",
     coverage: {
       scope: "currently-effective-g2b-sanctions",
       match_basis: "exact-business-number",
@@ -130,8 +135,15 @@ async function fetchG2bSanctions({ bizno, serviceKey, fetchImpl = global.fetch }
       ],
       zero_result_meaning:
         "조회 시점에 해당 사업자등록번호로 현재 유효한 제재가 조회되지 않았다는 뜻이며, 과거 만료·해제 제재가 없다는 뜻은 아니다.",
-      checked_at: new Date().toISOString(),
+      checked_at: checkedAt,
     },
+    source: {
+      data_go_kr_dataset: "15129466",
+      upstream: G2B_SANCTION_URL,
+      query: { inqryDiv: "1", bizno, numOfRows: "100", pageNo: "1", type: "json" },
+      checked_at: checkedAt,
+    },
+    upstream_response: payload,
     match_basis:
       "Exact business-number match (inqryDiv=1) — the list of sanctions in force at query time (first 100). Expired/lifted sanctions and non-registered suppliers are not provided by the upstream.",
   };

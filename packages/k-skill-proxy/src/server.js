@@ -4404,6 +4404,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     if (!config.molitApiKey) {
       reply.code(503);
       return {
+        ...(route === "g2b-sanctioned-supplier" ? { lookup_status: "lookup_failed" } : {}),
         error: "upstream_not_configured",
         message: "DATA_GO_KR_API_KEY is not configured on the proxy server.",
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
@@ -4425,6 +4426,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     } catch (error) {
       reply.code(502);
       return {
+        ...(route === "g2b-sanctioned-supplier" ? { lookup_status: "lookup_failed" } : {}),
         error: "proxy_error",
         message: error.message,
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
