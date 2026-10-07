@@ -20,3 +20,4 @@ infra/eatpl-relay/.env.*
 
 .agents/
 .cache/
+.gstack/
