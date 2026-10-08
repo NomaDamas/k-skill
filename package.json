@@ -22,6 +22,7 @@
     "release:npm": "changeset publish",
     "sync:cli-skills": "node scripts/sync-cli-skills.js",
     "generate:skill-stubs": "node scripts/generate-skill-stubs.js",
+    "generate:skill-list": "node scripts/generate-skill-list.js",
     "migrate:cli-assets": "node scripts/migrate-cli-asset-instructions.js"
   },
   "devDependencies": {
