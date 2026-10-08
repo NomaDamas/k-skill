@@ -1,18 +1,18 @@
 # Runtime Action Audit
 
-2026-09-10 기준 top-level `SKILL.md` 127개를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
+top-level `SKILL.md` 전체를 돌쇠 우선 실행 계약으로 전수 검토한 결과다. 이 표는 스킬 선택/분류용이며 실제 portable 계약은 각 `SKILL.md`의 `## Runtime contract (required)` 블록이 담당한다.
 
 ## Mode definitions
 
-- **commerce** (12): 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제
-- **booking** (12): 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제
-- **submission** (12): 공식 폼·첨부 준비 → `clarify` 후 제출/지원/결제/취소
-- **recruiting** (2): 기업 인재검색 → shortlist → 유료 열람/제안 직전 `clarify`
-- **account** (2): 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify`
-- **legal** (7): 공식 법률·정부 표면의 로그인/인증/서류 준비를 진행하고 `clarify` 후 제출·입찰·수수료 결제
-- **operations** (1): k-skill 설치·업데이트·복구·런타임 연결을 실제 적용하고 검증
-- **local** (12): 요청 산출물을 로컬에서 실제 생성·변환·정리
-- **lookup** (67): 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
+- **commerce**: 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제
+- **booking**: 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제
+- **submission**: 공식 폼·첨부 준비 → `clarify` 후 제출/지원/결제/취소
+- **recruiting**: 기업 인재검색 → shortlist → 유료 열람/제안 직전 `clarify`
+- **account**: 지원되는 계정 작업 수행 → 비가역 변경 직전 `clarify`
+- **legal**: 공식 법률·정부 표면의 로그인/인증/서류 준비를 진행하고 `clarify` 후 제출·입찰·수수료 결제
+- **operations**: k-skill 설치·업데이트·복구·런타임 연결을 실제 적용하고 검증
+- **local**: 요청 산출물을 로컬에서 실제 생성·변환·정리
+- **lookup**: 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결
 
 ## Complete catalog
 
@@ -26,6 +26,7 @@
 | `building-register-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `bunjang-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
 | `cheap-gas-nearby` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `company-analysis` | `lookup` | 공개 공시·실적발표를 대조해 3대 재무제표와 주가를 포함한 6개 섹션의 채팅 분석 완료 |
 | `consumer-price-safety-search` | `lookup` | 공식 소비자 가격·리콜 표면의 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `corporate-registration-consulting` | `legal` | 공식 법률 표면에서 로그인·서류 준비를 진행하고 `clarify` 후 허용된 제출·수수료 결제 |
 | `coupang-product-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
@@ -54,6 +55,7 @@
 | `geeknews-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `gongsijiga-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `gov-overseas-trip-report` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `government-bond-analysis` | `lookup` | 한국·미국 국채 금리의 관측일·만기·단위를 검증해 변화와 공식 확인 일정을 출처와 함께 정리 |
 | `government-support-survey` | `submission` | 정부지원 공고 전수조사와 신청 요건 확인 후 공식 신청서·첨부를 준비하고 `clarify` 후 제출 |
 | `han-river-water-level` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `hankookilbo-news` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
@@ -80,6 +82,7 @@
 | `kleague-results` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `kopis-performance-search` | `lookup` | KOPIS 공연·시설 목록과 상세 조회 완료 |
 | `korea-weather` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `korean-bond-search` | `lookup` | 채권 후보를 식별하고 출처·확인시각이 보존된 발행조건과 옵션을 비교 |
 | `korean-character-count` | `local` | 요청 산출물을 로컬에서 실제 생성·변환·정리 |
 | `korean-cinema-search` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
 | `korean-heritage-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
@@ -106,6 +109,7 @@
 | `library-book-search` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
 | `localdata-business-status` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `lotto-results` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `market-event-impact` | `lookup` | 사건의 공식 발표·당시 보도·확정 가격을 대조하고, 교차자산 영향과 근거등급을 한국어로 설명 |
 | `market-kurly-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |
 | `mfds-drug-safety` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `mfds-food-safety` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |

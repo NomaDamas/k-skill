@@ -108,6 +108,9 @@
 - KRX OPEN API 메인: https://openapi.krx.co.kr/contents/OPP/MAIN/main/index.cmd
 - KRX 종목 기본정보 API (KOSPI): http://data-dbg.krx.co.kr/svc/apis/sto/stk_isu_base_info
 - KRX 일별 매매정보 API (KOSPI): http://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd
+- SEIBro 채권정보: https://seibro.or.kr/websquare/control.jsp?w2xPath=/IPORTAL/user/bond/BIP_CNTS02001V.xml&menuNo=285 — `korean-bond-search`의 1차 원천. WebSquare 화면의 HTTP 200만으로 조회 성공을 판단하지 않고, 공식 상세 화면 확인 또는 실제 내보내기 파일을 사용한다.
+- 금융감독원 DART: https://dart.fss.or.kr/ — `korean-bond-search`가 CB·EB·BW 발행 여부와 조건을 원문으로 보강할 때 사용한다.
+- 한국거래소 KRX: https://global.krx.co.kr/ — `korean-bond-search`에서 상장 정보가 필요하고 SEIBro 값이 비어 있을 때 보강 원천으로 사용한다.
 - 잡코리아 공개 채용공고 검색: https://www.jobkorea.co.kr/Search/?stext=<검색어> — `job-posting-match`가 로그인 없이 `/Recruit/GI_Read/<id>` 링크가 포함된 공개 결과를 직접 조회한다.
 - 사람인 공개 채용공고 검색: https://www.saramin.co.kr/zf_user/search/recruit?searchword=<검색어> — `job-posting-match`가 로그인 없이 `rec_idx`가 포함된 공개 결과를 직접 조회한다.
 - MOLIT 아파트 매매 실거래가 API: https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade
@@ -276,6 +279,10 @@
 - 한국도로공사 공공데이터포털 실시간 교통량: https://data.ex.co.kr/openapi/odtraffic/trafficAmountByRealtime — 공개 데모 키 `test`로 무가입 호출 가능(2026-07-21 확인), 잘못된 키는 HTTP 200 + `{"code":"ERROR"}` 반환
 - 국가교통정보센터 ITS CCTV 정보: https://openapi.its.go.kr:9443/cctvInfo — 공개 데모 키 `test`로 무가입 호출 가능, `getType=json`이어도 성공 응답은 XML, 잘못된 키는 HTTP 401 resultCode 4005
 - 한국은행 ECOS Open API: https://ecos.bok.or.kr/api — positional URL(`/<Service>/<key>/json/kr/...`), 공개 데모 키 `sample`로 무가입 호출 가능(2026-07-21 확인, 호출당 최대 10행/ERROR-301), 잘못된 키는 HTTP 200 + `INFO-100`, 빈 결과는 `INFO-200`
+- 한국 국채시장 월별 발행 캘린더: https://ktb.moef.go.kr/mnbyIsuCldr.do — `government-bond-analysis`의 국고채 입찰일 공식 확인처. 실제 게시된 날짜만 일정 evidence에 기록한다.
+- 한국은행 통화정책방향 결정회의 일정: https://www.bok.or.kr/portal/singl/crncyPolicyDrcMtg/listYear.do?menuNo=200755&mtgSe=A — 금통위 결정일의 공식 확인처.
+- 미국 재무부 입찰 일정: https://www.treasurydirect.gov/auctions/announcements-data-results/ — 발표일·입찰일·결제일을 구별해 입찰일을 일정 evidence에 기록한다.
+- 미국 연방준비제도 FOMC 일정: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm — 이틀 회의의 마지막 날을 결정일로 기록한다.
 - 한국일보 공식 원격 MCP 서버: https://mcp.hankookilbo.com/mcp — 한국일보가 직접 운영하는 무인증 공개 Streamable HTTP MCP endpoint. 무상태 구성이라 `initialize`·`Mcp-Session-Id` 없이 단일 POST `tools/call` 이 `application/json` 으로 응답하므로 `hankookilbo-news` 스킬이 MCP SDK 없이 `curl` 로 직접 호출한다(2026-07-29 실측: 무세션 `tools/call` 200 `application/json`, `Accept` 누락 406, `GET` 405). 공식 MCP Registry 등재명은 `com.hankookilbo.mcp/hankookilbo-mcp` 이고, 기사 본문 전문 없이 제목·발행시각·원문 링크·썸네일·짧은 발췌만 반환한다. 원문 URL 에는 서버가 `?did=mcp` 유입 파라미터를 붙인다. 인증이 없으므로 `k-skill-proxy` 를 경유하지 않는다.
 - 흥익메디케어 동물약국 MCP 서버: https://hkmedi.co.kr/pharmacy-mcp — 민간 동물용의약품 유통사 흥익메디케어가 운영하는 무인증 공개 Streamable HTTP MCP endpoint. `initialize`에서 세션 ID를 발급하고 `find_animal_pharmacies`, `search_product`, `find_pharmacies_by_product`를 제공한다. 제품 취급 약국은 최근 6개월 흥익메디케어 구매 이력 기준이며 현재 재고·전국 포괄성을 보장하지 않는다(2026-08-25 실측: 서버 `hkmedi-pharmacy-mcp` 1.0.0, 서울 강남구 목록·항생제 검색·서울 취급 약국 정상 응답). 인증이 없으므로 `k-skill-proxy`를 경유하지 않는다.
 - 미국 재무부 일별 par yield curve CSV: https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve — `multi-asset-morning-briefing`의 `yields` helper가 같은 host의 `/daily-treasury-rates.csv/<YYYY>/all?type=daily_treasury_yield_curve&field_tdr_date_value=<YYYY>&page&_format=csv`를 직접 호출한다. 헤더는 `Date,"1 Mo",... ,"10 Yr","20 Yr","30 Yr"`, 값은 퍼센트, 날짜는 `MM/DD/YYYY`, 행은 최신순. 무인증 공개 read-only이므로 `k-skill-proxy`를 경유하지 않는다. 2026-09-16 실측에서 응답이 19초대까지 걸렸으므로 helper 기본 타임아웃은 30초다.
@@ -285,3 +292,10 @@
 - 한국은행 ECOS `802Y001`: https://ecos.bok.or.kr/api — 한국 최근 완료 세션과 KOSPI·KOSDAQ 종가를 독립 확인하는 공식 원천.
 - FRED 공개 CSV: https://fred.stlouisfed.org/graph/fredgraph.csv?id=<ID1>,<ID2> — `multi-asset-morning-briefing`의 보조 fallback. helper는 ZIP 멤버를 전부 날짜 기준으로 병합하고 시리즈별 `stale`·`lag_days`를 보고하므로 목표 세션과 다른 값은 브리핑에서 제외한다.
 - JS 챌린지로 보호되는 시장 데이터 집계 사이트는 `multi-asset-morning-briefing`의 조회 경로에서 제외하고 공식 정적 endpoint를 우선한다.
+- `market-event-impact`의 사건 원천은 해당 사건의 정부·중앙은행·규제기관·거래소·기업 공식 발표를 우선한다. 예: 연준 FOMC(https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm), 미국 노동통계국 CPI(https://www.bls.gov/cpi/), 한국은행 통화정책(https://www.bok.or.kr/portal/main/main.do). 당시 시장 해석과 예상치는 Reuters(https://www.reuters.com/) 등 보도와 분리해 기록한다.
+- `market-event-impact`의 가격 원천은 해당 시장의 거래소·공식 시계열을 우선한다. 미국 재무부 금리(https://home.treasury.gov/resource-center/data-chart-center/interest-rates), Cboe VIX(https://www.cboe.com/tradable_products/vix/vix_historical_data/), FRED(https://fred.stlouisfed.org/) 등의 관측시각·시간대·가격종류를 보존한다. Investing.com 역사적 데이터(https://www.investing.com/)는 공식 확정 종가가 부족할 때 보조로 사용하며 사건 자체의 근거로 쓰지 않는다.
+- DART 공개 공시 원문: https://dart.fss.or.kr/ — `company-analysis`가 회사명·접수번호·정정 여부와 연결 재무제표 목차를 확인한다. `dsaf001/main.do?rcpNo=<접수번호>`의 목차와 `report/viewer.do` 하위 표를 동일 접수번호·문서번호·목차 위치로 묶는다. OpenDART API는 개인 인증키가 필요해 이 스킬의 기본 경로에서 제외한다.
+- KIND 공개 공시·IR: https://kind.krx.co.kr/ — `company-analysis`의 국내 보조 원천. 개별 공시의 기업·게시일·원문을 대조한다.
+- SEC EDGAR 공개 데이터 API: https://www.sec.gov/search-filings/edgar-application-programming-interfaces — `company-analysis`의 미국 제출 이력·XBRL 원천. `companyfacts` 값은 accession·form·filed·기간·단위로 개별 공시와 연결하고 SEC 접근 정책을 따른다.
+- Nasdaq 공개 종목 JSON: https://api.nasdaq.com/api/quote/ — `company-analysis`의 나스닥 상장 종목 표시 주가 후보. 종목·시장·거래일/시각과 수집 시각을 분리해 검증하며 구조가 바뀌면 가격을 제외한다.
+- 네이버증권 모바일 공개 JSON: https://m.stock.naver.com/api/stock/ — `company-analysis`의 한국 종목 표시 주가 후보인 제3자 비공식 표면. 종목코드·시장·거래일/시각·응답 구조가 검증되지 않으면 가격을 제외하며 안정성을 보장하는 공식 API로 취급하지 않는다.

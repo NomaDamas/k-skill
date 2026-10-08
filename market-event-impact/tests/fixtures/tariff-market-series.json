@@ -1,0 +1,118 @@
+{
+  "series": [
+    {
+      "symbol": "DGS2",
+      "region": "US",
+      "asset_class": "rates",
+      "unit": "pct",
+      "roles": ["short_rates", "curve"],
+      "observation_timezone": "America/New_York",
+      "observation_time": "15:30",
+      "market_timezone": "America/New_York",
+      "price_type": "H.15 Treasury yield, closing quote",
+      "source": {"name": "FRED DGS2", "url": "https://fred.stlouisfed.org/data/DGS2"},
+      "observations": [
+        {"date":"2025-04-01","value":3.87},{"date":"2025-04-02","value":3.91},{"date":"2025-04-03","value":3.71},{"date":"2025-04-04","value":3.68},{"date":"2025-04-07","value":3.73},{"date":"2025-04-08","value":3.71},{"date":"2025-04-09","value":3.91},{"date":"2025-04-10","value":3.84},{"date":"2025-04-11","value":3.96}
+      ]
+    },
+    {
+      "symbol": "DGS10",
+      "region": "US",
+      "asset_class": "rates",
+      "unit": "pct",
+      "roles": ["long_rates", "curve"],
+      "observation_timezone": "America/New_York",
+      "observation_time": "15:30",
+      "market_timezone": "America/New_York",
+      "price_type": "H.15 Treasury yield, closing quote",
+      "source": {"name": "FRED DGS10", "url": "https://fred.stlouisfed.org/data/DGS10"},
+      "observations": [
+        {"date":"2025-04-01","value":4.17},{"date":"2025-04-02","value":4.20},{"date":"2025-04-03","value":4.06},{"date":"2025-04-04","value":4.01},{"date":"2025-04-07","value":4.15},{"date":"2025-04-08","value":4.26},{"date":"2025-04-09","value":4.34},{"date":"2025-04-10","value":4.40},{"date":"2025-04-11","value":4.48}
+      ]
+    },
+    {
+      "symbol": "SP500",
+      "region": "US",
+      "asset_class": "equity",
+      "unit": "index",
+      "roles": ["broad_equity"],
+      "observation_timezone": "America/New_York",
+      "observation_time": "16:00",
+      "market_timezone": "America/New_York",
+      "price_type": "daily cash-market close",
+      "source": {"name": "FRED SP500", "url": "https://fred.stlouisfed.org/data/SP500"},
+      "observations": [
+        {"date":"2025-04-01","value":5633.07},{"date":"2025-04-02","value":5670.97},{"date":"2025-04-03","value":5396.52},{"date":"2025-04-04","value":5074.08},{"date":"2025-04-07","value":5062.25},{"date":"2025-04-08","value":4982.77},{"date":"2025-04-09","value":5456.90},{"date":"2025-04-10","value":5268.05},{"date":"2025-04-11","value":5363.36}
+      ]
+    },
+    {
+      "symbol": "KOSPI",
+      "region": "KR",
+      "asset_class": "equity",
+      "unit": "index",
+      "roles": ["affected_equity", "broad_equity"],
+      "observation_timezone": "Asia/Seoul",
+      "observation_time": "15:30",
+      "market_timezone": "Asia/Seoul",
+      "price_type": "일별 종가",
+      "source": {"name": "Countryeconomy KOSPI history", "url": "https://countryeconomy.com/stock-exchange/south-korea?dr=2025-04"},
+      "observations": [
+        {"date":"2025-04-01","value":2521.39},{"date":"2025-04-02","value":2505.86},{"date":"2025-04-03","value":2486.70},{"date":"2025-04-04","value":2465.42},{"date":"2025-04-07","value":2328.20},{"date":"2025-04-08","value":2334.23},{"date":"2025-04-09","value":2293.70},{"date":"2025-04-10","value":2445.06},{"date":"2025-04-11","value":2432.72}
+      ]
+    },
+    {
+      "symbol": "DEXKOUS",
+      "region": "US",
+      "asset_class": "fx",
+      "unit": "krw_per_usd",
+      "roles": ["fx"],
+      "observation_timezone": "America/New_York",
+      "observation_time": "12:00",
+      "market_timezone": "America/New_York",
+      "price_type": "NYC noon buying rate",
+      "source": {"name": "FRED DEXKOUS", "url": "https://fred.stlouisfed.org/data/DEXKOUS"},
+      "observations": [
+        {"date":"2025-04-01","value":1471.00},{"date":"2025-04-02","value":1462.06},{"date":"2025-04-03","value":1450.55},{"date":"2025-04-04","value":1457.76},{"date":"2025-04-07","value":1470.22},{"date":"2025-04-08","value":1477.97},{"date":"2025-04-09","value":1472.75},{"date":"2025-04-10","value":1450.37},{"date":"2025-04-11","value":1418.79}
+      ]
+    },
+    {
+      "symbol": "DEXUSEU",
+      "region": "US",
+      "asset_class": "fx",
+      "unit": "usd",
+      "roles": ["fx"],
+      "observation_timezone": "America/New_York",
+      "observation_time": "12:00",
+      "market_timezone": "America/New_York",
+      "price_type": "NYC noon buying rate",
+      "source": {"name": "FRED DEXUSEU", "url": "https://fred.stlouisfed.org/data/DEXUSEU"},
+      "observations": [
+        {"date":"2025-04-01","value":1.0800},{"date":"2025-04-02","value":1.0868},{"date":"2025-04-03","value":1.1052},{"date":"2025-04-04","value":1.1014},{"date":"2025-04-07","value":1.0912},{"date":"2025-04-08","value":1.0912},{"date":"2025-04-09","value":1.1040},{"date":"2025-04-10","value":1.1192},{"date":"2025-04-11","value":1.1325}
+      ]
+    },
+    {
+      "symbol": "DCOILWTICO",
+      "region": "US",
+      "asset_class": "commodity",
+      "unit": "usd",
+      "roles": ["oil", "commodity"],
+      "price_type": "daily spot price",
+      "source": {"name": "FRED DCOILWTICO", "url": "https://fred.stlouisfed.org/data/DCOILWTICO"},
+      "observations": [
+        {"date":"2025-04-01","value":71.61},{"date":"2025-04-02","value":72.12},{"date":"2025-04-03","value":67.43},{"date":"2025-04-04","value":62.42},{"date":"2025-04-07","value":61.05},{"date":"2025-04-08","value":60.04},{"date":"2025-04-09","value":62.63},{"date":"2025-04-10","value":60.57},{"date":"2025-04-11","value":61.91}
+      ]
+    },
+    {
+      "symbol": "VIXCLS",
+      "region": "US",
+      "asset_class": "volatility",
+      "unit": "index",
+      "roles": ["volatility"],
+      "price_type": "daily index close",
+      "source": {"name": "FRED VIXCLS", "url": "https://fred.stlouisfed.org/data/VIXCLS"},
+      "observations": [
+        {"date":"2025-04-01","value":21.77},{"date":"2025-04-02","value":21.51},{"date":"2025-04-03","value":30.02},{"date":"2025-04-04","value":45.31},{"date":"2025-04-07","value":46.98},{"date":"2025-04-08","value":52.33},{"date":"2025-04-09","value":33.62},{"date":"2025-04-10","value":40.72},{"date":"2025-04-11","value":37.56}
+      ]
+    }
+  ]
+}

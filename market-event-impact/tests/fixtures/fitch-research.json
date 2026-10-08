@@ -1,0 +1,144 @@
+{
+  "research": [
+    {
+      "event_id": "fitch-us-downgrade-2023-08-01",
+      "event_name": "2023년 피치 미국 국가신용등급 강등",
+      "event_type": "sovereign_credit",
+      "region": "US",
+      "event_date": "2023-08-01",
+      "observed_at": "2023-08-10T17:00:00-04:00",
+      "event_features": {
+        "shock_mechanisms": ["rating_downgrade", "fiscal_governance", "debt_supply_risk"],
+        "affected_channels": ["government_bond", "equity", "fx", "volatility"],
+        "market_shock_pattern": {"rates": "mixed", "equity": "down", "fx": "mixed", "volatility": "up"}
+      },
+      "overview": {
+        "summary": "피치는 8월 1일 오후 5시 13분(미 동부) 미국의 장기 외화표시 국가신용등급을 AAA에서 AA+로 한 단계 내렸다. 부정적 관찰대상은 해제하고 등급 전망은 안정적으로 바꿨다. 발표는 미국 주식 현물시장 마감 뒤였다.",
+        "expected": false,
+        "surprise_assessment": "부정적 관찰대상 지정으로 등급 조정 위험은 알려져 있었지만, 6월 부채한도 협상 타결 뒤의 강등 시점은 투자자에게 뜻밖이었다. 따라서 새 정보는 단순한 등급 한 단계보다 피치가 재정 악화와 거버넌스 문제를 여전히 지속적인 위험으로 본다는 판단이었다.",
+        "classification": "미국 국가신용 재평가와 국채 발행 확대 뉴스가 겹친 사건",
+        "source": {"name": "Fitch Ratings — U.S. rating action", "url": "https://www.fitchratings.com/research/sovereigns/fitch-downgrades-united-states-long-term-ratings-to-aa-from-aaa-outlook-stable-01-08-2023"}
+      },
+      "what_changed": [
+        {
+          "channel": "등급과 전망",
+          "finding": "장기 외화표시 발행자등급은 AAA에서 AA+로 하향됐고, Rating Watch Negative는 해제되며 전망은 Stable이 됐다. 단기등급과 국가상한은 그대로 유지됐다.",
+          "significance": "즉각적인 지급불능 선언이 아니라 중기 재정·제도 위험에 대한 신용평가 변경이다.",
+          "source": {"name": "Fitch Ratings", "url": "https://www.fitchratings.com/research/sovereigns/fitch-downgrades-united-states-long-term-ratings-to-aa-from-aaa-outlook-stable-01-08-2023"}
+        },
+        {
+          "channel": "강등 근거",
+          "finding": "피치는 향후 3년의 재정 악화 예상, 높은 정부부채, 반복된 부채한도 대치에 나타난 거버넌스 약화를 근거로 들었다.",
+          "significance": "시장의 확인 지점은 국채의 당일 신용손실보다 장기 발행 부담과 위험 프리미엄 경로였다.",
+          "source": {"name": "Fitch Ratings — Key Rating Drivers", "url": "https://www.fitchratings.com/research/sovereigns/fitch-downgrades-united-states-long-term-ratings-to-aa-from-aaa-outlook-stable-01-08-2023"}
+        },
+        {
+          "channel": "미 재무부의 반론",
+          "finding": "재무장관 옐런은 판단에 동의하지 않는다며 미국 국채의 안전성과 유동성을 강조했다.",
+          "significance": "등급 변경을 곧바로 국채 수요 붕괴나 달러 약세로 등치하지 말아야 한다.",
+          "source": {"name": "U.S. Treasury — Yellen statement", "url": "https://home.treasury.gov/news/press-releases/jy1665"}
+        }
+      ],
+      "market_interpretation": [
+        {
+          "channel": "주식과 변동성",
+          "finding": "첫 미국 거래일인 8월 2일 S&P 500은 1.38% 하락하고 VIX는 13.93에서 16.09로 올랐다. Reuters는 강등 뒤 위험자산 약세와 기존 상승분의 차익실현을 함께 보도했다.",
+          "significance": "등급 뉴스가 위험회피의 계기였다는 해석과 일치하지만, 하루 전체 하락을 피치 결정 하나에 귀속할 수는 없다.",
+          "source": {"name": "Reuters — Wall Street after Fitch downgrade", "url": "https://www.marketscreener.com/news/latest/Wall-Street-ends-lower-as-investors-step-back-after-Fitch-downgrades-US-44498808/"}
+        },
+        {
+          "channel": "한국 주식의 다음 거래일",
+          "finding": "코스피는 뉴욕 장 마감 뒤 나온 강등 발표 다음 날인 8월 2일 2,667.07에서 2,616.47로 1.90% 하락했다.",
+          "significance": "미국 주식과 같은 위험회피 방향이지만 한국 현물시장 하락의 단일 원인을 피치 발표로 확정하지 않는다.",
+          "source": {"name": "Countryeconomy — KOSPI August 2023", "url": "https://countryeconomy.com/stock-exchange/south-korea?dr=2023-08"}
+        },
+        {
+          "channel": "국채와 발행 공급",
+          "finding": "8월 2일 미국 2년물 수익률은 전일보다 4bp 낮고 10년물은 3bp 높았다. 같은 날 재무부는 1,030억 달러 규모의 분기 차환과 국채 발행 확대를 발표했다.",
+          "significance": "장단기 금리의 방향도 달랐고 발행 공급 뉴스가 겹쳤다. 10년물 상승을 강등의 직접 비용으로 단정할 근거가 부족하다.",
+          "source": {"name": "U.S. Treasury — Quarterly Refunding", "url": "https://home.treasury.gov/news/press-releases/jy1671"}
+        },
+        {
+          "channel": "외환",
+          "finding": "FRED 뉴욕 정오 EUR/USD는 8월 1일 1.0971에서 8월 2일 1.0939로 내려갔다. 이 관측 구간에는 달러가 유로 대비 강세였다.",
+          "significance": "미국 등급 하향이면 달러가 약해질 것이라는 단선적 경로와 반대다. 뉴욕 정오 값이므로 발표 직후 장외 움직임은 따로 측정하지 못한다.",
+          "source": {"name": "FRED DEXUSEU", "url": "https://fred.stlouisfed.org/data/DEXUSEU"}
+        }
+      ],
+      "transmission": [
+        {
+          "from": "국가신용등급 강등",
+          "to": "주식 위험선호 약화·변동성 상승",
+          "status": "CONSISTENT",
+          "evidence": "Reuters는 강등 뒤 주식 약세를 연결해 보도했다. S&P 500 -1.38%와 VIX 상승이 방향을 뒷받침하지만 차익실현·금리 상승·고용지표도 겹쳤다.",
+          "source": {"name": "Reuters — Wall Street after Fitch downgrade", "url": "https://www.marketscreener.com/news/latest/Wall-Street-ends-lower-as-investors-step-back-after-Fitch-downgrades-US-44498808/"}
+        },
+        {
+          "from": "미국 신용 뉴스와 글로벌 위험회피",
+          "to": "한국 주식시장 약세",
+          "status": "CONSISTENT",
+          "evidence": "코스피는 발표 다음 한국 거래일에 1.90% 하락했다. 시간순서와 방향은 일치하지만 동시 국내외 요인을 분리할 장중 근거는 없다.",
+          "source": {"name": "Countryeconomy — KOSPI August 2023", "url": "https://countryeconomy.com/stock-exchange/south-korea?dr=2023-08"}
+        },
+        {
+          "from": "등급 하향과 재정 우려",
+          "to": "미 국채 금리 상승",
+          "status": "MIXED",
+          "evidence": "8월 2일 10년물은 +3bp지만 2년물은 -4bp였다. 재무부의 차환·발행 확대 발표가 같은 날 있었으므로 국채금리 반응을 강등 단일 효과로 식별할 수 없다.",
+          "source": {"name": "U.S. Treasury — Quarterly Refunding", "url": "https://home.treasury.gov/news/press-releases/jy1671"}
+        },
+        {
+          "from": "미국 신용등급 하향",
+          "to": "달러 약세",
+          "status": "CONTRADICTED",
+          "evidence": "첫 뉴욕 정오 관측에서 EUR/USD가 1.0971에서 1.0939로 내려 달러는 유로 대비 강세였다. 단일 통화쌍 결과이며 전체 달러지수의 판정은 아니다.",
+          "source": {"name": "FRED DEXUSEU", "url": "https://fred.stlouisfed.org/data/DEXUSEU"}
+        }
+      ],
+      "catalysts": [
+        {
+          "date": "2023-08-02", "time_local": "08:15", "timezone": "America/New_York",
+          "event": "ADP 미국 7월 민간고용",
+          "why_it_matters": "민간고용은 32만4천 명 증가했다. 첫 거래일 금리와 주식 가격에는 신용등급 이외의 노동시장 정보도 반영될 수 있다.",
+          "source": {"name": "ADP Research Institute", "url": "https://mediacenter.adp.com/2023-08-02-ADP-National-Employment-Report-Private-Sector-Employment-Increased-by-324%2C000-Jobs-in-July-Annual-Pay-was-Up-6-2"}
+        },
+        {
+          "date": "2023-08-02", "time_local": "08:30", "timezone": "America/New_York",
+          "event": "미 재무부 분기 차환 발표",
+          "why_it_matters": "국채 공급 증가와 등급 뉴스가 같은 첫 거래일 금리에 겹친 교란요인이다. 1,030억 달러의 차환 규모가 제시됐다.",
+          "source": {"name": "U.S. Treasury", "url": "https://home.treasury.gov/news/press-releases/jy1671"}
+        },
+        {
+          "date": "2023-08-04", "time_local": "08:30", "timezone": "America/New_York",
+          "event": "미국 7월 고용보고서",
+          "why_it_matters": "비농업고용 18만7천 명 증가와 실업률 3.5%는 D+2 이후 단기금리와 경기 해석을 바꿀 수 있는 독립 변수다.",
+          "source": {"name": "U.S. Bureau of Labor Statistics", "url": "https://www.bls.gov/news.release/archives/empsit_08042023.htm"}
+        },
+        {
+          "date": "2023-08-10", "time_local": "08:30", "timezone": "America/New_York",
+          "event": "미국 7월 CPI",
+          "why_it_matters": "헤드라인 CPI는 전월 대비 0.2%, 전년 대비 3.2%였다. D+5 이후 금리 변화가 신용 뉴스보다 물가 경로를 반영하는지 확인한다.",
+          "source": {"name": "U.S. Bureau of Labor Statistics", "url": "https://www.bls.gov/news.release/archives/cpi_08102023.htm"}
+        },
+        {
+          "date": "2023-08-16", "time_local": "14:00", "timezone": "America/New_York",
+          "event": "7월 FOMC 회의록 공개",
+          "why_it_matters": "단기금리와 장기금리가 다른 방향으로 움직인 해석에서 통화정책 경로가 얼마나 중요한지 다시 확인할 일정이다.",
+          "source": {"name": "Federal Reserve — 2023 FOMC calendar", "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"}
+        }
+      ],
+      "historical_analogue_pool": [
+        {
+          "date": "2011-08-05", "event": "S&P의 미국 국가신용등급 AAA에서 AA+ 강등",
+          "event_type": "sovereign_credit",
+          "shock_mechanisms": ["rating_downgrade", "fiscal_governance"],
+          "affected_channels": ["government_bond", "equity", "volatility"],
+          "market_shock_pattern": {"rates": "down", "equity": "down", "volatility": "up"},
+          "similarity": "미국 최고 국가신용등급이 재정·정치 문제를 이유로 하향됐고 위험자산이 약세였다.",
+          "difference": "2011년에는 국채가 안전자산으로 매수돼 금리가 하락했으며 유럽 재정위기 등 동시 충격도 컸다.",
+          "source": {"name": "U.S. Treasury — 2012 Financial Stability Annual Report", "url": "https://home.treasury.gov/system/files/261/2012-Annual-Report.pdf"}
+        }
+      ]
+    }
+  ]
+}

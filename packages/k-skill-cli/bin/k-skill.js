@@ -11,6 +11,7 @@ const {
 const { runBundledScript } = require("../src/execute");
 const { detectRuntime } = require("../src/detect");
 const { formatUpdate, runUpdate, UPDATE_INVOCATION } = require("../src/update");
+const { captureInvocation } = require("../src/analytics");
 const { version } = require("../package.json");
 
 function usage() {
@@ -40,38 +41,45 @@ function usage() {
   ].join("\n");
 }
 
-function main() {
+async function main() {
   const [command, skillName, assetPath, ...rawArgs] = process.argv.slice(2);
+  const runtimeMode = detectRuntime().mode;
+  let exitCode;
 
-  if (!command || command === "--help" || command === "-h") {
-    console.log(usage());
-    return 0;
-  }
-
-  if (command === "version" || command === "--version" || command === "-V" || command === "-v") {
-    console.log(version);
-    return 0;
-  }
-
-  if (command === "update") {
-    const checkOnly = process.argv.slice(3).includes("--check");
-    const result = runUpdate({ checkOnly });
-    process.stdout.write(formatUpdate(result));
-    return result.ok ? 0 : 1;
-  }
-
-  if (command === "list") {
-    for (const name of listSkills()) console.log(name);
-    return 0;
-  }
-
-  if (["instruct", "files", "exec", "read", "path"].includes(command)) {
-    if (!skillName) {
-      console.error(`error: "${command}" requires a skill name\n\n${usage()}`);
-      return 1;
+  try {
+    if (!command || command === "--help" || command === "-h") {
+      console.log(usage());
+      exitCode = 0;
+      return exitCode;
     }
 
-    try {
+    if (command === "version" || command === "--version" || command === "-V" || command === "-v") {
+      console.log(version);
+      exitCode = 0;
+      return exitCode;
+    }
+
+    if (command === "update") {
+      const checkOnly = process.argv.slice(3).includes("--check");
+      const result = runUpdate({ checkOnly });
+      process.stdout.write(formatUpdate(result));
+      exitCode = result.ok ? 0 : 1;
+      return exitCode;
+    }
+
+    if (command === "list") {
+      for (const name of listSkills()) console.log(name);
+      exitCode = 0;
+      return exitCode;
+    }
+
+    if (["instruct", "files", "exec", "read", "path"].includes(command)) {
+      if (!skillName) {
+        console.error(`error: "${command}" requires a skill name\n\n${usage()}`);
+        exitCode = 1;
+        return exitCode;
+      }
+
       if (command === "instruct") {
         process.stdout.write(assemble(skillName, detectRuntime()));
       } else if (command === "files") {
@@ -79,35 +87,48 @@ function main() {
       } else {
         if (!assetPath) {
           console.error(`error: "${command}" requires an asset path\n\n${usage()}`);
-          return 1;
+          exitCode = 1;
+          return exitCode;
         }
 
         if (command === "exec") {
           const args = rawArgs[0] === "--" ? rawArgs.slice(1) : rawArgs;
-          return runBundledScript(skillName, assetPath, args).status;
+          exitCode = runBundledScript(skillName, assetPath, args).status;
+          return exitCode;
         }
         if (command === "read") {
           process.stdout.write(readBundledAsset(skillName, assetPath));
-          return 0;
+          exitCode = 0;
+          return exitCode;
         }
         console.log(resolveBundledAsset(skillName, assetPath));
       }
-      return 0;
-    } catch (error) {
-      if (
-        ["EUNKNOWNSKILL", "EASSETPATH", "EASSETNOTFOUND", "EUNSUPPORTEDSCRIPT"].includes(
-          error.code,
-        )
-      ) {
-        console.error(`error: ${error.message}`);
-        return 1;
-      }
-      throw error;
+      exitCode = 0;
+      return exitCode;
     }
-  }
 
-  console.error(`error: unknown command "${command}"\n\n${usage()}`);
-  return 1;
+    console.error(`error: unknown command "${command}"\n\n${usage()}`);
+    exitCode = 1;
+    return exitCode;
+  } catch (error) {
+    if (
+      ["EUNKNOWNSKILL", "EASSETPATH", "EASSETNOTFOUND", "EUNSUPPORTEDSCRIPT"].includes(
+        error.code,
+      )
+    ) {
+      console.error(`error: ${error.message}`);
+      exitCode = 1;
+      return exitCode;
+    }
+    throw error;
+  } finally {
+    await captureInvocation(
+      { command, skillName, runtimeMode, success: exitCode === 0 },
+      process.env,
+    );
+  }
 }
 
-process.exitCode = main();
+main().then((exitCode) => {
+  process.exitCode = exitCode;
+});

@@ -54,6 +54,7 @@ const {
 } = require("../src/coupang");
 const { parseXmlItems } = require("../src/molit");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
+const { classifyUpstreamFailure } = require("../src/upstream-errors");
 
 test("makeCacheKey requires a non-empty route to prevent cross-route collisions", () => {
   assert.throws(() => makeCacheKey({ q: "강남" }), /route/);
@@ -7354,12 +7355,15 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   assert.equal(res.statusCode, 200);
   assert.equal(body.total_count, 1);
   assert.equal(body.active_sanctions[0].bizNm, "갑");
+  assert.equal(body.lookup_status, "active_sanctions_found");
   assert.equal(body.coverage.scope, "currently-effective-g2b-sanctions");
   assert.equal(body.coverage.match_basis, "exact-business-number");
   assert.ok(body.coverage.checked_at);
+  assert.equal(body.source.data_go_kr_dataset, "15129466");
+  assert.equal(body.source.query.inqryDiv, "1");
+  assert.equal(body.upstream_response.response.body.totalCount, 1);
   assert.match(seenUrls[0], /ServiceKey=data-go-key/);
   assert.match(seenUrls[0], /inqryDiv=1/);
-
   const cached = await app.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
   assert.equal(cached.json().proxy.cache.hit, true);
   assert.equal(seenUrls.length, 1);
@@ -7370,6 +7374,7 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   });
   const missing = await noKey.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
   assert.equal(missing.statusCode, 503);
+  assert.equal(missing.json().lookup_status, "lookup_failed");
 
 });
 
@@ -7394,8 +7399,27 @@ test("g2b sanctioned-supplier zero result explains excluded historical sanctions
   const body = res.json();
   assert.equal(res.statusCode, 200);
   assert.equal(body.total_count, 0);
+  assert.equal(body.lookup_status, "no_active_sanctions");
   assert.ok(body.coverage.zero_result_meaning);
   assert.ok(body.coverage.exclusions.includes("expired-or-lifted-sanctions"));
+  assert.equal(body.upstream_response.response.body.totalCount, 0);
+});
+
+test("g2b sanctioned-supplier distinguishes failed lookups from no sanctions", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("upstream unavailable", { status: 503 });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const res = await app.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
+  const body = res.json();
+  assert.equal(res.statusCode, 502);
+  assert.equal(body.lookup_status, "lookup_failed");
+  assert.equal(body.error, "upstream_error");
+  assert.equal(body.upstream_response, undefined);
 });
 
 test("korean-law search endpoint proxies law.go.kr with the server OC and browser headers", async (t) => {
@@ -7562,4 +7586,118 @@ test("health endpoint reports buildingRegisterConfigured from DATA_GO_KR_API_KEY
 
   assert.equal(offBody.upstreams.buildingRegisterConfigured, false);
   assert.equal(onBody.upstreams.buildingRegisterConfigured, true);
+});
+
+function upstreamFetchFailure(code) {
+  const error = new TypeError("fetch failed");
+  error.cause = Object.assign(new Error(code), { code });
+  return error;
+}
+
+function upstreamTimeoutFailure() {
+  const error = new Error("The operation was aborted due to timeout");
+  error.name = "TimeoutError";
+  error.code = "ABORT_ERR";
+  return error;
+}
+
+test("classifyUpstreamFailure separates unreachable, timeout, and opaque failures", () => {
+  assert.deepEqual(classifyUpstreamFailure(upstreamFetchFailure("ECONNREFUSED")), {
+    error: "upstream_unreachable",
+    cause: "ECONNREFUSED",
+    statusCode: 503
+  });
+  assert.deepEqual(classifyUpstreamFailure(upstreamFetchFailure("ENOTFOUND")), {
+    error: "upstream_unreachable",
+    cause: "ENOTFOUND",
+    statusCode: 503
+  });
+  assert.deepEqual(classifyUpstreamFailure(upstreamFetchFailure("ETIMEDOUT")), {
+    error: "upstream_timeout",
+    cause: "ETIMEDOUT",
+    statusCode: 504
+  });
+  assert.deepEqual(classifyUpstreamFailure(upstreamTimeoutFailure()), {
+    error: "upstream_timeout",
+    cause: "ABORT_ERR",
+    statusCode: 504
+  });
+  assert.deepEqual(classifyUpstreamFailure(new DOMException("The operation was aborted due to timeout", "TimeoutError")), {
+    error: "upstream_timeout",
+    cause: "TimeoutError",
+    statusCode: 504
+  });
+
+  const bare = new TypeError("fetch failed");
+  assert.deepEqual(classifyUpstreamFailure(bare), {
+    error: "upstream_unreachable",
+    cause: null,
+    statusCode: 503
+  });
+
+  assert.equal(classifyUpstreamFailure(new Error("bad request")), null);
+  assert.equal(classifyUpstreamFailure(undefined), null);
+});
+
+test("data.go.kr and KOSIS connect failures answer 503 upstream_unreachable with a cause", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("ECONNREFUSED");
+  };
+
+  const app = buildServer({
+    env: {
+      KMA_OPEN_API_KEY: "kma-key",
+      KOSIS_API_KEY: "kosis-key",
+      DATA_GO_KR_API_KEY: "data-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const weather = await app.inject({ method: "GET", url: "/v1/korea-weather/forecast?nx=60&ny=127" });
+  assert.equal(weather.statusCode, 503);
+  assert.equal(weather.json().error, "upstream_unreachable");
+  assert.equal(weather.json().upstream.cause, "ECONNREFUSED");
+  assert.match(weather.json().upstream.route, /korea-weather/);
+
+  const kosis = await app.inject({ method: "GET", url: "/v1/kosis/search?q=%EC%9D%B8%EA%B5%AC" });
+  assert.equal(kosis.statusCode, 503);
+  assert.equal(kosis.json().error, "upstream_unreachable");
+  assert.equal(kosis.json().upstream.cause, "ECONNREFUSED");
+
+  const holiday = await app.inject({ method: "GET", url: "/v1/korean-holiday/calendar?year=2026&month=10" });
+  assert.equal(holiday.statusCode, 503);
+  assert.equal(holiday.json().error, "upstream_unreachable");
+});
+
+test("upstream connect timeouts answer 504 upstream_timeout", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamTimeoutFailure();
+  };
+
+  const app = buildServer({
+    env: {
+      KMA_OPEN_API_KEY: "kma-key",
+      KOSIS_API_KEY: "kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const weather = await app.inject({ method: "GET", url: "/v1/korea-weather/forecast?nx=60&ny=127" });
+  assert.equal(weather.statusCode, 504);
+  assert.equal(weather.json().error, "upstream_timeout");
+  assert.equal(weather.json().upstream.cause, "ABORT_ERR");
+
+  const kosis = await app.inject({ method: "GET", url: "/v1/kosis/search?q=%EC%9D%B8%EA%B5%AC" });
+  assert.equal(kosis.statusCode, 504);
+  assert.equal(kosis.json().error, "upstream_timeout");
 });

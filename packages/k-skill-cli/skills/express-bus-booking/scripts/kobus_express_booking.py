@@ -24,8 +24,16 @@ from typing import Iterable
 
 BASE_URL = "https://www.kobus.co.kr"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125 Safari/537.36"
-FN_SATS_RE = re.compile(r"fnSatsChc\((.*?)\)", re.DOTALL)
+# Only real calls carry quoted arguments. The KOBUS response also embeds an
+# HTML-commented template `<!-- fnSatsChc(deprTime,alcnDeprTime,...) -->` whose
+# bare identifiers must never be parsed as a schedule, so the regex requires an
+# opening quote right after `(`.
+FN_SATS_RE = re.compile(r"fnSatsChc\(\s*('.*?)\)", re.DOTALL)
 ARG_RE = re.compile(r"'([^']*)'")
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+# seat_stage_fields() reads args[1..8], args[12] and args[13]; anything shorter
+# is an incomplete template and is not a bookable schedule.
+MIN_SATS_ARGS = 14
 FORM_RE = re.compile(r"<form\b([^>]*)>(.*?)</form>", re.DOTALL | re.IGNORECASE)
 INPUT_RE = re.compile(r"<input\b([^>]+)>", re.DOTALL | re.IGNORECASE)
 ATTR_RE = re.compile(r"([\w:-]+)=[\"']([^\"']*)[\"']")
@@ -107,6 +115,34 @@ def parse_form(body: str, form_id: str) -> list[tuple[str, str]]:
     return []
 
 
+def parse_schedules(body: str) -> list[Schedule]:
+    """Parse bookable schedules from the KOBUS search response.
+
+    HTML comments and inline templates are stripped first so the commented
+    `fnSatsChc(...)` prototype never becomes a schedule, and any call whose
+    quoted argument list is shorter than MIN_SATS_ARGS is dropped as incomplete.
+    """
+    visible = HTML_COMMENT_RE.sub(" ", body)
+    schedules: list[Schedule] = []
+    for m in FN_SATS_RE.finditer(visible):
+        args = ARG_RE.findall(m.group(1))
+        if len(args) < MIN_SATS_ARGS:
+            continue
+        context = strip_tags(visible[max(0, m.start() - 900) : m.start() + 900])
+        departure = args[1][:2] + ":" + args[1][2:4] if len(args[1]) >= 4 else None
+        schedules.append(
+            Schedule(
+                index=len(schedules) + 1,
+                departure_time=departure,
+                company=(re.search(r"\((?:주|유)\)[^\s]+|[가-힣]+고속", context) or [None])[0],
+                bus_class=(re.search(r"심야우등|우등|프리미엄|고속", context) or [None])[0],
+                remaining_text=(re.search(r"잔여\s*\d+석|\d+\s*/\s*\d+", context) or [None])[0],
+                raw_args=args,
+            )
+        )
+    return schedules
+
+
 def search(op: urllib.request.OpenerDirector, depart: str, arrive: str, date: str, timeout: int) -> tuple[str, list[Schedule]]:
     open_text(op, request(f"{BASE_URL}/main.do"), timeout)
     body = open_text(
@@ -128,22 +164,7 @@ def search(op: urllib.request.OpenerDirector, depart: str, arrive: str, date: st
         ),
         timeout,
     )
-    schedules: list[Schedule] = []
-    for idx, m in enumerate(FN_SATS_RE.finditer(body), 1):
-        args = ARG_RE.findall(m.group(1))
-        context = strip_tags(body[max(0, m.start() - 900) : m.start() + 900])
-        departure = args[1][:2] + ":" + args[1][2:4] if len(args) > 1 and len(args[1]) >= 4 else None
-        schedules.append(
-            Schedule(
-                index=idx,
-                departure_time=departure,
-                company=(re.search(r"\((?:주|유)\)[^\s]+|[가-힣]+고속", context) or [None])[0],
-                bus_class=(re.search(r"심야우등|우등|프리미엄|고속", context) or [None])[0],
-                remaining_text=(re.search(r"잔여\s*\d+석|\d+\s*/\s*\d+", context) or [None])[0],
-                raw_args=args,
-            )
-        )
-    return body, schedules
+    return body, parse_schedules(body)
 
 
 def seat_stage_fields(search_form: list[tuple[str, str]], schedule: Schedule) -> list[tuple[str, str]]:
@@ -231,7 +252,14 @@ def main(argv: Iterable[str] | None = None) -> int:
     op = opener()
     body, schedules = search(op, args.depart_code, args.arrive_code, args.date, args.timeout)
     result: dict[str, object] = {"route": {"depart_code": args.depart_code, "arrive_code": args.arrive_code, "date": args.date}, "count": len(schedules), "items": [asdict(s) for s in schedules[: args.limit]]}
-    if (args.hold_first_seat or args.hold_seat) and schedules:
+    if args.hold_first_seat or args.hold_seat:
+        if not schedules:
+            raise SystemExit("no KOBUS schedules were parsed for this route; cannot hold a seat")
+        if not 1 <= args.select_index <= len(schedules):
+            raise SystemExit(
+                f"--select-index {args.select_index} is out of range: parsed {len(schedules)} schedule(s) "
+                f"(valid range 1-{len(schedules)})"
+            )
         out = Path(args.output_dir) if args.output_dir else Path(tempfile.mkdtemp(prefix="kobus-hold-"))
         result["hold"] = asdict(hold(op, body, schedules[args.select_index - 1], args.hold_seat, out, args.timeout))
         result["payment_note"] = "Opened/saved the official KOBUS payment-information page; final card entry/payment remains manual."

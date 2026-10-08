@@ -1,0 +1,8 @@
+{
+  "name": "government-bond-analysis",
+  "description": "한국·미국 국채시장을 공식 금리 데이터로 분석하고 커브 변화, 한·미 금리차, 확인된 국채 입찰·통화정책 일정을 같은 형식으로 정리한다. 국고채·미국 국채 금리 비교, 최근 변화, 주요 일정 또는 출처 있는 보고서를 요청할 때 사용한다. 실시간 호가, 개별 채권 가격평가, 매매 추천은 다루지 않는다.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: government-bond-analysis\ndescription: 한국·미국 국채시장을 공식 금리 데이터로 분석하고 커브 변화, 한·미 금리차, 확인된 국채 입찰·통화정책 일정을 같은 형식으로 정리한다. 국고채·미국 국채 금리 비교, 최근 변화, 주요 일정 또는 출처 있는 보고서를 요청할 때 사용한다. 실시간 호가, 개별 채권 가격평가, 매매 추천은 다루지 않는다.\nlicense: MIT\nmetadata:\n  category: finance\n  locale: ko-KR\n  phase: v1"
+}
