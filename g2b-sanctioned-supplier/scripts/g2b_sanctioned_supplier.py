@@ -24,9 +24,10 @@ ROUTE = "/v1/g2b/sanctioned-supplier"
 
 
 class ApiError(RuntimeError):
-    def __init__(self, message: str, *, status_code: int | None = None):
+    def __init__(self, message: str, *, status_code: int | None = None, payload: dict[str, Any] | None = None):
         super().__init__(message)
         self.status_code = status_code
+        self.payload = payload
 
 
 def _text_or_none(value: Any) -> str | None:
@@ -73,9 +74,9 @@ def read_json_response(request: urllib.request.Request) -> dict[str, Any]:
         except json.JSONDecodeError:
             payload = None
         if error.code == 503 and isinstance(payload, dict) and payload.get("error") == "upstream_not_configured":
-            raise ApiError(PROXY_KEY_NOT_CONFIGURED_MSG, status_code=error.code) from error
+            raise ApiError(PROXY_KEY_NOT_CONFIGURED_MSG, status_code=error.code, payload=payload) from error
         if isinstance(payload, dict) and payload.get("message"):
-            raise ApiError(str(payload["message"]), status_code=error.code) from error
+            raise ApiError(str(payload["message"]), status_code=error.code, payload=payload) from error
         raise ApiError(f"g2b sanction proxy request failed with HTTP {error.code}", status_code=error.code) from error
     except urllib.error.URLError as error:
         raise ApiError(f"{PROXY_DOWN_MSG} (상세: {error.reason})") from error
@@ -106,7 +107,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (ValueError, ApiError) as error:
-        print(json.dumps({"error": str(error)}, ensure_ascii=False, indent=2), file=sys.stderr)
+        output = {"error": str(error)}
+        if isinstance(error, ApiError):
+            output = {"lookup_status": "lookup_failed", **(error.payload or {}), "error": str(error)}
+        print(json.dumps(output, ensure_ascii=False, indent=2), file=sys.stderr)
         return 1
 
 

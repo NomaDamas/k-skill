@@ -7355,12 +7355,15 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   assert.equal(res.statusCode, 200);
   assert.equal(body.total_count, 1);
   assert.equal(body.active_sanctions[0].bizNm, "갑");
+  assert.equal(body.lookup_status, "active_sanctions_found");
   assert.equal(body.coverage.scope, "currently-effective-g2b-sanctions");
   assert.equal(body.coverage.match_basis, "exact-business-number");
   assert.ok(body.coverage.checked_at);
+  assert.equal(body.source.data_go_kr_dataset, "15129466");
+  assert.equal(body.source.query.inqryDiv, "1");
+  assert.equal(body.upstream_response.response.body.totalCount, 1);
   assert.match(seenUrls[0], /ServiceKey=data-go-key/);
   assert.match(seenUrls[0], /inqryDiv=1/);
-
   const cached = await app.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
   assert.equal(cached.json().proxy.cache.hit, true);
   assert.equal(seenUrls.length, 1);
@@ -7371,6 +7374,7 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   });
   const missing = await noKey.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
   assert.equal(missing.statusCode, 503);
+  assert.equal(missing.json().lookup_status, "lookup_failed");
 
 });
 
@@ -7395,8 +7399,27 @@ test("g2b sanctioned-supplier zero result explains excluded historical sanctions
   const body = res.json();
   assert.equal(res.statusCode, 200);
   assert.equal(body.total_count, 0);
+  assert.equal(body.lookup_status, "no_active_sanctions");
   assert.ok(body.coverage.zero_result_meaning);
   assert.ok(body.coverage.exclusions.includes("expired-or-lifted-sanctions"));
+  assert.equal(body.upstream_response.response.body.totalCount, 0);
+});
+
+test("g2b sanctioned-supplier distinguishes failed lookups from no sanctions", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("upstream unavailable", { status: 503 });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const res = await app.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
+  const body = res.json();
+  assert.equal(res.statusCode, 502);
+  assert.equal(body.lookup_status, "lookup_failed");
+  assert.equal(body.error, "upstream_error");
+  assert.equal(body.upstream_response, undefined);
 });
 
 test("korean-law search endpoint proxies law.go.kr with the server OC and browser headers", async (t) => {
