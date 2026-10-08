@@ -1,5 +1,28 @@
 # @nomadamas/k-skill
 
+## 0.10.0
+
+### Minor Changes
+
+- f1a3b73: Add privacy-bounded PostHog CLI invocation analytics for unique-user, daily
+  volume, DAU/WAU/MAU, and recurrent-use measurement, with a stable anonymous
+  identifier, opt-out support, failure isolation, and usage-statistics-only
+  documentation.
+- 355edbe: `korean-bond-search` 스킬을 추가합니다. SEIBro 채권을 표준 Bond Instrument 필드로 정규화하고, 출처와 확인시각을 유지해 종목명·발행사·ISIN 검색과 조건 비교를 지원합니다.
+- 5b159e7: `market-event-impact` 스킬을 추가합니다. 정례·비정형 사건의 핵심 변화와 시장 해석을 공식자료·당시 보도·검증 가격으로 조사하고, 교차자산 전달경로·보조 이벤트 스터디·유사사례·다음 촉매를 한국어로 설명합니다.
+
+### Patch Changes
+
+- d925f16: Bundle `company-analysis` for source-checked Korean and overseas company analysis in six chat sections. Include no-key public filing and quote workflows, three-statement and company-identity checks, deterministic evidence output, and offline edge-case tests.
+- 5633c90: `express-bus-booking` KOBUS 시간표 파서가 HTML 주석의 `fnSatsChc(deprTime,...)` 템플릿을 가짜 운행편으로 파싱해 실제 편수를 2배로 반환하던 문제를 수정합니다. 주석과 인라인 템플릿을 먼저 제거하고, 따옴표 인자가 있는 실제 호출만 매칭하며, 필수 인자 수(14)를 못 채운 항목은 결과에서 제외합니다. 또한 `--select-index`가 범위를 벗어나면 `IndexError` 대신 명시적 오류로 종료합니다.
+- c74a473: `foresttrip-vacancy`가 로그인 실패를 처리하지 않아 예약 페이지에서 `#srchSido.options`를 평가하다 Playwright `TypeError`로 죽던 문제를 수정합니다. 로그인 후 로그인 폼 잔존 여부로 실패를 판별해 `KSKILL_FORESTTRIP_ID`/`KSKILL_FORESTTRIP_PASSWORD` 확인, CAPTCHA 수동 처리, `--refresh-session` 재시도를 안내하는 `SystemExit`으로 종료하고, 조회 전에 `#srchSido`·`#srchInstt` 존재를 검증합니다.
+- 7b5eae9: Bundle `government-bond-analysis` for verified Korean and U.S. Treasury yield comparisons, consistent chat and report output, official event schedules, and replayable evidence.
+- 82a0f36: `korean-bond-search`가 실제 SEIBro 상세 화면의 `선후순위 구분` 헤더를 인식하지 못해 선후순위를 `미확인`으로 표시하던 문제를 수정하고, 상세 chat 출력의 채권 유형을 검색 표와 같이 한국어(`금융채` 등)로 표시합니다.
+
+  또한 `options` 명령이 `convertible`/`exchangeable`/`warrant_attached`를 누락해 CB/EB/BW를 `미확인`으로 표시하던 문제를 수정합니다.
+
+- 3bc0cd5: Make G2B sanction lookups auditable and conservative: preserve the successful upstream response and lookup timestamp, distinguish active sanctions, confirmed zero results, and lookup failures, and document that search/state results do not establish notice-specific participation eligibility.
+
 ## 0.9.2
 
 ### Patch Changes
