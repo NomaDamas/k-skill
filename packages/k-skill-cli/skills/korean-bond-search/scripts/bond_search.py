@@ -89,13 +89,15 @@ ALIASES: dict[str, tuple[str, ...]] = {
     "issue_amount_krw": ("발행금액", "발행액", "issueamount"),
     "outstanding_amount_krw": ("발행잔액", "잔액", "outstandingamount"),
     "offering_type": ("공모/사모", "공모사모", "모집방법", "offeringtype"),
-    "seniority": ("선후순위", "변제순위", "seniority"),
+    "seniority": ("선후순위", "선후순위 구분", "변제순위", "seniority"),
     "guarantee": ("보증/무보증", "보증무보증", "보증구분", "guarantee"),
     "listed": ("상장여부", "상장일", "listed"),
     "option_schedule": ("옵션일정", "call/put일정", "callput일정", "optionschedule"),
     "option": ("옵션", "option"),
     "equity_linked": ("주식관련여부", "주식관련", "equitylinked"),
 }
+
+BOND_TYPE_NAMES = {"corporate": "회사채", "financial": "금융채", "government": "국채", "municipal": "지방채", "agency": "특수채", "abs": "ABS"}
 
 
 def key_text(value: Any) -> str:
@@ -723,12 +725,11 @@ def render_chat(payload: dict[str, Any]) -> str:
             "| 종목 | ISIN | 발행사 | 유형 | 표면금리 | 만기 | 발행잔액 | 옵션·구조 |",
             "| --- | --- | --- | --- | ---: | --- | ---: | --- |",
         ]
-        type_names = {"corporate": "회사채", "financial": "금융채", "government": "국채", "municipal": "지방채", "agency": "특수채", "abs": "ABS"}
         for item in items:
             rate = display(item.get("coupon_rate_pct"), "%")
             lines.append(
                 f"| {display(item.get('name'))} | `{display(item.get('isin'))}` | {display(item.get('issuer'))} | "
-                f"{type_names.get(item.get('bond_type'), display(item.get('bond_type')))} | {rate} | "
+                f"{BOND_TYPE_NAMES.get(item.get('bond_type'), display(item.get('bond_type')))} | {rate} | "
                 f"{display(item.get('maturity_date'))} | {money_krw(item.get('outstanding_amount_krw'))} | {option_summary(item)} |"
             )
         if payload.get("truncated"):
@@ -760,7 +761,7 @@ def render_chat(payload: dict[str, Any]) -> str:
         f"## {display(item.get('name'), '')}", "",
         f"`{display(item.get('isin'))}` · {display(item.get('issuer'))}", "",
         "| 항목 | 내용 |", "| --- | --- |",
-        f"| 유형 | {display(item.get('bond_type'))} |",
+        f"| 유형 | {BOND_TYPE_NAMES.get(item.get('bond_type'), display(item.get('bond_type')))} |",
         f"| 발행일 | {display(item.get('issue_date'))} |",
         f"| 만기 | {display(item.get('maturity_date'))} |",
         f"| 표면금리 | {display(item.get('coupon_rate_pct'), '%')} |",
@@ -896,7 +897,9 @@ def main(argv: Iterable[str] | None = None) -> None:
     if args.command == "detail":
         emit({"schema_version": "1.0", "result": "ok", "item": exact[0]})
     emit({"schema_version": "1.0", "result": "ok", "isin": exact[0]["isin"], "callable": exact[0]["callable"],
-          "putable": exact[0]["putable"], "option_schedule": exact[0]["option_schedule"], "source": exact[0]["source"]})
+          "putable": exact[0]["putable"], "convertible": exact[0]["convertible"],
+          "exchangeable": exact[0]["exchangeable"], "warrant_attached": exact[0]["warrant_attached"],
+          "option_schedule": exact[0]["option_schedule"], "source": exact[0]["source"]})
 
 
 if __name__ == "__main__":

@@ -337,6 +337,31 @@ class BondSearchTests(unittest.TestCase):
         self.assertIn("2027-02-01 CALL", rendered)
         self.assertNotIn("옵션 일정: 1건", rendered)
 
+    def test_seibro_seniority_header_and_localized_type_in_detail(self):
+        record = bond_search.normalize(
+            {"종목코드": "KR6009661G40", "종목명": "한서실업24", "선후순위 구분": "선순위"},
+            "2026-09-24T09:00:00+09:00",
+            "fixture",
+        )
+        self.assertEqual(record["seniority"], "선순위")
+        record["bond_type"] = "financial"
+        rendered = bond_search.render_chat({"result": "ok", "item": record})
+        self.assertIn("| 유형 | 금융채 |", rendered)
+        self.assertIn("| 선후순위 | 선순위 |", rendered)
+
+    def test_options_command_keeps_equity_linked_flags(self):
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), self.assertRaises(SystemExit) as caught:
+            bond_search.main([
+                "options", "--input", str(ROOT / "tests" / "fixtures" / "bonds.json"),
+                "--isin", "KR6000000002", "--format", "json",
+            ])
+        self.assertEqual(caught.exception.code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertIs(payload["convertible"], True)
+        self.assertIn("exchangeable", payload)
+        self.assertIn("warrant_attached", payload)
+
 
 if __name__ == "__main__":
     unittest.main()
