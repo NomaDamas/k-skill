@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-// Rebuilds the searchable k-skills-list.html from k-skills-list.md.
+// Rebuilds the browsable k-skills-list.html from k-skills-list.md.
 // The markdown file is the source of truth: "## <category>" headings and
 // "- **<skill-id>** — <summary>" bullets. Fails if a skill directory with a
 // skill.json is missing from the markdown, so the list cannot drift silently.
+// The HTML template is embedded below, so a fresh clone can regenerate the
+// page without any untracked local file.
 "use strict";
 
 const fs = require("node:fs");
@@ -28,6 +30,12 @@ const CATEGORY_ICONS = {
   "생활 · 기타": "🧰",
   "k-skill 관리": "🔧",
 };
+
+// Numeric references keep this file free of literal entity text and cover
+// every character the markdown summaries can contain.
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
 
 function parseMarkdown(markdown) {
   const categories = [];
@@ -63,25 +71,79 @@ if (missing.length) {
   process.exit(1);
 }
 
-const data =
-  "[\n" +
-  categories
+function renderSection({ name, items }) {
+  const icon = CATEGORY_ICONS[name] || "•";
+  const rows = items
     .map(
-      ({ name, items }) =>
-        ` [${JSON.stringify(`${CATEGORY_ICONS[name] || "•"} ${name}`)},[\n` +
-        items.map(([id, d]) => `  [${JSON.stringify(id)},${JSON.stringify(d)}],`).join("\n") +
-        "\n ]],"
+      ([id, description]) =>
+        `      <li><code>${escapeHtml(id)}</code><span>${escapeHtml(description)}</span></li>`
     )
-    .join("\n") +
-  "\n];";
+    .join("\n");
+  return `  <section>
+    <h2>${escapeHtml(`${icon} ${name}`)} <span class="n">${items.length}개</span></h2>
+    <ul>
+${rows}
+    </ul>
+  </section>`;
+}
 
 const today = new Date().toISOString().slice(0, 10);
-let html = fs.readFileSync(htmlPath, "utf8");
-html = html.replace(/const DATA = \[[\s\S]*?\n\];/, `const DATA = ${data}`);
-html = html.replace(/<title>.*?<\/title>/, `<title>k-skill 스킬 목록 (${total})</title>`);
-html = html.replace(/(id="cnt"[^>]*>)\d+개/, `$1${total}개`);
-html = html.replace(/filter\?shown\+'개 표시':'\d+개'/, `filter?shown+'개 표시':'${total}개'`);
-html = html.replace(/<footer>업데이트 .*?<\/footer>/, `<footer>업데이트 ${today} · origin/main 기준</footer>`);
+const html = `<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>k-skill 스킬 목록 (${total})</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font: 15px/1.6 -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  header { padding: 28px 20px 12px; max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 14px; }
+  #cnt { font-size: 15px; font-weight: 400; opacity: 0.7; margin-left: 8px; }
+  #q { width: 100%; box-sizing: border-box; padding: 10px 14px; font-size: 15px;
+       border: 1px solid #b8b8b8; border-radius: 10px; background: transparent; color: inherit; }
+  #q:focus { outline: 2px solid #6ea8fe; }
+  main { max-width: 880px; margin: 0 auto; padding: 8px 20px 40px; }
+  section { margin: 22px 0; }
+  h2 { font-size: 17px; margin: 0 0 10px; }
+  h2 .n { font-size: 13px; font-weight: 400; opacity: 0.6; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid #e6e6e6; align-items: baseline; }
+  code { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+  #shown { font-size: 13px; opacity: 0.7; margin-left: 10px; }
+  footer { max-width: 880px; margin: 0 auto; padding: 18px 20px 36px; font-size: 13px; opacity: 0.65; }
+</style>
+</head>
+<body>
+<header>
+  <h1>k-skill 스킬 목록<span id="cnt">${total}개</span><span id="shown"></span></h1>
+  <input id="q" type="search" placeholder="스킬 검색 (id 또는 설명)">
+</header>
+<main>
+${categories.map(renderSection).join("\n")}
+</main>
+<footer>업데이트 ${today} · k-skills-list.md 기준</footer>
+<script>
+  const input = document.getElementById("q");
+  const shown = document.getElementById("shown");
+  input.addEventListener("input", () => {
+    const needle = input.value.trim().toLowerCase();
+    let count = 0;
+    for (const li of document.querySelectorAll("main li")) {
+      const hit = !needle || li.textContent.toLowerCase().includes(needle);
+      li.hidden = !hit;
+      if (hit) count += 1;
+    }
+    for (const section of document.querySelectorAll("main section")) {
+      section.hidden = ![...section.querySelectorAll("li")].some((li) => !li.hidden);
+    }
+    shown.textContent = needle ? count + "개 표시" : "";
+  });
+</script>
+</body>
+</html>
+`;
+
 fs.writeFileSync(htmlPath, html);
 
 console.log(`k-skills-list.html: ${total} skills, ${categories.length} categories`);
