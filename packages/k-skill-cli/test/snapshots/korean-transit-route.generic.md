@@ -50,7 +50,7 @@ import os, urllib.parse, urllib.request, json
 PROXY=os.environ.get('KSKILL_PROXY_BASE_URL','https://k-skill-proxy.nomadamas.org').rstrip('/')
 def geocode(q):
     url=PROXY+'/v1/kakao-local/geocode?q='+urllib.parse.quote(q)
-    with urllib.request.urlopen(url,timeout=10) as resp:
+    with urllib.request.urlopen(urllib.request.Request(url,headers={'user-agent':'k-skill/korean-transit-route'}),timeout=10) as resp:
         d=json.loads(resp.read())
     if d.get('documents'):
         doc=d['documents'][0]
