@@ -193,3 +193,86 @@ test("fetchFineDustReport returns a helpful 400 when district tokens do not map 
       error.candidateStations.includes("오선동")
   );
 });
+
+test("fetchJson preserves the cause chain so connect timeouts classify as upstream_timeout", async () => {
+  const { classifyUpstreamFailure } = require("../src/upstream-errors");
+  const timeout = new TypeError("fetch failed");
+  timeout.cause = Object.assign(new Error("connect timeout"), { code: "UND_ERR_CONNECT_TIMEOUT" });
+
+  await assert.rejects(
+    fetchFineDustReport({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => {
+        throw timeout;
+      }
+    }),
+    (error) => {
+      assert.equal(error.message, "AirKorea upstream request failed.");
+      assert.equal(error.operation, "airkorea.fetchJson");
+      assert.equal(error.cause, timeout);
+      assert.deepEqual(classifyUpstreamFailure(error), {
+        error: "upstream_timeout",
+        cause: "UND_ERR_CONNECT_TIMEOUT",
+        statusCode: 504
+      });
+      return true;
+    }
+  );
+});
+
+test("fetchJson preserves the cause chain so DNS failures classify as upstream_unreachable", async () => {
+  const { classifyUpstreamFailure } = require("../src/upstream-errors");
+  const dnsFailure = new TypeError("fetch failed");
+  dnsFailure.cause = Object.assign(new Error("getaddrinfo ENOTFOUND apis.data.go.kr"), { code: "ENOTFOUND" });
+
+  await assert.rejects(
+    fetchFineDustReport({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => {
+        throw dnsFailure;
+      }
+    }),
+    (error) => {
+      assert.deepEqual(classifyUpstreamFailure(error), {
+        error: "upstream_unreachable",
+        cause: "ENOTFOUND",
+        statusCode: 503
+      });
+      return true;
+    }
+  );
+});
+
+test("fetchJson does not misclassify upstream HTTP errors as network failures", async () => {
+  const { classifyUpstreamFailure } = require("../src/upstream-errors");
+
+  await assert.rejects(
+    fetchFineDustReport({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => new Response("forbidden", { status: 403 })
+    }),
+    (error) => {
+      assert.match(error.message, /403 Forbidden/);
+      assert.equal(classifyUpstreamFailure(error), null);
+      return true;
+    }
+  );
+
+  await assert.rejects(
+    fetchFineDustReport({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => new Response("gateway error body", { status: 502 })
+    }),
+    (error) => {
+      assert.match(error.message, /HTTP 502/);
+      assert.equal(error.upstreamStatus, 502);
+      assert.equal(error.upstreamBody, "gateway error body");
+      assert.equal(classifyUpstreamFailure(error), null);
+      return true;
+    }
+  );
+});
