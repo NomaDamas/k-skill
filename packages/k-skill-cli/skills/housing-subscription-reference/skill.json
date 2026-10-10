@@ -1,0 +1,8 @@
+{
+  "name": "housing-subscription-reference",
+  "description": "Look up South Korean private-housing subscription point criteria (84 points) and region/area-based deposit thresholds using versioned AptToSell reference datasets.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: housing-subscription-reference\ndescription: Look up South Korean private-housing subscription point criteria and deposit thresholds using versioned AptToSell reference datasets.\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1"
+}
