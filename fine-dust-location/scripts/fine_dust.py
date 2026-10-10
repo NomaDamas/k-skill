@@ -414,7 +414,10 @@ def fetch_proxy_report(args: argparse.Namespace) -> dict | None:
         params["stationName"] = args.station_name
 
     query = urllib.parse.urlencode(params)
-    request = urllib.request.Request(f"{base_url}/v1/fine-dust/report?{query}")
+    request = urllib.request.Request(
+        f"{base_url}/v1/fine-dust/report?{query}",
+        headers={"accept": "application/json", "user-agent": "k-skill/fine-dust-location"},
+    )
     return read_json_response(request)
 
 

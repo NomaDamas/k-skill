@@ -40,7 +40,7 @@ def main(argv=None):
         print(json.dumps({"url": url, "query": params}, ensure_ascii=False, indent=2))
         return 0
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"accept": "application/json"}), timeout=30) as response:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"accept": "application/json", "user-agent": "k-skill/mofa-travel-safety"}), timeout=30) as response:
             payload = json.loads(response.read())
     except (OSError, ValueError, urllib.error.HTTPError) as error:
         print(f"[error] MOFA request failed: {error}", file=sys.stderr)
