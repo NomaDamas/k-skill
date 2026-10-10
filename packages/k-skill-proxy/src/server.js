@@ -4832,7 +4832,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         query: normalized,
         serviceKey: config.molitApiKey
       });
-    } catch {
+    } catch (error) {
+      if (classifyUpstreamFailure(error)) {
+        throw error;
+      }
       reply.code(502);
       return {
         error: "upstream_error",
