@@ -1,5 +1,6 @@
 // allow: SIZE_OK - Cohesive AirKorea station/measurement adapter with one shared fallback and redaction contract.
 const { fetchWithRetry } = require("./fetch-with-retry");
+const { classifyUpstreamFailure } = require("./upstream-errors");
 
 const STATION_SERVICE_URL = "http://apis.data.go.kr/B552584/MsrstnInfoInqireSvc";
 const MEASUREMENT_SERVICE_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc";
@@ -216,10 +217,16 @@ async function fetchJson(baseUrl, params, { fetchImpl = global.fetch, headers = 
       headers,
       signal: AbortSignal.timeout(20000)
     });
-  } catch {
-    const error = new Error("AirKorea upstream request failed.");
-    error.statusCode = 502;
-    error.code = "upstream_fetch_failed";
+  } catch (cause) {
+    // Keep the original failure (and its cause chain) on the thrown error so the
+    // global error handler can answer 504 upstream_timeout / 503
+    // upstream_unreachable with the socket cause instead of an opaque 502.
+    const error = new Error("AirKorea upstream request failed.", { cause });
+    error.operation = "airkorea.fetchJson";
+    if (!classifyUpstreamFailure(error)) {
+      error.statusCode = 502;
+      error.code = "upstream_fetch_failed";
+    }
     throw error;
   }
 
@@ -230,7 +237,11 @@ async function fetchJson(baseUrl, params, { fetchImpl = global.fetch, headers = 
       );
     }
 
-    throw new Error(`AirKorea upstream request failed with HTTP ${response.status}.`);
+    const error = new Error(`AirKorea upstream request failed with HTTP ${response.status}.`);
+    error.operation = "airkorea.fetchJson";
+    error.upstreamStatus = response.status;
+    error.upstreamBody = (await response.text()).slice(0, 500);
+    throw error;
   }
 
   return JSON.parse(await response.text());

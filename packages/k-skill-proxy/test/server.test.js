@@ -7701,3 +7701,57 @@ test("upstream connect timeouts answer 504 upstream_timeout", async (t) => {
   assert.equal(kosis.statusCode, 504);
   assert.equal(kosis.json().error, "upstream_timeout");
 });
+
+test("fine-dust route surfaces upstream connect timeout as 504 upstream_timeout with cause and route", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: {
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/fine-dust/report?stationName=%EC%A2%85%EB%A1%9C%EA%B5%AC";
+  const response = await app.inject({ method: "GET", url });
+  assert.equal(response.statusCode, 504);
+  assert.equal(response.json().error, "upstream_timeout");
+  assert.equal(response.json().upstream.failure, "upstream_timeout");
+  assert.equal(response.json().upstream.cause, "UND_ERR_CONNECT_TIMEOUT");
+  assert.equal(response.json().upstream.route, url);
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
+
+test("fine-dust route surfaces connection resets as 503 upstream_unreachable", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("ECONNRESET");
+  };
+
+  const app = buildServer({
+    env: {
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/fine-dust/report?stationName=%EC%A2%85%EB%A1%9C%EA%B5%AC"
+  });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_unreachable");
+  assert.equal(response.json().upstream.cause, "ECONNRESET");
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
