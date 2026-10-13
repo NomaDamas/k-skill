@@ -7,6 +7,8 @@
 // When more than one candidate matches we return the candidate list as-is and
 // do not assert which one is the queried business.
 
+const { upstreamFailureResult } = require("./upstream-errors");
+
 const NPS_BASE_URL = "https://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2";
 
 // data.go.kr gateway-level auth/quota reason codes (OpenAPI_ServiceResponse).
@@ -91,7 +93,8 @@ async function callOperation(operation, params, serviceKey, fetchImpl) {
   try {
     response = await doFetch(url.toString(), { signal: AbortSignal.timeout(20000) });
   } catch (err) {
-    return { kind: "error", reason: `Upstream request failed: ${err.message}` };
+    const failure = upstreamFailureResult(err);
+    return { kind: "error", failureError: failure.error, failureCause: failure.cause, reason: failure.message };
   }
 
   if (response.status === 401 || response.status === 403) {
@@ -120,7 +123,11 @@ async function fetchNationalPensionWorkplace({ wkplNm, bnoPrefix = "", serviceKe
     return { error: "upstream_forbidden", message: `NPS upstream rejected the request (${basic.reason}). The proxy key may not be approved for service 3046071.` };
   }
   if (basic.kind === "error") {
-    return { error: "upstream_error", message: basic.reason };
+    return {
+      error: basic.failureError || "upstream_error",
+      ...(basic.failureCause ? { cause: basic.failureCause } : {}),
+      message: basic.reason
+    };
   }
 
   // Defensive re-filter by the 6-digit prefix (trust upstream but verify).
@@ -158,7 +165,11 @@ async function fetchNationalPensionWorkplace({ wkplNm, bnoPrefix = "", serviceKe
     } else if (detailResult.kind === "auth-error") {
       return { error: "upstream_forbidden", message: `NPS detail lookup rejected the request (${detailResult.reason}). The proxy key may not be approved for service 3046071.` };
     } else {
-      return { error: "upstream_error", message: `NPS detail lookup failed (${detailResult.reason}).` };
+      return {
+        error: detailResult.failureError || "upstream_error",
+        ...(detailResult.failureCause ? { cause: detailResult.failureCause } : {}),
+        message: `NPS detail lookup failed (${detailResult.reason}).`
+      };
     }
 
     const periodResult = await callOperation(
@@ -174,7 +185,11 @@ async function fetchNationalPensionWorkplace({ wkplNm, bnoPrefix = "", serviceKe
     } else if (periodResult.kind === "auth-error") {
       return { error: "upstream_forbidden", message: `NPS monthly status lookup rejected the request (${periodResult.reason}). The proxy key may not be approved for service 3046071.` };
     } else {
-      return { error: "upstream_error", message: `NPS monthly status lookup failed (${periodResult.reason}).` };
+      return {
+        error: periodResult.failureError || "upstream_error",
+        ...(periodResult.failureCause ? { cause: periodResult.failureCause } : {}),
+        message: `NPS monthly status lookup failed (${periodResult.reason}).`
+      };
     }
   }
 

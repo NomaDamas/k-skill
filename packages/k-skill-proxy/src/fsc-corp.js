@@ -8,6 +8,8 @@
 // a bzno field, cross-check it against the supplied business number without
 // asserting identity when it is absent.
 
+const { upstreamFailureResult } = require("./upstream-errors");
+
 const FSC_CORP_OUTLINE_URL =
   "https://apis.data.go.kr/1160100/service/GetCorpBasicInfoService_V2/getCorpOutline_V2";
 
@@ -88,7 +90,7 @@ async function fetchFscCorpOutline({ corpNm, bno = null, serviceKey, fetchImpl =
   try {
     response = await doFetch(url.toString(), { signal: AbortSignal.timeout(20000) });
   } catch (err) {
-    return { error: "upstream_timeout", message: `Upstream request failed: ${err.message}` };
+    return upstreamFailureResult(err);
   }
 
   if (response.status === 401 || response.status === 403) {

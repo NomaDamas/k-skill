@@ -60,8 +60,33 @@ function classifyUpstreamFailure(error) {
   return null;
 }
 
+// Human-readable cause detail for a failed fetch: appends the socket/undici
+// cause code and message hidden inside Node's opaque `fetch failed` wrapper.
+function describeUpstreamFailure(error) {
+  const base = String(error?.message || "unknown upstream failure");
+  const cause = error?.cause ?? null;
+  const code = stringCode(cause?.code) || stringCode(error?.code);
+  const causeMessage =
+    typeof cause?.message === "string" && cause.message && cause.message !== base ? cause.message : null;
+  const detail = [code, causeMessage].filter(Boolean).join("; ");
+  return detail ? `${base} (${detail})` : base;
+}
+
+// Standard failure result for the keyed data.go.kr fetchers so every route in
+// the family classifies and reports failures the same way (see
+// docs/deploy-k-skill-proxy.md: 503 unreachable / 504 timeout / 502 other).
+function upstreamFailureResult(error) {
+  const classified = classifyUpstreamFailure(error);
+  const message = `Upstream request failed: ${describeUpstreamFailure(error)}`;
+  if (classified) {
+    return { error: classified.error, cause: classified.cause, message };
+  }
+  return { error: "upstream_error", message };
+}
+
 module.exports = {
   UNREACHABLE_CAUSE_CODES,
   TIMEOUT_CAUSE_CODES,
-  classifyUpstreamFailure
+  classifyUpstreamFailure,
+  upstreamFailureResult
 };
