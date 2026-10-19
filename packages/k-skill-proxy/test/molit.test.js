@@ -371,3 +371,45 @@ test("fetchTransactions returns error for API error code", async () => {
 
   assert.equal(result.error, "molit_api_030");
 });
+
+test("fetchTransactions calls the MOLIT API over https", async () => {
+  let requestedUrl = "";
+  const mockFetch = async (url) => {
+    requestedUrl = String(url);
+    return { ok: true, text: async () => SAMPLE_APT_TRADE_XML };
+  };
+
+  await fetchTransactions({
+    assetType: "apartment",
+    dealType: "trade",
+    lawdCd: "11680",
+    dealYmd: "202403",
+    serviceKey: "test-key",
+    fetchImpl: mockFetch,
+  });
+
+  assert.ok(
+    requestedUrl.startsWith("https://apis.data.go.kr/1613000/"),
+    `expected https MOLIT URL, got ${requestedUrl}`
+  );
+});
+
+test("fetchTransactions maps upstream timeout to 504", async () => {
+  const timeoutError = new Error("The operation timed out.");
+  timeoutError.name = "TimeoutError";
+  const mockFetch = async () => {
+    throw timeoutError;
+  };
+
+  const result = await fetchTransactions({
+    assetType: "apartment",
+    dealType: "trade",
+    lawdCd: "11680",
+    dealYmd: "202403",
+    serviceKey: "test-key",
+    fetchImpl: mockFetch,
+  });
+
+  assert.equal(result.error, "upstream_timeout");
+  assert.equal(result.status_code, 504);
+});
