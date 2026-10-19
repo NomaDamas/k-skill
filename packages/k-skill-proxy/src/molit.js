@@ -3,7 +3,7 @@
 
 const { fetchWithRetry } = require("./fetch-with-retry");
 
-const MOLIT_BASE_URL = "http://apis.data.go.kr/1613000";
+const MOLIT_BASE_URL = "https://apis.data.go.kr/1613000";
 
 const ENDPOINT_MAP = new Map([
   ["apartment/trade", "RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade"],
@@ -237,7 +237,11 @@ async function fetchTransactions({ assetType, dealType, lawdCd, dealYmd, numOfRo
       signal: AbortSignal.timeout(20000)
     });
   } catch (err) {
-    return { error: "upstream_timeout", message: `Upstream request failed: ${err.message}` };
+    return {
+      error: "upstream_timeout",
+      message: `Upstream request failed: ${err.message}`,
+      status_code: 504
+    };
   }
 
   if (!response.ok) {
