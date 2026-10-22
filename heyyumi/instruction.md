@@ -2,7 +2,7 @@
 
 ## What this skill does
 
-헤이유미 공식 REST API(`https://api.heyyumi.ai/api/v1`)로 한국 식당·카페·바를 찾고, 같은 인증으로 **예약 요청**과 **실시간 문의**(지금 메뉴 재고/웨이팅/즉시 착석)를 사장님에게 보낸다. 예약은 선결제가 없고, 사장님이 수락하면 `confirmed`, 거절하면 `cancelled`, 약 5분 무응답이면 `expired`가 된다. 진행 상황은 예약자에게 카카오톡/SMS로도 간다.
+헤이유미 공식 호스팅 MCP 서버(`https://mcp.heyyumi.ai/mcp`, Streamable HTTP)로 한국 식당·카페·바를 찾고, 같은 연결로 **예약 요청**과 **실시간 문의**(지금 메뉴 재고/웨이팅/즉시 착석)를 사장님에게 보낸다. **API 키 없이 구글 로그인만으로 쓸 수 있다.** k-skill-proxy는 쓰지 않는다. 헬퍼가 사용자 머신에서 헤이유미 서버로 직접 MCP 호출을 한다.
 
 공식 표면만 쓴다. 크롤링·화면 스크래핑은 하지 않는다.
 
@@ -29,20 +29,26 @@ npx -y @nomadamas/k-skill@0 exec heyyumi scripts/heyyumi.mjs -- <command> [optio
 | `nearby --lat --lng [--radius 1000]` | 없음 | 좌표 주변 검색(가까운 순). `regions`의 center를 넣는다 |
 | `place <place-id> [--fields core,contact_hours,quality]` | 없음 | 상세 |
 | `reserve ... [--confirm]` | **있음** | 예약 요청. `--confirm` 없으면 전송 없이 미리보기 |
-| `reservation-status <id> [--wait 25]` | 없음 | 롱폴링. 확정/거절/만료까지 |
+| `reservation-status <id> [--wait]` | 없음 | 상태 조회. `--wait`이면 서버에서 최대 약 25초 블록 |
 | `live-ask ... [--confirm]` | **있음** | 사장님에게 실시간 문의. `--confirm` 없으면 미리보기 |
-| `live-status <id> [--wait 25]` | 없음 | 문의 답변 롱폴링 |
-| `login` | 로컬 토큰 파일 | OAuth(구글 로그인), 아래 Auth 참고 |
+| `live-status <id> [--wait]` | 없음 | 답변 조회. `--wait`이면 서버에서 최대 약 25초 블록 |
+| `login` | 로컬 토큰 파일 | 구글 로그인(OAuth), 아래 Auth 참고 |
 
-`--sandbox`를 붙이면 `X-Map3-Sandbox: 1`로 호출한다. 검증·파트너 확인은 실제로 돌지만 저장·사장님 푸시·손님 문자는 없고, 약 8초 뒤 모의 결과가 나온다. 예약 흐름을 처음 점검할 때 쓴다.
+내부적으로 MCP 도구 `resolve_regions`, `search_places`, `nearby_places`, `get_place`, `request_reservation`, `get_reservation`/`wait_for_reservation`, `request_live_status`, `get_live_status`/`wait_for_live_status`를 호출한다. `--wait`은 `wait_for_*`를 부른다. 아직 `pending`(`settled:false`)이면 같은 명령을 다시 호출한다. `--filter wifi=true`처럼 `key=value`를 반복해 `pet_friendly`, `private_room` 등 불리언 필터를 넘긴다. 샌드박스 모드는 없으므로 `--confirm`을 붙인 호출은 항상 실제 전송이다.
 
 ## Auth
 
-우선순위: `KSKILL_HEYYUMI_API_KEY`(환경변수 또는 `~/.config/k-skill/secrets.env`) → `login`으로 저장한 OAuth 토큰.
+우선순위: `KSKILL_HEYYUMI_API_KEY`(환경변수 또는 `~/.config/k-skill/secrets.env`, 선택) → `login`으로 저장한 구글 로그인 토큰.
 
-1. **API 키(권장, REST가 문서화한 인증)**: https://heyyumi.ai/dashboard 에서 `hmp_...` 키를 발급해 `KSKILL_HEYYUMI_API_KEY`로 등록한다. 키는 채팅에 붙여 넣게 하거나 출력하지 않는다. 위 vault 규칙대로 주입/저장한다.
-2. **구글 로그인(OAuth 2.1)**: `heyyumi.mjs login`이 헤이유미 인증 서버(`heyyumi.ai/.well-known/oauth-authorization-server`)에 동적 클라이언트 등록 후 PKCE(S256)로 브라우저 로그인을 연다. 사용자가 출력된 URL을 열어 구글로 로그인·승인하면 토큰이 `~/.config/k-skill/heyyumi-oauth.json`(0600)에 저장되고 만료 시 refresh된다. 로그인·승인은 사용자가 직접 해야 하는 단계이며 자동화하지 않는다.
-   - 주의(미검증): 헤이유미 문서는 OAuth를 MCP 서버(`mcp.heyyumi.ai`) 연결용으로만 설명한다. 이 토큰이 REST에서도 통하는지는 확인되지 않았다. REST가 401이면 헬퍼가 "API 키를 쓰라"는 안내와 함께 `unauthorized`를 돌려준다. 이 경우 API 키 경로로 전환한다.
+**기본은 구글 로그인이다. 키는 필요 없다.**
+
+1. 처음 쓰기 전에 `login`을 실행한다. 헬퍼가 헤이유미 인증 서버(`heyyumi.ai/.well-known/oauth-authorization-server`)에 동적 클라이언트 등록(RFC 7591) 후 PKCE(S256)와 `resource=https://mcp.heyyumi.ai`로 로컬 loopback 콜백을 열고 로그인 URL을 출력한다.
+2. **사용자**가 그 URL을 같은 컴퓨터의 브라우저에서 열어 "이용약관과 개인정보처리방침에 동의" 체크 후 "Google로 계속하기"로 로그인·승인한다. 처음이면 헤이유미 계정이 자동 생성된다. 로그인·약관 동의는 사용자가 직접 하는 단계이며 에이전트가 대신 누르지 않는다.
+3. 토큰은 `~/.config/k-skill/heyyumi-oauth.json`(0600)에 저장되고 만료 시 refresh된다. refresh까지 거절되면 `login_required`가 나오니 `login`을 다시 실행한다.
+
+개인 대화형 사용은 무료이며 하루 약 20회 질문 한도가 있다(Plus 월 4,900원은 약 150회, 결제는 아직 준비 중). 한도를 넘으면 `rate_limited`가 나온다.
+
+API 키(`hmp_...`, https://heyyumi.ai/dashboard)는 이미 가진 사람을 위한 대안이다. 같은 MCP 서버에 Bearer로 붙으며, 키가 있으면 로그인 토큰보다 우선한다. 키·토큰은 채팅에 붙여 넣게 하거나 출력하지 않는다.
 
 ## Workflow
 
@@ -56,9 +62,9 @@ npx -y @nomadamas/k-skill@0 exec heyyumi scripts/heyyumi.mjs -- <command> [optio
 
 ### 2. 예약 정보 모으기
 
-필수: 매장(`placeId`), 날짜·시각(한국시간, 오프셋 포함 ISO 8601 `2026-12-01T19:00:00+09:00`), 인원, **예약자 연락처**. 이름과 요청사항(알레르기, 기념일, 좌석)은 선택이다. 빠진 값은 사용자에게 묻는다. 지어내지 않는다. 상대 날짜("내일")는 오늘 날짜로 절대 날짜로 바꿔 확인한다.
+필수: 매장(`placeId`), 날짜·시각(한국시간, 오프셋 포함 ISO 8601 `2026-12-01T19:00:00+09:00`), 인원, **예약자 휴대폰 번호**. 이름은 강하게 권장, 요청사항(알레르기, 기념일, 좌석)은 선택이다. 번호가 한국 번호가 아니면(`+82`·`010` 이외) **이메일(`--email`)도 필수**다. 문자를 못 보내므로 결과를 이메일로 보낸다. 한국 번호 사용자에게는 이메일을 묻지 않는다. 빠진 값은 사용자에게 묻는다. 지어내지 않는다. 상대 날짜("내일")는 오늘 날짜로 절대 날짜로 바꿔 확인한다.
 
-연락처는 예약 진행 문자와 노쇼 연락에 쓰인다고 사용자에게 알린다.
+번호는 사장님의 노쇼·변경 연락에 쓰이고, 한국 번호면 진행 상황이 카카오톡/SMS로도 간다고 사용자에게 알린다.
 
 ### 3. 미리보기 → `clarify` → 전송
 
@@ -69,11 +75,11 @@ npx -y @nomadamas/k-skill@0 exec heyyumi scripts/heyyumi.mjs -- <command> [optio
 
 ### 4. 결과 확인
 
-`reservation-status <reservationId> --wait 25`를 `confirmed`/`cancelled`/`expired`/`no_show` 중 하나가 나올 때까지 반복한다(최대 약 5분). 사용자에게는 확정/거절/만료 중 최종 결과만 보고하고, 확정이면 매장·시각·인원을 다시 적는다. 만료·거절이면 다른 시간이나 다른 후보를 제안한다. 같은 시간을 자동으로 재요청하지 않는다.
+`reservation-status <reservationId> --wait`를 `confirmed`/`cancelled`/`expired`/`no_show` 중 하나가 나올 때까지 반복한다(최대 약 5분). 사용자에게는 확정/거절/만료 중 최종 결과만 보고하고, 확정이면 매장·시각·인원을 다시 적는다. 만료·거절이면 다른 시간이나 다른 후보를 제안한다. 같은 시간을 자동으로 재요청하지 않는다.
 
 ### 5. 실시간 문의(선택)
 
-"지금 그거 돼요?"류 질문(`--kind item` 재고, `wait` 웨이팅, `seats` 즉시 착석+`--topic "party of 10"`)은 `live-ask`로 보낸다. 사장님 앱에 푸시가 가므로 예약과 같은 방식으로 `clarify` 승인 후 `--confirm`을 붙인다. `--topic`은 문장이 아니라 짧은 토큰(실제 메뉴명, `wait`)이다. 답은 `live-status <queryId> --wait 25`로 받는다. 상태: `available`, `limited`, `unavailable`, `soon`, `not_offered`, `no_response`. 답에는 `verifiedAt`(확인 시각)과 사장님 메모(`note`, 예: 웨이팅 20분)가 같이 있으니 함께 전달한다. 이미 유효한 답이 있으면 서버가 재사용한다(`reused: true`).
+"지금 그거 돼요?"류 질문(`--kind item` 재고, `wait` 웨이팅, `seats` 즉시 착석+`--topic "party of 10"`)은 `live-ask`로 보낸다. 사장님 앱에 푸시가 가므로 예약과 같은 방식으로 `clarify` 승인 후 `--confirm`을 붙인다. `--topic`은 문장이 아니라 짧은 토큰(실제 메뉴명, `wait`)이다. 답은 `live-status <queryId> --wait`로 받는다. 상태: `available`, `limited`, `unavailable`, `soon`, `not_offered`, `no_response`. 답에는 `verifiedAt`(확인 시각)과 사장님 메모(`note`, 예: 웨이팅 20분)가 같이 있으니 함께 전달한다. 이미 유효한 답이 있으면 서버가 재사용한다(`reused: true`).
 
 ## Done when
 
@@ -85,21 +91,24 @@ npx -y @nomadamas/k-skill@0 exec heyyumi scripts/heyyumi.mjs -- <command> [optio
 
 | 코드 | 의미 | 처리 |
 | --- | --- | --- |
-| `missing_credentials` | 키·토큰 없음 | Auth 절차 안내 |
-| `unauthorized` (401) | 키/토큰 무효 | 키 재발급 또는 `login`. OAuth 토큰이 거절되면 API 키로 전환 |
-| `rate_limited` (429) | 분당/월 한도 | `retryAfter`만큼 대기 후 재시도하거나 사용자에게 알림 |
+| `missing_credentials` | 로그인/키 없음 | `login` 안내(구글 로그인) |
+| `login_required` | 저장된 로그인이 만료·폐기됨 | `login` 재실행 |
+| `unauthorized` (401/403) | 로그인 토큰 또는 키 거절 | `login` 재실행(키를 쓰는 중이면 키 확인) |
+| `rate_limited` (429) | 하루 질문 한도(무료 약 20회) 등 | `retryAfter`가 있으면 그만큼 대기, 없으면 내일 다시 또는 Plus/API 키 안내 |
 | `reservation_not_available` (422) | 이 매장은 헤이유미로 예약 불가 | **재시도 금지.** 전화 예약 등 다른 방법 안내 |
 | `reservation_requests_closed` (422) | 비파트너 매장은 매일 11:00~21:00 KST만 접수 | `retryAfter` 이후에 다시 안내 |
 | `venue_closed_at_requested_time` (422) | 요청 시각에 매장 휴무/영업 외 | 다른 시각 제안 |
 | `live_status_not_available` (422) | 사장님 앱이 없는 매장 | 재시도 금지, 검색 결과의 영업시간 등으로 답 |
 | `blocked: closed_now` | 지금 영업 시간이 아니라 문의 안 보냄 | 영업시간 안내 |
-| `bad_request` (400) / `invalid_input` | 파라미터 오류, 결과창 초과(`bulk_export_required`) | 입력 수정. 대량 수집은 하지 않는다 |
-| `not_found` (404) | 매장/예약 없음 | `search`로 `placeId` 재확인 |
+| `invalid_input` / `reservation_time_past` / `guest_phone_required` / `guest_email_required` | 입력 오류 | 값을 사용자에게 다시 확인해 수정. 같은 값으로 재시도하지 않는다 |
+| `bulk_export_required` | 결과창 초과 | 조건을 좁힌다. 대량 수집은 하지 않는다 |
+| `venue_not_found` / `reservation_not_found` | 매장/예약 없음 | `search`로 `placeId` 재확인 |
+| `mcp_error` / `tool_error` | MCP 프로토콜 또는 도구 오류 | 메시지를 그대로 사용자에게 알리고 입력을 점검 |
 | `upstream_error` (5xx) | 서버 오류 | 잠시 후 한 번 재시도 |
 
 ## Boundaries
 
-- 개인의 대화형 사용(Open Season 동안 무료)을 위한 스킬이다. 회사 제품·서비스에 넣는 상업 이용과 대량·전체 데이터 수집은 헤이유미 별도 라이선스/Bulk Export 대상이므로 이 스킬로 하지 않는다.
-- 키·토큰·연락처를 저장소, 로그, 채팅에 남기지 않는다. API 키를 URL(`?api_key=`)에 넣지 않는다.
+- 개인의 대화형 사용(무료 하루 약 20회)을 위한 스킬이다. `login`은 로컬 loopback으로 돌아오므로 브라우저를 같은 컴퓨터에서 열어야 한다(원격 서버 셸이면 불가). 회사 제품·서비스에 넣는 상업 이용과 대량·전체 데이터 수집은 헤이유미 별도 라이선스/Bulk Export 대상이므로 이 스킬로 하지 않는다.
+- 로그인 토큰·키·연락처를 저장소, 로그, 채팅에 남기지 않는다.
 - 결제·카드 정보는 다루지 않는다(이 API는 선결제가 없다).
 - 이 스킬은 헤이유미 공식 기능이 아니며 헤이유미와 제휴 관계를 주장하지 않는다. 출처를 "헤이유미(HeyYumi)"로 표기한다.

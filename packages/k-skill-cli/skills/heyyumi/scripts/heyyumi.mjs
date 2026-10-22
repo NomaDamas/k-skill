@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 // HeyYumi (https://heyyumi.ai) helper: Korean restaurant/cafe/bar search and
-// table-reservation requests through the official REST API.
+// table-reservation requests through HeyYumi's hosted MCP server
+// (https://mcp.heyyumi.ai/mcp, Streamable HTTP).
 //
-// Reads (places, regions) run directly. Anything that reaches a venue owner or
-// a guest's phone (reserve, live-ask) only prints a preview unless --confirm is
-// passed, so the calling agent must get explicit user approval first.
+// Why MCP and not REST: HeyYumi documents Google sign-in (OAuth 2.1) only for the
+// MCP server. REST (api.heyyumi.ai) documents hmp_ API keys only. The MCP server
+// accepts both a Google-login OAuth token and an hmp_ key as the Bearer token, so
+// one transport serves users with and without a key. No k-skill-proxy is used.
+//
+// Anything that reaches a venue owner or a guest's phone (reserve, live-ask) only
+// prints a preview unless --confirm is passed, so the calling agent must get
+// explicit user approval first.
 //
 // Credentials, in order: KSKILL_HEYYUMI_API_KEY (env or
 // ~/.config/k-skill/secrets.env), then the OAuth token saved by `login`.
@@ -18,11 +24,14 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
-export const DEFAULT_API_BASE_URL = "https://api.heyyumi.ai";
+export const DEFAULT_MCP_URL = "https://mcp.heyyumi.ai/mcp";
 export const DEFAULT_OAUTH_ISSUER = "https://heyyumi.ai";
+// RFC 8707 resource indicator: the audience the OAuth token is minted for.
+export const DEFAULT_OAUTH_RESOURCE = "https://mcp.heyyumi.ai";
+export const MCP_PROTOCOL_VERSION = "2025-06-18";
 export const DEFAULT_TIMEOUT_MS = 30000;
-export const DEFAULT_FIELDS = "core,contact_hours";
-export const MAX_LONG_POLL_SECONDS = 25;
+// wait_for_* tools block ~25s server-side before answering.
+export const LONG_POLL_TIMEOUT_MS = 60000;
 export const LIVE_STATUS_KINDS = ["item", "wait", "seats"];
 export const API_KEY_ENV = "KSKILL_HEYYUMI_API_KEY";
 
@@ -35,8 +44,10 @@ export class HeyYumiError extends Error {
   }
 }
 
+// ---- credentials ----------------------------------------------------------
+
 function configDir(env = process.env) {
-  return path.join(env.KSKILL_CONFIG_DIR || path.join(os.homedir(), ".config", "k-skill"));
+  return env.KSKILL_CONFIG_DIR || path.join(os.homedir(), ".config", "k-skill");
 }
 
 export function oauthTokenPath(env = process.env) {
@@ -58,14 +69,10 @@ export function resolveApiKey(env = process.env) {
     return env[API_KEY_ENV];
   }
   try {
-    const value = parseDotenvValue(fs.readFileSync(path.join(configDir(env), "secrets.env"), "utf8"), API_KEY_ENV);
-    if (value) {
-      return value;
-    }
+    return parseDotenvValue(fs.readFileSync(path.join(configDir(env), "secrets.env"), "utf8"), API_KEY_ENV);
   } catch {
-    // no dotenv file
+    return "";
   }
-  return "";
 }
 
 function readOauthTokens(env = process.env) {
@@ -127,11 +134,19 @@ export async function resolveCredential({ env = process.env, fetchImpl = fetch, 
       return { kind: "oauth", token: saved.access_token };
     }
     if (saved.refresh_token && saved.token_endpoint && saved.client_id) {
-      const refreshed = await postForm(
-        saved.token_endpoint,
-        { grant_type: "refresh_token", refresh_token: saved.refresh_token, client_id: saved.client_id },
-        { fetchImpl }
-      );
+      let refreshed;
+      try {
+        refreshed = await postForm(
+          saved.token_endpoint,
+          { grant_type: "refresh_token", refresh_token: saved.refresh_token, client_id: saved.client_id },
+          { fetchImpl }
+        );
+      } catch (error) {
+        if (error instanceof HeyYumiError && error.details.status >= 400 && error.details.status < 500) {
+          throw new HeyYumiError("login_required", "HeyYumi sign-in expired. Run: heyyumi.mjs login", error.details);
+        }
+        throw error;
+      }
       const next = tokensFromResponse(refreshed, saved, {
         issuer: saved.issuer,
         token_endpoint: saved.token_endpoint,
@@ -140,79 +155,168 @@ export async function resolveCredential({ env = process.env, fetchImpl = fetch, 
       writeOauthTokens(next, env);
       return { kind: "oauth", token: next.access_token };
     }
+    throw new HeyYumiError("login_required", "HeyYumi sign-in expired. Run: heyyumi.mjs login");
   }
   throw new HeyYumiError(
     "missing_credentials",
-    `No HeyYumi credential. Set ${API_KEY_ENV} (key from https://heyyumi.ai/dashboard) or run: heyyumi.mjs login`
+    `Not signed in to HeyYumi. Run: heyyumi.mjs login (Google sign-in, no key needed), or set ${API_KEY_ENV}`
   );
 }
 
-function apiBase(env = process.env) {
-  return (env.KSKILL_HEYYUMI_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+// ---- MCP Streamable HTTP client -------------------------------------------
+
+function mcpUrl(env = process.env) {
+  return env.KSKILL_HEYYUMI_MCP_URL || DEFAULT_MCP_URL;
 }
 
-export async function apiRequest(method, route, { query, body, sandbox = false, env = process.env, fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
-  const credential = await resolveCredential({ env, fetchImpl });
-  const url = new URL(`${apiBase(env)}${route}`);
-  for (const [key, value] of Object.entries(query ?? {})) {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, String(value));
+// Streamable HTTP answers either application/json or a text/event-stream whose
+// `data:` events carry JSON-RPC messages. Returns the message for `id`.
+export function parseRpcResponse(text, contentType, id) {
+  const messages = [];
+  if (/text\/event-stream/i.test(contentType || "")) {
+    for (const event of text.split(/\r?\n\r?\n/)) {
+      const data = event
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trimStart())
+        .join("\n");
+      if (data) {
+        try {
+          messages.push(JSON.parse(data));
+        } catch {
+          // ignore non-JSON keep-alives
+        }
+      }
+    }
+  } else if (text.trim()) {
+    try {
+      const parsed = JSON.parse(text);
+      messages.push(...(Array.isArray(parsed) ? parsed : [parsed]));
+    } catch {
+      return null;
     }
   }
-  const headers = { accept: "application/json", authorization: `Bearer ${credential.token}` };
-  if (body !== undefined) {
-    headers["content-type"] = "application/json";
+  return messages.find((message) => message.id === id) ?? null;
+}
+
+export function classifyHttpFailure(response, bodyText, credentialKind) {
+  const status = response.status;
+  let payload = null;
+  try {
+    payload = JSON.parse(bodyText);
+  } catch {
+    // non-JSON body
   }
-  if (sandbox) {
-    headers["x-map3-sandbox"] = "1";
+  const message = payload?.error_description || payload?.message
+    || (typeof payload?.error === "string" ? payload.error : payload?.error?.message) || `HTTP ${status}`;
+  const details = { status, retryAfter: response.headers.get("retry-after") ?? undefined };
+
+  if (status === 401 || status === 403) {
+    const remedy = credentialKind === "api_key"
+      ? `check ${API_KEY_ENV} (key from https://heyyumi.ai/dashboard)`
+      : "run: heyyumi.mjs login";
+    return new HeyYumiError("unauthorized", `HeyYumi rejected the credential (${message}); ${remedy}`, details);
   }
-  const response = await fetchImpl(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs)
-  });
-  const text = await response.text();
-  let payload;
+  if (status === 429) {
+    return new HeyYumiError("rate_limited", `HeyYumi rate or daily quota limit hit: ${message}`, details);
+  }
+  return new HeyYumiError(status >= 500 ? "upstream_error" : "http_error", message, details);
+}
+
+const KNOWN_TOOL_ERROR_CODES = [
+  "reservation_not_available", "reservation_requests_closed", "venue_closed_at_requested_time",
+  "live_status_not_available", "reservation_time_past", "guest_phone_required", "guest_email_required",
+  "venue_not_found", "reservation_not_found", "bulk_export_required", "rate_limited"
+];
+
+// A tool-level failure arrives as a successful JSON-RPC result with isError=true.
+export function toolErrorFrom(result) {
+  const text = (result.content ?? []).filter((part) => part.type === "text").map((part) => part.text).join("\n");
+  let payload = null;
   try {
     payload = JSON.parse(text);
   } catch {
-    payload = null;
+    // plain-text error
   }
-  if (!response.ok || payload === null || payload.success === false) {
-    throw classifyHttpFailure(response, payload, credential.kind);
-  }
-  return { data: payload.data, meta: payload.meta, units: response.headers.get("x-map3-units") };
+  const rawCode = payload?.error?.code ?? payload?.code ?? (typeof payload?.error === "string" ? payload.error : undefined);
+  const code = rawCode || KNOWN_TOOL_ERROR_CODES.find((known) => text.includes(known)) || "tool_error";
+  const message = payload?.error?.message ?? payload?.message ?? (text || "HeyYumi tool call failed");
+  return new HeyYumiError(code, message, {
+    retryAfter: payload?.retryAfter ?? payload?.error?.retryAfter
+  });
 }
 
-export function classifyHttpFailure(response, payload, credentialKind = "api_key") {
-  const status = response.status;
-  const upstreamCode = payload?.error?.code ?? payload?.code ?? (typeof payload?.error === "string" ? payload.error : undefined);
-  const message = payload?.error?.message ?? payload?.message ?? (typeof payload?.error === "string" ? payload.error : `HTTP ${status}`);
-  const details = { status, upstreamCode, retryAfter: payload?.retryAfter ?? payload?.error?.retryAfter ?? response.headers.get("retry-after") ?? undefined };
+function toolResultData(result) {
+  if (result.structuredContent !== undefined) {
+    return result.structuredContent;
+  }
+  const text = (result.content ?? []).filter((part) => part.type === "text").map((part) => part.text).join("\n");
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
 
-  if (status === 401) {
-    const hint = credentialKind === "oauth"
-      ? " (the saved OAuth token was rejected by the REST API; use an API key from https://heyyumi.ai/dashboard)"
-      : "";
-    return new HeyYumiError("unauthorized", `HeyYumi rejected the credential: ${message}${hint}`, details);
+export async function callTool(name, args, { env = process.env, fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS, now = Date.now } = {}) {
+  const credential = await resolveCredential({ env, fetchImpl, now });
+  const url = mcpUrl(env);
+  let nextId = 0;
+  let sessionId = "";
+
+  const post = async (message, { expectResponse = true } = {}) => {
+    const headers = {
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+      authorization: `Bearer ${credential.token}`
+    };
+    if (message.method !== "initialize") {
+      headers["mcp-protocol-version"] = MCP_PROTOCOL_VERSION;
+    }
+    if (sessionId) {
+      headers["mcp-session-id"] = sessionId;
+    }
+    const response = await fetchImpl(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(message),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw classifyHttpFailure(response, text, credential.kind);
+    }
+    sessionId = response.headers.get("mcp-session-id") || sessionId;
+    if (!expectResponse) {
+      return null;
+    }
+    const reply = parseRpcResponse(text, response.headers.get("content-type"), message.id);
+    if (!reply) {
+      throw new HeyYumiError("upstream_error", `MCP server sent no reply to ${message.method}`);
+    }
+    if (reply.error) {
+      throw new HeyYumiError("mcp_error", reply.error.message || `MCP error ${reply.error.code}`, { rpcCode: reply.error.code });
+    }
+    return reply.result;
+  };
+
+  await post({
+    jsonrpc: "2.0",
+    id: ++nextId,
+    method: "initialize",
+    params: {
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      capabilities: {},
+      clientInfo: { name: "k-skill-heyyumi", version: "1" }
+    }
+  });
+  await post({ jsonrpc: "2.0", method: "notifications/initialized" }, { expectResponse: false });
+  const result = await post({ jsonrpc: "2.0", id: ++nextId, method: "tools/call", params: { name, arguments: args } });
+
+  if (result.isError) {
+    throw toolErrorFrom(result);
   }
-  if (status === 429) {
-    return new HeyYumiError("rate_limited", `HeyYumi rate or quota limit hit: ${message}`, details);
-  }
-  if (status === 422) {
-    // reservation_not_available / live_status_not_available: do not retry.
-    // reservation_requests_closed: retry only at details.retryAfter.
-    // venue_closed_at_requested_time: pick another time.
-    return new HeyYumiError(upstreamCode || "unprocessable", message, details);
-  }
-  if (status === 404) {
-    return new HeyYumiError(upstreamCode || "not_found", message, details);
-  }
-  if (status === 400) {
-    return new HeyYumiError(upstreamCode || "bad_request", message, details);
-  }
-  return new HeyYumiError(status >= 500 ? "upstream_error" : "http_error", message, details);
+  return { data: toolResultData(result) };
 }
 
 // ---- input builders -------------------------------------------------------
@@ -235,10 +339,15 @@ function positiveInt(value, name) {
 
 export function normalizePhone(value) {
   const phone = requireText(value, "phone");
-  if (!/^[0-9+\-\s()]{7,20}$/.test(phone)) {
-    throw new HeyYumiError("invalid_input", "--phone must look like 010-1234-5678");
+  if (!/^\+?[0-9\-\s()]{7,20}$/.test(phone)) {
+    throw new HeyYumiError("invalid_input", "--phone must look like 010-1234-5678 or +<country><number>");
   }
   return phone;
+}
+
+export function isKoreanPhone(phone) {
+  const digits = phone.replace(/[^0-9+]/g, "");
+  return /^01[016789]/.test(digits) || /^\+82/.test(digits);
 }
 
 // Requires an explicit UTC offset so a "19:00" can never silently shift zones.
@@ -274,6 +383,15 @@ export function buildReservationRequest(options, { now = Date.now } = {}) {
   if (options.name) {
     request.guestName = String(options.name).trim();
   }
+  if (options.email) {
+    request.guestEmail = String(options.email).trim();
+  }
+  if (!isKoreanPhone(request.guestPhone) && !request.guestEmail) {
+    throw new HeyYumiError(
+      "invalid_input",
+      "--email is required when --phone is not a Korean number (HeyYumi emails the outcome instead of texting)"
+    );
+  }
   if (options.note) {
     request.note = String(options.note).trim();
   }
@@ -297,94 +415,130 @@ export function buildLiveStatusRequest(options) {
   return request;
 }
 
-// ---- commands -------------------------------------------------------------
+// ---- search arguments -----------------------------------------------------
 
-const SEARCH_PASSTHROUGH = [
-  "keyword", "region_code", "business_category", "min_confidence", "recommended_for", "atmosphere", "parking",
+// Flags that map 1:1 to string arguments of search_places / nearby_places.
+const STRING_FILTERS = [
+  "keyword", "region_code", "region_name", "business_category", "recommended_for", "atmosphere", "parking",
   "parking_type", "reservable", "payment_methods", "serves", "dietary", "foreign_languages", "subtype", "bbq_meat",
-  "view", "max_dish_price", "foreigner_friendly", "legacy", "local_food", "exclude", "muslim_friendly", "open_at",
-  "include_unknown_hours", "reservation_channel", "page", "page_size", "sort", "radius"
+  "view", "legacy", "local_food", "exclude", "muslim_friendly", "open_at", "include_unknown_hours",
+  "reservation_channel", "fields"
 ];
+const INTEGER_FILTERS = ["page", "page_size"];
 
-function searchQuery(options) {
-  const query = { fields: options.fields || DEFAULT_FIELDS };
-  for (const key of SEARCH_PASSTHROUGH) {
-    const flag = key.replaceAll("_", "-");
-    const value = options[flag] ?? options[key];
-    if (value !== undefined) {
-      query[key] = value;
-    }
+function toInteger(value, name) {
+  const number = Number(value);
+  if (!Number.isInteger(number)) {
+    throw new HeyYumiError("invalid_input", `--${name} must be an integer`);
   }
-  return query;
+  return number;
 }
 
+function toNumber(value, name) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    throw new HeyYumiError("invalid_input", `--${name} must be a number`);
+  }
+  return number;
+}
+
+// `--filter wifi=true` reaches any of the boolean presence filters the tools accept
+// (pet_friendly, private_room, ...) without a dedicated flag for each.
+function parseFilters(values = []) {
+  const extra = {};
+  for (const entry of values) {
+    const match = String(entry).match(/^([a-z][a-z0-9_]*)=(.+)$/);
+    if (!match) {
+      throw new HeyYumiError("invalid_input", `--filter expects key=value, got "${entry}"`);
+    }
+    extra[match[1]] = match[2];
+  }
+  return extra;
+}
+
+export function buildSearchArguments(options) {
+  const args = parseFilters(options.filter);
+  for (const key of STRING_FILTERS) {
+    const value = options[key.replaceAll("_", "-")];
+    if (value !== undefined) {
+      args[key] = value;
+    }
+  }
+  for (const key of INTEGER_FILTERS) {
+    const value = options[key.replaceAll("_", "-")];
+    if (value !== undefined) {
+      args[key] = toInteger(value, key.replaceAll("_", "-"));
+    }
+  }
+  if (options["min-confidence"] !== undefined) {
+    args.min_confidence = toNumber(options["min-confidence"], "min-confidence");
+  }
+  return args;
+}
+
+// ---- commands -------------------------------------------------------------
+
 export async function runCommand(command, options, positionals, context = {}) {
-  const sandbox = Boolean(options.sandbox);
-  const request = (method, route, extra = {}) => apiRequest(method, route, { sandbox, ...context, ...extra });
+  const call = (name, args, extra = {}) => callTool(name, args, { ...context, ...extra });
 
   switch (command) {
     case "regions":
-      return request("GET", "/api/v1/regions", {
-        query: { dong: options.dong, sigungu: options.sigungu, sido: options.sido }
-      });
+      return call("resolve_regions", compact({ dong: options.dong, sigungu: options.sigungu, sido: options.sido }));
     case "search":
-      return request("GET", "/api/v1/places", { query: searchQuery(options) });
+      return call("search_places", buildSearchArguments(options));
     case "nearby": {
-      const lat = Number(requireText(options.lat, "lat"));
-      const lng = Number(requireText(options.lng, "lng"));
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        throw new HeyYumiError("invalid_input", "--lat and --lng must be numbers");
+      const args = {
+        ...buildSearchArguments(options),
+        lat: toNumber(requireText(options.lat, "lat"), "lat"),
+        lng: toNumber(requireText(options.lng, "lng"), "lng")
+      };
+      if (options.radius !== undefined) {
+        args.radius_m = toInteger(options.radius, "radius");
       }
-      return request("GET", "/api/v1/places/nearby", { query: { ...searchQuery(options), lat, lng } });
+      if (options.sort !== undefined) {
+        args.sort = options.sort;
+      }
+      return call("nearby_places", args);
     }
     case "place": {
       const id = requireText(positionals[0] ?? options["place-id"], "place-id");
-      return request("GET", `/api/v1/places/${encodeURIComponent(id)}`, {
-        query: { fields: options.fields || "core,contact_hours,quality" }
-      });
+      return call("get_place", compact({ id, fields: options.fields }));
     }
     case "reserve": {
       const body = buildReservationRequest(options, { now: context.now });
-      if (!options.confirm && !sandbox) {
+      if (!options.confirm) {
         return { preview: true, sent: false, request: body };
       }
-      const result = await request("POST", "/api/v1/reservations", { body });
+      const result = await call("request_reservation", body);
       return { ...result, request: body };
     }
     case "reservation-status": {
-      const id = requireText(positionals[0] ?? options.id, "id");
-      return request("GET", `/api/v1/reservations/${encodeURIComponent(id)}`, {
-        query: { wait: clampWait(options.wait) }
-      });
+      const reservationId = requireText(positionals[0] ?? options.id, "id");
+      return options.wait
+        ? call("wait_for_reservation", { reservationId }, { timeoutMs: LONG_POLL_TIMEOUT_MS })
+        : call("get_reservation", { reservationId });
     }
     case "live-ask": {
       const body = buildLiveStatusRequest(options);
-      if (!options.confirm && !sandbox) {
+      if (!options.confirm) {
         return { preview: true, sent: false, request: body };
       }
-      const result = await request("POST", "/api/v1/live-status", { body });
+      const result = await call("request_live_status", body);
       return { ...result, request: body };
     }
     case "live-status": {
-      const id = requireText(positionals[0] ?? options.id, "id");
-      return request("GET", `/api/v1/live-status/${encodeURIComponent(id)}`, {
-        query: { wait: clampWait(options.wait) }
-      });
+      const queryId = requireText(positionals[0] ?? options.id, "id");
+      return options.wait
+        ? call("wait_for_live_status", { queryId }, { timeoutMs: LONG_POLL_TIMEOUT_MS })
+        : call("get_live_status", { queryId });
     }
     default:
       throw new HeyYumiError("invalid_input", `unknown command "${command}"`);
   }
 }
 
-function clampWait(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  const seconds = Number(value);
-  if (!Number.isFinite(seconds) || seconds < 0) {
-    throw new HeyYumiError("invalid_input", "--wait must be a number of seconds >= 0");
-  }
-  return Math.min(Math.floor(seconds), MAX_LONG_POLL_SECONDS);
+function compact(object) {
+  return Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined && value !== ""));
 }
 
 // ---- OAuth (Google sign-in is handled by HeyYumi's own authorization server) --
@@ -423,8 +577,10 @@ function listenOnce(onRequest) {
   });
 }
 
-// Loopback PKCE flow. `announce(url)` hands the sign-in URL to the user.
-export async function login({ env = process.env, fetchImpl = fetch, announce, issuer, timeoutMs = 300000, resource } = {}) {
+// Loopback PKCE flow. `announce(url)` hands the sign-in URL to the user, who signs
+// in with Google on heyyumi.ai. The browser must run on the same machine as this
+// process because the redirect goes to 127.0.0.1.
+export async function login({ env = process.env, fetchImpl = fetch, announce, issuer, timeoutMs = 300000, resource = DEFAULT_OAUTH_RESOURCE } = {}) {
   const base = issuer || env.KSKILL_HEYYUMI_OAUTH_ISSUER || DEFAULT_OAUTH_ISSUER;
   const metadata = await discoverOauth(base, fetchImpl);
   const { verifier, challenge } = pkcePair();
@@ -466,25 +622,22 @@ export async function login({ env = process.env, fetchImpl = fetch, announce, is
   const timer = setTimeout(() => settle.reject(new HeyYumiError("oauth_timeout", "Timed out waiting for HeyYumi sign-in")), timeoutMs);
   try {
     const redirectUri = `http://127.0.0.1:${server.address().port}/callback`;
-    const registration = await (async () => {
-      const response = await fetchImpl(metadata.registration_endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({
-          client_name: "k-skill heyyumi",
-          redirect_uris: [redirectUri],
-          grant_types: ["authorization_code", "refresh_token"],
-          response_types: ["code"],
-          token_endpoint_auth_method: "none"
-        }),
-        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.client_id) {
-        throw new HeyYumiError("oauth_failed", `Client registration failed with HTTP ${response.status}`);
-      }
-      return body;
-    })();
+    const registrationResponse = await fetchImpl(metadata.registration_endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        client_name: "k-skill heyyumi",
+        redirect_uris: [redirectUri],
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        token_endpoint_auth_method: "none"
+      }),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+    });
+    const registration = await registrationResponse.json().catch(() => ({}));
+    if (!registrationResponse.ok || !registration.client_id) {
+      throw new HeyYumiError("oauth_failed", `Client registration failed with HTTP ${registrationResponse.status}`);
+    }
 
     const authorizeUrl = new URL(metadata.authorization_endpoint);
     authorizeUrl.search = new URLSearchParams({
@@ -507,7 +660,8 @@ export async function login({ env = process.env, fetchImpl = fetch, announce, is
         code,
         code_verifier: verifier,
         client_id: registration.client_id,
-        redirect_uri: redirectUri
+        redirect_uri: redirectUri,
+        ...(resource ? { resource } : {})
       },
       { fetchImpl }
     );
@@ -530,41 +684,40 @@ const COMMANDS = ["regions", "search", "nearby", "place", "reserve", "reservatio
 
 const OPTION_SPEC = {
   dong: { type: "string" }, sigungu: { type: "string" }, sido: { type: "string" },
-  keyword: { type: "string" }, "region-code": { type: "string" }, "business-category": { type: "string" },
-  "min-confidence": { type: "string" }, "recommended-for": { type: "string" }, atmosphere: { type: "string" },
-  parking: { type: "string" }, "parking-type": { type: "string" }, reservable: { type: "string" },
-  "payment-methods": { type: "string" }, serves: { type: "string" }, dietary: { type: "string" },
-  "foreign-languages": { type: "string" }, subtype: { type: "string" }, "bbq-meat": { type: "string" },
-  view: { type: "string" }, "max-dish-price": { type: "string" }, "foreigner-friendly": { type: "string" },
-  legacy: { type: "string" }, "local-food": { type: "string" }, exclude: { type: "string" },
-  "muslim-friendly": { type: "string" }, "open-at": { type: "string" }, "include-unknown-hours": { type: "string" },
+  keyword: { type: "string" }, "region-code": { type: "string" }, "region-name": { type: "string" },
+  "business-category": { type: "string" }, "min-confidence": { type: "string" },
+  "recommended-for": { type: "string" }, atmosphere: { type: "string" }, parking: { type: "string" },
+  "parking-type": { type: "string" }, reservable: { type: "string" }, "payment-methods": { type: "string" },
+  serves: { type: "string" }, dietary: { type: "string" }, "foreign-languages": { type: "string" },
+  subtype: { type: "string" }, "bbq-meat": { type: "string" }, view: { type: "string" }, legacy: { type: "string" },
+  "local-food": { type: "string" }, exclude: { type: "string" }, "muslim-friendly": { type: "string" },
+  "open-at": { type: "string" }, "include-unknown-hours": { type: "string" },
   "reservation-channel": { type: "string" }, page: { type: "string" }, "page-size": { type: "string" },
+  fields: { type: "string" }, filter: { type: "string", multiple: true },
   sort: { type: "string" }, radius: { type: "string" }, lat: { type: "string" }, lng: { type: "string" },
-  fields: { type: "string" },
   "place-id": { type: "string" }, time: { type: "string" }, guests: { type: "string" }, phone: { type: "string" },
-  name: { type: "string" }, note: { type: "string" }, "idempotency-key": { type: "string" },
-  kind: { type: "string" }, topic: { type: "string" }, question: { type: "string" },
-  id: { type: "string" }, wait: { type: "string" },
-  confirm: { type: "boolean" }, sandbox: { type: "boolean" }, resource: { type: "string" }, help: { type: "boolean", short: "h" }
+  email: { type: "string" }, name: { type: "string" }, note: { type: "string" }, "idempotency-key": { type: "string" },
+  kind: { type: "string" }, topic: { type: "string" }, question: { type: "string" }, id: { type: "string" },
+  wait: { type: "boolean" }, confirm: { type: "boolean" }, resource: { type: "string" }, help: { type: "boolean", short: "h" }
 };
 
 const USAGE = `Usage: heyyumi.mjs <command> [options]
 
+Auth (no API key needed):
+  login                    Google sign-in on heyyumi.ai (OAuth 2.1 + PKCE); saves a 0600 token file
+  KSKILL_HEYYUMI_API_KEY   optional hmp_ key; takes precedence over the saved sign-in
+
 Read (no side effects):
   regions --dong 홍제동 [--sigungu 서대문구] [--sido 서울]
-  search --keyword 파스타 [--region-code C] [--reservable true] [--open-at "2026-12-01T19:00"] [--fields core,contact_hours]
+  search --keyword 파스타 [--region-code C] [--reservable true] [--open-at "2026-12-01T19:00"] [--filter wifi=true]
   nearby --lat 37.589 --lng 126.943 [--radius 1000] [--keyword ...]
   place <place-id> [--fields core,contact_hours,quality]
-  reservation-status <reservation-id> [--wait 25]
-  live-status <query-id> [--wait 25]
+  reservation-status <reservation-id> [--wait]     --wait blocks up to ~25s per call
+  live-status <query-id> [--wait]
 
-Side effects (preview unless --confirm; --sandbox simulates without sending):
-  reserve --place-id ID --time 2026-12-01T19:00:00+09:00 --guests 2 --phone 010-1234-5678 [--name N] [--note T] --confirm
+Side effects (preview unless --confirm):
+  reserve --place-id ID --time 2026-12-01T19:00:00+09:00 --guests 2 --phone 010-1234-5678 [--name N] [--email E] [--note T] --confirm
   live-ask --place-id ID --kind item|wait|seats --topic "<bare token>" [--question T] --confirm
-
-Auth:
-  login [--resource URL]   HeyYumi OAuth (Google sign-in) in the browser; saves a 0600 token file
-  KSKILL_HEYYUMI_API_KEY   API key from https://heyyumi.ai/dashboard (takes precedence)
 `;
 
 export async function main(argv, { stdout = process.stdout, stderr = process.stderr, env = process.env } = {}) {
