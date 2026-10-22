@@ -1,6 +1,6 @@
 ---
 name: heyyumi
-description: 한국 식당·카페·바를 검색하고, 예약 가능한 매장이면 그 자리에서 예약 요청까지 보내 사장님 수락/거절을 확인하는 헤이유미(HeyYumi) 스킬. 예약 가능한 식당 찾기, 식당 예약, 테이블 예약, 맛집 예약, 카페 예약, 예약 가능 여부 확인, 지금 자리 있나·웨이팅 몇 분인지 사장님에게 물어보기가 필요할 때 사용한다.
+description: 한국 식당·카페·바를 검색하고, 예약 가능한 매장이면 그 자리에서 예약 요청까지 보내 사장님 수락/거절을 확인하는 헤이유미(HeyYumi) 스킬. 예약 가능한 식당 찾기, 식당 예약, 테이블 예약, 맛집 예약, 카페 예약, 예약 가능 여부 확인, 지금 자리 있나·웨이팅 몇 분인지 사장님에게 물어보기가 필요할 때 사용한다. Use when the user wants to find a Korean restaurant, cafe, or bar that takes reservations (예약 가능), book a table or send a reservation request via HeyYumi, or ask a venue about current wait time or seat availability.
 license: MIT
 metadata:
   category: food
