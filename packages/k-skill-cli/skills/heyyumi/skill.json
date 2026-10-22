@@ -1,0 +1,9 @@
+{
+  "name": "heyyumi",
+  "description": "헤이유미(HeyYumi) 공식 API로 한국 식당·카페·바를 검색하고 식당 예약 요청과 '지금 자리/재고/웨이팅 돼요?' 실시간 문의까지 진행한다. Use when the user asks to find a Korean restaurant and book a table (식당 예약, 맛집 예약, 레스토랑 예약, 웨이팅 확인) via HeyYumi. 예약 요청은 clarify 승인 후 전송하고 사장님 확정/거절까지 확인한다.",
+  "profiles": [
+    "vault",
+    "action:booking"
+  ],
+  "frontmatter": "name: heyyumi\ndescription: 헤이유미(HeyYumi) 공식 API로 한국 식당·카페·바를 검색하고 식당 예약 요청과 '지금 자리/재고/웨이팅 돼요?' 실시간 문의까지 진행한다. Use when the user asks to find a Korean restaurant and book a table (식당 예약, 맛집 예약, 레스토랑 예약, 웨이팅 확인) via HeyYumi. 예약 요청은 clarify 승인 후 전송하고 사장님 확정/거절까지 확인한다.\nlicense: MIT\nmetadata:\n  category: food\n  locale: ko-KR\n  phase: v1"
+}

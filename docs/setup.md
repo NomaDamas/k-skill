@@ -23,6 +23,8 @@ mkdir -p ~/.config/k-skill
 cat > ~/.config/k-skill/secrets.env <<'EOF'
 KSKILL_FORESTTRIP_ID=replace-me
 KSKILL_FORESTTRIP_PASSWORD=replace-me
+# 헤이유미 식당 검색·예약. 대시보드에서 발급한 hmp_ 키.
+KSKILL_HEYYUMI_API_KEY=replace-me
 # KOSIS 일반 조회는 hosted proxy 사용. bigdata/--direct 때만 채운다.
 KSKILL_KOSIS_API_KEY=replace-me
 # 창업진흥원 K-Startup 일반 조회는 hosted proxy 사용. --direct 때만 채운다.
@@ -112,6 +114,7 @@ bash scripts/check-setup.sh
 | 고속버스 예매 | 사용자 시크릿 불필요 (조회·좌석 단계는 공식 KOBUS HTTP 흐름, 돌쇠는 `clarify` 승인 후 공식 결제까지, generic은 수동 handoff) |
 | 시외버스 예매 | 사용자 시크릿 불필요 (조회·좌석 단계는 공식 티머니 HTTP 흐름, 돌쇠는 `clarify` 승인 후 공식 결제까지, generic은 수동 handoff) |
 | 자연휴양림 빈 객실 조회 | `KSKILL_FORESTTRIP_ID`, `KSKILL_FORESTTRIP_PASSWORD` |
+| 헤이유미 맛집 검색·식당 예약 | `KSKILL_HEYYUMI_API_KEY` (https://heyyumi.ai/dashboard 에서 발급) 또는 `heyyumi.mjs login` 구글 OAuth |
 | 한국 법령 검색 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `LAW_OC`) |
 | 한국 부동산 실거래가 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
 | 한국 특허 정보 검색 | `KIPRIS_PLUS_API_KEY` |
@@ -142,6 +145,7 @@ bash scripts/check-setup.sh
 - [고속버스 예매 가이드](features/express-bus-booking.md)
 - [시외버스 예매 가이드](features/intercity-bus-booking.md)
 - [자연휴양림 빈 객실 조회 가이드](features/foresttrip-vacancy.md)
+- [헤이유미 맛집 검색·식당 예약 가이드](features/heyyumi.md)
 - [서울 지하철 도착정보 가이드](features/seoul-subway-arrival.md)
 - [서울 실시간 혼잡도 가이드](features/seoul-density.md)
 - [한국 날씨 조회 가이드](features/korea-weather.md)
