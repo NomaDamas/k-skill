@@ -1,6 +1,6 @@
 ---
 name: heyyumi
-description: 헤이유미(HeyYumi) 공식 API로 한국 식당·카페·바를 검색하고 식당 예약 요청과 '지금 자리/재고/웨이팅 돼요?' 실시간 문의까지 진행한다. Use when the user asks to find a Korean restaurant and book a table (식당 예약, 맛집 예약, 레스토랑 예약, 웨이팅 확인) via HeyYumi. 예약 요청은 clarify 승인 후 전송하고 사장님 확정/거절까지 확인한다.
+description: 한국 식당·카페·바를 검색하고, 예약 가능한 매장이면 그 자리에서 예약 요청까지 보내 사장님 수락/거절을 확인하는 헤이유미(HeyYumi) 스킬. 예약 가능한 식당 찾기, 식당 예약, 테이블 예약, 맛집 예약, 카페 예약, 예약 가능 여부 확인, 지금 자리 있나·웨이팅 몇 분인지 사장님에게 물어보기가 필요할 때 사용한다. 구글 로그인 한 번이면 키 없이 쓴다. 예약 요청은 실제 매장으로 가므로 사용자 승인(clarify) 후에만 전송한다.
 license: MIT
 metadata:
   category: food
