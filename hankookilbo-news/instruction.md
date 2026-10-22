@@ -74,7 +74,7 @@ codex mcp add hankookilbo --url https://mcp.hankookilbo.com/mcp
 | "많이 본", "인기 뉴스", "지금 뜨는" | `list_popular_news` | `section_cd`, `page_size`, `exclude_section_cd` (전부 선택) |
 | "꼼꼼히 본", "정독할 만한" | `list_most_read_news` | 없음 |
 | "지금 볼만한", "출근길에 볼 뉴스" | `list_timely_news` | 없음 |
-| "최신 기사", "방금 올라온" | `list_latest_news` | `page_num`, `page_size` (선택) |
+| "최신 기사", "방금 올라온" | `list_latest_news` | `page_num` (1부터, 기본 1), `page_size` (선택) |
 | 섹션별 편집 추천 | `list_recommended_articles` | `section_cd` (필수), `page_size` |
 | 주제·인물·사건 검색, "왜 화제야" | `search_news` | `query` (필수), `limit` |
 | 섹션 코드 확인 | `list_sections` | 없음 |
@@ -95,6 +95,16 @@ codex mcp add hankookilbo --url https://mcp.hankookilbo.com/mcp
 - `opinion` 오피니언
 
 값을 추측하지 말고 불확실하면 `list_sections` 로 확인한다.
+
+도구 이름이나 인자가 위 표와 다르거나 불확실하면 `tools/list` 로 현재 스키마를 확인한다.
+
+```bash
+curl -fsS --max-time 35 https://mcp.hankookilbo.com/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'User-Agent: k-skill-hankookilbo/1.0' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
 
 세 가지 목록이 서로 다르다.
 
