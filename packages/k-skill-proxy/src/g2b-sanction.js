@@ -7,6 +7,8 @@
 // sanctions and sanctions against non-registered suppliers/individuals are not
 // provided. This is not a historical lookup.
 
+const { upstreamFailureResult } = require("./upstream-errors");
+
 const G2B_SANCTION_URL =
   "https://apis.data.go.kr/1230000/ao/UsrInfoService02/getUnptRsttCorpInfo02";
 
@@ -75,7 +77,7 @@ async function fetchG2bSanctions({ bizno, serviceKey, fetchImpl = global.fetch }
   try {
     response = await doFetch(url.toString(), { signal: AbortSignal.timeout(20000) });
   } catch (err) {
-    return { lookup_status: "lookup_failed", error: "upstream_timeout", message: `Upstream request failed: ${err.message}` };
+    return { lookup_status: "lookup_failed", ...upstreamFailureResult(err) };
   }
 
   if (response.status === 401 || response.status === 403) {

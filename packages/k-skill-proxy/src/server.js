@@ -4437,6 +4437,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     const keyedErrorStatus = {
       upstream_forbidden: 502,
+      upstream_unreachable: 503,
       upstream_timeout: 504,
       upstream_invalid_response: 502,
       upstream_error: 502

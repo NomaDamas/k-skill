@@ -7420,6 +7420,121 @@ test("g2b sanctioned-supplier distinguishes failed lookups from no sanctions", a
   assert.equal(body.upstream_response, undefined);
 });
 
+test("keyed data.go.kr routes classify upstream connect timeouts as 504 with cause detail", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    const error = new Error("fetch failed");
+    error.cause = Object.assign(new Error("Connect Timeout Error (attempted addresses: 27.101.236.63:443, timeout: 10000ms)"), {
+      name: "ConnectTimeoutError",
+      code: "UND_ERR_CONNECT_TIMEOUT"
+    });
+    throw error;
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const url of [
+    "/v1/national-pension/workplace?name=" + encodeURIComponent("테스트상사"),
+    "/v1/fsc/corp-outline?name=" + encodeURIComponent("테스트"),
+    "/v1/g2b/sanctioned-supplier?bizno=1234567890",
+    "/v1/g2b/order-plans?kind=goods"
+  ]) {
+    const res = await app.inject({ method: "GET", url });
+    const body = res.json();
+    assert.equal(res.statusCode, 504, `${url} must map connect timeout to 504`);
+    assert.equal(body.error, "upstream_timeout");
+    assert.equal(body.cause, "UND_ERR_CONNECT_TIMEOUT");
+    assert.match(body.message, /fetch failed \(UND_ERR_CONNECT_TIMEOUT; Connect Timeout Error/);
+  }
+
+  const sanction = await app.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
+  assert.equal(sanction.json().lookup_status, "lookup_failed");
+});
+
+test("keyed data.go.kr routes classify refused connections as 503 upstream_unreachable", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    const error = new Error("fetch failed");
+    error.cause = Object.assign(new Error("connect ECONNREFUSED 27.101.236.63:443"), { code: "ECONNREFUSED" });
+    throw error;
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const url of [
+    "/v1/national-pension/workplace?name=" + encodeURIComponent("테스트상사"),
+    "/v1/fsc/corp-outline?name=" + encodeURIComponent("테스트"),
+    "/v1/g2b/sanctioned-supplier?bizno=1234567890"
+  ]) {
+    const res = await app.inject({ method: "GET", url });
+    const body = res.json();
+    assert.equal(res.statusCode, 503, `${url} must map refused connection to 503`);
+    assert.equal(body.error, "upstream_unreachable");
+    assert.equal(body.cause, "ECONNREFUSED");
+  }
+});
+
+test("keyed data.go.kr routes map unclassifiable fetch errors to 502 upstream_error", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("socket hang up");
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const res = await app.inject({ method: "GET", url: "/v1/fsc/corp-outline?name=" + encodeURIComponent("테스트") });
+  const body = res.json();
+  assert.equal(res.statusCode, 502);
+  assert.equal(body.error, "upstream_error");
+  assert.equal(body.cause, undefined);
+  assert.match(body.message, /Upstream request failed: socket hang up/);
+});
+
+test("national-pension propagates classification when the detail call fails", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    const u = String(url);
+    if (u.includes("getBassInfoSearchV2")) {
+      return new Response(
+        npsItemsXml([
+          { wkplNm: "테스트상사", bzowrRgstNo: "123456****", seq: "777", dataCrtYm: "202605", wkplRoadNmDtlAddr: "서울" }
+        ]),
+        { status: 200, headers: { "content-type": "application/xml" } }
+      );
+    }
+    const error = new Error("fetch failed");
+    error.cause = Object.assign(new Error("Connect Timeout Error (timeout: 10000ms)"), {
+      name: "ConnectTimeoutError",
+      code: "UND_ERR_CONNECT_TIMEOUT"
+    });
+    throw error;
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const res = await app.inject({
+    method: "GET",
+    url: "/v1/national-pension/workplace?name=" + encodeURIComponent("테스트상사")
+  });
+  const body = res.json();
+  assert.equal(res.statusCode, 504);
+  assert.equal(body.error, "upstream_timeout");
+  assert.equal(body.cause, "UND_ERR_CONNECT_TIMEOUT");
+  assert.match(body.message, /NPS detail lookup failed \(Upstream request failed: fetch failed/);
+});
+
 test("korean-law search endpoint proxies law.go.kr with the server OC and browser headers", async (t) => {
   const originalFetch = global.fetch;
   let calledUrl = null;

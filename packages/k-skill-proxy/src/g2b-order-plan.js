@@ -2,6 +2,8 @@
 // Proxies data.go.kr 15129462 (OrderPlanSttusService) and keeps the
 // operator's DATA_GO_KR_API_KEY server-side.
 
+const { upstreamFailureResult } = require("./upstream-errors");
+
 const G2B_ORDER_PLAN_BASE_URL = "https://apis.data.go.kr/1230000/ao/OrderPlanSttusService";
 
 const ORDER_PLAN_KINDS = Object.freeze({
@@ -233,7 +235,7 @@ async function fetchOneOrderPlanQuery(normalized, serviceKey, fetchImpl) {
   try {
     response = await doFetch(url.toString(), { signal: AbortSignal.timeout(20000) });
   } catch (err) {
-    return { error: "upstream_timeout", message: `Upstream request failed: ${err.message}` };
+    return upstreamFailureResult(err);
   }
 
   if (response.status === 401 || response.status === 403) {
