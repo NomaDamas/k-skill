@@ -112,7 +112,7 @@ bash scripts/check-setup.sh
 | 고속버스 예매 | 사용자 시크릿 불필요 (조회·좌석 단계는 공식 KOBUS HTTP 흐름, 돌쇠는 `clarify` 승인 후 공식 결제까지, generic은 수동 handoff) |
 | 시외버스 예매 | 사용자 시크릿 불필요 (조회·좌석 단계는 공식 티머니 HTTP 흐름, 돌쇠는 `clarify` 승인 후 공식 결제까지, generic은 수동 handoff) |
 | 자연휴양림 빈 객실 조회 | `KSKILL_FORESTTRIP_ID`, `KSKILL_FORESTTRIP_PASSWORD` |
-| 헤이유미 예약 가능한 맛집 검색·식당 예약 | 사용자 시크릿 불필요 (`npx -y heyyumi@0 login`으로 구글 로그인. 이미 대시보드 키가 있으면 `HEYYUMI_API_KEY`) |
+| 헤이유미 예약 가능한 맛집 검색·식당 예약 | 사용자 시크릿 불필요 (`npx -y heyyumi login`으로 구글 로그인. 이미 대시보드 키가 있으면 `HEYYUMI_API_KEY`) |
 | 한국 법령 검색 | 사용자 시크릿 불필요 (기본 hosted proxy 사용, 운영자만 `LAW_OC`) |
 | 한국 부동산 실거래가 조회 | 사용자 시크릿 불필요 (기본 hosted proxy 사용) |
 | 한국 특허 정보 검색 | `KIPRIS_PLUS_API_KEY` |
