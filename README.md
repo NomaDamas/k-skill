@@ -181,7 +181,7 @@ npx -y @nomadamas/k-skill@0 update
 | [근처 술집 조회](docs/features/kakao-bar-nearby.md) | `kakao-bar-nearby` | 현재 위치 기준 영업 상태·메뉴·좌석·전화번호가 포함된 근처 술집 조회 |
 | [올라포케 역삼 포케](docs/features/hola-poke-yeoksam.md) | `hola-poke-yeoksam` | 올라포케 역삼점 메뉴, 매장 정보, 이벤트 참여 흐름 안내 |
 | [BC카드 eat.pl 맛집 검색](docs/features/bccard-eatpl-search.md) | `bccard-eatpl-search` | 지역·역·동네 기준 맛집·음식점·카페 검색. 최근 1개월 결제 데이터 기반 매출 상위와 상세 링크 |
-| [헤이유미 예약 가능한 맛집 검색·식당 예약](docs/features/heyyumi.md) | `heyyumi` | 구글 로그인 한 번(키 불필요)으로 예약 가능한 식당·카페 검색, 식당 예약 요청과 사장님 수락/거절 확인, 실시간 자리·웨이팅 문의 |
+| [헤이유미 예약 가능한 맛집 검색·식당 예약](docs/features/heyyumi.md) | `heyyumi` | 구글 로그인 한 번(키 불필요)으로 지역·메뉴·조건별 식당·카페 검색, 예약 요청과 매장 수락/거절 확인, 실시간 자리·웨이팅 문의. 외국어로 물어도 된다 |
 
 ### ⚽ 스포츠·경기
 
