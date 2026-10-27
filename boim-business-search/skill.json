@@ -1,0 +1,8 @@
+{
+  "name": "boim-business-search",
+  "description": "보임(BOIM, boim.io)의 무인증 공개 검색 주소로 한국 전국 전 업종 업체(지역×업종·상호), 공공 조달 실적이 있는 업체(품명·업종), 공공기관 진행 중 입찰 공고(나라장터·국방전자조달·LH·한국수자원공사·누리장터)를 한 번에 찾는다. '세종 보람동 미용실', '교통안전표지 납품 실적 업체', '학교 안전 입찰 공고'처럼 물을 때 사용한다. 결과는 관련도 순(평가·순위 아님)이고 출처 한 줄과 전체 목록 주소를 함께 준다. Use when the user wants to find businesses in Korea by region and industry, vendors with Korean public-procurement records, or open Korean public tenders.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: boim-business-search\ndescription: 보임(BOIM, boim.io)의 무인증 공개 검색 주소로 한국 전국 전 업종 업체(지역×업종·상호), 공공 조달 실적이 있는 업체(품명·업종), 공공기관 진행 중 입찰 공고(나라장터·국방전자조달·LH·한국수자원공사·누리장터)를 한 번에 찾는다. '세종 보람동 미용실', '교통안전표지 납품 실적 업체', '학교 안전 입찰 공고'처럼 물을 때 사용한다. 결과는 관련도 순(평가·순위 아님)이고 출처 한 줄과 전체 목록 주소를 함께 준다. Use when the user wants to find businesses in Korea by region and industry, vendors with Korean public-procurement records, or open Korean public tenders.\nlicense: MIT\nmetadata:\n  category: business\n  locale: ko-KR\n  phase: v1"
+}

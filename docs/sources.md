@@ -270,6 +270,8 @@
 - 소상공인시장진흥공단 상가(상권)정보 파일데이터(무인증, UTF-8 CSV zip, 분기 갱신): https://www.data.go.kr/data/15083033/fileData.do
 - 상가(상권)정보 다운로드 endpoint: https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=<FILE_ID>&fileDetailSn=1 (파일 ID는 데이터셋 페이지에서 분기마다 갱신)
 - 상가(상권)정보 검증 미러 manifest(R2, 직접 원본 timeout 시 fallback): https://pub-c974105a1e4840bcaa264cb2a55d99a1.r2.dev/store-longevity-radar/latest.json
+- 보임(BOIM) 공개 검색(무인증 JSON): https://boim.io/search/?q=<질의>&format=json — `boim-business-search`가 전 업종 업체(소상공인시장진흥공단 상가(상권)정보)·조달 실적 업체 카드(조달청 종합쇼핑몰 품목·계약정보)·진행 중 입찰 공고(나라장터·국방전자조달·LH·한국수자원공사·누리장터)를 한 번에 찾는다. 설명서 https://boim.io/openapi.json, 이용약관 https://boim.io/terms/(무단 대량 수집·재배포 금지). API 키가 필요 없으므로 `k-skill-proxy`를 경유하지 않는다. 운영: ㈜퍼블릭아이디.
+- 보임 업체 카드 요약(마크다운): https://boim.io/vendors/c/<카드 id>/ai.md
 - 잡코리아 기업 인재검색: https://www.jobkorea.co.kr/corp/person/find — 기업회원 로그인 세션에서 마스킹 이력서/목록을 읽는 브라우저 기반 경로. 유료 열람/마스킹 해제/포지션 제안은 수동 확인 대상.
 - 사람인 기업회원 인재풀 검색: https://www.saramin.co.kr/zf_user/memcom/talent-pool/main/search — 기업회원 로그인 및 첫 기기 2차 인증 후 현재 보이는 마스킹 후보 정보를 읽는 브라우저 기반 경로. 유료 열람/연락처 확인/제안 발송은 수동 확인 대상.
 - 국가유산청 국가유산 정보 Open API 안내: https://www.khs.go.kr/html/HtmlPage.do?mn=NS_04_04_03&pg=%2Fpublicinfo%2Fpbinfo3_0201.jsp — 국가유산 목록·상세·이미지·동영상·음성·행사 공개 endpoint를 안내한다.

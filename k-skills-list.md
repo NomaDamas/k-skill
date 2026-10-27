@@ -1,6 +1,6 @@
 # k-skill 스킬 리스트
 
-한국 특화 검색·조회·자동화 에이전트 스킬 모음 (총 131개)
+한국 특화 검색·조회·자동화 에이전트 스킬 모음 (총 132개)
 
 ## 쇼핑 · 커머스
 - **coupang-product-search** — 쿠팡 Partners API로 상품 검색·로켓배송·가격 후보 비교
@@ -61,6 +61,7 @@
 - **g2b-sanctioned-supplier** — 나라장터 부정당제재업체(입찰참가자격 제한) 조회
 - **d2b-notice-search** — 국방전자조달(D2B) 공개 입찰공고 검색
 - **s2b-notice-search** — S2B 학교장터 공고/견적요청 목록 조회
+- **boim-business-search** — 보임으로 전국 업체·조달 실적 업체·공공기관 입찰 공고 통합 찾기
 - **nts-business-registration** — 국세청 사업자등록 진위확인·상태조회
 - **nts-tax-delinquency** — 국세청 고액·상습체납자 명단 조회
 - **fsc-corporate-info** — 금융위 기업기본정보(대표자·설립일·업종) 조회

@@ -22,6 +22,7 @@ top-level `SKILL.md` 전체를 돌쇠 우선 실행 계약으로 전수 검토�
 | `assembly-bill-vote-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `bccard-eatpl-search` | `lookup` | 요청한 장소의 맛집·음식점·카페와 상세 링크 조회 완료 |
 | `biz-health-check` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `boim-business-search` | `lookup` | 요청한 업체·조달 실적 업체·입찰 공고 조회를 완료하고, 별도 후속 행동 요청 시 업체 카드나 공고를 낸 공식 시스템(나라장터 등)으로 연결 |
 | `bok-ecos-stats` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `building-register-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `bunjang-search` | `commerce` | 공식 상품 선택 → 장바구니/checkout 준비 → `clarify` 후 주문·결제 |

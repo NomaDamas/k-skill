@@ -42,7 +42,7 @@ npx -y @nomadamas/k-skill@0 update
 
 ## 어떤 걸 할 수 있나
 
-총 125개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
+총 126개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
 
 ### 🚉 이동·교통·여행
 
@@ -119,6 +119,7 @@ npx -y @nomadamas/k-skill@0 update
 | [부정당제재업체 조회](docs/features/g2b-sanctioned-supplier.md) | `g2b-sanctioned-supplier` | 사업자번호로 나라장터 부정당제재(조회시점 유효 제재) 조회(공공데이터포털 API, 프록시 경유) |
 | [국방전자조달 공고 조회](docs/features/d2b-notice-search.md) | `d2b-notice-search` | 국방전자조달시스템(D2B) 공개 입찰공고 화면을 Aside Browser 우선으로 조회하고 공고건명·공고구분·날짜·G2B공고번호·발주기관 조건으로 검색 |
 | [S2B 학교장터 공고 조회](docs/features/s2b-notice-search.md) | `s2b-notice-search` | S2B 학교장터 공개 고객 공고/견적요청 화면을 브라우저 우선으로 조회하고 목록·상세 HTML fixture를 파싱 |
+| [보임 업체·입찰 찾기](docs/features/boim-business-search.md) | `boim-business-search` | 지역×업종·상호로 전국 업체, 품명으로 공공 조달 실적 업체, 낱말로 진행 중 공공기관 입찰 공고(나라장터·국방전자조달·LH·한국수자원공사·누리장터)를 한 번에 조회(보임 공개 검색, 무인증) |
 | [전기차 보조금 현황 조회](docs/features/ev-subsidy-status.md) | `ev-subsidy-status` | 지자체별 전기차 민간공고·접수·출고·출고잔여 대수와 모델별 보조금 조회 |
 
 ### 🧑‍💼 채용·일자리
