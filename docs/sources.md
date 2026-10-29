@@ -3,6 +3,10 @@
 현재 v1 설계 시 확인한 외부 표면:
 
 - Vercel skills package 구조: https://vercel.com/kb/guide/agent-skills-creating-installing-and-sharing-reusable-agent-context
+- `kpic-drug-search` 원본 구현: https://github.com/antegral/kpic-mcp - MIT 라이선스의 `search_drugs_by_name`과 `get_drug_detail_by_id`를 이전했습니다. `Copyright (c) 2025 SeongUk Moon`과 라이선스 전문은 스킬의 `references/LICENSE.md` 및 CLI 번들에 보존합니다.
+- 약학정보원 공식 검색 및 상세 페이지: https://www.health.kr/searchResult, `https://www.health.kr/drug/<drug_code>` - 의약품 정보를 확인하는 공식 웹 표면입니다. 상세 응답에 포함된 효능, 용법, 주의사항은 진단이나 개인별 복약 지시와 구분합니다.
+- 약학정보원 공개 이름 검색 JSON: `GET https://www.health.kr/api/searchDrug?page=1&limit=5&drugName=<drugname>&total=1` - 2026-10-30 공식 웹 검색의 네트워크 요청에서 확인했습니다. `items`, `total`, `page`, `limit`, `totalPages`를 반환하며 스킬은 모든 페이지의 항목을 모아 JSON 배열로 출력합니다. 같은 날 기존 `/searchDrug/search_total_result.asp`가 `/searchResult`로 리다이렉트되어 원본의 CSRF 토큰 추출이 실패했으므로 구 검색 경로는 사용하지 않습니다.
+- 약학정보원 상세 JSON: `GET https://health.kr/searchDrug/ajax/ajax_result_drug2.asp?drug_cd=<drugcode>` - 원본 상세 조회 경로를 유지합니다. 2026-10-30에 JSON 배열 응답을 확인했으며 HTML Content-Type과 관계없이 JSON 본문을 파싱하고 전체 필드를 보존합니다. 검색과 상세 모두 API 키나 로그인 없이 사용자 환경에서 직접 호출하며 `k-skill-proxy`를 경유하지 않습니다. 조회 실패 시 공식 페이지 확인으로 안내하고 접근 제한을 우회하거나 체계적인 대량 수집에 사용하지 않습니다.
 - 철도 통합 시간표 스킬의 코레일 공식 시간표 게시판: https://www.korail.com/ticket/reserve/train-timeTable
 - 철도 통합 시간표 스킬의 코레일 공식 시간표 목록 JSON: https://www.korail.com/com/userBoard.do?schBcid=ticketTable&mode=list
 - 국가데이터처(구 통계청) KOSIS Open API 공식 진입: https://kosis.kr/openapi/ (회원가입·활용신청·개발가이드는 사이트 내부 메뉴 — 직접 deep-link는 SSO/SPA 라우팅으로 빈 화면이 보일 수 있다)
