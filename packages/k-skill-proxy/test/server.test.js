@@ -4132,6 +4132,240 @@ test("proxyKmaWeatherRequest injects API key and preserves caller query params",
   assert.match(calledUrl, /dataType=JSON/);
 });
 
+test("korea weather vsrt endpoint picks the latest half-hourly base time and caches", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async (url) => {
+    fetchCalls += 1;
+    assert.match(String(url), /getUltraSrtFcst/);
+    assert.match(String(url), /base_date=20260405/);
+    assert.match(String(url), /base_time=0630/);
+    assert.match(String(url), /nx=60/);
+    assert.match(String(url), /ny=127/);
+
+    return new Response(
+      JSON.stringify({
+        response: {
+          header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
+          body: {
+            dataType: "JSON",
+            items: {
+              item: [
+                {
+                  baseDate: "20260405",
+                  baseTime: "0630",
+                  category: "RN1",
+                  fcstDate: "20260405",
+                  fcstTime: "0700",
+                  fcstValue: "1.0",
+                  nx: 60,
+                  ny: 127
+                }
+              ]
+            }
+          }
+        }
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      KMA_OPEN_API_KEY: "kma-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?lat=37.5665&lon=126.978"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?nx=60&ny=127&baseDate=20260405&baseTime=0630"
+  });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(fetchCalls, 1);
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.deepEqual(first.json().query, {
+    baseDate: "20260405",
+    baseTime: "0630",
+    nx: 60,
+    ny: 127,
+    pageNo: 1,
+    numOfRows: 1000,
+    dataType: "JSON"
+  });
+});
+
+test("korea weather vsrt endpoint falls back to the previous base time before it is ready", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    JSON.stringify({
+      response: {
+        header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
+        body: { dataType: "JSON", items: { item: [] } }
+      }
+    }),
+    { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+  );
+
+  // 06:35 KST: the 06:30 issue is not queryable yet, so 05:30 must be selected.
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key" },
+    now: () => new Date("2026-04-05T06:35:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?nx=60&ny=127"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().query.baseTime, "0530");
+  assert.equal(response.json().query.baseDate, "20260405");
+});
+
+test("korea weather now endpoint resolves the latest hourly nowcast base time", async (t) => {
+  const originalFetch = global.fetch;
+  let calledUrl;
+  global.fetch = async (url) => {
+    calledUrl = String(url);
+    return new Response(
+      JSON.stringify({
+        response: {
+          header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
+          body: { dataType: "JSON", items: { item: [] } }
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  // 06:05 KST: the 06:00 nowcast is not queryable yet, so 05:00 must be selected.
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key" },
+    now: () => new Date("2026-04-05T06:05:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/now?nx=60&ny=127"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(calledUrl, /getUltraSrtNcst/);
+  assert.match(calledUrl, /base_time=0500/);
+  assert.match(calledUrl, /base_date=20260405/);
+  assert.equal(response.json().query.baseTime, "0500");
+});
+
+test("korea weather ultra-short routes reject bad input and missing KMA key", async (t) => {
+  const missing = buildServer();
+  const configured = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" } });
+
+  t.after(async () => {
+    await missing.close();
+    await configured.close();
+  });
+
+  const badCoords = await configured.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?lat=91&lon=126.978"
+  });
+  assert.equal(badCoords.statusCode, 400);
+  assert.deepEqual(badCoords.json(), {
+    error: "bad_request",
+    message: "Provide valid lat and lon."
+  });
+
+  const missingNow = await missing.inject({
+    method: "GET",
+    url: "/v1/korea-weather/now?nx=60&ny=127"
+  });
+  const missingVsrt = await missing.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?nx=60&ny=127"
+  });
+  assert.equal(missingNow.statusCode, 503);
+  assert.equal(missingNow.json().error, "upstream_not_configured");
+  assert.equal(missingVsrt.statusCode, 503);
+  assert.equal(missingVsrt.json().error, "upstream_not_configured");
+});
+
+test("proxyKmaWeatherRequest targets ultra-short operations when requested", async () => {
+  let calledUrl;
+  const fetchImpl = async (url) => {
+    calledUrl = String(url);
+    return new Response('{"ok":true}', {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const ultraSrtFcst = await proxyKmaWeatherRequest({
+    operation: "getUltraSrtFcst",
+    baseDate: "20260405",
+    baseTime: "0630",
+    nx: 60,
+    ny: 127,
+    apiKey: "test-kma-key",
+    fetchImpl
+  });
+  assert.equal(ultraSrtFcst.statusCode, 200);
+  assert.match(calledUrl, /\/1360000\/VilageFcstInfoService_2\.0\/getUltraSrtFcst\?/);
+  assert.match(calledUrl, /base_time=0630/);
+
+  const ultraSrtNcst = await proxyKmaWeatherRequest({
+    operation: "getUltraSrtNcst",
+    baseDate: "20260405",
+    baseTime: "0600",
+    nx: 60,
+    ny: 127,
+    apiKey: "test-kma-key",
+    fetchImpl
+  });
+  assert.equal(ultraSrtNcst.statusCode, 200);
+  assert.match(calledUrl, /\/1360000\/VilageFcstInfoService_2\.0\/getUltraSrtNcst\?/);
+  assert.match(calledUrl, /base_time=0600/);
+
+  await assert.rejects(
+    () => proxyKmaWeatherRequest({
+      operation: "getNotARealOperation",
+      baseDate: "20260405",
+      baseTime: "0600",
+      nx: 60,
+      ny: 127,
+      apiKey: "test-kma-key",
+      fetchImpl
+    }),
+    /Unsupported KMA forecast operation/
+  );
+});
+
 test("han river water-level endpoint stays publicly callable without proxy auth", async (t) => {
   const originalFetch = global.fetch;
   const fetchCalls = [];

@@ -242,7 +242,7 @@ npx -y @nomadamas/k-skill@0 update
 
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
-| [한국 날씨 조회](docs/features/korea-weather.md) | `korea-weather` | 기상청 단기예보 기반 한국 날씨 조회 |
+| [한국 날씨 조회](docs/features/korea-weather.md) | `korea-weather` | 기상청 단기예보·초단기예보(초단기실황) 기반 한국 날씨 조회 |
 | [서울 기상 위험 시간대 조회](docs/features/seoul-weather-risk.md) | `seoul-weather-risk` | ASK 서울 Marketplace의 장소별 폭염·한파·호우·대설·강풍 후보 예보 시간대와 판정 근거 조회 (기상청 공식 특보 아님) |
 | [사용자 위치 미세먼지 조회](docs/features/fine-dust-location.md) | `fine-dust-location` | 현재 위치 또는 지역 기준 PM10/PM2.5 미세먼지 조회 |
 | [한강 수위 정보 조회](docs/features/han-river-water-level.md) | `han-river-water-level` | 한강 관측소 기준 현재 수위·유량·기준수위 확인 |
