@@ -34,15 +34,15 @@ def query(args):
     if args.convert_kg not in {"Y", "N"}:
         raise ValueError("--convert-kg must be Y or N")
     result = {
-        "p_productclscode": args.product_class,
-        "p_itemcategorycode": args.category,
+        "p_product_cls_code": args.product_class,
+        "p_item_category_code": args.category,
         "p_convert_kg_yn": args.convert_kg,
         "p_returntype": "json",
     }
     if args.county:
         if not args.county.isdigit() or len(args.county) != 4:
             raise ValueError("--county must be a four-digit KAMIS code")
-        result["p_countycode"] = args.county
+        result["p_country_code"] = args.county
     if args.date:
         if len(args.date) != 10 or args.date[4] != "-" or args.date[7] != "-":
             raise ValueError("--date must be YYYY-MM-DD")
@@ -97,8 +97,16 @@ def main(argv=None):
         print(f"[error] KAMIS request failed: {error}", file=sys.stderr)
         return 4
 
+    items = payload.get("items", payload.get("data", {}).get("item", []))
+    expected_prefix = args.category[0]
+    if not isinstance(items, list) or any(
+        not str(item.get("item_code", "")).isdigit() or not str(item["item_code"]).startswith(expected_prefix)
+        for item in items
+    ):
+        print("[error] KAMIS returned items outside the requested category", file=sys.stderr)
+        return 5
+
     if args.text:
-        items = payload.get("items", payload.get("data", {}).get("item", []))
         for item in items:
             print(f"{item.get('item_name', '?')} {item.get('kind_name', '')} {item.get('dpr1', '-')}{item.get('unit', '')}")
     else:

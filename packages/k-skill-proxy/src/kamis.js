@@ -2,11 +2,11 @@ const KAMIS_UPSTREAM_BASE_URL = "https://www.kamis.or.kr/service/price/xml.do";
 const KAMIS_ACTION = "dailyPriceByCategoryList";
 
 const KAMIS_ALLOWED_FIELDS = new Set([
-  "p_productclscode",
-  "p_countycode",
+  "p_product_cls_code",
+  "p_country_code",
   "p_regday",
   "p_convert_kg_yn",
-  "p_itemcategorycode"
+  "p_item_category_code"
 ]);
 
 function trimOrNull(value) {
@@ -51,17 +51,17 @@ function normalizeKamisEnum(value, field, allowed) {
 
 function normalizeKamisQuery(query = {}) {
   const normalized = {
-    p_productclscode: normalizeKamisEnum(
+    p_product_cls_code: normalizeKamisEnum(
       query.p_productclscode ?? query.p_product_cls_code,
-      "p_productclscode",
+      "p_product_cls_code",
       new Set(["01", "02"])
     ) || "01",
-    p_itemcategorycode: normalizeKamisEnum(
+    p_item_category_code: normalizeKamisEnum(
       query.p_itemcategorycode ?? query.p_item_category_code,
-      "p_itemcategorycode",
+      "p_item_category_code",
       new Set(["100", "200", "300", "400", "500", "600"])
     ) || "100",
-    p_countycode: trimOrNull(query.p_countycode ?? query.p_country_code),
+    p_country_code: trimOrNull(query.p_countycode ?? query.p_country_code),
     p_regday: normalizeKamisDate(query.p_regday),
     p_convert_kg_yn: normalizeKamisEnum(
       query.p_convert_kg_yn,
@@ -70,13 +70,19 @@ function normalizeKamisQuery(query = {}) {
     ) || "N"
   };
 
-  if (normalized.p_countycode && !/^\d{4}$/.test(normalized.p_countycode)) {
-    throw new Error("p_countycode must be a four-digit KAMIS region code.");
+  if (normalized.p_country_code && !/^\d{4}$/.test(normalized.p_country_code)) {
+    throw new Error("p_country_code must be a four-digit KAMIS region code.");
   }
 
   return Object.fromEntries(
     Object.entries(normalized).filter(([, value]) => value !== null)
   );
+}
+
+function isKamisCategoryConsistent(items, category) {
+  if (!Array.isArray(items) || !category) return false;
+  const prefix = String(category).slice(0, 1);
+  return items.every((item) => /^\d+$/.test(String(item?.item_code || "")) && String(item.item_code).startsWith(prefix));
 }
 
 function kamisErrorCode(body) {
@@ -144,6 +150,7 @@ module.exports = {
   KAMIS_ACTION,
   KAMIS_UPSTREAM_BASE_URL,
   isKamisFailureBody,
+  isKamisCategoryConsistent,
   isKamisSuccessBody,
   kamisErrorCode,
   normalizeKamisQuery,

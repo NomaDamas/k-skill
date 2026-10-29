@@ -10,10 +10,10 @@
 
 ## Inputs
 
-- `p_productclscode`: `01` 소매, `02` 도매. 기본 `01`
-- `p_itemcategorycode`: `100` 식량작물, `200` 채소류, `300` 특용작물,
+- `p_product_cls_code`: `01` 소매, `02` 도매. 기본 `01`
+- `p_item_category_code`: `100` 식량작물, `200` 채소류, `300` 특용작물,
   `400` 과일류, `500` 축산물, `600` 수산물. 기본 `100`
-- `p_countycode`: 지역 코드(예: `1101` 서울). 생략하면 전체 지역
+- `p_country_code`: 지역 코드(예: `1101` 서울). 생략하면 전체 지역
 - `p_regday`: `YYYY-MM-DD`, 생략하면 최근 조사일
 - `p_convert_kg_yn`: `Y` 또는 `N`. 기본 `N`
 
@@ -25,9 +25,9 @@
 ```bash
 BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
 curl -fsS --get "$BASE/v1/kamis/food-price/daily-category" \
-  --data-urlencode "p_productclscode=01" \
-  --data-urlencode "p_itemcategorycode=200" \
-  --data-urlencode "p_countycode=1101" \
+  --data-urlencode "p_product_cls_code=01" \
+  --data-urlencode "p_item_category_code=200" \
+  --data-urlencode "p_country_code=1101" \
   --data-urlencode "p_convert_kg_yn=N"
 ```
 
