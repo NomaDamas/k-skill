@@ -67,7 +67,7 @@ const {
   normalizeGovernmentSupportQuery
 } = require("./government-support");
 const {
-  isKamisCategoryConsistent,
+  isKamisConditionConsistent,
   isKamisFailureBody,
   normalizeKamisQuery,
   proxyKamisRequest
@@ -4795,11 +4795,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     const data = parsed?.data || {};
     const items = Array.isArray(data.item) ? data.item : [];
-    if (!isKamisCategoryConsistent(items, normalized.p_item_category_code)) {
+    if (!isKamisConditionConsistent(parsed?.condition, normalized)) {
       reply.code(502);
       return {
         error: "upstream_category_mismatch",
-        message: "KAMIS returned items outside the requested category.",
+        message: "KAMIS applied filters other than the ones requested.",
         query: normalized,
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
       };

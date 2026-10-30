@@ -50,6 +50,79 @@ def query(args):
     return result
 
 
+def _echoed_filters(payload):
+    """Return the filters echoed by the proxy (``query``) or upstream (``condition``)."""
+    query = payload.get("query")
+    if isinstance(query, dict):
+        return query
+    condition = payload.get("condition")
+    if isinstance(condition, list):
+        echo = condition[0] if condition else None
+    else:
+        echo = condition
+    return echo if isinstance(echo, dict) else None
+
+
+def _response_items(payload):
+    """Return the price item list from a proxy or direct KAMIS payload.
+
+    A no-data upstream reply sometimes encodes the body as a bare array such as
+    ``{"data": ["001"]}``; that must be treated as "no items" rather than read
+    as a mapping.
+    """
+    items = payload.get("items")
+    if isinstance(items, list):
+        return items
+    data = payload.get("data")
+    if isinstance(data, dict) and isinstance(data.get("item"), list):
+        return data["item"]
+    return []
+
+
+def _upstream_error_code(payload):
+    """Return the first non-success upstream/proxy error code, if any."""
+    codes = []
+    data = payload.get("data")
+    if isinstance(data, dict):
+        if data.get("error_code") is not None:
+            codes.append(str(data["error_code"]))
+    elif isinstance(data, list):
+        codes.extend(
+            str(entry)
+            for entry in data
+            if isinstance(entry, (str, int)) and not isinstance(entry, bool)
+        )
+    upstream = payload.get("upstream")
+    if isinstance(upstream, dict) and upstream.get("error_code") is not None:
+        codes.append(str(upstream["error_code"]))
+    for code in codes:
+        if code not in {"", "000", "001"}:
+            return code
+    return None
+
+
+def _response_problem(payload, args):
+    """Return a message when the payload cannot be trusted for the request.
+
+    Mirrors the proxy's fail-closed behavior: a present echo that contradicts
+    the requested filters is an error, and a non-success/non-empty error code is
+    reported instead of crashing on unexpected shapes.
+    """
+    echo = _echoed_filters(payload)
+    if echo is not None:
+        checks = (
+            ("p_item_category_code", args.category, echo.get("p_item_category_code") or echo.get("p_category_code")),
+            ("p_product_cls_code", args.product_class, echo.get("p_product_cls_code") or echo.get("p_productclscode")),
+        )
+        for name, requested, applied in checks:
+            if applied is not None and str(applied).strip() != requested:
+                return f"KAMIS applied {name}={applied} but {requested} was requested"
+    code = _upstream_error_code(payload)
+    if code is not None:
+        return f"KAMIS returned upstream error code {code}"
+    return None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="KAMIS 농수축산물 가격 조회")
     parser.add_argument("--product-class", default="01")
@@ -97,13 +170,10 @@ def main(argv=None):
         print(f"[error] KAMIS request failed: {error}", file=sys.stderr)
         return 4
 
-    items = payload.get("items", payload.get("data", {}).get("item", []))
-    expected_prefix = args.category[0]
-    if not isinstance(items, list) or any(
-        not str(item.get("item_code", "")).isdigit() or not str(item["item_code"]).startswith(expected_prefix)
-        for item in items
-    ):
-        print("[error] KAMIS returned items outside the requested category", file=sys.stderr)
+    items = _response_items(payload)
+    problem = _response_problem(payload, args)
+    if problem:
+        print(f"[error] {problem}", file=sys.stderr)
         return 5
 
     if args.text:
