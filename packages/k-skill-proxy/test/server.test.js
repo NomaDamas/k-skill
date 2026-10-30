@@ -4711,6 +4711,140 @@ test("real estate transaction endpoint caches successful responses", async (t) =
   assert.equal(fetchCalls, 1);
 });
 
+test("real estate transaction endpoint calls apis.data.go.kr over https", async (t) => {
+  const originalFetch = global.fetch;
+  let requestedUrl = "";
+  global.fetch = async (url) => {
+    requestedUrl = String(url);
+    return new Response(SAMPLE_APT_TRADE_XML, {
+      status: 200,
+      headers: { "content-type": "text/xml;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/real-estate/apartment/trade?lawd_cd=11680&deal_ymd=202403"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(
+    requestedUrl.startsWith("https://apis.data.go.kr/1613000/"),
+    `expected https MOLIT URL, got ${requestedUrl}`
+  );
+});
+
+test("real estate transaction endpoint maps an upstream timeout to HTTP 504", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    const error = new Error("The operation was aborted due to timeout");
+    error.name = "TimeoutError";
+    throw error;
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/real-estate/apartment/trade?lawd_cd=11680&deal_ymd=202403"
+  });
+
+  assert.equal(response.statusCode, 504);
+  const body = response.json();
+  assert.equal(body.error, "upstream_timeout");
+  assert.equal(body.proxy.cache.hit, false);
+});
+
+test("real estate transaction endpoint maps a refused connection to HTTP 503", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    const error = new Error("fetch failed");
+    error.cause = Object.assign(new Error("connect ECONNREFUSED 27.101.236.63:443"), {
+      code: "ECONNREFUSED"
+    });
+    throw error;
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/real-estate/apartment/trade?lawd_cd=11680&deal_ymd=202403"
+  });
+
+  assert.equal(response.statusCode, 503);
+  const body = response.json();
+  assert.equal(body.error, "upstream_unreachable");
+  assert.equal(body.cause, "ECONNREFUSED");
+  assert.equal(body.proxy.cache.hit, false);
+});
+
+test("real estate transaction endpoint reports upstream failures as JSON and never caches them", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    const error = new Error("fetch failed");
+    error.cause = Object.assign(new Error("connect ECONNREFUSED 27.101.236.63:443"), {
+      code: "ECONNREFUSED"
+    });
+    throw error;
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/real-estate/apartment/trade?lawd_cd=11680&deal_ymd=202403";
+  const first = await app.inject({ method: "GET", url });
+
+  assert.equal(first.statusCode, 503);
+  assert.match(first.headers["content-type"], /application\/json/);
+  const firstBody = first.json();
+  assert.equal(firstBody.error, "upstream_unreachable");
+  assert.equal(firstBody.cause, "ECONNREFUSED");
+  assert.equal(
+    firstBody.message,
+    "Upstream request failed: fetch failed (ECONNREFUSED; connect ECONNREFUSED 27.101.236.63:443)"
+  );
+  assert.equal(firstBody.proxy.cache.hit, false);
+  assert.equal(firstBody.serviceKey, undefined);
+
+  const callsAfterFailure = fetchCalls;
+  const second = await app.inject({ method: "GET", url });
+
+  assert.equal(second.json().proxy.cache.hit, false);
+  assert.ok(fetchCalls > callsAfterFailure, "a failed response must not be served from cache");
+});
+
 test("health endpoint reports molitConfigured status", async (t) => {
   const app = buildServer({
     env: { DATA_GO_KR_API_KEY: "test-key" }

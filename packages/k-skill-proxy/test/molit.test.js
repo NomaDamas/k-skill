@@ -413,3 +413,118 @@ test("fetchTransactions maps upstream timeout to 504", async () => {
   assert.equal(result.error, "upstream_timeout");
   assert.equal(result.status_code, 504);
 });
+
+test("fetchTransactions maps a DNS failure to 503 upstream_unreachable with cause", async () => {
+  const dnsError = new Error("fetch failed");
+  dnsError.cause = Object.assign(new Error("getaddrinfo ENOTFOUND apis.data.go.kr"), {
+    code: "ENOTFOUND",
+  });
+  const mockFetch = async () => {
+    throw dnsError;
+  };
+
+  const result = await fetchTransactions({
+    assetType: "apartment",
+    dealType: "trade",
+    lawdCd: "11680",
+    dealYmd: "202403",
+    serviceKey: "test-key",
+    fetchImpl: mockFetch,
+  });
+
+  assert.equal(result.error, "upstream_unreachable");
+  assert.equal(result.status_code, 503);
+  assert.equal(result.cause, "ENOTFOUND");
+  assert.match(result.message, /Upstream request failed: fetch failed \(ENOTFOUND/);
+});
+
+test("fetchTransactions maps a refused connection to 503 upstream_unreachable", async () => {
+  const refusedError = new Error("fetch failed");
+  refusedError.cause = Object.assign(new Error("connect ECONNREFUSED 27.101.236.63:443"), {
+    code: "ECONNREFUSED",
+  });
+  const mockFetch = async () => {
+    throw refusedError;
+  };
+
+  const result = await fetchTransactions({
+    assetType: "apartment",
+    dealType: "trade",
+    lawdCd: "11680",
+    dealYmd: "202403",
+    serviceKey: "test-key",
+    fetchImpl: mockFetch,
+  });
+
+  assert.equal(result.error, "upstream_unreachable");
+  assert.equal(result.status_code, 503);
+  assert.equal(result.cause, "ECONNREFUSED");
+});
+
+test("fetchTransactions maps an unclassifiable fetch error to 502 upstream_error", async () => {
+  const mockFetch = async () => {
+    throw new Error("socket hang up");
+  };
+
+  const result = await fetchTransactions({
+    assetType: "apartment",
+    dealType: "trade",
+    lawdCd: "11680",
+    dealYmd: "202403",
+    serviceKey: "test-key",
+    fetchImpl: mockFetch,
+  });
+
+  assert.equal(result.error, "upstream_error");
+  assert.equal(result.status_code, 502);
+  assert.equal(result.cause, undefined);
+  assert.match(result.message, /Upstream request failed: socket hang up/);
+});
+
+test("fetchTransactions classifies a mid-body stream reset", async () => {
+  const streamError = new Error("terminated");
+  streamError.cause = Object.assign(new Error("other side closed"), { code: "UND_ERR_SOCKET" });
+  const mockFetch = async () => ({
+    ok: true,
+    status: 200,
+    text: async () => {
+      throw streamError;
+    },
+  });
+
+  const result = await fetchTransactions({
+    assetType: "apartment",
+    dealType: "trade",
+    lawdCd: "11680",
+    dealYmd: "202403",
+    serviceKey: "test-key",
+    fetchImpl: mockFetch,
+  });
+
+  assert.equal(result.error, "upstream_unreachable");
+  assert.equal(result.status_code, 503);
+  assert.equal(result.cause, "UND_ERR_SOCKET");
+});
+
+test("fetchTransactions failure result does not leak the service key", async () => {
+  const serviceKey = "SECRET-SERVICE-KEY-abcdef123456";
+  const mockFetch = async () => {
+    const error = new Error("fetch failed");
+    error.cause = Object.assign(new Error("connect ECONNREFUSED 27.101.236.63:443"), {
+      code: "ECONNREFUSED",
+    });
+    throw error;
+  };
+
+  const result = await fetchTransactions({
+    assetType: "apartment",
+    dealType: "trade",
+    lawdCd: "11680",
+    dealYmd: "202403",
+    serviceKey,
+    fetchImpl: mockFetch,
+  });
+
+  assert.equal(result.error, "upstream_unreachable");
+  assert.ok(!JSON.stringify(result).includes(serviceKey), "service key must not appear in the failure result");
+});
