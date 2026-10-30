@@ -19,15 +19,15 @@
 
 ```bash
 # 지역×업종 업체
-curl -fsS --get "https://boim.io/search/" -A "k-skill-boim" \
+curl -fsS --max-time 15 --get "https://boim.io/search/" -A "k-skill-boim" \
   --data-urlencode "q=세종 보람동 미용실" --data-urlencode "format=json"
 
 # 공공 조달 실적 업체 + 관련 입찰 공고
-curl -fsS --get "https://boim.io/search/" -A "k-skill-boim" \
+curl -fsS --max-time 15 --get "https://boim.io/search/" -A "k-skill-boim" \
   --data-urlencode "q=교통안전표지 조달 업체" --data-urlencode "format=json"
 
 # 진행 중 입찰 공고
-curl -fsS --get "https://boim.io/search/" -A "k-skill-boim" \
+curl -fsS --max-time 15 --get "https://boim.io/search/" -A "k-skill-boim" \
   --data-urlencode "q=학교 안전 입찰" --data-urlencode "format=json"
 ```
 
@@ -35,8 +35,10 @@ curl -fsS --get "https://boim.io/search/" -A "k-skill-boim" \
 
 - 순서는 관련도 순이다(전 업종 업체는 이름순, 조달 업체는 관련도 → AI 준비 구간 → 날마다 섞기, 입찰은 마감순). 추천 순위나 품질 평가로 말하지 않는다.
 - 답에 `cite` 한 줄과 카드·목록·공고 주소를 함께 준다.
-- 전 업종 업체의 전화번호·상세 주소는 데이터에 없다. 지어내지 않는다.
-- 입찰 공고는 마감일을 KST 기준으로 판정하고 공고 원문 주소를 준다. 입찰 참가는 공식 시스템에서 사용자가 직접 한다.
+- 전 업종 업체(`businesses`)의 `url`은 결과들이 공유하는 `/vendors/k/…` 디렉터리 주소라 전화번호·상세 주소가 없다. 연락처 확인용으로 열지 않고 지어내지도 않는다. 업체가 직접 올린 등록 정보가 있을 수 있는 곳은 조달 업체 카드(`/vendors/c/<카드 id>/`, `ai_md`)뿐이다.
+- 입찰 결과의 `url`은 공고를 낸 공식 시스템 주소지만 국방전자조달(`www.d2b.go.kr`)·LH처럼 포털 첫 화면이나 목록일 수 있다. 그때는 정확한 공고명(`name`)을 함께 주고, 공고구분·개찰일·G2B 공고번호 같은 상세 조건은 `d2b-notice-search`로 넘긴다. 입찰 공고 마감일은 KST 기준으로 판정하고, 입찰 참가는 공식 시스템에서 사용자가 직접 한다.
+- 입찰 질의에는 주제·품명 낱말을 반드시 넣는다(`q`는 최대 60자). `나라장터 입찰`처럼 포털 이름만 넣으면 `parsed.words`가 null이 되어 필터 없이 8,000건대 전체가 나오므로, 품명·주제를 되물어 받는다.
+- 0건이면 `suggest`·`suggest_for`로 후보를 구분한다. `region`이면 지역을 임의로 고르지 말고 사용자에게 되묻고, `name`·`example` 후보나 예시 질의로는 다시 부르지 않는다. `suggest[].url`에는 `format=json`이 없고 `all_regions`·`category`는 HTML 디렉터리라서, 파생 재검색은 사용자 질의 기반 `/search/?q=…&format=json`으로 한 번만 한다.
 
 ## 범위 경계
 
@@ -47,7 +49,7 @@ curl -fsS --get "https://boim.io/search/" -A "k-skill-boim" \
 ## 실패 모드
 
 - 429·403: 너무 자주 불렀다 — 잠시 뒤 한 번만 재시도
-- 0건: `suggest`의 지역·업종 후보로 질의를 바꿔 한 번 더
+- 0건: `suggest_for`가 `region`·`categories`면 후보를 사용자에게 보여 주고 고른 것만 쓰며(지역은 되묻기), `name`·`example` 후보로는 다시 부르지 않는다 — 파생 재검색은 사용자 질의 기반으로 한 번만, `format=json`을 붙여서
 - `unavailable`: 해당 구역만 일시 장애 — 받은 구역만 답한다
 - 5xx·JSON 아님: 보임 일시 장애 — https://boim.io/status/
 
