@@ -18,6 +18,11 @@ PROXY_BASE_URL_NAME = "KSKILL_PROXY_BASE_URL"
 DEFAULT_PROXY_BASE_URL = "https://k-skill-proxy.nomadamas.org"
 PROXY_DOWN_MSG = "설정된 k-skill-proxy 서버가 응답하지 않습니다. 잠시 후 재시도하거나 운영자에게 문의하세요."
 PROXY_KEY_NOT_CONFIGURED_MSG = "k-skill-proxy에 필요한 API 키가 설정되어 있지 않습니다. 운영자에게 문의하세요."
+# The report flow can make two sequential upstream calls, each bounded by the
+# proxy's 20s AbortSignal timeout, so the client must wait past that worst
+# normal path (40s) before giving up - while staying bounded. Previously 20s,
+# which raced the proxy and produced spurious "proxy is down" exits.
+REQUEST_TIMEOUT_SECONDS = 45
 WGS84_A = 6378137.0
 WGS84_F = 1 / 298.257223563
 BESSEL_A = 6377397.155
@@ -363,7 +368,7 @@ def get_proxy_base_url() -> str | None:
 
 def read_json_response(request: urllib.request.Request | str) -> dict:
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             return json.load(response)
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")

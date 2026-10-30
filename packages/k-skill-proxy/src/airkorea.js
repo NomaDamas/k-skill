@@ -1,6 +1,7 @@
 // allow: SIZE_OK - Cohesive AirKorea station/measurement adapter with one shared fallback and redaction contract.
 const { fetchWithRetry } = require("./fetch-with-retry");
 const { classifyUpstreamFailure } = require("./upstream-errors");
+const { redactErrorChain, redactSecretValue } = require("./redaction");
 
 const STATION_SERVICE_URL = "http://apis.data.go.kr/B552584/MsrstnInfoInqireSvc";
 const MEASUREMENT_SERVICE_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc";
@@ -200,6 +201,7 @@ async function fetchJson(baseUrl, params, { fetchImpl = global.fetch, headers = 
     throw new Error("A fetch implementation is required.");
   }
 
+  const serviceKey = params?.serviceKey;
   const url = new URL(baseUrl);
   const searchParams = new URLSearchParams();
 
@@ -221,26 +223,42 @@ async function fetchJson(baseUrl, params, { fetchImpl = global.fetch, headers = 
     // Keep the original failure (and its cause chain) on the thrown error so the
     // global error handler can answer 504 upstream_timeout / 503
     // upstream_unreachable with the socket cause instead of an opaque 502.
+    // The chain is redacted before it can reach the logger, because undici's
+    // `fetch failed` wrapper can carry the credential-bearing request URL.
     const error = new Error("AirKorea upstream request failed.", { cause });
     error.operation = "airkorea.fetchJson";
     if (!classifyUpstreamFailure(error)) {
       error.statusCode = 502;
       error.code = "upstream_fetch_failed";
     }
-    throw error;
+    throw redactErrorChain(error, serviceKey);
   }
 
   if (!response.ok) {
+    // Read and redact once: the upstream body may echo the service key.
+    const bodySnippet = redactSecretValue((await response.text()).slice(0, 500), serviceKey);
+
     if (response.status === 403) {
-      throw new Error(
+      const error = new Error(
         "AirKorea upstream returned 403 Forbidden. 기술문서 기준 후보 원인: 활용신청 후 동기화 대기(1~2시간), 활용신청하지 않은 API 호출, 서비스키 인코딩/서비스키 오류, 등록하지 않은 도메인 또는 IP.",
       );
+      error.operation = "airkorea.fetchJson";
+      error.statusCode = 403;
+      error.code = "upstream_forbidden";
+      error.upstreamStatusCode = 403;
+      error.upstreamBodySnippet = bodySnippet;
+      throw error;
     }
 
+    // Deliberate mapping: a non-2xx upstream must not surface as an unexplained
+    // generic 500. The proxy is the gateway, so it answers 502 with the real
+    // upstream status and a redacted body snippet.
     const error = new Error(`AirKorea upstream request failed with HTTP ${response.status}.`);
     error.operation = "airkorea.fetchJson";
-    error.upstreamStatus = response.status;
-    error.upstreamBody = (await response.text()).slice(0, 500);
+    error.statusCode = 502;
+    error.code = "upstream_error";
+    error.upstreamStatusCode = response.status;
+    error.upstreamBodySnippet = bodySnippet;
     throw error;
   }
 

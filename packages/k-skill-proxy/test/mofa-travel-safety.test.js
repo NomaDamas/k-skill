@@ -153,3 +153,25 @@ test("MOFA route keeps upstream HTTP error responses distinct from network failu
   assert.equal(response.statusCode, 403);
   assert.equal(response.json().error, "upstream_error");
 });
+
+test("MOFA route classifies a wrapped bare `fetch failed` as 503 upstream_unreachable", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    const wrapper = new Error("MOFA travel alarm upstream request failed.");
+    wrapper.cause = new TypeError("fetch failed");
+    throw wrapper;
+  };
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/mofa-travel-safety/travel-alerts?country_iso_alp2=RU&perPage=1"
+  });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_unreachable");
+  assert.doesNotMatch(response.body, /mofa-secret|serviceKey=/);
+});

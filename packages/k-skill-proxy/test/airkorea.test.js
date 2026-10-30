@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   buildReport,
   fetchFineDustReport,
+  fetchStationLookup,
   pickStation
 } = require("../src/airkorea");
 
@@ -269,9 +270,80 @@ test("fetchJson does not misclassify upstream HTTP errors as network failures", 
     }),
     (error) => {
       assert.match(error.message, /HTTP 502/);
-      assert.equal(error.upstreamStatus, 502);
-      assert.equal(error.upstreamBody, "gateway error body");
+      assert.equal(error.upstreamStatusCode, 502);
+      assert.equal(error.upstreamBodySnippet, "gateway error body");
       assert.equal(classifyUpstreamFailure(error), null);
+      return true;
+    }
+  );
+});
+
+test("fetchJson maps upstream HTTP 403 to 403 upstream_forbidden, not a generic 500", async () => {
+  await assert.rejects(
+    fetchStationLookup({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => new Response("forbidden serviceKey=test-key", {
+        status: 403,
+        headers: { "content-type": "text/plain" }
+      })
+    }),
+    (error) => {
+      assert.match(error.message, /403 Forbidden/);
+      assert.equal(error.statusCode, 403);
+      assert.equal(error.code, "upstream_forbidden");
+      assert.equal(error.upstreamStatusCode, 403);
+      assert.doesNotMatch(error.upstreamBodySnippet, /test-key|serviceKey=(?!\[REDACTED\])/);
+      assert.match(error.upstreamBodySnippet, /serviceKey=\[REDACTED\]/);
+      return true;
+    }
+  );
+});
+
+test("fetchJson maps non-403 upstream HTTP errors to 502 with redacted metadata", async () => {
+  await assert.rejects(
+    fetchStationLookup({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => new Response("boom serviceKey=test-key", {
+        status: 500,
+        headers: { "content-type": "text/plain" }
+      })
+    }),
+    (error) => {
+      assert.equal(error.statusCode, 502);
+      assert.equal(error.code, "upstream_error");
+      assert.equal(error.upstreamStatusCode, 500);
+      assert.doesNotMatch(error.upstreamBodySnippet, /test-key|serviceKey=(?!\[REDACTED\])/);
+      assert.equal(error.upstreamBody, undefined);
+      assert.equal(error.upstreamStatus, undefined);
+      return true;
+    }
+  );
+});
+
+test("fetchJson redacts the service key out of the preserved cause chain", async () => {
+  const secret = "airkorea-secret+/=";
+  const rejection = new Error(`boom http://apis.data.go.kr/x?serviceKey=${encodeURIComponent(secret)}`);
+
+  await assert.rejects(
+    fetchStationLookup({
+      stationName: "종로구",
+      serviceKey: secret,
+      fetchImpl: async () => {
+        throw rejection;
+      }
+    }),
+    (error) => {
+      const serialized = JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        causeMessage: error.cause?.message,
+        causeStack: error.cause?.stack
+      });
+      assert.doesNotMatch(serialized, /airkorea-secret/);
+      assert.doesNotMatch(serialized, /serviceKey=(?!\[REDACTED\])/);
+      assert.match(error.cause.message, /serviceKey=\[REDACTED\]/);
       return true;
     }
   );

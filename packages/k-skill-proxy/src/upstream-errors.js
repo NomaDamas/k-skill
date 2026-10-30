@@ -74,6 +74,13 @@ function isTimeoutFailure(error) {
   }));
 }
 
+// Node wraps an unreachable upstream in a bare `TypeError: fetch failed` whose
+// useful detail lives on `cause`. Route adapters may wrap that wrapper again,
+// so detect the marker anywhere in the bounded chain, not just at the top.
+function isFetchFailedFailure(error) {
+  return walkCauseChain(error, (current) => (current?.message === "fetch failed" ? true : null)) || false;
+}
+
 function classifyUpstreamFailure(error) {
   if (!error || typeof error !== "object") {
     return null;
@@ -85,20 +92,24 @@ function classifyUpstreamFailure(error) {
   if (code && UNREACHABLE_CAUSE_CODES.has(code)) {
     return { error: "upstream_unreachable", cause: code, statusCode: 503 };
   }
-  if (error.message === "fetch failed") {
+  if (isFetchFailedFailure(error)) {
     return { error: "upstream_unreachable", cause: code, statusCode: 503 };
   }
   return null;
 }
 
 // Human-readable cause detail for a failed fetch: appends the socket/undici
-// cause code and message hidden inside Node's opaque `fetch failed` wrapper.
+// cause code and the message hidden inside Node's opaque `fetch failed`
+// wrapper. Reuses the same bounded chain walker as classification so wrapped
+// errors from the keyed data.go.kr routes are described consistently.
 function describeUpstreamFailure(error) {
   const base = String(error?.message || "unknown upstream failure");
-  const cause = error?.cause ?? null;
-  const code = stringCode(cause?.code) || stringCode(error?.code);
-  const causeMessage =
-    typeof cause?.message === "string" && cause.message && cause.message !== base ? cause.message : null;
+  const code = failureCode(error);
+  const causeMessage = walkCauseChain(error, (current) =>
+    typeof current?.message === "string" && current.message && current.message !== base
+      ? current.message
+      : null
+  );
   const detail = [code, causeMessage].filter(Boolean).join("; ");
   return detail ? `${base} (${detail})` : base;
 }

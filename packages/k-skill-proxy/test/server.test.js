@@ -55,6 +55,34 @@ const {
 const { parseXmlItems } = require("../src/molit");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
 const { classifyUpstreamFailure } = require("../src/upstream-errors");
+const { inspect } = require("node:util");
+
+// Minimal Fastify-compatible logger that records every call so tests can assert
+// on what actually reaches Pino. `child` returns the same recorder so all
+// request-scoped logs land in one place.
+function createCapturingLogger() {
+  const entries = [];
+  const record = (level) => (...args) => {
+    entries.push({ level, args });
+  };
+  const logger = {
+    info: record("info"),
+    warn: record("warn"),
+    error: record("error"),
+    debug: record("debug"),
+    trace: record("trace"),
+    fatal: record("fatal"),
+    level: "info",
+    child() {
+      return logger;
+    }
+  };
+  return {
+    logger,
+    entries,
+    text: () => entries.map((entry) => inspect(entry.args, { depth: 6 })).join("\n")
+  };
+}
 
 test("makeCacheKey requires a non-empty route to prevent cross-route collisions", () => {
   assert.throws(() => makeCacheKey({ q: "강남" }), /route/);
@@ -3242,7 +3270,7 @@ test("public AirKorea passthrough does not expose service-key usage statistics",
   assert.equal(response.json().error, "not_found");
 });
 
-test("fine dust upstream failures do not expose the AirKorea service key", async (t) => {
+test("fine dust upstream HTTP errors answer 502 upstream_error without exposing the AirKorea service key", async (t) => {
   const originalFetch = global.fetch;
   global.fetch = async () => new Response("failed serviceKey=airkorea-secret", { status: 500 });
 
@@ -3262,10 +3290,103 @@ test("fine dust upstream failures do not expose the AirKorea service key", async
     url: "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
   });
 
-  assert.equal(response.statusCode, 500);
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_error");
   assert.doesNotMatch(response.body, /airkorea-secret/);
-  assert.doesNotMatch(response.body, /serviceKey=/);
+  assert.doesNotMatch(response.body, /serviceKey=(?!\[REDACTED\])/);
   assert.match(response.json().message, /HTTP 500/);
+  assert.equal(response.json().upstream.status_code, 500);
+  assert.doesNotMatch(response.json().upstream.body_snippet, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+});
+
+test("fine dust upstream 403 answers 403 upstream_forbidden with redacted metadata", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("forbidden serviceKey=airkorea-secret", {
+    status: 403,
+    headers: { "content-type": "text/plain" }
+  });
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  });
+
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.json().error, "upstream_forbidden");
+  assert.equal(response.json().upstream.status_code, 403);
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+});
+
+test("AirKorea HTTP error bodies redact the service key from responses and Pino logs", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, text } = createCapturingLogger();
+  global.fetch = async (url) => new Response(
+    `upstream failure for ${url} serviceKey=airkorea-secret`,
+    { status: 500, headers: { "content-type": "text/plain" } }
+  );
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const url of [
+    "/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?returnType=json&stationName=%EA%B0%95%EB%82%A8%EA%B5%AC",
+    "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  ]) {
+    const response = await app.inject({ method: "GET", url });
+    assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+  }
+
+  const logs = text();
+  assert.doesNotMatch(logs, /airkorea-secret/);
+  assert.doesNotMatch(logs, /serviceKey=(?!\[REDACTED\])/);
+});
+
+test("AirKorea fetch rejections redact the credential-bearing URL from responses and Pino logs", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, text } = createCapturingLogger();
+  global.fetch = async (url) => {
+    throw new Error(`boom ${url}`);
+  };
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret+/=" },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const url of [
+    "/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?returnType=json&stationName=%EA%B0%95%EB%82%A8%EA%B5%AC",
+    "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  ]) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 502);
+    assert.equal(response.json().error, "upstream_fetch_failed");
+    assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+  }
+
+  const logs = text();
+  assert.doesNotMatch(logs, /airkorea-secret/);
+  assert.doesNotMatch(logs, /serviceKey=(?!\[REDACTED\])/);
 });
 
 test("seoul subway endpoint caches successful upstream responses for normalized queries", async (t) => {
@@ -7867,4 +7988,143 @@ test("fine-dust route surfaces connection resets as 503 upstream_unreachable", a
   assert.equal(response.json().error, "upstream_unreachable");
   assert.equal(response.json().upstream.cause, "ECONNRESET");
   assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
+
+const AIRKOREA_PASSTHROUGH_URL = "/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?returnType=json&stationName=%EA%B0%95%EB%82%A8%EA%B5%AC";
+
+function routeUsageFields(entries) {
+  return entries
+    .filter((entry) => entry.args[1] === "route usage")
+    .map((entry) => entry.args[0]);
+}
+
+test("AirKorea passthrough route classifies network timeouts as 504 upstream_timeout", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries, text } = createCapturingLogger();
+  global.fetch = async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
+  assert.equal(response.statusCode, 504);
+  assert.equal(response.json().error, "upstream_timeout");
+  assert.equal(response.json().upstream.cause, "UND_ERR_CONNECT_TIMEOUT");
+  assert.equal(response.json().upstream.route, AIRKOREA_PASSTHROUGH_URL);
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+
+  assert.ok(routeUsageFields(entries).some((fields) =>
+    fields.errorCode === "upstream_timeout" && fields.statusCode === 504
+  ));
+  assert.doesNotMatch(text(), /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+});
+
+test("AirKorea passthrough route classifies unreachable upstreams as 503 upstream_unreachable", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("ENOTFOUND");
+  };
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_unreachable");
+  assert.equal(response.json().upstream.cause, "ENOTFOUND");
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
+
+test("AirKorea passthrough route keeps opaque fetch failures as 502 upstream_fetch_failed", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("kaboom");
+  };
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_fetch_failed");
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
+
+test("AirKorea passthrough route maps upstream HTTP 403 to 403 upstream_forbidden", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () =>
+    new Response("forbidden", { status: 403, headers: { "content-type": "text/plain" } });
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.json().error, "upstream_forbidden");
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+
+  assert.ok(routeUsageFields(entries).some((fields) =>
+    fields.errorCode === "upstream_forbidden" && fields.statusCode === 403
+  ));
+});
+
+test("AirKorea and MOFA routes record the upstream failure errorCode in route usage logs", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: {
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret",
+      DATA_GO_KR_API_KEY: "mofa-secret"
+    },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  await app.inject({ method: "GET", url: "/v1/fine-dust/report?stationName=%EC%A2%85%EB%A1%9C%EA%B5%AC" });
+  await app.inject({ method: "GET", url: "/v1/mofa-travel-safety/travel-alerts?country_iso_alp2=RU&perPage=1" });
+
+  const fields = routeUsageFields(entries);
+  assert.ok(fields.some((entry) =>
+    entry.route === "/v1/fine-dust/report" && entry.statusCode === 504 && entry.errorCode === "upstream_timeout"
+  ));
+  assert.ok(fields.some((entry) =>
+    entry.route === "/v1/mofa-travel-safety/travel-alerts" && entry.statusCode === 504 && entry.errorCode === "upstream_timeout"
+  ));
 });

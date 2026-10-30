@@ -82,6 +82,7 @@ const {
 } = require("./coupang");
 const { searchRegionCode } = require("./region-lookup");
 const { classifyUpstreamFailure } = require("./upstream-errors");
+const { redactErrorChain, redactSecretValue } = require("./redaction");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
 const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require("./national-pension");
 const { normalizeFscCorpQuery, fetchFscCorpOutline } = require("./fsc-corp");
@@ -1499,19 +1500,6 @@ function isAllowedAirKoreaRoute(service, operation) {
   return ALLOWED_AIRKOREA_ROUTES.get(service)?.has(operation) || false;
 }
 
-function redactSecretValue(text, secret) {
-  let redacted = String(text);
-  const serializedSecret = new URLSearchParams({ serviceKey: String(secret) })
-    .toString()
-    .slice("serviceKey=".length);
-  for (const candidate of [String(secret), encodeURIComponent(String(secret)), serializedSecret]) {
-    if (candidate) {
-      redacted = redacted.split(candidate).join("[REDACTED]");
-    }
-  }
-  return redacted.replace(/serviceKey(?:=|%3D)[^&\s"'<>\\]+/giu, "serviceKey=[REDACTED]");
-}
-
 async function proxyAirKoreaRequest({ service, operation, query, serviceKey, fetchImpl = global.fetch }) {
   if (!serviceKey) {
     return {
@@ -1555,11 +1543,22 @@ async function proxyAirKoreaRequest({ service, operation, query, serviceKey, fet
     response = await fetchImpl(url, {
       signal: AbortSignal.timeout(20000)
     });
-  } catch {
-    const error = new Error("AirKorea upstream request failed.");
-    error.statusCode = 502;
-    error.code = "upstream_fetch_failed";
-    throw error;
+  } catch (cause) {
+    // Keep the original failure (and its cause chain) so the global error handler
+    // answers 504 upstream_timeout / 503 upstream_unreachable with the socket
+    // cause, instead of collapsing every network failure into an opaque 502.
+    // The chain is redacted before it can reach the logger.
+    const error = new Error("AirKorea upstream request failed.", { cause });
+    error.service = service;
+    error.operation = operation;
+    const classified = classifyUpstreamFailure(error);
+    if (classified) {
+      error.statusCode = classified.statusCode;
+    } else {
+      error.statusCode = 502;
+      error.code = "upstream_fetch_failed";
+    }
+    throw redactErrorChain(error, serviceKey);
   }
   if (response.status === 403) {
     const error = new Error(`AirKorea upstream returned HTTP 403 for ${service}/${operation}.`);
@@ -1567,7 +1566,7 @@ async function proxyAirKoreaRequest({ service, operation, query, serviceKey, fet
     error.code = "upstream_forbidden";
     error.service = service;
     error.operation = operation;
-    throw error;
+    throw redactErrorChain(error, serviceKey);
   }
   const body = await response.text();
   return {
@@ -2196,7 +2195,7 @@ function validateHouseholdWastePaginationQuery(query) {
   return { ok: true };
 }
 
-function buildServer({ env = process.env, provider = null, now = () => new Date() } = {}) {
+function buildServer({ env = process.env, provider = null, now = () => new Date(), loggerInstance = null } = {}) {
   const config = buildConfig(env);
   const cache = createMemoryCache({ maxEntries: config.cacheMaxEntries });
   const vworldCache = createMemoryCache({
@@ -2210,7 +2209,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     now
   });
   const app = Fastify({
-    logger: true,
+    ...(loggerInstance ? { loggerInstance } : { logger: true }),
     logController: new LogController({ disableRequestLogging: true }),
     trustProxy: config.trustProxyHops || false
   });
@@ -6474,6 +6473,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         failure: upstreamFailure.error,
         cause: upstreamFailure.cause,
         route: request.url
+      };
+    }
+
+    // HTTP (non-network) upstream failures carry the real status and a redacted
+    // body snippet so a 403/500 upstream never looks like an unexplained 500.
+    if (error.upstreamStatusCode) {
+      payload.upstream = {
+        ...(payload.upstream || {}),
+        status_code: error.upstreamStatusCode,
+        body_snippet: error.upstreamBodySnippet || null
       };
     }
 
