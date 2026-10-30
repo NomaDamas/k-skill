@@ -1,0 +1,5 @@
+housing_area,lower_sqm_exclusive,upper_sqm_inclusive,seoul_busan,other_metropolitan,other_city_county,unit,checked_date,source_basis,source_url
+85sqm_or_less,0,85,300,250,200,KRW_10k,2026-10-30,주택공급에 관한 규칙 별표 2,https://www.law.go.kr/법령/주택공급에관한규칙
+102sqm_or_less,85,102,600,400,300,KRW_10k,2026-10-30,주택공급에 관한 규칙 별표 2,https://www.law.go.kr/법령/주택공급에관한규칙
+135sqm_or_less,102,135,1000,700,400,KRW_10k,2026-10-30,주택공급에 관한 규칙 별표 2,https://www.law.go.kr/법령/주택공급에관한규칙
+all_areas,135,,1500,1000,500,KRW_10k,2026-10-30,주택공급에 관한 규칙 별표 2,https://www.law.go.kr/법령/주택공급에관한규칙

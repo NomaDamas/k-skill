@@ -1,0 +1,134 @@
+# housing-subscription-reference — assembled instructions
+
+Runtime mode: generic
+
+## Runtime rules
+
+- Detect capabilities, not product names. Dolshoi credential mode is active only when `DOLSHOI_ACTION_BROKER_URL` is set and `vault-run` is available; CloakBrowser mode is active when the built-in browser tool identifies CloakBrowser or `CLOAKBROWSER_PEEK_TOKEN` is set.
+- When the user asks for an action and the official surface supports it lawfully, continue beyond lookup through reversible preparation and execution. Do not declare completion at a result list, deep link, or handoff when the action can still be carried out.
+- Immediately before an irreversible external side effect such as payment, message/email delivery, final submission, cancellation, account mutation, or public posting, call `clarify` with the exact target, amount/payload, and effect. Execute only after approval; do not ask again for already-approved reversible steps.
+- Preserve hard boundaries for law, required physical presence, CAPTCHA, identity proofing, electronic signatures, and unsupported official surfaces. In those cases, complete the furthest lawful supported step and open or prepare the exact next official step for the user.
+- Before using k-skill CLI tools, run `npx -y @nomadamas/k-skill@0 update` so the CLI and all coding-agent skill installs (including `~/.agents/skills`) are current.
+- This skill is lookup-oriented. Completion means the requested data is retrieved, summarized with its source (table/endpoint, period, unit), and any requested follow-up action is connected to the official surface that supports it.
+
+## Bundled asset access
+
+- Execute bundled helpers only through `npx -y @nomadamas/k-skill@0 exec housing-subscription-reference scripts/<file> -- <args>`; do not assume a repository-relative or installed-skill-relative path.
+- Resolve an asset path with `npx -y @nomadamas/k-skill@0 path housing-subscription-reference <relative-path>` only when another tool explicitly requires a filesystem path.
+- Read bundled references through `npx -y @nomadamas/k-skill@0 read housing-subscription-reference references/<file>`.
+
+# 민영주택 청약가점·예치금 참고
+
+## 이 스킬이 하는 일
+
+민영주택 일반공급의 청약가점 항목별 기준표(무주택기간 32점 + 부양가족수 35점 + 청약통장 가입기간 17점 = 총 84점)와 지역·전용면적별 청약 예치금 기준을 정적으로 조회한다. 값은 「주택공급에 관한 규칙」 별표 1(가점제 적용기준)과 별표 2(민영주택 청약 예치기준금액)를 옮긴 것이며, 스킬에 함께 번들된 참고 CSV를 읽어서 답한다.
+
+실시간 공고 검색, 개인별 청약 자격 판정, 당첨 커트라인 예측은 하지 않는다.
+
+## 사용 시점
+
+- "청약가점 84점은 어떻게 나뉘어?"
+- "청약 예치금 얼마나 넣어야 해?"
+- "민영주택 무주택기간 10년이면 몇 점이야?"
+- "부양가족 2명이면 가점 얼마야?"
+- "청약통장 1년이면 몇 점이야?"
+- "세종에서 전용 84㎡ 청약하려면 예치금 얼마야?" / "서울 85㎡ 초과는?"
+
+## 범위 밖
+
+- 특정 단지의 당첨 커트라인, 경쟁률, 당첨 확률·가능성은 다루지 않는다.
+- 국민주택(공공주택)의 청약 자격·순위·예치금은 별도 규정이며, 이 자료는 민영주택 일반공급 기준만 다룬다.
+- 개인의 실제 청약 자격·가점 확정 판정은 청약Home과 입주자모집공고문이 최종이다. 이 자료는 참고값이다.
+
+## 출처와 접근
+
+추가 API 키, 프록시, 로그인, 스크래핑은 필요 없다. 값은 스킬에 번들된 참고 CSV로 읽는다.
+
+- 1차 권위(법령): 「주택공급에 관한 규칙」(국토교통부령, 국가법령정보센터 law.go.kr). 별표 1은 가점제 적용기준, 별표 2는 민영주택 청약 예치기준금액이다.
+- 가점 CSV: `npx -y @nomadamas/k-skill@0 read housing-subscription-reference references/housing_subscription_score.csv`
+- 예치금 CSV: `npx -y @nomadamas/k-skill@0 read housing-subscription-reference references/private_housing_deposit.csv`
+- 지역·면적 규칙(지역 등급, 면적 반개구간, 계산 예시): `npx -y @nomadamas/k-skill@0 read housing-subscription-reference references/region-and-area-rules.md`
+
+검토일(checked_date)은 2026-10-30이다. CSV의 `source_basis`/`source_url` 열이 각 값의 법령 근거를 담는다.
+
+## 입력
+
+- `topic`: `score` 또는 `deposit`.
+- `category`(score): `homeless_period`, `dependents`, `subscription_account_period` 중 하나.
+- `condition`(score): 아래 유효 키 중 정확히 하나. 모호하면 먼저 되묻는다.
+  - `homeless_period`: `no_eligible_period`, `under_1_year`, `1_to_2_years`, `2_to_3_years`, `3_to_4_years`, `4_to_5_years`, `5_to_6_years`, `6_to_7_years`, `7_to_8_years`, `8_to_9_years`, `9_to_10_years`, `10_to_11_years`, `11_to_12_years`, `12_to_13_years`, `13_to_14_years`, `14_to_15_years`, `15_years_or_more`
+  - `dependents`: `0`, `1`, `2`, `3`, `4`, `5`, `6_or_more`
+  - `subscription_account_period`: `under_6_months`, `6_months_to_1_year`, `1_to_2_years`, `2_to_3_years`, `3_to_4_years`, `4_to_5_years`, `5_to_6_years`, `6_to_7_years`, `7_to_8_years`, `8_to_9_years`, `9_to_10_years`, `10_to_11_years`, `11_to_12_years`, `12_to_13_years`, `13_to_14_years`, `14_to_15_years`, `15_years_or_more`
+- `region`(deposit): `seoul_busan`, `other_metropolitan`, `other_city_county` 중 하나.
+- `housing_area`(deposit): `85sqm_or_less`, `102sqm_or_less`, `135sqm_or_less`, `all_areas` 중 하나.
+
+## 청약가점 기준 (별표 1, 검토일 2026-10-30)
+
+점수 구간은 모두 반개구간 `[이상, 미만)`으로 읽는다(마지막 구간은 이상).
+
+- 무주택기간(상한 32점): 1년 미만 2점, 1년 이상~2년 미만 4점, 2~3년 6점, 3~4년 8점, 4~5년 10점, 5~6년 12점, 6~7년 14점, 7~8년 16점, 8~9년 18점, 9~10년 20점, 10~11년 22점, 11~12년 24점, 12~13년 26점, 13~14년 28점, 14~15년 30점, 15년 이상 32점.
+- 부양가족수(상한 35점): 0명 5점, 1명 10점, 2명 15점, 3명 20점, 4명 25점, 5명 30점, 6명 이상 35점.
+- 청약통장 가입기간(상한 17점): 6개월 미만 1점, 6개월 이상~1년 미만 2점, 1년 이상~2년 미만 3점, 이후 1년마다 1점씩 증가, 15년 이상 17점.
+- 최대 합계: 32 + 35 + 17 = **84점**.
+
+무주택기간 산정 규칙:
+
+- 무주택기간은 주택공급신청자와 그 배우자를 기준으로 하고, 신청자의 연령이 **만 30세가 되는 날**부터 계속 무주택인 기간으로 한다.
+- **만 30세가 되기 전에 혼인한 경우**에는 혼인관계증명서에 등재된 **혼인신고일**부터 기산한다.
+- 신청자나 배우자가 주택을 소유한 사실이 있으면 그 주택을 처분한 후 무주택자가 된 날(2회 이상이면 최근 무주택자가 된 날)부터 산정한다.
+- **유주택자**(입주자모집공고일 현재 1호/1세대 주택을 소유한 세대에 속한 자 등, 별표 1 비고 1·규칙 제28조제6항)와 **만 30세 미만 미혼 무주택자**는 무주택기간 점수가 **0점**이다(CSV 키 `no_eligible_period`, 값 0).
+
+부양가족·가입기간 관련 규칙:
+
+- 부양가족은 입주자모집공고일 현재 신청자 또는 배우자와 같은 세대별 주민등록표에 등재된 세대원이며, 자녀(손자녀 포함)는 미혼으로 한정한다.
+- 청약통장 가입기간은 종류·금액·명의변경과 무관하게 최초 가입일 기준으로 산정한다.
+- **배우자가 주택청약종합저축에 가입한 경우** 신청자 가입기간 점수에 배우자 가입기간의 **50퍼센트**에 해당하는 기간의 점수를 합산할 수 있다. 이때 합산하는 배우자 몫은 **최대 3점**, 합산 후 가입기간 항목 총점은 **최대 17점**을 넘을 수 없다.
+- **미성년자 가입기간**은 2023년 12월 31일 이전 미성년 기간(최대 2년 인정)과 2024년 1월 1일 이후 미성년 기간을 합쳐 **최대 5년**만 인정한다(규칙 제10조제6항).
+
+## 청약 예치금 기준 (별표 2, 검토일 2026-10-30)
+
+단위는 **만원(KRW 10,000)**이다. “지역”은 **입주자모집공고일 현재 신청자의 주민등록표에 따른 거주지역**이며, 공급(분양) 사업지 소재지가 아니다.
+
+지역 등급:
+
+- `seoul_busan`: 서울특별시와 부산광역시.
+- `other_metropolitan`: 그 밖의 광역시 — 인천광역시, 대구광역시, 광주광역시, 대전광역시, 울산광역시(정확히 이 5개).
+- `other_city_county`: 특별시 및 광역시를 제외한 지역 — 세종특별자치시, 제주특별자치도, 강원특별자치도, 전북특별자치도 및 도 관할 시·군 등.
+
+전용면적 구간은 반개구간으로 해석한다: `(0, 85]`는 `85sqm_or_less`, `(85, 102]`는 `102sqm_or_less`, `(102, 135]`는 `135sqm_or_less`, `(135, ∞)`은 `all_areas`.
+
+| 전용면적 | `seoul_busan` | `other_metropolitan` | `other_city_county` |
+| --- | ---: | ---: | ---: |
+| 85㎡ 이하 (0, 85] | 300 | 250 | 200 |
+| 102㎡ 이하 (85, 102] | 600 | 400 | 300 |
+| 135㎡ 이하 (102, 135] | 1,000 | 700 | 400 |
+| 모든 면적 (135, ∞) | 1,500 | 1,000 | 500 |
+
+## 계산 예시 (QA 기준)
+
+- 무주택기간 10년 + 부양가족 2명 + 청약통장 가입기간 1년 → 22 + 15 + 3 = **40점** (84점 만점).
+- 만 30세 미만 미혼 무주택자(및 유주택자) → 무주택기간 **0점**.
+- 가점 상한 조합 → 32 + 35 + 17 = **84점**.
+- 세종특별자치시 거주, 전용 84.9㎡ → `other_city_county` + `85sqm_or_less` → **200만원**.
+- 서울특별시 거주, 전용 85.01㎡ → `seoul_busan` + `102sqm_or_less` → **600만원**.
+
+## 워크플로
+
+1. 요청을 score/deposit으로 분류하고, category·condition 또는 region·housing_area를 추출한다.
+2. 해당 번들 CSV를 CLI `read`로 읽고 헤더(`category,condition,score,checked_date,source_basis,source_url` 또는 `housing_area,lower_sqm_exclusive,upper_sqm_inclusive,seoul_busan,other_metropolitan,other_city_county,unit,checked_date,source_basis,source_url`)를 확인한다.
+3. 정확히 일치하는 행의 값과 단위, 검토일, 법령 근거(`source_basis`)를 함께 돌려준다.
+4. 비교 질문은 해당 행/열만 정확히 돌려주고 자격을 추론하지 않는다.
+5. 실제 단지·현재 공고 질문이면 최신 입주자모집공고, 청약Home, 최신 법령을 별도로 확인하라고 안내한다.
+
+## 실패 모드
+
+- 번들 CSV가 없거나, 헤더·수치가 예상과 다르면 값을 지어내지 말고 데이터 사용 불가와 근거를 보고한다.
+- region·area·기간·부양가족수가 모호하면 먼저 되묻는다.
+- 자료의 검토일과 현재 법령·공고가 다를 수 있음을 설명하고, 최신 공식 규정이 우선함을 밝힌다.
+- 실제 자격·당첨 확률·커트라인 요청은 범위 밖이며, 이 자료가 결과를 결정하지 않는다.
+
+## 완료 조건
+
+- 요청한 행/기준값을 정확한 단위와 검토일, 법령 근거와 함께 돌려줬다.
+- 정적 참고자료와 최신 공식 공고·개인 자격을 명확히 구분했다.
+- 출처를 「주택공급에 관한 규칙」 별표 1·별표 2(법제처 국가법령정보센터)로 밝혔다.

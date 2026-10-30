@@ -64,6 +64,7 @@ top-level `SKILL.md` 전체를 돌쇠 우선 실행 계약으로 전수 검토�
 | `heyyumi` | `booking` | 예약 가능한 매장 검색 → `clarify` 후 `reserve` 전송 → `cli.next`로 매장 수락/거절 확인 |
 | `household-waste-info` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `housing-official-price` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `housing-subscription-reference` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `hwp` | `local` | 요청 산출물을 로컬에서 실제 생성·변환·정리 |
 | `intercity-bus-booking` | `booking` | 공식 일정/좌석 선택 → 예약·선점 → `clarify` 후 필요한 결제 |
 | `iros-registry-automation` | `legal` | 공식 등기 표면에서 로그인·서류 준비를 진행하고 `clarify` 후 허용된 신청·수수료 결제 |

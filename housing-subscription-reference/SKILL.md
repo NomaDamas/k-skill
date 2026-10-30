@@ -1,6 +1,6 @@
 ---
 name: housing-subscription-reference
-description: Look up South Korean private-housing subscription point criteria and deposit thresholds using versioned AptToSell reference datasets.
+description: 민영주택 일반공급 청약가점(무주택기간·부양가족수·청약통장 가입기간 합계 84점)과 지역·전용면적별 청약 예치금 기준을 「주택공급에 관한 규칙」 별표 1·별표 2 값으로 조회한다. 청약가점, 청약 예치금, 민영주택, 무주택기간, 부양가족 질문에 사용한다.
 license: MIT
 metadata:
   category: real-estate

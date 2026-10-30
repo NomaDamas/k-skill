@@ -73,6 +73,7 @@ npx -y @nomadamas/k-skill@0 update
 | --- | --- | --- |
 | [한국 부동산 실거래가 조회](docs/features/real-estate-search.md) | `real-estate-search` | 아파트/오피스텔/빌라/단독주택 실거래가·전월세·지역코드 조회 |
 | [한국 주택 공시가격 조회](docs/features/housing-official-price.md) | `housing-official-price` | realtyprice.kr 공개 웹 데이터 표면에서 공동주택·개별주택 정부 공시가격 이력을 직접 조회 (공식 문서화된 OpenAPI 아님) |
+| [민영주택 청약가점·예치금 기준 조회](docs/features/housing-subscription-reference.md) | `housing-subscription-reference` | 「주택공급에 관한 규칙」 별표 1·별표 2 기준 청약가점(무주택기간·부양가족·가입기간 84점)과 지역·면적별 청약 예치금 조회 (외부 CSV 의존 없이 번들 참고값) |
 | [개별공시지가 조회](docs/features/gongsijiga-search.md) | `gongsijiga-search` | realtyprice.kr 공개 API에서 지번 단위 개별공시지가(원/㎡) 다년도 추이·전년 대비 변동률 조회 |
 | [건축물대장 표제부 조회](docs/features/building-register-search.md) | `building-register-search` | 주소·PNU·법정동 코드와 필지로 주용도·연면적·층수·사용승인일 조회 (공공데이터포털 15134735, 프록시 경유) |
 | [LH 청약 공고문 조회](docs/features/lh-notice-search.md) | `lh-notice-search` | 한국토지주택공사(LH) 임대/분양/주거복지(신혼희망타운)/토지/상가 공고를 지역·상태·공고유형·키워드로 조회하고 마감 여부를 KST 기준으로 표시 |
