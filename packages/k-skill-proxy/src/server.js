@@ -132,12 +132,18 @@ const SEOUL_CITYDATA_BASE_URL = "http://openapi.seoul.go.kr:8088";
 const KMA_FORECAST_BASE_TIMES = ["0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300"];
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const KMA_FORECAST_READY_MINUTE = 10;
-// Ultra-short-term forecast (초단기예보) is published every half hour (baseTime "HH30"),
-// ultra-short-term nowcast (초단기실황) at the top of every hour; both are queryable ~10 minutes later.
-const KMA_ULTRA_SRT_READY_MINUTE = 10;
+// Ultra-short-term forecast (초단기예보) is published every half hour (baseTime "HH30") and becomes
+// queryable ~15 minutes later (HH:45). Ultra-short-term nowcast (초단기실황) is published at the top of
+// every hour (baseTime "HH00") and becomes queryable ~10 minutes later (HH:10). The two readiness
+// windows differ, so each route resolves its own latest base time.
+const KMA_ULTRA_SRT_FCST_READY_MINUTE = 15;
+const KMA_ULTRA_SRT_NCST_READY_MINUTE = 10;
 const KMA_ULTRA_SRT_FCST_BASE_TIMES = Array.from({ length: 24 }, (unused, hour) => `${padNumber(hour, 2)}30`);
 const KMA_ULTRA_SRT_NCST_BASE_TIMES = Array.from({ length: 24 }, (unused, hour) => `${padNumber(hour, 2)}00`);
 const KMA_FORECAST_OPERATIONS = new Set(["getVilageFcst", "getUltraSrtFcst", "getUltraSrtNcst"]);
+// KMA application-level success codes. Anything else (e.g. "03" NODATA, "10" invalid param) is a
+// semantic error that must not be cached so a retry can self-heal once the upstream recovers.
+const KMA_SEMANTIC_SUCCESS_CODES = new Set(["00", "0"]);
 const OPINET_API_BASE_URL = "https://www.opinet.co.kr/api";
 const NEIS_MEAL_SERVICE_URL = "https://open.neis.go.kr/hub/mealServiceDietInfo";
 const NEIS_SCHOOL_INFO_URL = "https://open.neis.go.kr/hub/schoolInfo";
@@ -208,6 +214,23 @@ function resolveLatestKmaBase(baseTimes, readyMinute, now = new Date()) {
 
 function resolveLatestKmaForecastBase(now = new Date()) {
   return resolveLatestKmaBase(KMA_FORECAST_BASE_TIMES, KMA_FORECAST_READY_MINUTE, now);
+}
+
+// KMA reports application-level results inside `response.header.resultCode` while still answering
+// HTTP 200. `00` (and the loosely-documented `0`) mean success; every other code is an application
+// error (NODATA, quota, invalid params) that must be surfaced as a non-cacheable proxy error.
+function getKmaSemanticResult(payload) {
+  const header = payload && typeof payload === "object" ? payload.response?.header : null;
+  if (!header || typeof header !== "object" || header.resultCode === undefined || header.resultCode === null) {
+    return null;
+  }
+
+  const resultCode = String(header.resultCode);
+  return {
+    success: KMA_SEMANTIC_SUCCESS_CODES.has(resultCode),
+    resultCode,
+    resultMsg: typeof header.resultMsg === "string" && header.resultMsg ? header.resultMsg : null
+  };
 }
 
 function convertLatLonToKmaGrid(latitude, longitude) {
@@ -3112,7 +3135,55 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         return upstream.body;
       }
 
-      const payload = JSON.parse(upstream.body);
+      let payload;
+      try {
+        payload = JSON.parse(upstream.body);
+      } catch {
+        reply.code(502);
+        return {
+          error: "upstream_invalid_response",
+          message: "KMA weather upstream did not return valid JSON.",
+          upstream_status: upstream.statusCode,
+          query: { ...normalized },
+          proxy: {
+            name: config.proxyName,
+            cache: {
+              hit: false,
+              ttl_ms: config.cacheTtlMs
+            },
+            requested_at: new Date().toISOString()
+          }
+        };
+      }
+
+      const isHttpSuccess = upstream.statusCode >= 200 && upstream.statusCode < 300;
+      const semantic = getKmaSemanticResult(payload);
+
+      // HTTP 200 with a non-success resultCode (e.g. "03" NODATA) is an application error, not a
+      // cacheable payload: surface it as a deliberate proxy error so a later retry re-hits upstream.
+      if (isHttpSuccess && (!semantic || !semantic.success)) {
+        reply.code(502);
+        return {
+          error: "upstream_error",
+          message: semantic
+            ? semantic.resultMsg || `KMA weather upstream returned resultCode ${semantic.resultCode}.`
+            : "KMA weather upstream response is missing response.header.resultCode.",
+          upstream_status: upstream.statusCode,
+          upstream: semantic
+            ? { result_code: semantic.resultCode, result_msg: semantic.resultMsg }
+            : null,
+          query: { ...normalized },
+          proxy: {
+            name: config.proxyName,
+            cache: {
+              hit: false,
+              ttl_ms: config.cacheTtlMs
+            },
+            requested_at: new Date().toISOString()
+          }
+        };
+      }
+
       payload.query = { ...normalized };
       payload.proxy = {
         name: config.proxyName,
@@ -3123,7 +3194,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         requested_at: new Date().toISOString()
       };
 
-      if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      if (isHttpSuccess) {
         cache.set(cacheKey, payload, config.cacheTtlMs);
       }
 
@@ -3143,14 +3214,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     cacheRoute: "korea-weather-vsrt",
     operation: "getUltraSrtFcst",
     baseTimes: KMA_ULTRA_SRT_FCST_BASE_TIMES,
-    readyMinute: KMA_ULTRA_SRT_READY_MINUTE
+    readyMinute: KMA_ULTRA_SRT_FCST_READY_MINUTE
   });
   addKmaWeatherRoute({
     path: "/v1/korea-weather/now",
     cacheRoute: "korea-weather-now",
     operation: "getUltraSrtNcst",
     baseTimes: KMA_ULTRA_SRT_NCST_BASE_TIMES,
-    readyMinute: KMA_ULTRA_SRT_READY_MINUTE
+    readyMinute: KMA_ULTRA_SRT_NCST_READY_MINUTE
   });
 
   async function handleKopisListRoute({ operation, path, request, reply }) {

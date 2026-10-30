@@ -42,7 +42,7 @@ Runtime mode: generic
 - 또는 위도/경도: `lat`, `lon`
 - 선택 사항: `baseDate`, `baseTime`
 
-`baseDate` / `baseTime` 을 생략하면 proxy 가 KST 기준 최신 발표 시각을 자동으로 고른다 (발표 후 약 10분부터 조회 가능).
+`baseDate` / `baseTime` 을 생략하면 proxy 가 KST 기준 최신 발표 시각을 자동으로 고른다. 조회 가능 시점은 route마다 다르다 (초단기예보는 매시 30분 발표 후 약 15분 뒤 HH:45, 초단기실황은 매시 정시 발표 후 약 10분 뒤 HH:10, 단기예보는 발표 후 약 10분).
 
 ## Workflow
 
@@ -104,17 +104,31 @@ curl -fsS --get "${BASE}/v1/korea-weather/forecast" \
 - `REH`: 습도
 - `WSD`: 풍속
 
-초단기예보·초단기실황(`/vsrt`, `/now`)은 아래 항목을 우선 요약한다 (`POP`, `REH`, `SNO` 는 초단기 계열에 없다).
+초단기실황(`/now`)은 예보가 아닌 관측이라 `obsrValue` 필드를 쓰고, 아래 항목을 우선 요약한다.
 
 - `T1H`: 기온
 - `RN1`: 1시간 강수량
+- `REH`: 습도
 - `PTY`: 강수형태
-- `SKY`: 하늘상태
 - `VEC`: 풍향
-- `WSD`: 풍속 (초단기예보)
-- `WAV`: 파고 (해안 격자)
+- `WSD`: 풍속
+- `UUU`: 동서 바람성분
+- `VVV`: 남북 바람성분
 
-category 상세는 기상청 단기예보 조회서비스 활용가이드를 따른다.
+초단기예보(`/vsrt`)는 `fcstDate` / `fcstTime` / `fcstValue` 필드를 쓰고, 아래 항목을 우선 요약한다.
+
+- `T1H`: 기온
+- `RN1`: 1시간 강수량
+- `SKY`: 하늘상태
+- `REH`: 습도
+- `PTY`: 강수형태
+- `LGT`: 낙뢰
+- `VEC`: 풍향
+- `WSD`: 풍속
+- `UUU`: 동서 바람성분
+- `VVV`: 남북 바람성분
+
+`POP`·`SNO` 는 초단기 계열에 없고, `WAV`(파고)는 단기예보(`/forecast`)에만 있다. category 상세는 기상청 단기예보 조회서비스 활용가이드를 따른다.
 
 응답에는 조회 시점과 `baseDate` / `baseTime`, 사용한 route 도 함께 적는다.
 
@@ -129,11 +143,12 @@ category 상세는 기상청 단기예보 조회서비스 활용가이드를 따
 - proxy upstream key 미설정 또는 hosted/self-host route 장애
 - `nx` / `ny` 또는 `lat` / `lon` 이 불완전한 경우
 - 기상청 quota 초과 또는 upstream 장애
-- 선택한 발표 시각에 아직 예보가 준비되지 않은 경우 (초단기예보는 발표 후 약 10분부터 조회 가능)
+- 선택한 발표 시각에 아직 예보가 준비되지 않은 경우 (초단기예보는 매시 30분 발표 후 약 15분, 초단기실황은 매시 정시 발표 후 약 10분부터 조회 가능). upstream이 HTTP 200과 함께 `resultCode` `03`(NODATA) 같은 semantic 오류를 돌려주면 proxy는 이를 `502`로 드러내고 cache하지 않으므로 잠시 후 재시도한다.
 
 ## Notes
 
 - 공식 API는 `nx` / `ny` 격자를 쓰지만, proxy 는 `lat` / `lon` 도 받아 내부에서 격자로 변환한다.
-- 단기예보 category 는 `TMP`, `SKY`, `PTY`, `POP`, `PCP`, `SNO`, `REH`, `WSD` 등을 중심으로 본다.
+- 단기예보 category 는 `TMP`, `SKY`, `PTY`, `POP`, `PCP`, `SNO`, `REH`, `WSD`, `WAV` 등을 중심으로 본다.
+- 초단기실황(`/now`)은 `obsrValue`, 초단기예보(`/vsrt`)는 `fcstValue`(시각은 `fcstDate` / `fcstTime`) 필드를 쓰며, 둘 다 `T1H`·`RN1`·`PTY` 등 관측/초단기 category를 담는다.
 - 초단기예보는 매시 30분 발표로 단기예보보다 최신이고, 6시간 이내 돌풍·소나기처럼 빠르게 변하는 날씨 확인에 쓴다.
 - proxy 운영/환경변수 설정은 `docs/features/k-skill-proxy.md` 를 참고한다.

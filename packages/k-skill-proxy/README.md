@@ -1,6 +1,6 @@
 # k-skill-proxy
 
-`k-skill`용 Fastify 기반 프록시 서버입니다. AirKorea 미세먼지 조회, 기상청 단기예보, 서울 지하철 실시간 도착정보, 한강홍수통제소 수위 정보를 감싸고, 이후 무료/공공 API adapter를 추가하는 베이스로 씁니다.
+`k-skill`용 Fastify 기반 프록시 서버입니다. AirKorea 미세먼지 조회, 기상청 단기예보·초단기예보·초단기실황, 서울 지하철 실시간 도착정보, 한강홍수통제소 수위 정보를 감싸고, 이후 무료/공공 API adapter를 추가하는 베이스로 씁니다.
 
 개인정보 처리 기준은 공개 서비스의 [`/privacy`](https://k-skill-proxy.nomadamas.org/privacy)에서 확인할 수 있습니다. 모든 응답은 `Link: </privacy>; rel="privacy-policy"` 헤더로 같은 경로를 안내합니다.
 
@@ -10,6 +10,8 @@
 - `GET /privacy` — k-skill-proxy 개인정보 처리방침
 - `GET /v1/fine-dust/report`
 - `GET /v1/korea-weather/forecast`
+- `GET /v1/korea-weather/vsrt` — 초단기예보(`getUltraSrtFcst`; 매시 30분 발표, 최대 6시간 1시간 간격)
+- `GET /v1/korea-weather/now` — 초단기실황(`getUltraSrtNcst`; 매시 정시 발표)
 - `GET /v1/ask-seoul/weather-risk/bundle` — ASK 서울 기상 위험 단일 bundle (`ASK_SEOUL_SKILL_API_BASE_URL`, `ASK_SEOUL_KSKILL_API_KEY`)
 - `GET /v1/ask-seoul/weather-risk/product` — ASK 서울 기상 위험 단일 product metadata
 - `GET /v1/ask-seoul/weather-risk/data` — ASK 서울 기상 위험 data (`product_row_id`, `place_id`, `forecast_at`, `risk_labels`, `from`, `to`, `limit`, `cursor`만 허용)
@@ -82,7 +84,7 @@
 ## 환경변수
 
 - `AIR_KOREA_OPEN_API_KEY` — 프록시 서버 쪽 AirKorea upstream key
-- `KMA_OPEN_API_KEY` — 프록시 서버 쪽 기상청 단기예보 upstream key
+- `KMA_OPEN_API_KEY` — 프록시 서버 쪽 기상청 단기예보 조회서비스(단기예보·초단기예보·초단기실황) upstream key
 - `SEOUL_OPEN_API_KEY` — 프록시 서버 쪽 서울 열린데이터 광장 upstream key
 - `HRFCO_OPEN_API_KEY` — 프록시 서버 쪽 한강홍수통제소 upstream key
 - `KEDU_INFO_KEY` — 프록시 서버 쪽 나이스(NEIS) 교육정보 개방 포털 Open API 인증키 (`school-search`, `school-meal`)
@@ -150,9 +152,20 @@ curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/seoul-bike/nearby" \
 한국 날씨 예시:
 
 ```bash
+# 단기예보(오늘~+3일): 발표 후 약 10분부터 조회 가능
 curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/korea-weather/forecast" \
   --data-urlencode 'lat=37.5665' \
   --data-urlencode 'lon=126.9780'
+
+# 초단기예보(최대 6시간): 매시 30분 발표 후 약 15분부터 조회 가능
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/korea-weather/vsrt" \
+  --data-urlencode 'lat=37.5665' \
+  --data-urlencode 'lon=126.9780'
+
+# 초단기실황(현재 관측): 매시 정시 발표 후 약 10분부터 조회 가능
+curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/korea-weather/now" \
+  --data-urlencode 'nx=60' \
+  --data-urlencode 'ny=127'
 ```
 
 한강 수위 정보 예시:

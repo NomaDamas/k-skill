@@ -4223,10 +4223,11 @@ test("korea weather vsrt endpoint falls back to the previous base time before it
     { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
   );
 
-  // 06:35 KST: the 06:30 issue is not queryable yet, so 05:30 must be selected.
+  // 06:44 KST: the 06:30 issue is published at HH30+15 (06:45) and is not queryable yet, so 05:30
+  // must be selected.
   const app = buildServer({
     env: { KMA_OPEN_API_KEY: "kma-key" },
-    now: () => new Date("2026-04-05T06:35:00+09:00")
+    now: () => new Date("2026-04-05T06:44:00+09:00")
   });
 
   t.after(async () => {
@@ -4364,6 +4365,220 @@ test("proxyKmaWeatherRequest targets ultra-short operations when requested", asy
     }),
     /Unsupported KMA forecast operation/
   );
+});
+
+function kmaSuccessResponse() {
+  return new Response(
+    JSON.stringify({
+      response: {
+        header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
+        body: { dataType: "JSON", items: { item: [] } }
+      }
+    }),
+    { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+  );
+}
+
+test("korea weather ultra-short readiness splits at HH:45 for /vsrt and HH:10 for /now", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => kmaSuccessResponse();
+
+  const before = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key" },
+    now: () => new Date("2026-04-05T06:44:00+09:00")
+  });
+  const at = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key" },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await before.close();
+    await at.close();
+  });
+
+  // 06:44 KST: the 06:30 ultra-short forecast (HH30+15 = 06:45) is not ready yet -> 05:30.
+  const vsrtBefore = await before.inject({ method: "GET", url: "/v1/korea-weather/vsrt?nx=60&ny=127" });
+  assert.equal(vsrtBefore.statusCode, 200);
+  assert.equal(vsrtBefore.json().query.baseTime, "0530");
+
+  // 06:45 KST: the 06:30 ultra-short forecast becomes queryable -> 06:30.
+  const vsrtAt = await at.inject({ method: "GET", url: "/v1/korea-weather/vsrt?nx=60&ny=127" });
+  assert.equal(vsrtAt.statusCode, 200);
+  assert.equal(vsrtAt.json().query.baseTime, "0630");
+
+  // /now uses the shorter HH00+10 window, so the 06:00 nowcast is already ready at 06:44.
+  const nowBefore = await before.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+  assert.equal(nowBefore.statusCode, 200);
+  assert.equal(nowBefore.json().query.baseTime, "0600");
+});
+
+test("korea weather ultra-short routes roll the base date back across KST midnight", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => kmaSuccessResponse();
+
+  const vsrtBefore = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" }, now: () => new Date("2026-04-05T00:44:00+09:00") });
+  const vsrtAfter = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" }, now: () => new Date("2026-04-05T00:45:00+09:00") });
+  const nowBefore = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" }, now: () => new Date("2026-04-05T00:09:00+09:00") });
+  const nowAfter = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" }, now: () => new Date("2026-04-05T00:10:00+09:00") });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await Promise.all([vsrtBefore.close(), vsrtAfter.close(), nowBefore.close(), nowAfter.close()]);
+  });
+
+  // /vsrt at 00:44 KST: the 00:30 slot (00:45 ready) is not ready -> previous day 23:30.
+  const vsrtRolled = await vsrtBefore.inject({ method: "GET", url: "/v1/korea-weather/vsrt?nx=60&ny=127" });
+  assert.deepEqual(
+    { baseDate: vsrtRolled.json().query.baseDate, baseTime: vsrtRolled.json().query.baseTime },
+    { baseDate: "20260404", baseTime: "2330" }
+  );
+
+  // /vsrt at 00:45 KST: 00:30 is ready on the same KST day.
+  const vsrtSameDay = await vsrtAfter.inject({ method: "GET", url: "/v1/korea-weather/vsrt?nx=60&ny=127" });
+  assert.deepEqual(
+    { baseDate: vsrtSameDay.json().query.baseDate, baseTime: vsrtSameDay.json().query.baseTime },
+    { baseDate: "20260405", baseTime: "0030" }
+  );
+
+  // /now at 00:09 KST: the 00:00 slot (00:10 ready) is not ready -> previous day 23:00.
+  const nowRolled = await nowBefore.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+  assert.deepEqual(
+    { baseDate: nowRolled.json().query.baseDate, baseTime: nowRolled.json().query.baseTime },
+    { baseDate: "20260404", baseTime: "2300" }
+  );
+
+  // /now at 00:10 KST: 00:00 is ready on the same KST day.
+  const nowSameDay = await nowAfter.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+  assert.deepEqual(
+    { baseDate: nowSameDay.json().query.baseDate, baseTime: nowSameDay.json().query.baseTime },
+    { baseDate: "20260405", baseTime: "0000" }
+  );
+});
+
+test("korea weather ultra-short routes do not cache HTTP-200 KMA semantic errors", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        response: {
+          header: { resultCode: "03", resultMsg: "NODATA_ERROR" },
+          body: { dataType: "JSON", items: { item: [] } }
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key", KSKILL_PROXY_CACHE_TTL_MS: "60000" },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const route of ["vsrt", "now"]) {
+    const first = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+    const second = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+
+    assert.equal(first.statusCode, 502);
+    assert.equal(second.statusCode, 502);
+    assert.equal(first.json().error, "upstream_error");
+    assert.deepEqual(first.json().upstream, { result_code: "03", result_msg: "NODATA_ERROR" });
+  }
+
+  // Two routes x two calls = four upstream calls: NODATA must never be cached.
+  assert.equal(fetchCalls, 4);
+});
+
+test("korea weather ultra-short routes still cache HTTP-200 semantic successes", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return kmaSuccessResponse();
+  };
+
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key", KSKILL_PROXY_CACHE_TTL_MS: "60000" },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+  const second = await app.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls, 1);
+});
+
+test("korea weather ultra-short routes guard malformed upstream JSON without leaking the key", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("<html>gateway error</html>", {
+    status: 200,
+    headers: { "content-type": "application/json;charset=UTF-8" }
+  });
+
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "secret-kma-key" },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const route of ["vsrt", "now"]) {
+    const response = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+    assert.equal(response.statusCode, 502);
+    assert.equal(response.json().error, "upstream_invalid_response");
+    assert.doesNotMatch(response.body, /secret-kma-key/);
+    assert.doesNotMatch(response.body, /serviceKey/);
+  }
+});
+
+test("korea weather ultra-short routes classify unreachable as 503 and timeout as 504", async (t) => {
+  const originalFetch = global.fetch;
+  const app = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  global.fetch = async () => {
+    throw upstreamFetchFailure("ECONNREFUSED");
+  };
+  for (const route of ["vsrt", "now"]) {
+    const response = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+    assert.equal(response.statusCode, 503);
+    assert.equal(response.json().error, "upstream_unreachable");
+    assert.equal(response.json().upstream.cause, "ECONNREFUSED");
+  }
+
+  global.fetch = async () => {
+    throw upstreamTimeoutFailure();
+  };
+  for (const route of ["vsrt", "now"]) {
+    const response = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+    assert.equal(response.statusCode, 504);
+    assert.equal(response.json().error, "upstream_timeout");
+    assert.equal(response.json().upstream.cause, "ABORT_ERR");
+  }
 });
 
 test("han river water-level endpoint stays publicly callable without proxy auth", async (t) => {
