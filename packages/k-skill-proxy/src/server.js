@@ -67,6 +67,7 @@ const {
   normalizeGovernmentSupportQuery
 } = require("./government-support");
 const {
+  isKamisConditionConsistent,
   isKamisFailureBody,
   normalizeKamisQuery,
   proxyKamisRequest
@@ -82,6 +83,7 @@ const {
 } = require("./coupang");
 const { searchRegionCode } = require("./region-lookup");
 const { classifyUpstreamFailure } = require("./upstream-errors");
+const { redactErrorChain, redactSecretValue } = require("./redaction");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
 const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require("./national-pension");
 const { normalizeFscCorpQuery, fetchFscCorpOutline } = require("./fsc-corp");
@@ -132,6 +134,18 @@ const SEOUL_CITYDATA_BASE_URL = "http://openapi.seoul.go.kr:8088";
 const KMA_FORECAST_BASE_TIMES = ["0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300"];
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const KMA_FORECAST_READY_MINUTE = 10;
+// Ultra-short-term forecast (초단기예보) is published every half hour (baseTime "HH30") and becomes
+// queryable ~15 minutes later (HH:45). Ultra-short-term nowcast (초단기실황) is published at the top of
+// every hour (baseTime "HH00") and becomes queryable ~10 minutes later (HH:10). The two readiness
+// windows differ, so each route resolves its own latest base time.
+const KMA_ULTRA_SRT_FCST_READY_MINUTE = 15;
+const KMA_ULTRA_SRT_NCST_READY_MINUTE = 10;
+const KMA_ULTRA_SRT_FCST_BASE_TIMES = Array.from({ length: 24 }, (unused, hour) => `${padNumber(hour, 2)}30`);
+const KMA_ULTRA_SRT_NCST_BASE_TIMES = Array.from({ length: 24 }, (unused, hour) => `${padNumber(hour, 2)}00`);
+const KMA_FORECAST_OPERATIONS = new Set(["getVilageFcst", "getUltraSrtFcst", "getUltraSrtNcst"]);
+// KMA application-level success codes. Anything else (e.g. "03" NODATA, "10" invalid param) is a
+// semantic error that must not be cached so a retry can self-heal once the upstream recovers.
+const KMA_SEMANTIC_SUCCESS_CODES = new Set(["00", "0"]);
 const OPINET_API_BASE_URL = "https://www.opinet.co.kr/api";
 const NEIS_MEAL_SERVICE_URL = "https://open.neis.go.kr/hub/mealServiceDietInfo";
 const NEIS_SCHOOL_INFO_URL = "https://open.neis.go.kr/hub/schoolInfo";
@@ -176,15 +190,15 @@ function formatKstDate(date) {
   return `${padNumber(kstDate.getUTCFullYear(), 4)}${padNumber(kstDate.getUTCMonth() + 1, 2)}${padNumber(kstDate.getUTCDate(), 2)}`;
 }
 
-function resolveLatestKmaForecastBase(now = new Date()) {
+function resolveLatestKmaBase(baseTimes, readyMinute, now = new Date()) {
   const kstDate = new Date(now.getTime() + KST_OFFSET_MS);
   const currentMinutes = (kstDate.getUTCHours() * 60) + kstDate.getUTCMinutes();
 
-  for (let index = KMA_FORECAST_BASE_TIMES.length - 1; index >= 0; index -= 1) {
-    const baseTime = KMA_FORECAST_BASE_TIMES[index];
+  for (let index = baseTimes.length - 1; index >= 0; index -= 1) {
+    const baseTime = baseTimes[index];
     const baseHour = Number.parseInt(baseTime.slice(0, 2), 10);
     const baseMinute = Number.parseInt(baseTime.slice(2, 4), 10);
-    const readyMinutes = (baseHour * 60) + baseMinute + KMA_FORECAST_READY_MINUTE;
+    const readyMinutes = (baseHour * 60) + baseMinute + readyMinute;
 
     if (currentMinutes >= readyMinutes) {
       return {
@@ -196,7 +210,28 @@ function resolveLatestKmaForecastBase(now = new Date()) {
 
   return {
     baseDate: formatKstDate(new Date(now.getTime() - (24 * 60 * 60 * 1000))),
-    baseTime: KMA_FORECAST_BASE_TIMES[KMA_FORECAST_BASE_TIMES.length - 1]
+    baseTime: baseTimes[baseTimes.length - 1]
+  };
+}
+
+function resolveLatestKmaForecastBase(now = new Date()) {
+  return resolveLatestKmaBase(KMA_FORECAST_BASE_TIMES, KMA_FORECAST_READY_MINUTE, now);
+}
+
+// KMA reports application-level results inside `response.header.resultCode` while still answering
+// HTTP 200. `00` (and the loosely-documented `0`) mean success; every other code is an application
+// error (NODATA, quota, invalid params) that must be surfaced as a non-cacheable proxy error.
+function getKmaSemanticResult(payload) {
+  const header = payload && typeof payload === "object" ? payload.response?.header : null;
+  if (!header || typeof header !== "object" || header.resultCode === undefined || header.resultCode === null) {
+    return null;
+  }
+
+  const resultCode = String(header.resultCode);
+  return {
+    success: KMA_SEMANTIC_SUCCESS_CODES.has(resultCode),
+    resultCode,
+    resultMsg: typeof header.resultMsg === "string" && header.resultMsg ? header.resultMsg : null
   };
 }
 
@@ -1153,7 +1188,7 @@ function normalizeKakaoLocalGeocodeQuery(query) {
   };
 }
 
-function normalizeKmaForecastQuery(query, now = new Date()) {
+function normalizeKmaForecastQuery(query, now = new Date(), { baseTimes = KMA_FORECAST_BASE_TIMES, readyMinute = KMA_FORECAST_READY_MINUTE } = {}) {
   const rawNx = parseInteger(query.nx, Number.NaN);
   const rawNy = parseInteger(query.ny, Number.NaN);
   const latitude = parseFloatValue(query.lat ?? query.latitude);
@@ -1200,7 +1235,7 @@ function normalizeKmaForecastQuery(query, now = new Date()) {
         baseDate: rawBaseDate,
         baseTime: rawBaseTime
       }
-    : resolveLatestKmaForecastBase(now);
+    : resolveLatestKmaBase(baseTimes, readyMinute, now);
 
   if (!/^\d{8}$/.test(baseDate) || !/^\d{4}$/.test(baseTime)) {
     throw new Error("Provide baseDate as YYYYMMDD and baseTime as HHMM.");
@@ -1499,19 +1534,6 @@ function isAllowedAirKoreaRoute(service, operation) {
   return ALLOWED_AIRKOREA_ROUTES.get(service)?.has(operation) || false;
 }
 
-function redactSecretValue(text, secret) {
-  let redacted = String(text);
-  const serializedSecret = new URLSearchParams({ serviceKey: String(secret) })
-    .toString()
-    .slice("serviceKey=".length);
-  for (const candidate of [String(secret), encodeURIComponent(String(secret)), serializedSecret]) {
-    if (candidate) {
-      redacted = redacted.split(candidate).join("[REDACTED]");
-    }
-  }
-  return redacted.replace(/serviceKey(?:=|%3D)[^&\s"'<>\\]+/giu, "serviceKey=[REDACTED]");
-}
-
 async function proxyAirKoreaRequest({ service, operation, query, serviceKey, fetchImpl = global.fetch }) {
   if (!serviceKey) {
     return {
@@ -1555,11 +1577,22 @@ async function proxyAirKoreaRequest({ service, operation, query, serviceKey, fet
     response = await fetchImpl(url, {
       signal: AbortSignal.timeout(20000)
     });
-  } catch {
-    const error = new Error("AirKorea upstream request failed.");
-    error.statusCode = 502;
-    error.code = "upstream_fetch_failed";
-    throw error;
+  } catch (cause) {
+    // Keep the original failure (and its cause chain) so the global error handler
+    // answers 504 upstream_timeout / 503 upstream_unreachable with the socket
+    // cause, instead of collapsing every network failure into an opaque 502.
+    // The chain is redacted before it can reach the logger.
+    const error = new Error("AirKorea upstream request failed.", { cause });
+    error.service = service;
+    error.operation = operation;
+    const classified = classifyUpstreamFailure(error);
+    if (classified) {
+      error.statusCode = classified.statusCode;
+    } else {
+      error.statusCode = 502;
+      error.code = "upstream_fetch_failed";
+    }
+    throw redactErrorChain(error, serviceKey);
   }
   if (response.status === 403) {
     const error = new Error(`AirKorea upstream returned HTTP 403 for ${service}/${operation}.`);
@@ -1567,7 +1600,7 @@ async function proxyAirKoreaRequest({ service, operation, query, serviceKey, fet
     error.code = "upstream_forbidden";
     error.service = service;
     error.operation = operation;
-    throw error;
+    throw redactErrorChain(error, serviceKey);
   }
   const body = await response.text();
   return {
@@ -1727,6 +1760,7 @@ async function fetchAllSeoulBikeRealtimeRows({ apiKey, fetchImpl = global.fetch 
 }
 
 async function proxyKmaWeatherRequest({
+  operation = "getVilageFcst",
   baseDate,
   baseTime,
   nx,
@@ -1748,7 +1782,11 @@ async function proxyKmaWeatherRequest({
     };
   }
 
-  const url = new URL(`${DATA_GO_KR_UPSTREAM_BASE_URL}/1360000/VilageFcstInfoService_2.0/getVilageFcst`);
+  if (!KMA_FORECAST_OPERATIONS.has(operation)) {
+    throw new Error(`Unsupported KMA forecast operation: ${operation}`);
+  }
+
+  const url = new URL(`${DATA_GO_KR_UPSTREAM_BASE_URL}/1360000/VilageFcstInfoService_2.0/${operation}`);
   url.searchParams.set("serviceKey", apiKey);
   url.searchParams.set("pageNo", String(pageNo));
   url.searchParams.set("numOfRows", String(numOfRows));
@@ -2196,7 +2234,7 @@ function validateHouseholdWastePaginationQuery(query) {
   return { ok: true };
 }
 
-function buildServer({ env = process.env, provider = null, now = () => new Date() } = {}) {
+function buildServer({ env = process.env, provider = null, now = () => new Date(), loggerInstance = null } = {}) {
   const config = buildConfig(env);
   const cache = createMemoryCache({ maxEntries: config.cacheMaxEntries });
   const vworldCache = createMemoryCache({
@@ -2210,7 +2248,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     now
   });
   const app = Fastify({
-    logger: true,
+    ...(loggerInstance ? { loggerInstance } : { logger: true }),
     logController: new LogController({ disableRequestLogging: true }),
     trustProxy: config.trustProxyHops || false
   });
@@ -3052,65 +3090,138 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return upstream.body;
   });
 
-  app.get("/v1/korea-weather/forecast", async (request, reply) => {
-    let normalized;
+  function addKmaWeatherRoute({ path, cacheRoute, operation, baseTimes, readyMinute }) {
+    app.get(path, async (request, reply) => {
+      let normalized;
 
-    try {
-      normalized = normalizeKmaForecastQuery(request.query || {}, now());
-    } catch (error) {
-      reply.code(400);
-      return {
-        error: "bad_request",
-        message: error.message
-      };
-    }
+      try {
+        normalized = normalizeKmaForecastQuery(request.query || {}, now(), { baseTimes, readyMinute });
+      } catch (error) {
+        reply.code(400);
+        return {
+          error: "bad_request",
+          message: error.message
+        };
+      }
 
-    const cacheKey = makeCacheKey({
-      route: "korea-weather-forecast",
-      ...normalized
-    });
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        proxy: {
-          ...cached.proxy,
-          cache: {
-            hit: true,
-            ttl_ms: config.cacheTtlMs
+      const cacheKey = makeCacheKey({
+        route: cacheRoute,
+        ...normalized
+      });
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        return {
+          ...cached,
+          proxy: {
+            ...cached.proxy,
+            cache: {
+              hit: true,
+              ttl_ms: config.cacheTtlMs
+            }
           }
-        }
+        };
+      }
+
+      const upstream = await proxyKmaWeatherRequest({
+        ...normalized,
+        operation,
+        apiKey: config.kmaOpenApiKey
+      });
+
+      reply.code(upstream.statusCode);
+      reply.header("content-type", upstream.contentType);
+
+      if (!upstream.contentType.includes("json")) {
+        return upstream.body;
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(upstream.body);
+      } catch {
+        reply.code(502);
+        return {
+          error: "upstream_invalid_response",
+          message: "KMA weather upstream did not return valid JSON.",
+          upstream_status: upstream.statusCode,
+          query: { ...normalized },
+          proxy: {
+            name: config.proxyName,
+            cache: {
+              hit: false,
+              ttl_ms: config.cacheTtlMs
+            },
+            requested_at: new Date().toISOString()
+          }
+        };
+      }
+
+      const isHttpSuccess = upstream.statusCode >= 200 && upstream.statusCode < 300;
+      const semantic = getKmaSemanticResult(payload);
+
+      // HTTP 200 with a non-success resultCode (e.g. "03" NODATA) is an application error, not a
+      // cacheable payload: surface it as a deliberate proxy error so a later retry re-hits upstream.
+      if (isHttpSuccess && (!semantic || !semantic.success)) {
+        reply.code(502);
+        return {
+          error: "upstream_error",
+          message: semantic
+            ? semantic.resultMsg || `KMA weather upstream returned resultCode ${semantic.resultCode}.`
+            : "KMA weather upstream response is missing response.header.resultCode.",
+          upstream_status: upstream.statusCode,
+          upstream: semantic
+            ? { result_code: semantic.resultCode, result_msg: semantic.resultMsg }
+            : null,
+          query: { ...normalized },
+          proxy: {
+            name: config.proxyName,
+            cache: {
+              hit: false,
+              ttl_ms: config.cacheTtlMs
+            },
+            requested_at: new Date().toISOString()
+          }
+        };
+      }
+
+      payload.query = { ...normalized };
+      payload.proxy = {
+        name: config.proxyName,
+        cache: {
+          hit: false,
+          ttl_ms: config.cacheTtlMs
+        },
+        requested_at: new Date().toISOString()
       };
-    }
 
-    const upstream = await proxyKmaWeatherRequest({
-      ...normalized,
-      apiKey: config.kmaOpenApiKey
+      if (isHttpSuccess) {
+        cache.set(cacheKey, payload, config.cacheTtlMs);
+      }
+
+      return payload;
     });
+  }
 
-    reply.code(upstream.statusCode);
-    reply.header("content-type", upstream.contentType);
-
-    if (!upstream.contentType.includes("json")) {
-      return upstream.body;
-    }
-
-    const payload = JSON.parse(upstream.body);
-    payload.query = { ...normalized };
-    payload.proxy = {
-      name: config.proxyName,
-      cache: {
-        hit: false,
-        ttl_ms: config.cacheTtlMs
-      },
-      requested_at: new Date().toISOString()
-    };
-
-    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
-      cache.set(cacheKey, payload, config.cacheTtlMs);
-    }
-
-    return payload;
+  addKmaWeatherRoute({
+    path: "/v1/korea-weather/forecast",
+    cacheRoute: "korea-weather-forecast",
+    operation: "getVilageFcst",
+    baseTimes: KMA_FORECAST_BASE_TIMES,
+    readyMinute: KMA_FORECAST_READY_MINUTE
+  });
+  addKmaWeatherRoute({
+    path: "/v1/korea-weather/vsrt",
+    cacheRoute: "korea-weather-vsrt",
+    operation: "getUltraSrtFcst",
+    baseTimes: KMA_ULTRA_SRT_FCST_BASE_TIMES,
+    readyMinute: KMA_ULTRA_SRT_FCST_READY_MINUTE
+  });
+  addKmaWeatherRoute({
+    path: "/v1/korea-weather/now",
+    cacheRoute: "korea-weather-now",
+    operation: "getUltraSrtNcst",
+    baseTimes: KMA_ULTRA_SRT_NCST_BASE_TIMES,
+    readyMinute: KMA_ULTRA_SRT_NCST_READY_MINUTE
   });
 
   async function handleKopisListRoute({ operation, path, request, reply }) {
@@ -4793,9 +4904,19 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     }
 
     const data = parsed?.data || {};
+    const items = Array.isArray(data.item) ? data.item : [];
+    if (!isKamisConditionConsistent(parsed?.condition, normalized)) {
+      reply.code(502);
+      return {
+        error: "upstream_category_mismatch",
+        message: "KAMIS applied filters other than the ones requested.",
+        query: normalized,
+        proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
+      };
+    }
     const payload = {
       query: normalized,
-      items: Array.isArray(data.item) ? data.item : [],
+      items,
       upstream: {
         error_code: data.error_code || "001",
       },
@@ -4835,7 +4956,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         query: normalized,
         serviceKey: config.molitApiKey
       });
-    } catch {
+    } catch (error) {
+      if (classifyUpstreamFailure(error)) {
+        throw error;
+      }
       reply.code(502);
       return {
         error: "upstream_error",
@@ -6471,6 +6595,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         failure: upstreamFailure.error,
         cause: upstreamFailure.cause,
         route: request.url
+      };
+    }
+
+    // HTTP (non-network) upstream failures carry the real status and a redacted
+    // body snippet so a 403/500 upstream never looks like an unexplained 500.
+    if (error.upstreamStatusCode) {
+      payload.upstream = {
+        ...(payload.upstream || {}),
+        status_code: error.upstreamStatusCode,
+        body_snippet: error.upstreamBodySnippet || null
       };
     }
 

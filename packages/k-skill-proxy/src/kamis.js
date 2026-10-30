@@ -2,11 +2,11 @@ const KAMIS_UPSTREAM_BASE_URL = "https://www.kamis.or.kr/service/price/xml.do";
 const KAMIS_ACTION = "dailyPriceByCategoryList";
 
 const KAMIS_ALLOWED_FIELDS = new Set([
-  "p_productclscode",
-  "p_countycode",
+  "p_product_cls_code",
+  "p_country_code",
   "p_regday",
   "p_convert_kg_yn",
-  "p_itemcategorycode"
+  "p_item_category_code"
 ]);
 
 function trimOrNull(value) {
@@ -15,6 +15,16 @@ function trimOrNull(value) {
   }
   const trimmed = String(value).trim();
   return trimmed ? trimmed : null;
+}
+
+function firstTrimmed(...values) {
+  for (const value of values) {
+    const trimmed = trimOrNull(value);
+    if (trimmed !== null) {
+      return trimmed;
+    }
+  }
+  return null;
 }
 
 function normalizeKamisDate(value) {
@@ -51,17 +61,17 @@ function normalizeKamisEnum(value, field, allowed) {
 
 function normalizeKamisQuery(query = {}) {
   const normalized = {
-    p_productclscode: normalizeKamisEnum(
-      query.p_productclscode ?? query.p_product_cls_code,
-      "p_productclscode",
+    p_product_cls_code: normalizeKamisEnum(
+      firstTrimmed(query.p_product_cls_code, query.p_productclscode),
+      "p_product_cls_code",
       new Set(["01", "02"])
     ) || "01",
-    p_itemcategorycode: normalizeKamisEnum(
-      query.p_itemcategorycode ?? query.p_item_category_code,
-      "p_itemcategorycode",
+    p_item_category_code: normalizeKamisEnum(
+      firstTrimmed(query.p_item_category_code, query.p_itemcategorycode),
+      "p_item_category_code",
       new Set(["100", "200", "300", "400", "500", "600"])
     ) || "100",
-    p_countycode: trimOrNull(query.p_countycode ?? query.p_country_code),
+    p_country_code: firstTrimmed(query.p_country_code, query.p_countycode),
     p_regday: normalizeKamisDate(query.p_regday),
     p_convert_kg_yn: normalizeKamisEnum(
       query.p_convert_kg_yn,
@@ -70,12 +80,37 @@ function normalizeKamisQuery(query = {}) {
     ) || "N"
   };
 
-  if (normalized.p_countycode && !/^\d{4}$/.test(normalized.p_countycode)) {
-    throw new Error("p_countycode must be a four-digit KAMIS region code.");
+  if (normalized.p_country_code && !/^\d{4}$/.test(normalized.p_country_code)) {
+    throw new Error("p_country_code must be a four-digit KAMIS region code.");
   }
 
   return Object.fromEntries(
     Object.entries(normalized).filter(([, value]) => value !== null)
+  );
+}
+
+// KAMIS echoes the filters it actually applied in `condition[0]` (for example
+// `p_category_code` and `p_product_cls_code`). Compare that echo against the
+// requested query so a silently ignored filter fails closed. Unexpected echo
+// shapes (`[]`, a bare object, a missing envelope) are treated as unverifiable
+// rather than crashing the route, and only a present-but-contradicting echo is
+// rejected.
+function kamisEchoedCondition(condition) {
+  const echo = Array.isArray(condition) ? condition[0] : condition;
+  return echo && typeof echo === "object" ? echo : null;
+}
+
+function isKamisConditionConsistent(condition, query) {
+  const echo = kamisEchoedCondition(condition);
+  if (!echo) {
+    return true;
+  }
+  const checks = [
+    [trimOrNull(echo.p_category_code ?? echo.p_item_category_code), trimOrNull(query?.p_item_category_code)],
+    [trimOrNull(echo.p_product_cls_code ?? echo.p_productclscode), trimOrNull(query?.p_product_cls_code)]
+  ];
+  return checks.every(
+    ([applied, requested]) => requested === null || applied === null || applied === requested
   );
 }
 
@@ -144,6 +179,7 @@ module.exports = {
   KAMIS_ACTION,
   KAMIS_UPSTREAM_BASE_URL,
   isKamisFailureBody,
+  isKamisConditionConsistent,
   isKamisSuccessBody,
   kamisErrorCode,
   normalizeKamisQuery,

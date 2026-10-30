@@ -1,0 +1,8 @@
+{
+  "name": "housing-subscription-reference",
+  "description": "민영주택 일반공급 청약가점(무주택기간·부양가족수·청약통장 가입기간 합계 84점)과 지역·전용면적별 청약 예치금 기준을 「주택공급에 관한 규칙」 별표 1·별표 2 값으로 조회한다. 청약가점, 청약 예치금, 민영주택, 무주택기간, 부양가족 질문에 사용한다.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: housing-subscription-reference\ndescription: 민영주택 일반공급 청약가점(무주택기간·부양가족수·청약통장 가입기간 합계 84점)과 지역·전용면적별 청약 예치금 기준을 「주택공급에 관한 규칙」 별표 1·별표 2 값으로 조회한다. 청약가점, 청약 예치금, 민영주택, 무주택기간, 부양가족 질문에 사용한다.\nlicense: MIT\nmetadata:\n  category: real-estate\n  locale: ko-KR\n  phase: v1"
+}

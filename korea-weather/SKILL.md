@@ -1,6 +1,6 @@
 ---
 name: korea-weather
-description: 한국 날씨를 기상청 단기예보 조회서비스와 프록시 경유로 조회해 요약한다.
+description: 한국 날씨를 기상청 단기예보 조회서비스(초단기예보·초단기실황 포함)와 프록시 경유로 조회해 요약한다.
 license: MIT
 metadata:
   category: weather

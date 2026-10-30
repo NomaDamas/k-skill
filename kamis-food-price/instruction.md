@@ -10,24 +10,25 @@
 
 ## Inputs
 
-- `p_productclscode`: `01` 소매, `02` 도매. 기본 `01`
-- `p_itemcategorycode`: `100` 식량작물, `200` 채소류, `300` 특용작물,
+- `p_product_cls_code`: `01` 소매, `02` 도매. 기본 `01`
+- `p_item_category_code`: `100` 식량작물, `200` 채소류, `300` 특용작물,
   `400` 과일류, `500` 축산물, `600` 수산물. 기본 `100`
-- `p_countycode`: 지역 코드(예: `1101` 서울). 생략하면 전체 지역
+- `p_country_code`: 지역 코드(예: `1101` 서울). 생략하면 전체 지역
 - `p_regday`: `YYYY-MM-DD`, 생략하면 최근 조사일
 - `p_convert_kg_yn`: `Y` 또는 `N`. 기본 `N`
 
-사용자가 문서식 별칭인 `p_product_cls_code`, `p_country_code`,
-`p_item_category_code`를 주어도 proxy가 실제 upstream 계약명으로 정규화한다.
+공식 계약 이름은 underscored 형식이며, 구식 별칭 `p_productclscode`,
+`p_countycode`, `p_itemcategorycode`도 계속 받는다. 이름이 겹치면 공식
+underscored 값이 우선하고, 빈 값은 무시하고 별칭으로 되돌아간다.
 
 ## Workflow
 
 ```bash
 BASE="${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}"
 curl -fsS --get "$BASE/v1/kamis/food-price/daily-category" \
-  --data-urlencode "p_productclscode=01" \
-  --data-urlencode "p_itemcategorycode=200" \
-  --data-urlencode "p_countycode=1101" \
+  --data-urlencode "p_product_cls_code=01" \
+  --data-urlencode "p_item_category_code=200" \
+  --data-urlencode "p_country_code=1101" \
   --data-urlencode "p_convert_kg_yn=N"
 ```
 
@@ -55,6 +56,9 @@ KAMIS의 공식 계약이며 URL을 `json.do`로 바꾸지 않는다.
 - `400 bad_request`: 잘못된 날짜, 지역 코드, 부류 코드, 도소매 값
 - `503 upstream_not_configured`: proxy runtime에 `KAMIS_API_KEY` 없음
 - `400` 또는 `502 upstream_error`: KAMIS code `200`, `900`, 네트워크/상류 오류
+- `502 upstream_category_mismatch`: upstream이 요청한 부류/도소매 필터를
+  적용하지 않아(응답 `condition`의 echo가 요청과 다름) 다른 데이터를 반환함.
+  Python helper는 같은 검증을 하며 `[error]`와 종료코드 `5`로 실패한다.
 - `items: []`, upstream code `001`: 해당 조건의 가격 없음
 - KAMIS가 JSON 대신 점검 HTML/XML을 반환하면 `upstream_invalid_response`
 - 가격은 조사 시점의 공식 데이터이며 구매 보장·법률 판단·투자 조언이 아니다

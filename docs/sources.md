@@ -95,6 +95,7 @@
 - real-estate-mcp: https://github.com/tae0y/real-estate-mcp/tree/main
 - realtyprice.kr 개별주택가격 검색 화면: https://www.realtyprice.kr/notice/hpindividual/search.htm — `housing-official-price`가 공개 read-only web data surface로 관측한 개별주택가격 진입점. 가격 목록 JSON은 browser-visible `https://www.realtyprice.kr/notice/search/hpiSearchListApi.search` 형태를 직접 호출하며, 공식 문서화된 OpenAPI 계약으로 취급하지 않는다.
 - realtyprice.kr 공동주택가격 모바일 검색 화면: https://www.realtyprice.kr/notice/m/town/search.do — `housing-official-price`가 공개 read-only web data surface로 관측한 공동주택가격 진입점. 후보/상세/동/호/가격 이력은 `/notice/m/town/getApt.do`, `/notice/m/town/detail.do`, `/notice/m/town/getHo.do`, `/notice/m/town/getPriceYear.do` 흐름으로 직접 호출하며, 응답은 `model.list` 또는 `modelMap.list` 형태가 모두 가능하다.
+- 「주택공급에 관한 규칙」(국토교통부령 제1592호, 시행 2026-06-15) 별표 1·별표 2: https://www.law.go.kr/법령/주택공급에관한규칙 — `housing-subscription-reference`의 1차 권위. 별표 1(가점제 적용기준, 개정 2024-12-18)은 무주택기간·부양가족수·주택청약종합저축 가입기간 점수표, 별표 2(민영주택 청약 예치기준금액, 개정 2023-05-10)는 지역 3등급 × 전용면적 4구간 예치금(단위 만원)이다. 별표 2 비고는 “지역”을 입주자모집공고일 현재 신청자의 주민등록표상 거주지역으로 정의한다. 법제처 국가법령정보센터에서 2026-10-30 검토한 값을 스킬에 번들 CSV(`housing-subscription-reference/references/housing_subscription_score.csv`, `housing-subscription-reference/references/private_housing_deposit.csv`)로 고정해 런타임에 외부 GitHub/개인 저장소 CSV URL에 의존하지 않는다. 질문의 ‘지역’은 광역시 등급에 따라 `seoul_busan`(서울·부산), `other_metropolitan`(인천·대구·광주·대전·울산 5곳), `other_city_county`(세종특별자치시·제주특별자치도·강원특별자치도·전북특별자치도 및 도 관할 시·군 등)로 나뉜다.
 - 한국장학재단 학자금 지원구간 산정절차: https://www.kosaf.go.kr/ko/tuition.do?pg=tuition04_09_01&type=tuition
 - 한국장학재단 학자금 지원구간 경곗값 확인: https://www.kosaf.go.kr/ko/tuition.do?naviParam=JH%2C01%2C01%2C03&pg=tuition04_09_07
 - 한국장학재단 푸른등대 기부장학금: https://www.kosaf.go.kr/ko/scholar.do?pg=scholarship05_11_01
@@ -274,6 +275,8 @@
 - 소상공인시장진흥공단 상가(상권)정보 파일데이터(무인증, UTF-8 CSV zip, 분기 갱신): https://www.data.go.kr/data/15083033/fileData.do
 - 상가(상권)정보 다운로드 endpoint: https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=<FILE_ID>&fileDetailSn=1 (파일 ID는 데이터셋 페이지에서 분기마다 갱신)
 - 상가(상권)정보 검증 미러 manifest(R2, 직접 원본 timeout 시 fallback): https://pub-c974105a1e4840bcaa264cb2a55d99a1.r2.dev/store-longevity-radar/latest.json
+- 보임(BOIM) 공개 검색(무인증 JSON): https://boim.io/search/?q=<질의>&format=json — `boim-business-search`가 전 업종 업체(소상공인시장진흥공단 상가(상권)정보)·조달 실적 업체 카드(조달청 종합쇼핑몰 품목·계약정보)·진행 중 입찰 공고(나라장터·국방전자조달·LH·한국수자원공사·누리장터)를 한 번에 찾는다. 설명서 https://boim.io/openapi.json, 이용약관 https://boim.io/terms/(무단 대량 수집·재배포 금지). API 키가 필요 없으므로 `k-skill-proxy`를 경유하지 않는다. 운영: ㈜퍼블릭아이디.
+- 보임 업체 카드 요약(마크다운): https://boim.io/vendors/c/<카드 id>/ai.md
 - 잡코리아 기업 인재검색: https://www.jobkorea.co.kr/corp/person/find — 기업회원 로그인 세션에서 마스킹 이력서/목록을 읽는 브라우저 기반 경로. 유료 열람/마스킹 해제/포지션 제안은 수동 확인 대상.
 - 사람인 기업회원 인재풀 검색: https://www.saramin.co.kr/zf_user/memcom/talent-pool/main/search — 기업회원 로그인 및 첫 기기 2차 인증 후 현재 보이는 마스킹 후보 정보를 읽는 브라우저 기반 경로. 유료 열람/연락처 확인/제안 발송은 수동 확인 대상.
 - 국가유산청 국가유산 정보 Open API 안내: https://www.khs.go.kr/html/HtmlPage.do?mn=NS_04_04_03&pg=%2Fpublicinfo%2Fpbinfo3_0201.jsp — 국가유산 목록·상세·이미지·동영상·음성·행사 공개 endpoint를 안내한다.

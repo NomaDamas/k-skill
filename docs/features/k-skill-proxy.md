@@ -18,6 +18,8 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /privacy` — 개인정보 보호법 제30조에 따른 k-skill-proxy 개인정보 처리방침
 - `GET /v1/fine-dust/report`
 - `GET /v1/korea-weather/forecast`
+- `GET /v1/korea-weather/vsrt` (초단기예보 `getUltraSrtFcst`; 매시 30분 발표, 발표 후 약 15분부터 조회, 최대 6시간 1시간 간격)
+- `GET /v1/korea-weather/now` (초단기실황 `getUltraSrtNcst`; 매시 정시 발표, 발표 후 약 10분부터 조회)
 - `GET /v1/ask-seoul/weather-risk/bundle` (ASK 서울 기상 위험 단일 bundle, `ASK_SEOUL_SKILL_API_BASE_URL` + `ASK_SEOUL_KSKILL_API_KEY`)
 - `GET /v1/ask-seoul/weather-risk/product` (ASK 서울 기상 위험 단일 product metadata)
 - `GET /v1/ask-seoul/weather-risk/data` (ASK 서울 기상 위험 data; `product_row_id`, `place_id`, `forecast_at`, `risk_labels`, `from`, `to`, `limit`, `cursor`만 허용)

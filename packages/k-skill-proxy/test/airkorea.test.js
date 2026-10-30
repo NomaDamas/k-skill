@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   buildReport,
   fetchFineDustReport,
+  fetchStationLookup,
   pickStation
 } = require("../src/airkorea");
 
@@ -191,5 +192,159 @@ test("fetchFineDustReport returns a helpful 400 when district tokens do not map 
       Array.isArray(error.candidateStations) &&
       error.candidateStations.includes("평동") &&
       error.candidateStations.includes("오선동")
+  );
+});
+
+test("fetchJson preserves the cause chain so connect timeouts classify as upstream_timeout", async () => {
+  const { classifyUpstreamFailure } = require("../src/upstream-errors");
+  const timeout = new TypeError("fetch failed");
+  timeout.cause = Object.assign(new Error("connect timeout"), { code: "UND_ERR_CONNECT_TIMEOUT" });
+
+  await assert.rejects(
+    fetchFineDustReport({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => {
+        throw timeout;
+      }
+    }),
+    (error) => {
+      assert.equal(error.message, "AirKorea upstream request failed.");
+      assert.equal(error.operation, "airkorea.fetchJson");
+      assert.equal(error.cause, timeout);
+      assert.deepEqual(classifyUpstreamFailure(error), {
+        error: "upstream_timeout",
+        cause: "UND_ERR_CONNECT_TIMEOUT",
+        statusCode: 504
+      });
+      return true;
+    }
+  );
+});
+
+test("fetchJson preserves the cause chain so DNS failures classify as upstream_unreachable", async () => {
+  const { classifyUpstreamFailure } = require("../src/upstream-errors");
+  const dnsFailure = new TypeError("fetch failed");
+  dnsFailure.cause = Object.assign(new Error("getaddrinfo ENOTFOUND apis.data.go.kr"), { code: "ENOTFOUND" });
+
+  await assert.rejects(
+    fetchFineDustReport({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => {
+        throw dnsFailure;
+      }
+    }),
+    (error) => {
+      assert.deepEqual(classifyUpstreamFailure(error), {
+        error: "upstream_unreachable",
+        cause: "ENOTFOUND",
+        statusCode: 503
+      });
+      return true;
+    }
+  );
+});
+
+test("fetchJson does not misclassify upstream HTTP errors as network failures", async () => {
+  const { classifyUpstreamFailure } = require("../src/upstream-errors");
+
+  await assert.rejects(
+    fetchFineDustReport({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => new Response("forbidden", { status: 403 })
+    }),
+    (error) => {
+      assert.match(error.message, /403 Forbidden/);
+      assert.equal(classifyUpstreamFailure(error), null);
+      return true;
+    }
+  );
+
+  await assert.rejects(
+    fetchFineDustReport({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => new Response("gateway error body", { status: 502 })
+    }),
+    (error) => {
+      assert.match(error.message, /HTTP 502/);
+      assert.equal(error.upstreamStatusCode, 502);
+      assert.equal(error.upstreamBodySnippet, "gateway error body");
+      assert.equal(classifyUpstreamFailure(error), null);
+      return true;
+    }
+  );
+});
+
+test("fetchJson maps upstream HTTP 403 to 403 upstream_forbidden, not a generic 500", async () => {
+  await assert.rejects(
+    fetchStationLookup({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => new Response("forbidden serviceKey=test-key", {
+        status: 403,
+        headers: { "content-type": "text/plain" }
+      })
+    }),
+    (error) => {
+      assert.match(error.message, /403 Forbidden/);
+      assert.equal(error.statusCode, 403);
+      assert.equal(error.code, "upstream_forbidden");
+      assert.equal(error.upstreamStatusCode, 403);
+      assert.doesNotMatch(error.upstreamBodySnippet, /test-key|serviceKey=(?!\[REDACTED\])/);
+      assert.match(error.upstreamBodySnippet, /serviceKey=\[REDACTED\]/);
+      return true;
+    }
+  );
+});
+
+test("fetchJson maps non-403 upstream HTTP errors to 502 with redacted metadata", async () => {
+  await assert.rejects(
+    fetchStationLookup({
+      stationName: "종로구",
+      serviceKey: "test-key",
+      fetchImpl: async () => new Response("boom serviceKey=test-key", {
+        status: 500,
+        headers: { "content-type": "text/plain" }
+      })
+    }),
+    (error) => {
+      assert.equal(error.statusCode, 502);
+      assert.equal(error.code, "upstream_error");
+      assert.equal(error.upstreamStatusCode, 500);
+      assert.doesNotMatch(error.upstreamBodySnippet, /test-key|serviceKey=(?!\[REDACTED\])/);
+      assert.equal(error.upstreamBody, undefined);
+      assert.equal(error.upstreamStatus, undefined);
+      return true;
+    }
+  );
+});
+
+test("fetchJson redacts the service key out of the preserved cause chain", async () => {
+  const secret = "airkorea-secret+/=";
+  const rejection = new Error(`boom http://apis.data.go.kr/x?serviceKey=${encodeURIComponent(secret)}`);
+
+  await assert.rejects(
+    fetchStationLookup({
+      stationName: "종로구",
+      serviceKey: secret,
+      fetchImpl: async () => {
+        throw rejection;
+      }
+    }),
+    (error) => {
+      const serialized = JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        causeMessage: error.cause?.message,
+        causeStack: error.cause?.stack
+      });
+      assert.doesNotMatch(serialized, /airkorea-secret/);
+      assert.doesNotMatch(serialized, /serviceKey=(?!\[REDACTED\])/);
+      assert.match(error.cause.message, /serviceKey=\[REDACTED\]/);
+      return true;
+    }
   );
 });

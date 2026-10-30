@@ -55,6 +55,34 @@ const {
 const { parseXmlItems } = require("../src/molit");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
 const { classifyUpstreamFailure } = require("../src/upstream-errors");
+const { inspect } = require("node:util");
+
+// Minimal Fastify-compatible logger that records every call so tests can assert
+// on what actually reaches Pino. `child` returns the same recorder so all
+// request-scoped logs land in one place.
+function createCapturingLogger() {
+  const entries = [];
+  const record = (level) => (...args) => {
+    entries.push({ level, args });
+  };
+  const logger = {
+    info: record("info"),
+    warn: record("warn"),
+    error: record("error"),
+    debug: record("debug"),
+    trace: record("trace"),
+    fatal: record("fatal"),
+    level: "info",
+    child() {
+      return logger;
+    }
+  };
+  return {
+    logger,
+    entries,
+    text: () => entries.map((entry) => inspect(entry.args, { depth: 6 })).join("\n")
+  };
+}
 
 test("makeCacheKey requires a non-empty route to prevent cross-route collisions", () => {
   assert.throws(() => makeCacheKey({ q: "강남" }), /route/);
@@ -3242,7 +3270,7 @@ test("public AirKorea passthrough does not expose service-key usage statistics",
   assert.equal(response.json().error, "not_found");
 });
 
-test("fine dust upstream failures do not expose the AirKorea service key", async (t) => {
+test("fine dust upstream HTTP errors answer 502 upstream_error without exposing the AirKorea service key", async (t) => {
   const originalFetch = global.fetch;
   global.fetch = async () => new Response("failed serviceKey=airkorea-secret", { status: 500 });
 
@@ -3262,10 +3290,103 @@ test("fine dust upstream failures do not expose the AirKorea service key", async
     url: "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
   });
 
-  assert.equal(response.statusCode, 500);
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_error");
   assert.doesNotMatch(response.body, /airkorea-secret/);
-  assert.doesNotMatch(response.body, /serviceKey=/);
+  assert.doesNotMatch(response.body, /serviceKey=(?!\[REDACTED\])/);
   assert.match(response.json().message, /HTTP 500/);
+  assert.equal(response.json().upstream.status_code, 500);
+  assert.doesNotMatch(response.json().upstream.body_snippet, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+});
+
+test("fine dust upstream 403 answers 403 upstream_forbidden with redacted metadata", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("forbidden serviceKey=airkorea-secret", {
+    status: 403,
+    headers: { "content-type": "text/plain" }
+  });
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  });
+
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.json().error, "upstream_forbidden");
+  assert.equal(response.json().upstream.status_code, 403);
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+});
+
+test("AirKorea HTTP error bodies redact the service key from responses and Pino logs", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, text } = createCapturingLogger();
+  global.fetch = async (url) => new Response(
+    `upstream failure for ${url} serviceKey=airkorea-secret`,
+    { status: 500, headers: { "content-type": "text/plain" } }
+  );
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const url of [
+    "/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?returnType=json&stationName=%EA%B0%95%EB%82%A8%EA%B5%AC",
+    "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  ]) {
+    const response = await app.inject({ method: "GET", url });
+    assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+  }
+
+  const logs = text();
+  assert.doesNotMatch(logs, /airkorea-secret/);
+  assert.doesNotMatch(logs, /serviceKey=(?!\[REDACTED\])/);
+});
+
+test("AirKorea fetch rejections redact the credential-bearing URL from responses and Pino logs", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, text } = createCapturingLogger();
+  global.fetch = async (url) => {
+    throw new Error(`boom ${url}`);
+  };
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret+/=" },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const url of [
+    "/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?returnType=json&stationName=%EA%B0%95%EB%82%A8%EA%B5%AC",
+    "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  ]) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 502);
+    assert.equal(response.json().error, "upstream_fetch_failed");
+    assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+  }
+
+  const logs = text();
+  assert.doesNotMatch(logs, /airkorea-secret/);
+  assert.doesNotMatch(logs, /serviceKey=(?!\[REDACTED\])/);
 });
 
 test("seoul subway endpoint caches successful upstream responses for normalized queries", async (t) => {
@@ -4132,6 +4253,455 @@ test("proxyKmaWeatherRequest injects API key and preserves caller query params",
   assert.match(calledUrl, /dataType=JSON/);
 });
 
+test("korea weather vsrt endpoint picks the latest half-hourly base time and caches", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async (url) => {
+    fetchCalls += 1;
+    assert.match(String(url), /getUltraSrtFcst/);
+    assert.match(String(url), /base_date=20260405/);
+    assert.match(String(url), /base_time=0630/);
+    assert.match(String(url), /nx=60/);
+    assert.match(String(url), /ny=127/);
+
+    return new Response(
+      JSON.stringify({
+        response: {
+          header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
+          body: {
+            dataType: "JSON",
+            items: {
+              item: [
+                {
+                  baseDate: "20260405",
+                  baseTime: "0630",
+                  category: "RN1",
+                  fcstDate: "20260405",
+                  fcstTime: "0700",
+                  fcstValue: "1.0",
+                  nx: 60,
+                  ny: 127
+                }
+              ]
+            }
+          }
+        }
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      }
+    );
+  };
+
+  const app = buildServer({
+    env: {
+      KMA_OPEN_API_KEY: "kma-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?lat=37.5665&lon=126.978"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?nx=60&ny=127&baseDate=20260405&baseTime=0630"
+  });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(fetchCalls, 1);
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.deepEqual(first.json().query, {
+    baseDate: "20260405",
+    baseTime: "0630",
+    nx: 60,
+    ny: 127,
+    pageNo: 1,
+    numOfRows: 1000,
+    dataType: "JSON"
+  });
+});
+
+test("korea weather vsrt endpoint falls back to the previous base time before it is ready", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    JSON.stringify({
+      response: {
+        header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
+        body: { dataType: "JSON", items: { item: [] } }
+      }
+    }),
+    { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+  );
+
+  // 06:44 KST: the 06:30 issue is published at HH30+15 (06:45) and is not queryable yet, so 05:30
+  // must be selected.
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key" },
+    now: () => new Date("2026-04-05T06:44:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?nx=60&ny=127"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().query.baseTime, "0530");
+  assert.equal(response.json().query.baseDate, "20260405");
+});
+
+test("korea weather now endpoint resolves the latest hourly nowcast base time", async (t) => {
+  const originalFetch = global.fetch;
+  let calledUrl;
+  global.fetch = async (url) => {
+    calledUrl = String(url);
+    return new Response(
+      JSON.stringify({
+        response: {
+          header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
+          body: { dataType: "JSON", items: { item: [] } }
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  // 06:05 KST: the 06:00 nowcast is not queryable yet, so 05:00 must be selected.
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key" },
+    now: () => new Date("2026-04-05T06:05:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korea-weather/now?nx=60&ny=127"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(calledUrl, /getUltraSrtNcst/);
+  assert.match(calledUrl, /base_time=0500/);
+  assert.match(calledUrl, /base_date=20260405/);
+  assert.equal(response.json().query.baseTime, "0500");
+});
+
+test("korea weather ultra-short routes reject bad input and missing KMA key", async (t) => {
+  const missing = buildServer();
+  const configured = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" } });
+
+  t.after(async () => {
+    await missing.close();
+    await configured.close();
+  });
+
+  const badCoords = await configured.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?lat=91&lon=126.978"
+  });
+  assert.equal(badCoords.statusCode, 400);
+  assert.deepEqual(badCoords.json(), {
+    error: "bad_request",
+    message: "Provide valid lat and lon."
+  });
+
+  const missingNow = await missing.inject({
+    method: "GET",
+    url: "/v1/korea-weather/now?nx=60&ny=127"
+  });
+  const missingVsrt = await missing.inject({
+    method: "GET",
+    url: "/v1/korea-weather/vsrt?nx=60&ny=127"
+  });
+  assert.equal(missingNow.statusCode, 503);
+  assert.equal(missingNow.json().error, "upstream_not_configured");
+  assert.equal(missingVsrt.statusCode, 503);
+  assert.equal(missingVsrt.json().error, "upstream_not_configured");
+});
+
+test("proxyKmaWeatherRequest targets ultra-short operations when requested", async () => {
+  let calledUrl;
+  const fetchImpl = async (url) => {
+    calledUrl = String(url);
+    return new Response('{"ok":true}', {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const ultraSrtFcst = await proxyKmaWeatherRequest({
+    operation: "getUltraSrtFcst",
+    baseDate: "20260405",
+    baseTime: "0630",
+    nx: 60,
+    ny: 127,
+    apiKey: "test-kma-key",
+    fetchImpl
+  });
+  assert.equal(ultraSrtFcst.statusCode, 200);
+  assert.match(calledUrl, /\/1360000\/VilageFcstInfoService_2\.0\/getUltraSrtFcst\?/);
+  assert.match(calledUrl, /base_time=0630/);
+
+  const ultraSrtNcst = await proxyKmaWeatherRequest({
+    operation: "getUltraSrtNcst",
+    baseDate: "20260405",
+    baseTime: "0600",
+    nx: 60,
+    ny: 127,
+    apiKey: "test-kma-key",
+    fetchImpl
+  });
+  assert.equal(ultraSrtNcst.statusCode, 200);
+  assert.match(calledUrl, /\/1360000\/VilageFcstInfoService_2\.0\/getUltraSrtNcst\?/);
+  assert.match(calledUrl, /base_time=0600/);
+
+  await assert.rejects(
+    () => proxyKmaWeatherRequest({
+      operation: "getNotARealOperation",
+      baseDate: "20260405",
+      baseTime: "0600",
+      nx: 60,
+      ny: 127,
+      apiKey: "test-kma-key",
+      fetchImpl
+    }),
+    /Unsupported KMA forecast operation/
+  );
+});
+
+function kmaSuccessResponse() {
+  return new Response(
+    JSON.stringify({
+      response: {
+        header: { resultCode: "00", resultMsg: "NORMAL_SERVICE" },
+        body: { dataType: "JSON", items: { item: [] } }
+      }
+    }),
+    { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+  );
+}
+
+test("korea weather ultra-short readiness splits at HH:45 for /vsrt and HH:10 for /now", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => kmaSuccessResponse();
+
+  const before = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key" },
+    now: () => new Date("2026-04-05T06:44:00+09:00")
+  });
+  const at = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key" },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await before.close();
+    await at.close();
+  });
+
+  // 06:44 KST: the 06:30 ultra-short forecast (HH30+15 = 06:45) is not ready yet -> 05:30.
+  const vsrtBefore = await before.inject({ method: "GET", url: "/v1/korea-weather/vsrt?nx=60&ny=127" });
+  assert.equal(vsrtBefore.statusCode, 200);
+  assert.equal(vsrtBefore.json().query.baseTime, "0530");
+
+  // 06:45 KST: the 06:30 ultra-short forecast becomes queryable -> 06:30.
+  const vsrtAt = await at.inject({ method: "GET", url: "/v1/korea-weather/vsrt?nx=60&ny=127" });
+  assert.equal(vsrtAt.statusCode, 200);
+  assert.equal(vsrtAt.json().query.baseTime, "0630");
+
+  // /now uses the shorter HH00+10 window, so the 06:00 nowcast is already ready at 06:44.
+  const nowBefore = await before.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+  assert.equal(nowBefore.statusCode, 200);
+  assert.equal(nowBefore.json().query.baseTime, "0600");
+});
+
+test("korea weather ultra-short routes roll the base date back across KST midnight", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => kmaSuccessResponse();
+
+  const vsrtBefore = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" }, now: () => new Date("2026-04-05T00:44:00+09:00") });
+  const vsrtAfter = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" }, now: () => new Date("2026-04-05T00:45:00+09:00") });
+  const nowBefore = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" }, now: () => new Date("2026-04-05T00:09:00+09:00") });
+  const nowAfter = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" }, now: () => new Date("2026-04-05T00:10:00+09:00") });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await Promise.all([vsrtBefore.close(), vsrtAfter.close(), nowBefore.close(), nowAfter.close()]);
+  });
+
+  // /vsrt at 00:44 KST: the 00:30 slot (00:45 ready) is not ready -> previous day 23:30.
+  const vsrtRolled = await vsrtBefore.inject({ method: "GET", url: "/v1/korea-weather/vsrt?nx=60&ny=127" });
+  assert.deepEqual(
+    { baseDate: vsrtRolled.json().query.baseDate, baseTime: vsrtRolled.json().query.baseTime },
+    { baseDate: "20260404", baseTime: "2330" }
+  );
+
+  // /vsrt at 00:45 KST: 00:30 is ready on the same KST day.
+  const vsrtSameDay = await vsrtAfter.inject({ method: "GET", url: "/v1/korea-weather/vsrt?nx=60&ny=127" });
+  assert.deepEqual(
+    { baseDate: vsrtSameDay.json().query.baseDate, baseTime: vsrtSameDay.json().query.baseTime },
+    { baseDate: "20260405", baseTime: "0030" }
+  );
+
+  // /now at 00:09 KST: the 00:00 slot (00:10 ready) is not ready -> previous day 23:00.
+  const nowRolled = await nowBefore.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+  assert.deepEqual(
+    { baseDate: nowRolled.json().query.baseDate, baseTime: nowRolled.json().query.baseTime },
+    { baseDate: "20260404", baseTime: "2300" }
+  );
+
+  // /now at 00:10 KST: 00:00 is ready on the same KST day.
+  const nowSameDay = await nowAfter.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+  assert.deepEqual(
+    { baseDate: nowSameDay.json().query.baseDate, baseTime: nowSameDay.json().query.baseTime },
+    { baseDate: "20260405", baseTime: "0000" }
+  );
+});
+
+test("korea weather ultra-short routes do not cache HTTP-200 KMA semantic errors", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(
+      JSON.stringify({
+        response: {
+          header: { resultCode: "03", resultMsg: "NODATA_ERROR" },
+          body: { dataType: "JSON", items: { item: [] } }
+        }
+      }),
+      { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+    );
+  };
+
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key", KSKILL_PROXY_CACHE_TTL_MS: "60000" },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const route of ["vsrt", "now"]) {
+    const first = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+    const second = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+
+    assert.equal(first.statusCode, 502);
+    assert.equal(second.statusCode, 502);
+    assert.equal(first.json().error, "upstream_error");
+    assert.deepEqual(first.json().upstream, { result_code: "03", result_msg: "NODATA_ERROR" });
+  }
+
+  // Two routes x two calls = four upstream calls: NODATA must never be cached.
+  assert.equal(fetchCalls, 4);
+});
+
+test("korea weather ultra-short routes still cache HTTP-200 semantic successes", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return kmaSuccessResponse();
+  };
+
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "kma-key", KSKILL_PROXY_CACHE_TTL_MS: "60000" },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+  const second = await app.inject({ method: "GET", url: "/v1/korea-weather/now?nx=60&ny=127" });
+
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls, 1);
+});
+
+test("korea weather ultra-short routes guard malformed upstream JSON without leaking the key", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("<html>gateway error</html>", {
+    status: 200,
+    headers: { "content-type": "application/json;charset=UTF-8" }
+  });
+
+  const app = buildServer({
+    env: { KMA_OPEN_API_KEY: "secret-kma-key" },
+    now: () => new Date("2026-04-05T06:45:00+09:00")
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  for (const route of ["vsrt", "now"]) {
+    const response = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+    assert.equal(response.statusCode, 502);
+    assert.equal(response.json().error, "upstream_invalid_response");
+    assert.doesNotMatch(response.body, /secret-kma-key/);
+    assert.doesNotMatch(response.body, /serviceKey/);
+  }
+});
+
+test("korea weather ultra-short routes classify unreachable as 503 and timeout as 504", async (t) => {
+  const originalFetch = global.fetch;
+  const app = buildServer({ env: { KMA_OPEN_API_KEY: "kma-key" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  global.fetch = async () => {
+    throw upstreamFetchFailure("ECONNREFUSED");
+  };
+  for (const route of ["vsrt", "now"]) {
+    const response = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+    assert.equal(response.statusCode, 503);
+    assert.equal(response.json().error, "upstream_unreachable");
+    assert.equal(response.json().upstream.cause, "ECONNREFUSED");
+  }
+
+  global.fetch = async () => {
+    throw upstreamTimeoutFailure();
+  };
+  for (const route of ["vsrt", "now"]) {
+    const response = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
+    assert.equal(response.statusCode, 504);
+    assert.equal(response.json().error, "upstream_timeout");
+    assert.equal(response.json().upstream.cause, "ABORT_ERR");
+  }
+});
+
 test("han river water-level endpoint stays publicly callable without proxy auth", async (t) => {
   const originalFetch = global.fetch;
   const fetchCalls = [];
@@ -4709,6 +5279,140 @@ test("real estate transaction endpoint caches successful responses", async (t) =
   assert.equal(first.json().proxy.cache.hit, false);
   assert.equal(second.json().proxy.cache.hit, true);
   assert.equal(fetchCalls, 1);
+});
+
+test("real estate transaction endpoint calls apis.data.go.kr over https", async (t) => {
+  const originalFetch = global.fetch;
+  let requestedUrl = "";
+  global.fetch = async (url) => {
+    requestedUrl = String(url);
+    return new Response(SAMPLE_APT_TRADE_XML, {
+      status: 200,
+      headers: { "content-type": "text/xml;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/real-estate/apartment/trade?lawd_cd=11680&deal_ymd=202403"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(
+    requestedUrl.startsWith("https://apis.data.go.kr/1613000/"),
+    `expected https MOLIT URL, got ${requestedUrl}`
+  );
+});
+
+test("real estate transaction endpoint maps an upstream timeout to HTTP 504", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    const error = new Error("The operation was aborted due to timeout");
+    error.name = "TimeoutError";
+    throw error;
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/real-estate/apartment/trade?lawd_cd=11680&deal_ymd=202403"
+  });
+
+  assert.equal(response.statusCode, 504);
+  const body = response.json();
+  assert.equal(body.error, "upstream_timeout");
+  assert.equal(body.proxy.cache.hit, false);
+});
+
+test("real estate transaction endpoint maps a refused connection to HTTP 503", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    const error = new Error("fetch failed");
+    error.cause = Object.assign(new Error("connect ECONNREFUSED 27.101.236.63:443"), {
+      code: "ECONNREFUSED"
+    });
+    throw error;
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/real-estate/apartment/trade?lawd_cd=11680&deal_ymd=202403"
+  });
+
+  assert.equal(response.statusCode, 503);
+  const body = response.json();
+  assert.equal(body.error, "upstream_unreachable");
+  assert.equal(body.cause, "ECONNREFUSED");
+  assert.equal(body.proxy.cache.hit, false);
+});
+
+test("real estate transaction endpoint reports upstream failures as JSON and never caches them", async (t) => {
+  const originalFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    const error = new Error("fetch failed");
+    error.cause = Object.assign(new Error("connect ECONNREFUSED 27.101.236.63:443"), {
+      code: "ECONNREFUSED"
+    });
+    throw error;
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "test-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/real-estate/apartment/trade?lawd_cd=11680&deal_ymd=202403";
+  const first = await app.inject({ method: "GET", url });
+
+  assert.equal(first.statusCode, 503);
+  assert.match(first.headers["content-type"], /application\/json/);
+  const firstBody = first.json();
+  assert.equal(firstBody.error, "upstream_unreachable");
+  assert.equal(firstBody.cause, "ECONNREFUSED");
+  assert.equal(
+    firstBody.message,
+    "Upstream request failed: fetch failed (ECONNREFUSED; connect ECONNREFUSED 27.101.236.63:443)"
+  );
+  assert.equal(firstBody.proxy.cache.hit, false);
+  assert.equal(firstBody.serviceKey, undefined);
+
+  const callsAfterFailure = fetchCalls;
+  const second = await app.inject({ method: "GET", url });
+
+  assert.equal(second.json().proxy.cache.hit, false);
+  assert.ok(fetchCalls > callsAfterFailure, "a failed response must not be served from cache");
 });
 
 test("health endpoint reports molitConfigured status", async (t) => {
@@ -7813,4 +8517,197 @@ test("upstream connect timeouts answer 504 upstream_timeout", async (t) => {
   const kosis = await app.inject({ method: "GET", url: "/v1/kosis/search?q=%EC%9D%B8%EA%B5%AC" });
   assert.equal(kosis.statusCode, 504);
   assert.equal(kosis.json().error, "upstream_timeout");
+});
+
+test("fine-dust route surfaces upstream connect timeout as 504 upstream_timeout with cause and route", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: {
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/fine-dust/report?stationName=%EC%A2%85%EB%A1%9C%EA%B5%AC";
+  const response = await app.inject({ method: "GET", url });
+  assert.equal(response.statusCode, 504);
+  assert.equal(response.json().error, "upstream_timeout");
+  assert.equal(response.json().upstream.failure, "upstream_timeout");
+  assert.equal(response.json().upstream.cause, "UND_ERR_CONNECT_TIMEOUT");
+  assert.equal(response.json().upstream.route, url);
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
+
+test("fine-dust route surfaces connection resets as 503 upstream_unreachable", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("ECONNRESET");
+  };
+
+  const app = buildServer({
+    env: {
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/fine-dust/report?stationName=%EC%A2%85%EB%A1%9C%EA%B5%AC"
+  });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_unreachable");
+  assert.equal(response.json().upstream.cause, "ECONNRESET");
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
+
+const AIRKOREA_PASSTHROUGH_URL = "/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?returnType=json&stationName=%EA%B0%95%EB%82%A8%EA%B5%AC";
+
+function routeUsageFields(entries) {
+  return entries
+    .filter((entry) => entry.args[1] === "route usage")
+    .map((entry) => entry.args[0]);
+}
+
+test("AirKorea passthrough route classifies network timeouts as 504 upstream_timeout", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries, text } = createCapturingLogger();
+  global.fetch = async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
+  assert.equal(response.statusCode, 504);
+  assert.equal(response.json().error, "upstream_timeout");
+  assert.equal(response.json().upstream.cause, "UND_ERR_CONNECT_TIMEOUT");
+  assert.equal(response.json().upstream.route, AIRKOREA_PASSTHROUGH_URL);
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+
+  assert.ok(routeUsageFields(entries).some((fields) =>
+    fields.errorCode === "upstream_timeout" && fields.statusCode === 504
+  ));
+  assert.doesNotMatch(text(), /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+});
+
+test("AirKorea passthrough route classifies unreachable upstreams as 503 upstream_unreachable", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("ENOTFOUND");
+  };
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_unreachable");
+  assert.equal(response.json().upstream.cause, "ENOTFOUND");
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
+
+test("AirKorea passthrough route keeps opaque fetch failures as 502 upstream_fetch_failed", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error("kaboom");
+  };
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_fetch_failed");
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+});
+
+test("AirKorea passthrough route maps upstream HTTP 403 to 403 upstream_forbidden", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () =>
+    new Response("forbidden", { status: 403, headers: { "content-type": "text/plain" } });
+
+  const app = buildServer({
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.json().error, "upstream_forbidden");
+  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+
+  assert.ok(routeUsageFields(entries).some((fields) =>
+    fields.errorCode === "upstream_forbidden" && fields.statusCode === 403
+  ));
+});
+
+test("AirKorea and MOFA routes record the upstream failure errorCode in route usage logs", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: {
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret",
+      DATA_GO_KR_API_KEY: "mofa-secret"
+    },
+    loggerInstance: logger
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  await app.inject({ method: "GET", url: "/v1/fine-dust/report?stationName=%EC%A2%85%EB%A1%9C%EA%B5%AC" });
+  await app.inject({ method: "GET", url: "/v1/mofa-travel-safety/travel-alerts?country_iso_alp2=RU&perPage=1" });
+
+  const fields = routeUsageFields(entries);
+  assert.ok(fields.some((entry) =>
+    entry.route === "/v1/fine-dust/report" && entry.statusCode === 504 && entry.errorCode === "upstream_timeout"
+  ));
+  assert.ok(fields.some((entry) =>
+    entry.route === "/v1/mofa-travel-safety/travel-alerts" && entry.statusCode === 504 && entry.errorCode === "upstream_timeout"
+  ));
 });

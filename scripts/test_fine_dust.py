@@ -279,6 +279,13 @@ class FineDustTests(unittest.TestCase):
         self.assertEqual(rendered["station_name"], "강남구")
         self.assertEqual(rendered["proxy"]["name"], "k-skill-proxy")
 
+    def test_request_timeout_exceeds_proxy_worst_normal_path(self):
+        # The report flow can make two sequential upstream calls, each bounded by
+        # the proxy's 20s AbortSignal timeout. The client must outwait that 40s
+        # worst path so it stops racing the proxy, while staying bounded.
+        self.assertGreater(fine_dust.REQUEST_TIMEOUT_SECONDS, 40)
+        self.assertLessEqual(fine_dust.REQUEST_TIMEOUT_SECONDS, 120)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,8 +2,9 @@
 // Proxies data.go.kr XML endpoints for Korean real estate transaction data.
 
 const { fetchWithRetry } = require("./fetch-with-retry");
+const { upstreamFailureResult } = require("./upstream-errors");
 
-const MOLIT_BASE_URL = "http://apis.data.go.kr/1613000";
+const MOLIT_BASE_URL = "https://apis.data.go.kr/1613000";
 
 const ENDPOINT_MAP = new Map([
   ["apartment/trade", "RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade"],
@@ -39,6 +40,28 @@ const RENT_SCHEMA = {
   villa: { name_tag: "mhouseNm", area_tag: "excluUseAr", extra_fields: ["houseType"] },
   "single-house": { name_tag: null, area_tag: "totalFloorAr", extra_fields: ["houseType"] },
 };
+
+// HTTP status the /v1/real-estate route reports for each classified upstream
+// failure. Mirrors the shared data.go.kr contract in
+// docs/deploy-k-skill-proxy.md: 503 unreachable, 504 timeout, 502 other.
+const UPSTREAM_FAILURE_STATUS = {
+  upstream_unreachable: 503,
+  upstream_timeout: 504,
+  upstream_error: 502
+};
+
+// Classify a fetch failure from fetchWithRetry (undici TypeError, an
+// AbortSignal timeout, or a mid-body stream reset) into the shared upstream
+// result plus the HTTP status the route reports. Delegates to
+// upstreamFailureResult so MOLIT answers like the other keyed data.go.kr
+// routes; the message carries the undici cause code, never the service key.
+function classifyMolitFailure(error) {
+  const failure = upstreamFailureResult(error);
+  return {
+    ...failure,
+    status_code: UPSTREAM_FAILURE_STATUS[failure.error] || 502
+  };
+}
 
 function extractTag(itemXml, tagName) {
   const re = new RegExp(`<${tagName}>\\s*([^<]*)\\s*</${tagName}>`);
@@ -237,14 +260,22 @@ async function fetchTransactions({ assetType, dealType, lawdCd, dealYmd, numOfRo
       signal: AbortSignal.timeout(20000)
     });
   } catch (err) {
-    return { error: "upstream_timeout", message: `Upstream request failed: ${err.message}` };
+    return classifyMolitFailure(err);
   }
 
   if (!response.ok) {
     return { error: "upstream_error", message: `Upstream returned ${response.status}` };
   }
 
-  const xmlText = await response.text();
+  // A connection reset mid-body surfaces here rather than at fetch time, so
+  // classify it too instead of letting it escape as an opaque 500.
+  let xmlText;
+  try {
+    xmlText = await response.text();
+  } catch (err) {
+    return classifyMolitFailure(err);
+  }
+
   const parsed = parseXmlItems(xmlText);
   if (parsed.error) {
     return parsed;
