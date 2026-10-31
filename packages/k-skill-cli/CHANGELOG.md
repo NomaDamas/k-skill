@@ -1,5 +1,34 @@
 # @nomadamas/k-skill
 
+## 0.10.4
+
+### Patch Changes
+
+- 721ddee: 보임(BOIM) 업체·입찰 찾기 스킬 추가: 보임 공개 검색 주소(`https://boim.io/search/?q=…&format=json`, 무인증)로 전국 전 업종 업체·공공 조달 실적 업체·공공기관 진행 중 입찰 공고를 한 번에 조회한다. instruction 전용, k-skill-proxy 미사용 (#737)
+- f013347: fine-dust-location 헬퍼의 프록시 요청 타임아웃을 20초에서 45초로 늘린다. 정상 report 흐름은 측정소 조회와 측정값 조회를 순차로 호출하며 각 호출이 프록시에서 최대 20초까지 걸릴 수 있어, 20초 클라이언트 타임아웃이 프록시보다 먼저 끊겨 정상 응답을 "프록시 다운"으로 오인하던 경쟁 상태를 제거한다.
+- b93fc75: Send KAMIS daily-category filters with the official underscored parameter names, keep legacy aliases as a blank-safe fallback, and fail closed when the upstream condition echo shows a different category or product class.
+- 3b7e0c3: `hankookilbo-news` 의 `list_latest_news` `page_num` 이 1부터 시작함을 명시하고, 도구·인자가 불확실할 때 `tools/list` 로 스키마를 확인하는 안내를 추가합니다.
+- c72bbe1: 민영주택 청약가점·예치금 참고 스킬(`housing-subscription-reference`)을 번들 참고 CSV 기반으로 정리한다. 런타임 외부 GitHub/개인 저장소 CSV URL과 GitHub `/blob/` fallback을 제거하고, 「주택공급에 관한 규칙」 별표 1·별표 2 값을 2026-10-30 검토일로 스킬에 번들한다. 지역 등급(서울·부산 / 인천·대구·광주·대전·울산 / 그 외), 신청자 주민등록상 거주지역 기준, 반개구간 점수·면적 경계, 배우자 가입기간 50%·최대 3점·합산 상한 17점, 미성년자 최대 5년 규칙을 명시하고, 설명·문서·소스·감사 표·스킬 목록·플러그인 매니페스트를 갱신한다 (#710)
+- e136fc8: korea-weather 스킬에 초단기예보(`/v1/korea-weather/vsrt`)·초단기실황(`/v1/korea-weather/now`) route 조회 방법을 추가한다.
+
+## 0.10.3
+
+### Patch Changes
+
+- da1e901: 헤이유미 스킬이 사용 규칙을 `npx -y heyyumi guide`로 헤이유미 서버에서 받아 오게 정리하고, npx가 오래된 사본을 쓰지 않도록 `heyyumi@0` 대신 `heyyumi`로 호출한다. 스킬 설명에 지역·메뉴·조건별 검색과 외국어 질문을 넣었다
+
+## 0.10.2
+
+### Patch Changes
+
+- 47ba7fa: 헤이유미(HeyYumi) 스킬 추가: 헤이유미 공식 CLI(`npx -y heyyumi@0`)로 구글 로그인 한 번(키 불필요)만에 예약 가능한 식당·카페를 검색하고, 사용자 승인(clarify) 후 예약 요청을 보내 사장님 수락/거절/만료까지 확인한다. 실시간 자리·웨이팅 문의 포함. k-skill-proxy 미사용 (#724)
+
+## 0.10.1
+
+### Patch Changes
+
+- d07bc50: 공개 프록시를 호출하는 Python urllib 헬퍼(fine-dust-location, kamis-food-price, mofa-travel-safety)와 korean-transit-route 예제에 명시적 `User-Agent`를 추가해 Cloudflare 1010 차단(#697)을 피한다.
+
 ## 0.10.0
 
 ### Minor Changes
