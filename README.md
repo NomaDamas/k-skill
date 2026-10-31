@@ -163,6 +163,7 @@ npx -y @nomadamas/k-skill@0 update
 | [근처 응급실 병상 상태 확인](docs/features/emergency-room-beds.md) | `emergency-room-beds` | 현재 위치 기준 가까운 응급실 운영·입원실/병상 운영 플래그와 갱신시각 조회 (정확한 잔여 병상 수/가동률은 공개 E-Gen nearby 목록에 없음) |
 | [장기요양·건강검진기관 조회](docs/features/nhis-care-checkup-search.md) | `nhis-care-checkup-search` | 국민건강보험공단 장기요양기관·건강검진기관 공개 후보 조회 (공공데이터포털 15059029·15154419, 프록시 경유) |
 | [의약품 안전 체크](docs/features/mfds-drug-safety.md) | `mfds-drug-safety` | 식약처 e약은요·안전상비의약품 정보를 인터뷰-first 흐름으로 프록시 조회 |
+| [약학정보원 의약품 검색](docs/features/kpic-drug-search.md) | `kpic-drug-search` | 약학정보원(KPIC) 공개 이름 검색과 약품 코드별 상세 원문 조회 (API 키, 로그인, 프록시 불필요) |
 | [식품 안전 체크](docs/features/mfds-food-safety.md) | `mfds-food-safety` | 식약처 부적합 식품·식품안전나라 회수 정보를 인터뷰-first 흐름으로 프록시 조회 |
 | [동물약국·동물용의약품 취급 약국 조회](docs/features/animal-pharmacy-search.md) | `animal-pharmacy-search` | 홍익메디케어 공개 MCP로 지역별 동물약국, 제품 검색, 최근 6개월 구매 이력 기반 취급 약국 조회 |
 
