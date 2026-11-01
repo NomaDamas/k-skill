@@ -40,6 +40,13 @@ npx -y @nomadamas/k-skill@0 update
 
 기여 전에는 [기여 가이드](CONTRIBUTING.md)를 확인해 주세요.
 
+## 같이 쓰면 좋은 도구
+
+k-skill이 에이전트를 **한국 서비스**에 연결해 준다면, 아래 둘은 **내 컴퓨터**에 연결해 줍니다.
+
+- 🔎 **[AutoRAG Agent](https://github.com/Marker-Inc-Korea/AutoRAG)**: 파일·카톡·Slack·메일·HWP까지 읽고 출처 달린 답을 주는 개인 사서 에이전트. Claude Code·Codex에 MCP로 연결. `npm i -g @autorag/librarian`
+- 🌻 **[Dazzi](https://dazziapp.com/)**: AutoRAG 기반 AI 파일 매니저 (macOS·Windows). `brew install --cask nomadamas/dazzi/dazzi`
+
 ## 협력사
 
 <!-- BC카드 공식 심볼 원본: https://cdn.bccard.com/static/images/comm/logo/etc-bc-s-1-l.png (144×144, 3× 표시 해상도) -->
