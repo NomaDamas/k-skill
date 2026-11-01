@@ -74,7 +74,7 @@
 - `@rhwp/core` npm (WASM bindings used by `k-skill-rhwp`): https://www.npmjs.com/package/@rhwp/core
 - `@rhwp/editor` npm (upstream iframe editor — not wrapped by this repo, documented for reference): https://www.npmjs.com/package/@rhwp/editor
 - rhwp HWPX-save-disabled issue #196 (data-safety gate until #197 ships): https://github.com/edwardkim/rhwp/issues/196
-- korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp
+- korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp — `korean-law-search` 의 신･구조문대비표 엔진(`korean-law-search/scripts/amendment/`)을 upstream 의 `amendment_table` 구현(MIT, Copyright (c) 2025 Chris, 커밋 `dcb866b`)에서 이식했다. 라이선스 전문은 `korean-law-search/scripts/amendment/LICENSE-korean-law-mcp`.
 - korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
 - korean-jangbu-for upstream: https://github.com/kimlawtech/korean-jangbu-for (Apache-2.0; original author @kimlawtech, SpeciAI)
 - Popbill developer center: https://developers.popbill.com

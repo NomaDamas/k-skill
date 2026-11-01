@@ -8,6 +8,7 @@
 
 - 검색/목록: `GET /v1/korean-law/search`
 - 본문/상세: `GET /v1/korean-law/detail`
+- 신･구조문대비표 작성: `scripts/amendment_table.js` (현행 조문은 위 `search`/`detail` 로 자동 조회, 한글 `.hwpx` 저장)
 
 ## When to use
 
@@ -16,6 +17,8 @@
 - "부당해고 판례 찾아줘"
 - "개인정보보호법 시행령 조문 확인해줘"
 - "한국 법령/판례/자치법규 검색해줘"
+- "건축법 제22조 개정안 신구조문대비표 만들어줘"
+- "이 개정안으로 신구조문대비표 한글 파일로 저장해줘"
 
 ## When not to use
 
@@ -103,6 +106,35 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-law/detail' \
 - 일부 출처는 본문을 제공하지 않을 수 있다. 본문을 못 가져오면 목록 메타데이터(사건번호·법원·선고일자·출처·요지)까지만 제공하고 본문이 없다는 점을 명시한다(없는 본문을 지어내지 않는다).
 - 법적 판단이 필요한 경우 `검색 결과 요약`과 `원문 출처`까지만 제공하고 법률 자문처럼 단정하지 않는다.
 
+## 신･구조문대비표 작성
+
+개정할 조문만 주면 현행 조문을 법제처에서 가져와 대조한 **신･구조문대비표 초안**을 만든다. 바뀐 부분은 밑줄(채팅 표에서는 굵은 글씨), 개정안 칸의 같은 부분은 `----`, 바뀌지 않은 항·호는 현행 칸 `(생  략)` / 개정안 칸 `(현행과 같음)`, 신설·삭제는 `<신  설>` / `<삭  제>` 로 적는다. 표기 규칙은 법제처 신구법비교 원문을 따른다.
+
+1. 법령명과 개정할 조문을 확인한다. 사용자가 **개정 후 조문 전문**을 주지 않았으면 `detail` 로 현행 조문을 읽고, 사용자가 말한 개정 내용만 반영해 개정 후 조문 전문을 쓴다. 사용자가 말하지 않은 내용은 바꾸지 않는다.
+2. 아래 JSON 을 파일(또는 stdin)로 만든다.
+
+   ```json
+   {
+     "lawName": "건축법",
+     "title": "건축법 일부개정법률안",
+     "amendments": [
+       { "jo": "제22조", "text": "제22조(건축물의 사용승인) ① …개정 후 모습 그대로…\n② ∼ ⑥ (현행과 같음)" }
+     ]
+   }
+   ```
+
+   - `text`: 개정 후 모습 그대로 조 머리·항·호·목을 한 줄에 한 단위로 쓴다. 바뀌지 않는 항·호는 그대로 적거나 `② ∼ ⑤ (현행과 같음)` · `1.·2. (현행과 같음)` 으로 줄여 쓴다. **적지 않은 현행 항·호는 삭제로 본다.** 지우는 항·호는 `③ 삭제`, 조 전체 삭제는 `제5조 삭제`.
+   - `jo`: 생략하면 `text` 첫머리의 조 번호를 쓴다. 한 번에 30개 조문까지, 같은 조는 한 번만 넣는다.
+   - `lawName`(정확한 법령명) 또는 `mst`/`lawId`. 조례·행정규칙처럼 자동 조회가 안 되는 현행은 조문마다 `currentText` 에 현행 원문을 직접 넣는다(신설 조는 빈 문자열). 모든 조문에 `currentText` 가 있으면 법령을 조회하지 않는다.
+3. 실행한다. 한글 파일이 필요하면 `--output` 에 `.hwpx` 경로를 준다(`~/` 는 홈 디렉터리). 한글 파일은 사용자가 달라고 했을 때만 만든다.
+
+   ```bash
+   npx -y @nomadamas/k-skill@0 exec korean-law-search scripts/amendment_table.js -- --input amendment.json --output ~/Desktop/건축법_신구조문대비표.hwpx
+   ```
+
+4. stdout 의 표와 `확인할 점` 을 그대로 사용자에게 보여 준다. `.hwpx` 를 저장했으면 저장 경로를 알린다. 표는 직접 고쳐 쓰지 않는다(`----` 개수·밑줄이 틀어진다) — 고칠 곳이 있으면 JSON 을 고쳐 다시 실행한다.
+5. 결과는 **초안**이다. 공포·제출 전에 법제처 원문과 대조해 검수해야 한다고 알린다.
+
 ## Failure modes
 
 - `target` 이 없거나 허용되지 않은 값이면 400 응답
@@ -110,6 +142,10 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-law/detail' \
 - 프록시 서버에 `LAW_OC` 가 없으면 503 응답
 - 법제처 API가 사용자 검증 실패(`사용자 정보 검증 실패`)를 반환하면 502 + `law_user_verification_failed` (서버 OC/UA/Referer 점검)
 - 법제처 API가 일시적으로 빈/HTML 응답이면 proxy가 재시도 후 502 + `upstream_unstable`
+- 대비표 `[NOT_FOUND] 법령명이 정확히 같은 법령을 찾지 못했습니다` → 검색 후보를 보여 주고 정확한 법령명을 다시 받거나 `currentText` 를 쓴다. 부분 일치(예: 「민법」→「난민법」)로 넘어가지 않는다.
+- 대비표 `[UPSTREAM]` (proxy 연결 실패·법제처 점검) → 잠시 뒤 다시 실행한다. 표를 손으로 만들어 대신하지 않는다.
+- 대비표 `[INVALID_PARAM]` (JSON 형식·`.hwpx` 확장자·중복 조문·31개 이상) → 메시지대로 JSON 을 고쳐 다시 실행한다.
+- 대비표 `[NO_CHANGE]` → 개정안이 현행과 모두 같다는 뜻이다. 입력한 개정 내용을 사용자와 확인한다.
 
 ## Done when
 
@@ -117,10 +153,12 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/korean-law/detail' \
 - 법령/조문은 `target=law` + 필요 시 `detail`, 판례는 `target=prec`, 유권해석은 `target=expc`, 자치법규는 `target=ordin` 로 맞는 종류를 조회했다.
 - 판례/조문 본문이 필요하면 식별자로 `detail` 본문까지 연결했다.
 - 결과를 요약하고 원문 출처(법제처 국가법령정보센터)를 함께 남겼다.
+- 신･구조문대비표 요청이면 `scripts/amendment_table.js` 결과(표·`확인할 점`)를 그대로 전달했고, 한글 파일을 요청받았다면 저장 경로를 알렸으며, 초안이라 검수가 필요하다고 안내했다.
 
 ## Notes
 
 - 설계 참고(upstream): `https://github.com/chrisryugj/korean-law-mcp`
 - official data source: 법제처 Open API (`https://open.law.go.kr`, DRF `lawSearch.do`/`lawService.do`)
 - 운영자(proxy) 전용 시크릿: `LAW_OC` (사용자는 불필요). 무료 발급: `https://open.law.go.kr`
+- 신･구조문대비표 엔진(`scripts/amendment/`)은 `chrisryugj/korean-law-mcp`(MIT)의 `amendment_table` 을 이식했다. 현행 조문 조회만 사용자 키가 필요 없는 k-skill-proxy 호출로 바꿨고, 라이선스 전문은 `scripts/amendment/LICENSE-korean-law-mcp` 에 둔다.
 - 이 저장소 안에는 한국 법령 전용 npm package나 python package를 추가하지 않는다.
