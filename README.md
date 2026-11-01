@@ -93,7 +93,7 @@ npx -y @nomadamas/k-skill@0 update
 
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
-| [한국 법령 검색](docs/features/korean-law-search.md) | `korean-law-search` | 한국 법령/조문/판례/유권해석 검색 |
+| [한국 법령 검색](docs/features/korean-law-search.md) | `korean-law-search` | 한국 법령/조문/판례/유권해석 검색, 개정 조문만 주면 현행을 가져와 만드는 신･구조문대비표(한글 `.hwpx` 저장) |
 | [한국 특허 정보 검색](docs/features/korean-patent-search.md) | `korean-patent-search` | 한국 특허/실용신안 키워드 검색 및 출원번호 상세 조회 |
 | [한국 개인정보처리방침·이용약관 자동 생성](docs/features/korean-privacy-terms.md) | `korean-privacy-terms` | Next.js 프로젝트에 개인정보보호법·약관규제법·전자상거래법 기반 개인정보처리방침/이용약관/쿠키 배너/동의 모달을 생성하는 `kimlawtech/korean-privacy-terms` (Apache-2.0) thin wrapper |
 | [등기부등본 자동화](docs/features/iros-registry-automation.md) | `iros-registry-automation` | 인터넷등기소(IROS)에서 법인/부동산 등기부등본 장바구니, 수동 결제 후 열람·저장 흐름을 보조 |

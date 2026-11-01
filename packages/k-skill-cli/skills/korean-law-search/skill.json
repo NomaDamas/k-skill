@@ -1,10 +1,10 @@
 {
   "name": "korean-law-search",
-  "description": "Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy. Use when the user asks for Korean law/article/precedent lookups.",
+  "description": "Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy, and draft 신･구조문대비표 (old/new article comparison tables, optional HWPX). Use when the user asks for Korean law/article/precedent lookups or an amendment comparison table.",
   "profiles": [
     "proxy",
     "browser",
     "lookup"
   ],
-  "frontmatter": "name: korean-law-search\ndescription: Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy. Use when the user asks for Korean law/article/precedent lookups.\nlicense: MIT\nmetadata:\n  category: legal\n  locale: ko-KR\n  phase: v1"
+  "frontmatter": "name: korean-law-search\ndescription: Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy, and draft 신･구조문대비표 (old/new article comparison tables, optional HWPX). Use when the user asks for Korean law/article/precedent lookups or an amendment comparison table.\nlicense: MIT\nmetadata:\n  category: legal\n  locale: ko-KR\n  phase: v1"
 }

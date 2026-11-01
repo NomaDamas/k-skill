@@ -1,6 +1,6 @@
 ---
 name: korean-law-search
-description: Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy. Use when the user asks for Korean law/article/precedent lookups.
+description: Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy, and draft 신･구조문대비표 (old/new article comparison tables, optional HWPX). Use when the user asks for Korean law/article/precedent lookups or an amendment comparison table.
 license: MIT
 metadata:
   category: legal
