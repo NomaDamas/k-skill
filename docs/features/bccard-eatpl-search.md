@@ -25,14 +25,15 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
   --data-urlencode 'merTpbuzNm=카페'
 ```
 
-프록시는 `BCCARD_EATPL_INST_NM`을 서버에서만 읽고 `trnsTrceNo`를 자동 생성한다. 운영자는 gpu01 `k-skill-proxy` `.env`에 기관코드와 승인된 `BCCARD_EATPL_API_BASE_URL`을 등록한다. 사용자는 credentials나 추적번호를 입력하지 않는다.
+프록시는 `BCCARD_EATPL_INST_NM`을 서버에서만 읽고 `trnsTrceNo`를 자동 생성한다. 운영자는 Cloud Run `k-skill-proxy` 서비스에 기관코드와 승인된 `BCCARD_EATPL_API_BASE_URL`을 등록한다. 사용자는 credentials나 추적번호를 입력하지 않는다.
 
-고정 outbound IP가 필요한 경우 gpu01 `k-skill-proxy` `.env`에
-`BCCARD_EATPL_RELAY_URL`과 `BCCARD_EATPL_RELAY_TOKEN`을 넣는다.
-Lightsail relay는 같은 값을 `EATPL_RELAY_TOKEN`으로 들고 `Authorization: Bearer`가
-일치할 때만 검색을 받는다. 토큰이 없거나 틀리면 즉시 `401 unauthorized`다.
-proxy에 relay URL만 있고 토큰이 없으면 릴레이를 호출하지 않고 `503`이다.
-사용자는 Lightsail을 직접 호출하지 않으며, token은 로그·Git·클라이언트에 남기지 않는다.
+Cloud Run에서 eat.pl을 직접 호출하는 경로가 기본이다. Cloud Run egress IP 등록 전이나
+직접 호출이 실패할 때는 `BCCARD_EATPL_RELAY_URL`과 `BCCARD_EATPL_RELAY_TOKEN`으로
+Lightsail fallback을 유지한다. Lightsail relay는 같은 토큰을 `EATPL_RELAY_TOKEN`으로
+들고 `Authorization: Bearer`가 일치할 때만 검색을 받는다. 토큰이 없거나 틀리면 즉시
+`401 unauthorized`다. proxy에 relay URL만 있고 토큰이 없으면 relay를 호출하지 않고
+`503`이다. 사용자는 Lightsail을 직접 호출하지 않으며, token은 로그·Git에
+남기지 않는다.
 
 ## 입력 및 결과
 

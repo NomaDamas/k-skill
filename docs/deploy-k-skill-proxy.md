@@ -200,8 +200,11 @@ Verify activation through `/health` → `upstreams.*Configured`.
 The Coupang keys enable `GET /v1/coupang/products/search`;
 `KOMSA_MTIS_API_KEY` enables `GET /v1/komsa/ferry/:dataset`.
 
-Optional BC Card eat.pl relay keys, only when the Lightsail fixed-egress relay
-is in use. Store the same random token on Lightsail as `EATPL_RELAY_TOKEN`:
+BC Card eat.pl uses the direct Cloud Run request path first. Keep the optional
+Lightsail fixed-egress relay configured as a fallback while BC Card has not yet
+allowlisted the Cloud Run egress IP, and remove the two relay bindings only
+after the direct path is stable. Store the same random token on Lightsail as
+`EATPL_RELAY_TOKEN`:
 
 ```dotenv
 BCCARD_EATPL_INST_NM=<partner-institution-code>
@@ -209,6 +212,10 @@ BCCARD_EATPL_API_BASE_URL=https://api.paybooc.ai/api/mer
 BCCARD_EATPL_RELAY_URL=https://eatpl-relay.nomadamas.org/v1/search
 BCCARD_EATPL_RELAY_TOKEN=<same-token-as-lightsail>
 ```
+
+A successful search reports `upstream.provider: "bccard-eatpl"` for the direct
+path or `"bccard-eatpl-relay"` when fallback was used. With no base URL, the
+relay remains usable as the only configured upstream.
 
 ## HRFCO relay (Han River water level)
 
