@@ -8479,6 +8479,36 @@ test("classifyUpstreamFailure separates unreachable, timeout, and opaque failure
     statusCode: 503
   });
 
+  // An adapter wrapper's own `code` must never mask the socket cause.
+  const wrappedReset = new Error("fetch failed", { cause: upstreamFetchFailure("ECONNRESET") });
+  wrappedReset.code = "proxy_error";
+  assert.deepEqual(classifyUpstreamFailure(wrappedReset), {
+    error: "upstream_unreachable",
+    cause: "ECONNRESET",
+    statusCode: 503
+  });
+
+  const wrappedTimeout = new Error("fetch failed", { cause: upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT") });
+  wrappedTimeout.code = "proxy_error";
+  assert.deepEqual(classifyUpstreamFailure(wrappedTimeout), {
+    error: "upstream_timeout",
+    cause: "UND_ERR_CONNECT_TIMEOUT",
+    statusCode: 504
+  });
+
+  // AbortSignal.timeout rejects with a DOMException whose numeric legacy code is
+  // indistinguishable from other aborts, so the root cause is only identifiable
+  // by name — and the wrapper's own code must not shadow it.
+  const wrappedAbortSignal = new Error("fetch failed", {
+    cause: new DOMException("The operation was aborted due to timeout", "TimeoutError")
+  });
+  wrappedAbortSignal.code = "proxy_error";
+  assert.deepEqual(classifyUpstreamFailure(wrappedAbortSignal), {
+    error: "upstream_timeout",
+    cause: "TimeoutError",
+    statusCode: 504
+  });
+
   assert.equal(classifyUpstreamFailure(new Error("bad request")), null);
   assert.equal(classifyUpstreamFailure(undefined), null);
 });
@@ -8737,4 +8767,293 @@ test("AirKorea and MOFA routes record the upstream failure errorCode in route us
   assert.ok(fields.some((entry) =>
     entry.route === "/v1/mofa-travel-safety/travel-alerts" && entry.statusCode === 504 && entry.errorCode === "upstream_timeout"
   ));
+});
+
+// ---------------------------------------------------------------------------
+// Issue #712: every route that talks to a keyed upstream must answer the
+// documented 503 upstream_unreachable / 504 upstream_timeout contract with the
+// socket cause (see docs/deploy-k-skill-proxy.md) instead of an opaque 502 or an
+// unbounded hang, while real upstream HTTP errors keep their own status/body.
+//
+// `upstreamHttpError` pins what a 403 from upstream must keep returning; the
+// mfds food-safety routes deliberately degrade to 200 + `warnings` while at
+// least one of their sources answered, so only a total outage of every source
+// may surface as 503/504.
+// ---------------------------------------------------------------------------
+const NETWORK_CLASSIFICATION_ROUTES = [
+  {
+    label: "household-waste/info",
+    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=1&numOfRows=100",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_error" }
+  },
+  {
+    label: "parking-lots/search",
+    url: "/v1/parking-lots/search?latitude=37.57371315593711&longitude=126.97833785777944&limit=2&radius=1000",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "proxy_error" }
+  },
+  {
+    label: "ev-charger/info",
+    url: "/v1/ev-charger/info?zcode=11",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_forbidden" }
+  },
+  {
+    label: "ev-charger/status",
+    url: "/v1/ev-charger/status?statId=ME000001",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_forbidden" }
+  },
+  {
+    label: "building-register/title",
+    url: "/v1/building-register/title?pnu=1168010100101230004",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_forbidden" }
+  },
+  {
+    label: "lh-notice/search",
+    url: "/v1/lh-notice/search?limit=10",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_error" }
+  },
+  {
+    label: "lh-notice/detail",
+    url: "/v1/lh-notice/detail?panId=2015122300019828&ccrCnntSysDsCd=03&splInfTpCd=051",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_error" }
+  },
+  {
+    label: "kstartup/announcements",
+    url: "/v1/kstartup/announcements?page=1",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 403, error: "upstream_invalid_response" }
+  },
+  {
+    label: "mfds/drug-safety/lookup",
+    url: "/v1/mfds/drug-safety/lookup?itemName=%ED%83%80%EC%9D%B4%EB%A0%88%EB%86%80",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_error" }
+  },
+  {
+    label: "mfds/food-safety/search",
+    url: "/v1/mfds/food-safety/search?query=%EA%B9%80%EB%B0%A5&limit=3",
+    env: { DATA_GO_KR_API_KEY: "data-go-key", FOODSAFETYKOREA_API_KEY: "foodsafety-key" },
+    secrets: ["data-go-key", "foodsafety-key"],
+    upstreamHttpError: { statusCode: 200, error: null }
+  },
+  {
+    label: "mfds/food-safety/health-food-ingredient",
+    url: "/v1/mfds/food-safety/health-food-ingredient?query=%EC%B0%A8%EC%A0%84%EC%9E%90%ED%94%BC&limit=3",
+    env: { FOODSAFETYKOREA_API_KEY: "foodsafety-key" },
+    secrets: ["foodsafety-key"],
+    upstreamHttpError: { statusCode: 200, error: null }
+  },
+  {
+    label: "mfds/food-safety/inspection-fail",
+    url: "/v1/mfds/food-safety/inspection-fail?query=%EC%AA%BD%EA%B0%93&limit=3",
+    env: { FOODSAFETYKOREA_API_KEY: "foodsafety-key" },
+    secrets: ["foodsafety-key"],
+    upstreamHttpError: { statusCode: 200, error: null }
+  },
+  {
+    label: "mfds/food-safety/product-report",
+    url: "/v1/mfds/food-safety/product-report?query=%EC%B0%A8%EC%A0%84%EC%9E%90%ED%94%BC&limit=3",
+    env: { FOODSAFETYKOREA_API_KEY: "foodsafety-key" },
+    secrets: ["foodsafety-key"],
+    upstreamHttpError: { statusCode: 200, error: null }
+  }
+];
+
+async function withMockedFetch(fetchImpl, run) {
+  const originalFetch = global.fetch;
+  global.fetch = fetchImpl;
+  try {
+    return await run();
+  } finally {
+    global.fetch = originalFetch;
+  }
+}
+
+function trackServer(t, env, loggerInstance) {
+  const app = loggerInstance ? buildServer({ env, loggerInstance }) : buildServer({ env });
+  t.after(async () => {
+    await app.close();
+  });
+  return app;
+}
+
+test("keyed upstream routes answer 504 upstream_timeout with the socket cause (#712)", async (t) => {
+  await withMockedFetch(async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  }, async () => {
+    for (const entry of NETWORK_CLASSIFICATION_ROUTES) {
+      const app = trackServer(t, entry.env);
+      const response = await app.inject({ method: "GET", url: entry.url });
+      const body = response.json();
+
+      assert.equal(response.statusCode, 504, `${entry.label} must map a connect timeout to 504`);
+      assert.equal(body.error, "upstream_timeout", `${entry.label} error code`);
+      assert.equal(body.upstream?.failure, "upstream_timeout", `${entry.label} upstream failure`);
+      assert.equal(body.upstream?.cause, "UND_ERR_CONNECT_TIMEOUT", `${entry.label} upstream cause`);
+      assert.equal(body.upstream?.route, entry.url, `${entry.label} upstream route`);
+    }
+  });
+});
+
+test("keyed upstream routes answer 503 upstream_unreachable for DNS and reset failures (#712)", async (t) => {
+  for (const code of ["ENOTFOUND", "ECONNRESET"]) {
+    await withMockedFetch(async () => {
+      throw upstreamFetchFailure(code);
+    }, async () => {
+      for (const entry of NETWORK_CLASSIFICATION_ROUTES) {
+        const app = trackServer(t, entry.env);
+        const response = await app.inject({ method: "GET", url: entry.url });
+        const body = response.json();
+
+        assert.equal(response.statusCode, 503, `${entry.label} must map ${code} to 503`);
+        assert.equal(body.error, "upstream_unreachable", `${entry.label} error code`);
+        assert.equal(body.upstream?.cause, code, `${entry.label} upstream cause`);
+      }
+    });
+  }
+});
+
+test("keyed upstream routes keep real upstream HTTP errors distinct from network failures (#712)", async (t) => {
+  await withMockedFetch(async () =>
+    new Response("forbidden", { status: 403, headers: { "content-type": "text/plain" } }), async () => {
+    for (const entry of NETWORK_CLASSIFICATION_ROUTES) {
+      const app = trackServer(t, entry.env);
+      const response = await app.inject({ method: "GET", url: entry.url });
+      const body = response.json();
+
+      assert.equal(
+        response.statusCode,
+        entry.upstreamHttpError.statusCode,
+        `${entry.label} must keep its upstream HTTP status`
+      );
+      assert.equal(
+        body.error ?? null,
+        entry.upstreamHttpError.error,
+        `${entry.label} must keep its upstream error code`
+      );
+      assert.equal(body.upstream, undefined, `${entry.label} must not be classified as a network failure`);
+    }
+  });
+});
+
+test("keyed upstream network failures never echo the service key in the response or logs (#712)", async (t) => {
+  for (const entry of NETWORK_CLASSIFICATION_ROUTES) {
+    const [primarySecret, secondarySecret] = entry.secrets;
+    const leakyUrl =
+      `https://apis.data.go.kr/example?serviceKey=${primarySecret}` +
+      (secondarySecret ? `&altKey=${secondarySecret}` : "");
+    const fail = async () => {
+      const error = new TypeError(`fetch failed: request to ${leakyUrl} failed`);
+      error.cause = Object.assign(new Error(`Connect Timeout Error (${leakyUrl})`), {
+        code: "UND_ERR_CONNECT_TIMEOUT"
+      });
+      throw error;
+    };
+
+    const { logger, text } = createCapturingLogger();
+    await withMockedFetch(fail, async () => {
+      const app = trackServer(t, entry.env, logger);
+      const response = await app.inject({ method: "GET", url: entry.url });
+
+      for (const secret of entry.secrets) {
+        assert.equal(
+          response.body.includes(secret),
+          false,
+          `${entry.label} response body must not echo the service key`
+        );
+        assert.equal(
+          text().includes(secret),
+          false,
+          `${entry.label} logs must not echo the service key`
+        );
+      }
+      assert.doesNotMatch(response.body, /serviceKey=(?!\[REDACTED\])/, entry.label);
+    });
+  }
+});
+
+test("mfds food-safety search queries its sources concurrently so deadlines are not added up (#712)", async (t) => {
+  const originalFetch = global.fetch;
+  const started = [];
+  let releaseGate;
+  const gate = new Promise((resolve) => {
+    releaseGate = resolve;
+  });
+  // Safety valve: without it a sequential handler would deadlock the test. When
+  // it fires the assertion below still fails with a readable message.
+  const safety = setTimeout(() => releaseGate(), 2000);
+  let startedAtFirstFailure = null;
+  global.fetch = async (url) => {
+    started.push(String(url));
+    if (started.length === 2) {
+      releaseGate();
+    }
+    await gate;
+    if (startedAtFirstFailure === null) {
+      startedAtFirstFailure = started.length;
+    }
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "data-go-key", FOODSAFETYKOREA_API_KEY: "foodsafety-key" }
+  });
+  t.after(async () => {
+    clearTimeout(safety);
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/mfds/food-safety/search?query=%EA%B9%80%EB%B0%A5&limit=3"
+  });
+
+  assert.equal(response.statusCode, 504);
+  assert.equal(
+    startedAtFirstFailure,
+    2,
+    "both sources must be in flight before either answers; waiting for them in series doubles the timeout budget"
+  );
+});
+
+test("mfds routes bound every upstream request with a proxy timeout signal (#712)", async (t) => {
+  const originalFetch = global.fetch;
+  const seenSignals = [];
+  global.fetch = async (_url, options) => {
+    seenSignals.push(options?.signal ?? null);
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/mfds/drug-safety/lookup?itemName=%ED%83%80%EC%9D%B4%EB%A0%88%EB%86%80"
+  });
+
+  assert.equal(response.statusCode, 504);
+  assert.equal(seenSignals.length, 2, "both drug-safety upstream calls must be issued");
+  for (const signal of seenSignals) {
+    assert.ok(signal instanceof AbortSignal, "mfds requestJson must pass an AbortSignal to fetch");
+  }
 });

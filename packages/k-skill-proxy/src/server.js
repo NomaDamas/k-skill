@@ -82,7 +82,7 @@ const {
   searchCoupangProducts
 } = require("./coupang");
 const { searchRegionCode } = require("./region-lookup");
-const { classifyUpstreamFailure } = require("./upstream-errors");
+const { classifyUpstreamFailure, rethrowIfUpstreamNetworkFailure } = require("./upstream-errors");
 const { redactErrorChain, redactSecretValue } = require("./redaction");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
 const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require("./national-pension");
@@ -3999,6 +3999,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         serviceKey: config.molitApiKey
       });
     } catch (error) {
+      // Preserve classified network failures (504 upstream_timeout / 503
+      // upstream_unreachable with the socket cause) for the global error
+      // handler instead of collapsing them into an opaque 502 proxy_error.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       request.log.warn({
         route: "/v1/korean-stock/search",
         upstreamError: error.code || "proxy_error",
@@ -4101,7 +4105,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     let upstreamData;
     try {
-      const res = await fetch(url.toString());
+      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(20000) });
       if (!res.ok) {
         reply.code(502);
         return {
@@ -4112,10 +4116,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       }
       upstreamData = await res.json();
     } catch (err) {
+      // A connect timeout / DNS failure must answer the documented 504/503 with
+      // its socket cause instead of this opaque 502; the global error handler
+      // classifies it, so rethrow (redacted) rather than swallow it.
+      rethrowIfUpstreamNetworkFailure(err, config.molitApiKey);
       reply.code(502);
       return {
         error: "upstream_fetch_failed",
-        message: err.message,
+        message: redactSecretValue(err.message, config.molitApiKey),
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
       };
     }
@@ -4187,6 +4195,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         filters: normalized
       });
     } catch (error) {
+      // Classified network failures keep their 504/503 contract (with cause) via
+      // the global error handler; the module already redacted the error chain.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       request.log.warn({
         route: "/v1/korean-stock/base-info",
         upstreamError: error.code || "proxy_error",
@@ -4273,6 +4284,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         filters: normalized
       });
     } catch (error) {
+      // Classified network failures keep their 504/503 contract (with cause) via
+      // the global error handler; the module already redacted the error chain.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       request.log.warn({
         route: "/v1/korean-stock/trade-info",
         upstreamError: error.code || "proxy_error",
@@ -4673,6 +4687,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         serviceKey: config.molitApiKey
       });
     } catch (error) {
+      // Network failures (connect timeout, DNS, reset) are classified by the
+      // global error handler as 504 upstream_timeout / 503 upstream_unreachable
+      // with the socket cause; only opaque failures keep this 502.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       reply.code(502);
       return {
         error: "proxy_error",
@@ -5168,10 +5186,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         dataGoKrApiKey: config.molitApiKey
       });
     } catch (error) {
-      const upstreamError = error.cause || error;
-      if (classifyUpstreamFailure(upstreamError)) {
-        throw upstreamError;
-      }
+      // Classified network failures answer 504 upstream_timeout / 503
+      // upstream_unreachable with the socket cause; the service key is redacted
+      // first because the failure message can carry the credential-bearing URL.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5234,6 +5252,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaApiKey: config.foodsafetyKoreaApiKey
       });
     } catch (error) {
+      // Every source failed on a network error -> 504/503 with the socket cause
+      // (see mfds.js); a single unavailable source still degrades to 200+ warnings.
+      rethrowIfUpstreamNetworkFailure(error, [config.molitApiKey, config.foodsafetyKoreaApiKey]);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5294,6 +5315,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaApiKey: config.foodsafetyKoreaApiKey
       });
     } catch (error) {
+      // Every source failed on a network error -> 504/503 with the socket cause
+      // (see mfds.js); a single unavailable source still degrades to 200+ warnings.
+      rethrowIfUpstreamNetworkFailure(error, config.foodsafetyKoreaApiKey);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5354,6 +5378,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaApiKey: config.foodsafetyKoreaApiKey
       });
     } catch (error) {
+      // Every source failed on a network error -> 504/503 with the socket cause
+      // (see mfds.js); a single unavailable source still degrades to 200+ warnings.
+      rethrowIfUpstreamNetworkFailure(error, config.foodsafetyKoreaApiKey);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5414,6 +5441,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaApiKey: config.foodsafetyKoreaApiKey
       });
     } catch (error) {
+      // Every source failed on a network error -> 504/503 with the socket cause
+      // (see mfds.js); a single unavailable source still degrades to 200+ warnings.
+      rethrowIfUpstreamNetworkFailure(error, config.foodsafetyKoreaApiKey);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",

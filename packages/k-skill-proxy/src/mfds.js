@@ -1,3 +1,7 @@
+const { classifyUpstreamFailure } = require("./upstream-errors");
+
+const MFDS_UPSTREAM_TIMEOUT_MS = 20000;
+
 const DATA_GO_KR_UPSTREAM_BASE_URL = "https://apis.data.go.kr";
 const DRUG_EASY_ENDPOINT = `${DATA_GO_KR_UPSTREAM_BASE_URL}/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList`;
 const SAFE_STAD_ENDPOINT = `${DATA_GO_KR_UPSTREAM_BASE_URL}/1471000/SafeStadDrugService/getSafeStadDrugInq`;
@@ -116,7 +120,10 @@ async function requestJson(url, { params, fetchImpl = global.fetch } = {}) {
       headers: {
         accept: "application/json",
         "user-agent": "k-skill-proxy/1.0"
-      }
+      },
+      // Without a deadline a blackholed upstream (data.go.kr / foodsafetykorea)
+      // left the route hanging past every client timeout.
+      signal: AbortSignal.timeout(MFDS_UPSTREAM_TIMEOUT_MS)
     });
   } catch (error) {
     throw new ProxyError(error.message, { cause: error });
@@ -143,6 +150,24 @@ async function requestJson(url, { params, fetchImpl = global.fetch } = {}) {
     throw new ProxyError(`Upstream response was not valid JSON (content-type: ${contentType}).`, {
       code: "upstream_invalid_response"
     });
+  }
+}
+
+// The food-safety adapters aggregate several upstream sources and deliberately
+// degrade to `warnings` when one source is unavailable, so the surviving sources
+// keep answering 200. When every source failed on a network error the route must
+// still surface the documented 503 upstream_unreachable / 504 upstream_timeout
+// contract, so keep the first classified network failure and rethrow it once the
+// aggregation has finished.
+function collectSourceFailure(error, failures) {
+  if (classifyUpstreamFailure(error)) {
+    failures.push(error);
+  }
+}
+
+function throwIfAllSourcesFailed({ failures, successes }) {
+  if (successes === 0 && failures.length > 0) {
+    throw failures[0];
   }
 }
 
@@ -407,45 +432,63 @@ async function fetchMfdsFoodSafetySearch({
   fetchImpl = global.fetch
 }) {
   const warnings = [];
-  const items = [];
-
-  if (dataGoKrApiKey) {
-    try {
-      const improperPayload = await requestJson(IMPROPER_FOOD_ENDPOINT, {
-        fetchImpl,
-        params: {
-          ServiceKey: dataGoKrApiKey,
-          pageNo: 1,
-          numOfRows: Math.max(limit * 5, 50),
-          type: "json"
-        }
-      });
-      items.push(...extractDataGoItems(improperPayload).map(normalizeImproperFoodItem));
-    } catch (error) {
-      warnings.push(error.message);
-    }
-  } else {
-    warnings.push("DATA_GO_KR_API_KEY is not configured on the proxy server, so improper-food live lookups were skipped.");
-  }
+  const failures = [];
+  let successes = 0;
+  const rowCount = Math.max(limit * 5, 50);
 
   const recallUrl = foodsafetyKoreaApiKey
     ? FOOD_RECALL_LIVE_URL.replace("{apiKey}", encodeURIComponent(foodsafetyKoreaApiKey))
     : FOOD_RECALL_SAMPLE_URL;
 
-  try {
-    const recallPayload = await requestJson(
-      recallUrl
-        .replace("{start}", "1")
-        .replace("{end}", String(Math.max(limit * 5, 50))),
-      { fetchImpl }
-    );
-    items.push(...extractFoodRecallRows(recallPayload).map(normalizeFoodRecallRow));
-    if (!foodsafetyKoreaApiKey) {
-      warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so recall results use the public sample feed.");
-    }
-  } catch (error) {
-    warnings.push(error.message);
-  }
+  // Both sources are independent, so they are queried concurrently: a sequential
+  // wait would add their deadlines together (~2x the proxy timeout budget) on top
+  // of what the caller is allowed to wait for.
+  const [improperItems, recallItems] = await Promise.all([
+    (async () => {
+      if (!dataGoKrApiKey) {
+        warnings.push("DATA_GO_KR_API_KEY is not configured on the proxy server, so improper-food live lookups were skipped.");
+        return [];
+      }
+      try {
+        const improperPayload = await requestJson(IMPROPER_FOOD_ENDPOINT, {
+          fetchImpl,
+          params: {
+            ServiceKey: dataGoKrApiKey,
+            pageNo: 1,
+            numOfRows: rowCount,
+            type: "json"
+          }
+        });
+        successes += 1;
+        return extractDataGoItems(improperPayload).map(normalizeImproperFoodItem);
+      } catch (error) {
+        collectSourceFailure(error, failures);
+        warnings.push(error.message);
+        return [];
+      }
+    })(),
+    (async () => {
+      try {
+        const recallPayload = await requestJson(
+          recallUrl.replace("{start}", "1").replace("{end}", String(rowCount)),
+          { fetchImpl }
+        );
+        successes += 1;
+        if (!foodsafetyKoreaApiKey) {
+          warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so recall results use the public sample feed.");
+        }
+        return extractFoodRecallRows(recallPayload).map(normalizeFoodRecallRow);
+      } catch (error) {
+        collectSourceFailure(error, failures);
+        warnings.push(error.message);
+        return [];
+      }
+    })()
+  ]);
+
+  const items = [...improperItems, ...recallItems];
+
+  throwIfAllSourcesFailed({ failures, successes });
 
   return {
     query,
@@ -468,16 +511,32 @@ async function fetchHealthFoodIngredient({ query, limit, foodsafetyKoreaApiKey, 
     : HEALTH_FOOD_PRODUCT_SAMPLE_URL;
 
   const items = [];
+  const failures = [];
+  let successes = 0;
 
   const [ingredientPayload, productPayload] = await Promise.all([
     requestJson(
       ingredientUrl.replace("{start}", "1").replace("{end}", String(fetchCount)),
       { fetchImpl }
-    ).catch((error) => { warnings.push(`I-0040: ${error.message}`); return null; }),
+    ).then((payload) => {
+      successes += 1;
+      return payload;
+    }).catch((error) => {
+      collectSourceFailure(error, failures);
+      warnings.push(`I-0040: ${error.message}`);
+      return null;
+    }),
     requestJson(
       productUrl.replace("{start}", "1").replace("{end}", String(fetchCount)),
       { fetchImpl }
-    ).catch((error) => { warnings.push(`I-0050: ${error.message}`); return null; })
+    ).then((payload) => {
+      successes += 1;
+      return payload;
+    }).catch((error) => {
+      collectSourceFailure(error, failures);
+      warnings.push(`I-0050: ${error.message}`);
+      return null;
+    })
   ]);
 
   if (ingredientPayload) {
@@ -491,6 +550,8 @@ async function fetchHealthFoodIngredient({ query, limit, foodsafetyKoreaApiKey, 
     warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so results use the public sample feed.");
   }
 
+  throwIfAllSourcesFailed({ failures, successes });
+
   const filtered = filterByName(items, query, ["ingredient_name"]).slice(0, limit);
 
   return {
@@ -503,6 +564,8 @@ async function fetchHealthFoodIngredient({ query, limit, foodsafetyKoreaApiKey, 
 
 async function fetchInspectionFail({ query, limit, foodsafetyKoreaApiKey, fetchImpl = global.fetch }) {
   const warnings = [];
+  const failures = [];
+  let successes = 0;
   const fetchCount = Math.max(limit * 10, 100);
 
   const url = foodsafetyKoreaApiKey
@@ -516,9 +579,13 @@ async function fetchInspectionFail({ query, limit, foodsafetyKoreaApiKey, fetchI
       { fetchImpl }
     );
     items = extractFoodSafetyKoreaRows(payload, "I2620").map(normalizeInspectionFailRow);
+    successes += 1;
   } catch (error) {
+    collectSourceFailure(error, failures);
     warnings.push(error.message);
   }
+
+  throwIfAllSourcesFailed({ failures, successes });
 
   if (!foodsafetyKoreaApiKey) {
     warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so results use the public sample feed.");
@@ -543,6 +610,8 @@ async function fetchHealthFoodProductReport({ query, limit, foodsafetyKoreaApiKe
     : HEALTH_FOOD_PRODUCT_REPORT_SAMPLE_URL;
 
   const items = [];
+  const failures = [];
+  let successes = 0;
 
   const searchPaths = [
     `/PRDLST_NM=${encodeURIComponent(query)}`,
@@ -553,7 +622,14 @@ async function fetchHealthFoodProductReport({ query, limit, foodsafetyKoreaApiKe
     requestJson(
       baseUrl.replace("{start}", "1").replace("{end}", String(fetchCount)) + path,
       { fetchImpl }
-    ).catch((error) => { warnings.push(`I0030: ${error.message}`); return null; })
+    ).then((payload) => {
+      successes += 1;
+      return payload;
+    }).catch((error) => {
+      collectSourceFailure(error, failures);
+      warnings.push(`I0030: ${error.message}`);
+      return null;
+    })
   );
 
   const results = await Promise.all(fetches);
@@ -573,6 +649,8 @@ async function fetchHealthFoodProductReport({ query, limit, foodsafetyKoreaApiKe
   if (!foodsafetyKoreaApiKey) {
     warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so results use the public sample feed.");
   }
+
+  throwIfAllSourcesFailed({ failures, successes });
 
   return {
     query,

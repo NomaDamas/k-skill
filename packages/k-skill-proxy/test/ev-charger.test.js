@@ -98,8 +98,8 @@ test("EV charger payload extraction accepts direct and response envelopes", () =
   }).items, []);
 });
 
-test("EV charger upstream timeout covers slow data.go.kr responses", () => {
-  assert.equal(EV_CHARGER_UPSTREAM_TIMEOUT_MS, 90000);
+test("EV charger upstream timeout keeps the worst-case request bounded for slow data.go.kr responses", () => {
+  assert.equal(EV_CHARGER_UPSTREAM_TIMEOUT_MS, 20000);
 });
 
 test("EV charger payload extraction rejects flat semantic auth failures", () => {
