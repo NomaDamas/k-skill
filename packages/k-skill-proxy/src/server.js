@@ -13,7 +13,13 @@ const {
 } = require("./assembly");
 const { fetchFineDustReport } = require("./airkorea");
 const { fetchWaterLevelReport } = require("./hrfco");
-const { KRX_MARKETS, fetchBaseInfo, fetchTradeInfo, getCurrentKstDate, searchStocks } = require("./krx-stock");
+const {
+  KRX_MARKETS,
+  fetchBaseInfoItems,
+  fetchTradeInfoItems,
+  getCurrentKstDate,
+  searchStocks
+} = require("./krx-stock");
 const {
   fetchMfdsDrugLookup,
   fetchMfdsFoodSafetySearch,
@@ -1476,13 +1482,16 @@ function normalizeKrxMarket(value) {
   return normalized;
 }
 
-function normalizeKoreanStockDate(value) {
-  const normalized = trimOrNull(value) || getCurrentKstDate();
-  if (!/^\d{8}$/.test(normalized)) {
+// Returns whether the caller supplied bas_dd at all: an omitted date may fall
+// back to the most recent trading day, while an explicit one is honored as-is.
+function normalizeKoreanStockDateInput(value) {
+  const provided = trimOrNull(value);
+  const basDd = provided || getCurrentKstDate();
+  if (!/^\d{8}$/.test(basDd)) {
     throw new Error("Provide bas_dd/date as YYYYMMDD.");
   }
 
-  return normalized;
+  return { basDd, basDdExplicit: Boolean(provided) };
 }
 
 function normalizeKoreanStockCodes(value) {
@@ -1505,7 +1514,7 @@ function normalizeKoreanStockSearchQuery(query) {
     throw new Error("Provide q/query.");
   }
 
-  const basDd = normalizeKoreanStockDate(query.bas_dd ?? query.basDd ?? query.date);
+  const { basDd, basDdExplicit } = normalizeKoreanStockDateInput(query.bas_dd ?? query.basDd ?? query.date);
   const marketValue = trimOrNull(query.market);
   const limit = parseInteger(query.limit, 10);
 
@@ -1516,6 +1525,7 @@ function normalizeKoreanStockSearchQuery(query) {
   return {
     q,
     basDd,
+    basDdExplicit,
     market: marketValue ? normalizeKrxMarket(marketValue) : null,
     limit
   };
@@ -1525,7 +1535,7 @@ function normalizeKoreanStockLookupQuery(query) {
   return {
     market: normalizeKrxMarket(query.market),
     code: normalizeKoreanStockCodes(query.code ?? query.codes ?? query.codeList ?? query.stockCode ?? query.stock_code)[0],
-    basDd: normalizeKoreanStockDate(query.bas_dd ?? query.basDd ?? query.date)
+    ...normalizeKoreanStockDateInput(query.bas_dd ?? query.basDd ?? query.date)
   };
 }
 
@@ -5451,6 +5461,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       route: "korean-stock-search",
       q: normalized.q.toLowerCase(),
       basDd: normalized.basDd,
+      // A default-date request may resolve to an older trading day, so it must
+      // never share a cache entry with an explicit request for today's date.
+      basDdExplicit: normalized.basDdExplicit,
       market: normalized.market,
       limit: normalized.limit
     });
@@ -5488,6 +5501,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       result = await searchStocks({
         query: normalized.q,
         basDd: normalized.basDd,
+        basDdExplicit: normalized.basDdExplicit,
         market: normalized.market,
         limit: normalized.limit,
         apiKey: config.krxApiKey,
@@ -5506,7 +5520,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       items: result.items,
       query: {
         q: normalized.q,
-        bas_dd: normalized.basDd,
+        bas_dd: result.basDd,
         market: normalized.market,
         limit: normalized.limit
       },
@@ -6439,13 +6453,16 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    let items;
+    let lookup;
     try {
-      items = await fetchBaseInfo({
+      lookup = await fetchBaseInfoItems({
         market: normalized.market,
         basDd: normalized.basDd,
+        basDdExplicit: normalized.basDdExplicit,
         codeList: [normalized.code],
-        apiKey: config.krxApiKey
+        apiKey: config.krxApiKey,
+        cache,
+        cacheTtlMs: config.cacheTtlMs
       });
     } catch (error) {
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
@@ -6455,11 +6472,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
+    const items = lookup.items;
     if (items.length === 0) {
       reply.code(404);
       return {
         error: "not_found",
-        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 을(를) 찾지 못했습니다.`
+        message: `기준일 ${lookup.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 을(를) 찾지 못했습니다.`
       };
     }
 
@@ -6470,7 +6488,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         market: normalized.market,
         code: normalized.code,
         codes: [normalized.code],
-        bas_dd: normalized.basDd
+        bas_dd: lookup.basDd
       },
       proxy: {
         name: config.proxyName,
@@ -6532,11 +6550,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    let items;
+    let lookup;
     try {
-      items = await fetchTradeInfo({
+      lookup = await fetchTradeInfoItems({
         market: normalized.market,
         basDd: normalized.basDd,
+        basDdExplicit: normalized.basDdExplicit,
         codeList: [normalized.code],
         apiKey: config.krxApiKey
       });
@@ -6548,11 +6567,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
+    const items = lookup.items;
     if (items.length === 0) {
       reply.code(404);
       return {
         error: "not_found",
-        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 의 일별 시세를 찾지 못했습니다. 휴장일이거나 데이터가 아직 없을 수 있습니다.`
+        message: `기준일 ${lookup.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 의 일별 시세를 찾지 못했습니다. 휴장일이거나 데이터가 아직 없을 수 있습니다.`
       };
     }
 
@@ -6563,7 +6583,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         market: normalized.market,
         code: normalized.code,
         codes: [normalized.code],
-        bas_dd: normalized.basDd
+        bas_dd: lookup.basDd
       },
       proxy: {
         name: config.proxyName,

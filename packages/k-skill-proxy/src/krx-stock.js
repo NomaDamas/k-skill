@@ -58,6 +58,60 @@ function getCurrentKstDate() {
   return formatter.format(new Date()).replace(/-/g, "");
 }
 
+// How far back the default (caller omitted bas_dd) date is allowed to walk when
+// today's snapshot is empty (weekend, public holiday or not published yet).
+const KRX_DEFAULT_BAS_DD_MAX_LOOKBACK_DAYS = 10;
+
+function shiftKstYmd(ymd, deltaDays) {
+  const shifted = new Date(Date.UTC(
+    Number(ymd.slice(0, 4)),
+    Number(ymd.slice(4, 6)) - 1,
+    Number(ymd.slice(6, 8)) + deltaDays
+  ));
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${shifted.getUTCFullYear()}${pad(shifted.getUTCMonth() + 1)}${pad(shifted.getUTCDate())}`;
+}
+
+// Walks back one calendar day at a time until `isUsable` accepts a snapshot.
+// An explicit bas_dd is always honored verbatim, and upstream failures stop the
+// walk immediately so a bad day never multiplies into a burst of KRX requests.
+async function resolveBasDd({
+  basDd,
+  basDdExplicit = false,
+  maxLookbackDays = KRX_DEFAULT_BAS_DD_MAX_LOOKBACK_DAYS,
+  load,
+  isUsable,
+  canFallback = () => true
+}) {
+  const requestedBasDd = basDd;
+  const firstLoad = await load(requestedBasDd);
+
+  if (basDdExplicit || isUsable(firstLoad) || !canFallback(firstLoad)) {
+    return { basDd: requestedBasDd, loaded: firstLoad, fallbackApplied: false };
+  }
+
+  for (let step = 1; step <= maxLookbackDays; step += 1) {
+    const candidateBasDd = shiftKstYmd(requestedBasDd, -step);
+    const loaded = await load(candidateBasDd);
+    if (isUsable(loaded)) {
+      return { basDd: candidateBasDd, loaded, fallbackApplied: true };
+    }
+  }
+
+  // Nothing was published inside the lookback window: keep reporting the date
+  // the caller asked for (KST today) rather than an arbitrary probe date.
+  return { basDd: requestedBasDd, loaded: firstLoad, fallbackApplied: false, exhausted: true };
+}
+
+function filterBaseInfoItems(items, codeList) {
+  const codes = (codeList || []).filter(Boolean);
+  if (codes.length === 0) {
+    return items;
+  }
+
+  return items.filter((item) => codes.includes(item.code) || codes.includes(item.standard_code));
+}
+
 function normalizeBaseItem(item, market) {
   const normalized = {
     market,
@@ -261,9 +315,65 @@ async function fetchBaseInfoSnapshot({
   return items;
 }
 
+async function fetchBaseInfoItems({
+  market,
+  basDd,
+  basDdExplicit = false,
+  codeList = [],
+  apiKey,
+  fetchImpl = global.fetch,
+  cache = null,
+  cacheTtlMs = 0,
+  maxLookbackDays
+}) {
+  const { basDd: resolvedBasDd, loaded } = await resolveBasDd({
+    basDd,
+    basDdExplicit,
+    maxLookbackDays,
+    load: (candidateBasDd) => fetchBaseInfoSnapshot({
+      market,
+      basDd: candidateBasDd,
+      apiKey,
+      fetchImpl,
+      cache,
+      cacheTtlMs
+    }),
+    isUsable: (items) => filterBaseInfoItems(items, codeList).length > 0
+  });
+
+  return { basDd: resolvedBasDd, items: filterBaseInfoItems(loaded, codeList) };
+}
+
+async function fetchTradeInfoItems({
+  market,
+  basDd,
+  basDdExplicit = false,
+  codeList = [],
+  apiKey,
+  fetchImpl = global.fetch,
+  maxLookbackDays
+}) {
+  const { basDd: resolvedBasDd, loaded } = await resolveBasDd({
+    basDd,
+    basDdExplicit,
+    maxLookbackDays,
+    load: (candidateBasDd) => fetchTradeInfo({
+      market,
+      basDd: candidateBasDd,
+      codeList,
+      apiKey,
+      fetchImpl
+    }),
+    isUsable: (items) => items.length > 0
+  });
+
+  return { basDd: resolvedBasDd, items: loaded };
+}
+
 async function searchStocks({
   query,
   basDd = getCurrentKstDate(),
+  basDdExplicit = false,
   market = null,
   limit = 10,
   apiKey,
@@ -272,17 +382,26 @@ async function searchStocks({
   cacheTtlMs = 0
 }) {
   const markets = market ? [market] : KRX_MARKETS;
-  const settledResults = await Promise.allSettled(markets.map(async (entryMarket) => ({
-    market: entryMarket,
-    items: await fetchBaseInfoSnapshot({
+
+  const { basDd: resolvedBasDd, loaded: settledResults } = await resolveBasDd({
+    basDd,
+    basDdExplicit,
+    load: (candidateBasDd) => Promise.allSettled(markets.map(async (entryMarket) => ({
       market: entryMarket,
-      basDd,
-      apiKey,
-      fetchImpl,
-      cache,
-      cacheTtlMs
-    })
-  })));
+      items: await fetchBaseInfoSnapshot({
+        market: entryMarket,
+        basDd: candidateBasDd,
+        apiKey,
+        fetchImpl,
+        cache,
+        cacheTtlMs
+      })
+    }))),
+    isUsable: (results) => results.some((result) => result.status === "fulfilled" && result.value.items.length > 0),
+    // Only a genuinely empty day walks back; an upstream failure must not fan
+    // out into more KRX requests.
+    canFallback: (results) => results.every((result) => result.status === "fulfilled")
+  });
 
   const successfulResults = settledResults
     .filter((result) => result.status === "fulfilled")
@@ -321,13 +440,16 @@ async function searchStocks({
     };
   }
 
-  return payload;
+  return { ...payload, basDd: resolvedBasDd };
 }
 
 module.exports = {
+  KRX_DEFAULT_BAS_DD_MAX_LOOKBACK_DAYS,
   KRX_MARKETS,
   fetchBaseInfo,
+  fetchBaseInfoItems,
   fetchTradeInfo,
+  fetchTradeInfoItems,
   getCurrentKstDate,
   searchStocks
 };

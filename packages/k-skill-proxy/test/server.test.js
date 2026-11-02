@@ -53,6 +53,7 @@ const {
   normalizeCoupangProducts
 } = require("../src/coupang");
 const { parseXmlItems } = require("../src/molit");
+const { getCurrentKstDate, KRX_DEFAULT_BAS_DD_MAX_LOOKBACK_DAYS } = require("../src/krx-stock");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
 const { classifyUpstreamFailure } = require("../src/upstream-errors");
 const { inspect } = require("node:util");
@@ -3029,6 +3030,303 @@ test("korean stock trade-info endpoint treats empty trade snapshots as not_found
   assert.deepEqual(fetchCalls, [
     "https://data-dbg.krx.co.kr/svc/apis/sto/stk_bydd_trd?basDd=20260404"
   ]);
+});
+
+// korean-stock: instruction.md promises that an omitted bas_dd resolves to the
+// most recent trading day. These tests pin the calendar-day fallback behavior.
+function shiftKrxYmd(ymd, deltaDays) {
+  const shifted = new Date(Date.UTC(
+    Number(ymd.slice(0, 4)),
+    Number(ymd.slice(4, 6)) - 1,
+    Number(ymd.slice(6, 8)) + deltaDays
+  ));
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${shifted.getUTCFullYear()}${pad(shifted.getUTCMonth() + 1)}${pad(shifted.getUTCDate())}`;
+}
+
+function krxRequestedDate(url) {
+  return new URL(String(url)).searchParams.get("basDd");
+}
+
+function krxSamsungBaseRow() {
+  return {
+    ISU_CD: "KR7005930003",
+    ISU_SRT_CD: "005930",
+    ISU_NM: "삼성전자",
+    ISU_ABBRV: "삼성전자",
+    ISU_ENG_NM: "Samsung Electronics",
+    LIST_DD: "19750611",
+    MKT_TP_NM: "KOSPI",
+    SECUGRP_NM: "주권",
+    SECT_TP_NM: "대형주",
+    KIND_STKCERT_TP_NM: "보통주",
+    PARVAL: "100",
+    LIST_SHRS: "5969782550"
+  };
+}
+
+function krxJsonResponse(rows) {
+  return new Response(
+    JSON.stringify({ OutBlock_1: rows }),
+    {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    }
+  );
+}
+
+test("korean stock search without bas_dd falls back to the most recent trading day", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const yesterday = shiftKrxYmd(today, -1);
+  const lastTradingDay = shiftKrxYmd(today, -2);
+  const fetchCalls = [];
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    assert.match(text, /isu_base_info/);
+    // Today and yesterday are holidays / data is not published yet.
+    const hasRows = krxRequestedDate(text) === lastTradingDay && text.includes("stk_isu_base_info");
+    return krxJsonResponse(hasRows ? [krxSamsungBaseRow()] : []);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().items[0].code, "005930");
+  assert.equal(response.json().query.bas_dd, lastTradingDay);
+  // Stops at the first day that has rows: 3 markets x (today, yesterday, D-2).
+  assert.deepEqual([...new Set(fetchCalls.map(krxRequestedDate))], [today, yesterday, lastTradingDay]);
+  assert.equal(fetchCalls.length, 9);
+
+  const repeat = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90"
+  });
+  assert.equal(repeat.json().proxy.cache.hit, true);
+  assert.equal(repeat.json().query.bas_dd, lastTradingDay);
+  assert.equal(fetchCalls.length, 9);
+});
+
+test("korean stock base-info without bas_dd falls back to the most recent trading day", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const lastTradingDay = shiftKrxYmd(today, -2);
+  const fetchCalls = [];
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    assert.match(text, /stk_isu_base_info/);
+    return krxJsonResponse(krxRequestedDate(text) === lastTradingDay ? [krxSamsungBaseRow()] : []);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/base-info?market=KOSPI&code=005930"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().item.code, "005930");
+  assert.equal(response.json().item.name, "삼성전자");
+  assert.equal(response.json().query.bas_dd, lastTradingDay);
+  assert.deepEqual([...new Set(fetchCalls.map(krxRequestedDate))], [today, shiftKrxYmd(today, -1), lastTradingDay]);
+  assert.equal(fetchCalls.length, 3);
+});
+
+test("korean stock trade-info without bas_dd falls back to the most recent trading day", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const lastTradingDay = shiftKrxYmd(today, -2);
+  const fetchCalls = [];
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    assert.match(text, /stk_bydd_trd/);
+    if (krxRequestedDate(text) !== lastTradingDay) {
+      return krxJsonResponse([]);
+    }
+    return krxJsonResponse([
+      {
+        BAS_DD: lastTradingDay,
+        ISU_CD: "KR7005930003",
+        ISU_SRT_CD: "005930",
+        ISU_NM: "삼성전자",
+        MKT_NM: "KOSPI",
+        TDD_CLSPRC: "84000",
+        ACC_TRDVOL: "12345678"
+      }
+    ]);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/trade-info?market=KOSPI&code=005930"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().item.close_price, 84000);
+  assert.equal(response.json().query.bas_dd, lastTradingDay);
+  assert.deepEqual([...new Set(fetchCalls.map(krxRequestedDate))], [today, shiftKrxYmd(today, -1), lastTradingDay]);
+  assert.equal(fetchCalls.length, 3);
+});
+
+test("korean stock endpoints honor an explicit bas_dd without fallback probing", async (t) => {
+  const originalFetch = global.fetch;
+  t.after(() => {
+    global.fetch = originalFetch;
+  });
+
+  // A fresh app per endpoint keeps the snapshot cache from hiding upstream
+  // calls, so the per-request call counts are the real fallback behavior.
+  async function injectWithFreshApp(url) {
+    const fetchCalls = [];
+    global.fetch = async (rawUrl) => {
+      fetchCalls.push(String(rawUrl));
+      return krxJsonResponse([]);
+    };
+
+    const app = buildServer({
+      env: {
+        KRX_API_KEY: "krx-key"
+      }
+    });
+
+    try {
+      const response = await app.inject({ method: "GET", url });
+      return { response, fetchCalls };
+    } finally {
+      await app.close();
+    }
+  }
+
+  const search = await injectWithFreshApp("/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90&bas_dd=20260404");
+  assert.equal(search.response.statusCode, 200);
+  assert.deepEqual(search.response.json().items, []);
+  assert.equal(search.response.json().query.bas_dd, "20260404");
+  assert.deepEqual(search.fetchCalls.map(krxRequestedDate), ["20260404", "20260404", "20260404"]);
+
+  const baseInfo = await injectWithFreshApp("/v1/korean-stock/base-info?market=KOSPI&code=005930&bas_dd=20260404");
+  assert.equal(baseInfo.response.statusCode, 404);
+  assert.equal(baseInfo.response.json().error, "not_found");
+  assert.match(baseInfo.response.json().message, /20260404/);
+  assert.deepEqual(baseInfo.fetchCalls.map(krxRequestedDate), ["20260404"]);
+
+  const tradeInfo = await injectWithFreshApp("/v1/korean-stock/trade-info?market=KOSPI&code=005930&bas_dd=20260404");
+  assert.equal(tradeInfo.response.statusCode, 404);
+  assert.equal(tradeInfo.response.json().error, "not_found");
+  assert.match(tradeInfo.response.json().message, /20260404/);
+  assert.deepEqual(tradeInfo.fetchCalls.map(krxRequestedDate), ["20260404"]);
+});
+
+test("korean stock default bas_dd fallback stops after a bounded lookback", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const fetchCalls = [];
+
+  // Nothing was ever published: the proxy must give up, not walk back forever.
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return krxJsonResponse([]);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().items, []);
+  assert.equal(response.json().query.bas_dd, today);
+  const maxProbeCount = KRX_DEFAULT_BAS_DD_MAX_LOOKBACK_DAYS + 1;
+  const probedDates = [...new Set(fetchCalls.map(krxRequestedDate))];
+  assert.equal(probedDates.length, maxProbeCount);
+  assert.deepEqual(
+    probedDates,
+    Array.from({ length: maxProbeCount }, (_value, index) => shiftKrxYmd(today, -index))
+  );
+  assert.equal(fetchCalls.length, maxProbeCount * 3);
+});
+
+test("korean stock default bas_dd does not probe older days while the upstream is failing", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const fetchCalls = [];
+
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    throw new Error("krx upstream down");
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90"
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.deepEqual([...new Set(fetchCalls.map(krxRequestedDate))], [today]);
+  assert.equal(fetchCalls.length, 3);
 });
 
 test("fine dust endpoint stays publicly callable without proxy auth", async (t) => {
