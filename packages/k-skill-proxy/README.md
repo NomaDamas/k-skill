@@ -359,10 +359,13 @@ curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kosis/meta" \
 curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kosis/data" \
   --data-urlencode 'tableId=DT_1JC1501' \
   --data-urlencode 'prdSe=Y' \
-  --data-urlencode 'start=2020' \
+  --data-urlencode 'start=2022' \
   --data-urlencode 'end=2023' \
-  --data-urlencode 'objL1=ALL'
+  --data-urlencode 'objL1=00' \
+  --data-urlencode 'itmId=T1100'
 ```
+
+`DT_1JC1501` 처럼 읍면동 단위 표는 `objL1=ALL`+`itmId=ALL` 로 조회하면 40,000셀을 넘어 KOSIS가 에러 코드 `31` 을 돌려준다. 이때 프록시는 HTTP 200 대신 `400 bad_request` 와 함께 `{"error":"bad_request","message":"...","upstream":{"err":"31","errMsg":"..."}}` 를 반환하므로, 위 예시처럼 분류(`objL1`)·항목(`itmId`)·기간을 좁혀 호출한다. KOSIS 앱 레벨 에러 매핑: 코드 `20`/`21`/`30`/`31` → `400`, `10`/`11`/`41`/`42` → `502 upstream_forbidden`, `40`(분당 호출 한도) → `503 upstream_quota_exceeded`, 그 외(`50`/`99`/빈 응답) → `502 upstream_error`.
 
 Kakao Local geocoding 예시 (`KAKAO_REST_API_KEY` 필요, caller `apiKey`는 무시하고 서버 쪽 키를 주입):
 

@@ -147,13 +147,15 @@ npx -y @nomadamas/k-skill@0 exec kosis-stats scripts/run_kosis_stats.py -- expla
 
 ### 4. Fetch a small bounded slice first
 
-`--prd-se`, `--start`, `--end`, `--obj-l` 으로 범위를 좁혀 작은 슬라이스를 먼저 조회한다.
+`--prd-se`, `--start`, `--end`, `--itm-id`, `--obj-l` 으로 범위를 좁혀 작은 슬라이스를 먼저 조회한다. `DT_1JC1501` 같은 읍면동 단위 표는 기본값(`--itm-id ALL`, `--obj-l 1=ALL`)으로 조회하면 40,000셀 한도(code `31`)를 넘으므로 아래처럼 분류·항목까지 함께 좁힌다.
 
 ```bash
 npx -y @nomadamas/k-skill@0 exec kosis-stats scripts/run_kosis_stats.py -- data \
   --table-id DT_1JC1501 --prd-se Y --start 2020 --end 2022 \
-  --obj-l 1=ALL --json
+  --itm-id T1100 --obj-l 1=11 --json
 ```
+
+프록시는 KOSIS 앱 레벨 에러를 HTTP 200 으로 흘려보내지 않고 매핑한다: `20`/`21`/`30`/`31` → `400`, `10`/`11`/`41`/`42` → `502 upstream_forbidden`, `40`(분당 호출 한도) → `503 upstream_quota_exceeded`, `50`/`99`/기타/빈 응답 → `502 upstream_error`.
 
 **`--prd-se` 를 먼저 확정한다.** 주기를 틀리면 다른 파라미터가 전부 맞아도 KOSIS는 코드 `30`(결과 없음)만 돌려주며, 메시지로는 원인을 알 수 없다. `explain`(§3)으로 조사주기를 확인하거나, 좁은 기간·최소 분류로 `Y` → `F` → `IR` → `M`/`Q`/`S` 순으로 프로브해 데이터가 나오는 코드를 찾은 뒤 본 조회를 한다. 총조사·인구주택총조사처럼 5년 간격인 표는 연 단위로 보여도 `F`(다년)다.
 

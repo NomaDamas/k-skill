@@ -2003,24 +2003,87 @@ function isSuccessfulJsonResponse(upstream) {
   return upstream.statusCode >= 200 && upstream.statusCode < 300 && upstream.contentType.includes("json");
 }
 
-function isKosisErrorBody(body) {
+// KOSIS signals application errors with HTTP 200 and an error body, so the body
+// (not the status line) decides whether a response is a failure. Returns null when
+// the body is a success payload (KOSIS answers these routes with a JSON array).
+function parseKosisErrorBody(body) {
   const text = String(body || "").trim();
   if (!text) {
-    return true;
+    return { code: null, message: "KOSIS upstream returned an empty response body." };
   }
-  if (/<error>\s*<err>/i.test(text)) {
-    return true;
+  if (text.startsWith("<")) {
+    if (!/<error[\s>]/i.test(text)) {
+      return null;
+    }
+    const codeMatch = text.match(/<err>([^<]*)<\/err>/i);
+    const messageMatch = text.match(/<errMsg>([^<]*)<\/errMsg>/i) || text.match(/<message>([^<]*)<\/message>/i);
+    return {
+      code: codeMatch ? codeMatch[1] : null,
+      message: messageMatch ? messageMatch[1] : "KOSIS upstream returned an XML error response."
+    };
   }
   if (!(text.startsWith("{") || text.startsWith("["))) {
-    return false;
+    return null;
   }
 
+  let payload;
   try {
-    const payload = JSON.parse(text.replace(/([{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":'));
-    return Boolean(payload && !Array.isArray(payload) && typeof payload === "object" && (payload.err || payload.errCode || payload.error));
+    payload = JSON.parse(text.replace(/([{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":'));
   } catch {
-    return false;
+    return null;
   }
+  if (!payload || Array.isArray(payload) || typeof payload !== "object") {
+    return null;
+  }
+
+  const rawCode = payload.err ?? payload.errCode ?? payload.error;
+  if (rawCode === undefined || rawCode === null || rawCode === false || rawCode === "") {
+    return null;
+  }
+  const rawMessage = payload.errMsg ?? payload.errmsg ?? payload.message;
+  return {
+    code: String(rawCode),
+    message: rawMessage === undefined || rawMessage === null || rawMessage === ""
+      ? `KOSIS upstream returned error code ${rawCode}.`
+      : String(rawMessage)
+  };
+}
+
+// err 20/21/30/31 are caller-fixable input problems (missing/invalid request variable,
+// no result, result set too large) -> 400.
+// err 10/11/41/42 are non-transient auth/entitlement limits on the server-side key
+// (missing/expired key, row limit, per-user limit) that the caller cannot fix by
+// editing the request -> 502 upstream_forbidden. err 40 is the per-minute call quota,
+// which expires on its own -> 503 upstream_quota_exceeded (mirrors molit.js). Everything
+// else (50 server error, 99, unknown or empty bodies) -> 502 upstream_error.
+const KOSIS_ERROR_CLASSES = new Map([
+  ["10", { statusCode: 502, error: "upstream_forbidden" }],
+  ["11", { statusCode: 502, error: "upstream_forbidden" }],
+  ["20", { statusCode: 400, error: "bad_request" }],
+  ["21", { statusCode: 400, error: "bad_request" }],
+  ["30", { statusCode: 400, error: "bad_request" }],
+  ["31", { statusCode: 400, error: "bad_request" }],
+  ["40", { statusCode: 503, error: "upstream_quota_exceeded" }],
+  ["41", { statusCode: 502, error: "upstream_forbidden" }],
+  ["42", { statusCode: 502, error: "upstream_forbidden" }],
+  ["50", { statusCode: 502, error: "upstream_error" }],
+  ["99", { statusCode: 502, error: "upstream_error" }]
+]);
+
+function buildKosisErrorResponse(apiError) {
+  const classification = KOSIS_ERROR_CLASSES.get(String(apiError.code ?? "").trim()) || {
+    statusCode: 502,
+    error: "upstream_error"
+  };
+  return {
+    statusCode: classification.statusCode,
+    payload: {
+      error: classification.error,
+      message: apiError.message || "KOSIS upstream returned an error response.",
+      upstream: { err: apiError.code, errMsg: apiError.message },
+      ...(classification.error === "upstream_quota_exceeded" ? { retry_after: 60 } : {})
+    }
+  };
 }
 
 async function proxyOpinetRequest({ path, params, apiKey, fetchImpl = global.fetch }) {
@@ -2987,7 +3050,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       apiKey: config.kosisApiKey
     });
 
-    if (upstream.statusCode >= 200 && upstream.statusCode < 300 && !isKosisErrorBody(upstream.body)) {
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      const apiError = parseKosisErrorBody(upstream.body);
+      if (apiError) {
+        // Never cache errors.
+        const { statusCode, payload } = buildKosisErrorResponse(apiError);
+        reply.code(statusCode);
+        return payload;
+      }
       cache.set(cacheKey, upstream, config.cacheTtlMs);
     }
 
