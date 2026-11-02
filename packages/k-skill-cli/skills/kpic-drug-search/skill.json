@@ -1,0 +1,8 @@
+{
+  "name": "kpic-drug-search",
+  "description": "약학정보원(KPIC) 공개 정보에서 의약품 이름을 검색하고 약품 코드로 효능, 용법, 주의사항 등 상세 원문을 조회하는 읽기 전용 스킬입니다.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: kpic-drug-search\ndescription: 약학정보원(KPIC) 공개 정보에서 의약품 이름을 검색하고 약품 코드로 효능, 용법, 주의사항 등 상세 원문을 조회하는 읽기 전용 스킬입니다.\nlicense: MIT\nmetadata:\n  category: public-health\n  locale: ko-KR\n  source: https://github.com/antegral/kpic-mcp"
+}
