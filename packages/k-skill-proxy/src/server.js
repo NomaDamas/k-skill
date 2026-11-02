@@ -386,6 +386,27 @@ function getErrorLogLevel(statusCode) {
   return statusCode >= 500 ? "error" : "warn";
 }
 
+// Upstream HTTP failures are reported with the proxy's own status, so the real
+// upstream status, body snippet and provider error code must survive in the
+// `upstream` block for debugging (Naver: `errorCode` SE05/024/010).
+function buildUpstreamErrorDetails(error) {
+  if (!error.upstreamStatusCode) {
+    return null;
+  }
+
+  const details = {
+    status_code: error.upstreamStatusCode,
+    body_snippet: error.upstreamBodySnippet || null
+  };
+  if (error.upstreamErrorCode) {
+    details.error_code = error.upstreamErrorCode;
+  }
+  if (error.retryAfterSeconds != null) {
+    details.retry_after = error.retryAfterSeconds;
+  }
+  return details;
+}
+
 function isFailureResponse(value) {
   if (!value || typeof value !== "object") {
     return false;
@@ -5573,6 +5594,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         clientSecret: config.naverSearchClientSecret
       });
     } catch (error) {
+      if (error.retryAfterSeconds != null) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       const payload = {
         error: error.code || "proxy_error",
@@ -5585,11 +5609,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
           }
         }
       };
-      if (error.upstreamStatusCode) {
-        payload.upstream = {
-          status_code: error.upstreamStatusCode,
-          body_snippet: error.upstreamBodySnippet || null
-        };
+      const upstream = buildUpstreamErrorDetails(error);
+      if (upstream) {
+        payload.upstream = upstream;
       }
       return payload;
     }
@@ -5746,6 +5768,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         clientSecret: config.naverSearchClientSecret
       });
     } catch (error) {
+      if (error.retryAfterSeconds != null) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       const payload = {
         error: error.code || "proxy_error",
@@ -5758,11 +5783,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
           }
         }
       };
-      if (error.upstreamStatusCode) {
-        payload.upstream = {
-          status_code: error.upstreamStatusCode,
-          body_snippet: error.upstreamBodySnippet || null
-        };
+      const upstream = buildUpstreamErrorDetails(error);
+      if (upstream) {
+        payload.upstream = upstream;
       }
       return payload;
     }

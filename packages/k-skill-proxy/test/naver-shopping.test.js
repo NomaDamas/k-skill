@@ -574,3 +574,117 @@ test("naver shopping official Search API marks review sort as unsupported instea
   assert.equal(upstreamUrl.hostname, "openapi.naver.com");
   assert.equal(upstreamUrl.searchParams.get("sort"), "sim");
 });
+
+function buildNaverShoppingErrorApp(t, fetchImpl) {
+  const originalFetch = global.fetch;
+  global.fetch = fetchImpl;
+
+  const app = buildServer({
+    env: {
+      NAVER_SEARCH_CLIENT_ID: "client-id",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  return app;
+}
+
+test("naver shopping openapi upstream 404 hides route behind a proxy 502 upstream_error", async (t) => {
+  const app = buildNaverShoppingErrorApp(t, async () =>
+    new Response(
+      JSON.stringify({
+        errorMessage: "Invalid search api (존재하지 않는 검색 api 입니다.)",
+        errorCode: "SE05"
+      }),
+      { status: 404, headers: { "content-type": "application/json" } }
+    )
+  );
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=airpods"
+  });
+
+  assert.equal(response.statusCode, 502);
+  const body = response.json();
+  assert.equal(body.error, "upstream_error");
+  assert.equal(body.upstream.status_code, 404);
+  assert.equal(body.upstream.error_code, "SE05");
+  assert.match(body.upstream.body_snippet, /SE05/);
+});
+
+test("naver shopping openapi upstream 401 auth failure surfaces as a proxy 502 upstream_error", async (t) => {
+  const app = buildNaverShoppingErrorApp(t, async () =>
+    new Response(
+      JSON.stringify({ errorMessage: "Authentication failed", errorCode: "024" }),
+      { status: 401, headers: { "content-type": "application/json" } }
+    )
+  );
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=%EC%9D%B8%EC%A6%9D"
+  });
+
+  assert.equal(response.statusCode, 502);
+  const body = response.json();
+  assert.equal(body.error, "upstream_error");
+  assert.equal(body.upstream.status_code, 401);
+  assert.equal(body.upstream.error_code, "024");
+});
+
+test("naver shopping openapi upstream 429 stays 429 upstream_rate_limited and passes retry-after through", async (t) => {
+  const app = buildNaverShoppingErrorApp(t, async () =>
+    new Response(
+      JSON.stringify({ errorMessage: "Request limit exceeded", errorCode: "010" }),
+      { status: 429, headers: { "content-type": "application/json", "retry-after": "60" } }
+    )
+  );
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=%ED%95%9C%EB%8F%84"
+  });
+
+  assert.equal(response.statusCode, 429);
+  const body = response.json();
+  assert.equal(body.error, "upstream_rate_limited");
+  assert.equal(body.upstream.status_code, 429);
+  assert.equal(body.upstream.error_code, "010");
+  assert.equal(body.upstream.retry_after, 60);
+  assert.equal(response.headers["retry-after"], "60");
+});
+
+test("naver shopping BFF fallback upstream 4xx also surfaces as a proxy 502 upstream_error", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () =>
+    new Response("access temporarily restricted", {
+      status: 418,
+      headers: { "content-type": "text/plain" }
+    });
+
+  const app = buildServer({ env: { KSKILL_PROXY_CACHE_TTL_MS: "60000" } });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-shopping/search?q=%EC%B0%A8%EB%8B%A8"
+  });
+
+  assert.equal(response.statusCode, 502);
+  const body = response.json();
+  assert.equal(body.error, "upstream_error");
+  assert.equal(body.upstream.status_code, 418);
+  assert.equal(body.upstream.error_code, undefined);
+  assert.equal(body.upstream.body_snippet, "access temporarily restricted");
+});

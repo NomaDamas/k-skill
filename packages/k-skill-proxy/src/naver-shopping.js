@@ -1,3 +1,5 @@
+const { createUpstreamHttpError } = require("./naver-upstream-error");
+
 const NAVER_SHOPPING_BASE_URL = "https://search.shopping.naver.com";
 const NAVER_SHOPPING_BFF_BASE_URL = "https://ns-portal.shopping.naver.com";
 const NAVER_SHOPPING_SEARCH_PATH = "/api/v2/shopping-paged-slot";
@@ -749,12 +751,12 @@ async function fetchNaverShoppingOpenApiSearch({
   const body = await response.text();
 
   if (!response.ok) {
-    const error = new Error(`Naver Search API responded with ${response.status}.`);
-    error.code = "upstream_error";
-    error.statusCode = response.status >= 400 && response.status < 500 ? response.status : 502;
-    error.upstreamStatusCode = response.status;
-    error.upstreamBodySnippet = body.slice(0, 200);
-    throw error;
+    throw createUpstreamHttpError({
+      apiLabel: "Naver Search API",
+      status: response.status,
+      body,
+      headers: response.headers
+    });
   }
 
   let payload;
@@ -917,12 +919,12 @@ async function fetchNaverShoppingSearch({ query, limit, page, sort, clientId = n
   const body = await response.text();
 
   if (!response.ok) {
-    const error = new Error(`Naver Shopping upstream responded with ${response.status}.`);
-    error.code = "upstream_error";
-    error.statusCode = 502;
-    error.upstreamStatusCode = response.status;
-    error.upstreamBodySnippet = body.slice(0, 200);
-    throw error;
+    throw createUpstreamHttpError({
+      apiLabel: "Naver Shopping upstream",
+      status: response.status,
+      body,
+      headers: response.headers
+    });
   }
 
   let parsed;
