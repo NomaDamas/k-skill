@@ -1,3 +1,7 @@
+🌐 [한국어](README.md) | [English](README.en.md) | [中文](README.zh.md) | [日本語](README.ja.md)
+
+> 외국인 관광객 및 한국 거주 외국인은 영어·중국어·일본어 README를 참고하세요.
+
 # k-skill
 
 ![k-skill thumbnail](docs/assets/k-skill-thumbnail.png)
