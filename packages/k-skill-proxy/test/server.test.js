@@ -6144,6 +6144,33 @@ test("mfds drug-safety lookup endpoint still parses legacy body.items.item shape
   assert.equal(items[1].item_name, "레거시판콜");
 });
 
+test("mfds drug-safety lookup classifies upstream connect timeouts", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "mfds-secret" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/mfds/drug-safety/lookup?itemName=%ED%83%80%EC%9D%B4%EB%A0%88%EB%86%80";
+  const response = await app.inject({ method: "GET", url });
+  const body = response.json();
+
+  assert.equal(response.statusCode, 504);
+  assert.equal(body.error, "upstream_timeout");
+  assert.equal(body.upstream.failure, "upstream_timeout");
+  assert.equal(body.upstream.cause, "UND_ERR_CONNECT_TIMEOUT");
+  assert.equal(body.upstream.route, url);
+  assert.doesNotMatch(response.body, /mfds-secret|serviceKey=/i);
+});
+
 test("mfds food-safety search endpoint requires query", async (t) => {
   const app = buildServer();
 
