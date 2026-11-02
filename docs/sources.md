@@ -284,7 +284,7 @@
 - 국가유산 상세 API: https://www.khs.go.kr/cha/SearchKindOpenapiDt.do — `ccbaKdcd`, `ccbaAsno`, `ccbaCtcd`로 설명·주소·좌표·이미지를 조회한다. 2026-07-15 실측에서 서울 숭례문 상세 XML 응답을 확인했다.
 - 국가유산 행사 API: https://www.khs.go.kr/cha/openapi/selectEventListOpenapi.do — `searchYear`, `searchMonth`로 월별 국가유산 활용 행사를 조회한다. 2026-07-15 실측에서 2026년 7월 행사 XML 응답을 확인했다.
 - 한국도로공사 공공데이터포털 실시간 교통량: https://data.ex.co.kr/openapi/odtraffic/trafficAmountByRealtime — 공개 데모 키 `test`로 무가입 호출 가능(2026-07-21 확인), 잘못된 키는 HTTP 200 + `{"code":"ERROR"}` 반환
-- 국가교통정보센터 ITS CCTV 정보: https://openapi.its.go.kr:9443/cctvInfo — 공개 데모 키 `test`로 무가입 호출 가능, `getType=json`이어도 성공 응답은 XML, 잘못된 키는 HTTP 401 resultCode 4005
+- 국가교통정보센터 ITS CCTV 정보: https://openapi.its.go.kr:9443/cctvInfo — 공개 데모 키 `test`로 무가입 호출 가능, 성공 응답은 XML 또는 JSON, 잘못된 키는 HTTP 401 resultCode 4005
 - 한국은행 ECOS Open API: https://ecos.bok.or.kr/api — positional URL(`/<Service>/<key>/json/kr/...`), 공개 데모 키 `sample`로 무가입 호출 가능(2026-07-21 확인, 호출당 최대 10행/ERROR-301), 잘못된 키는 HTTP 200 + `INFO-100`, 빈 결과는 `INFO-200`
 - 한국 국채시장 월별 발행 캘린더: https://ktb.moef.go.kr/mnbyIsuCldr.do — `government-bond-analysis`의 국고채 입찰일 공식 확인처. 실제 게시된 날짜만 일정 evidence에 기록한다.
 - 한국은행 통화정책방향 결정회의 일정: https://www.bok.or.kr/portal/singl/crncyPolicyDrcMtg/listYear.do?menuNo=200755&mtgSe=A — 금통위 결정일의 공식 확인처.
