@@ -18,8 +18,8 @@ const HEALTH_FOOD_PRODUCT_REPORT_SAMPLE_URL = "https://openapi.foodsafetykorea.g
 const HEALTH_FOOD_PRODUCT_REPORT_LIVE_URL = "https://openapi.foodsafetykorea.go.kr/api/{apiKey}/I0030/json/{start}/{end}";
 
 class ProxyError extends Error {
-  constructor(message, { code = "proxy_error", statusCode = 502 } = {}) {
-    super(message);
+  constructor(message, { code = "proxy_error", statusCode = 502, cause } = {}) {
+    super(message, { cause });
     this.code = code;
     this.statusCode = statusCode;
   }
@@ -119,7 +119,7 @@ async function requestJson(url, { params, fetchImpl = global.fetch } = {}) {
       }
     });
   } catch (error) {
-    throw new ProxyError(error.message);
+    throw new ProxyError(error.message, { cause: error });
   }
 
   const text = await response.text();

@@ -5168,6 +5168,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         dataGoKrApiKey: config.molitApiKey
       });
     } catch (error) {
+      const upstreamError = error.cause || error;
+      if (classifyUpstreamFailure(upstreamError)) {
+        throw upstreamError;
+      }
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
