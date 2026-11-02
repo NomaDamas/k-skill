@@ -17,6 +17,11 @@
 - `p_regday`: `YYYY-MM-DD`, 생략하면 최근 조사일
 - `p_convert_kg_yn`: `Y` 또는 `N`. 기본 `N`
 
+`p_regday`를 생략하면 proxy가 KST(`Asia/Seoul`) 기준 오늘부터 하루씩
+되짚어(최대 7일) `items`가 있는 조사일을 찾고, 응답 `query.p_regday`에
+실제 사용한 조사일을 담아 반환한다. 명시한 `p_regday`는 되짚지 않고
+그대로 조회한다.
+
 공식 계약 이름은 underscored 형식이며, 구식 별칭 `p_productclscode`,
 `p_countycode`, `p_itemcategorycode`도 계속 받는다. 이름이 겹치면 공식
 underscored 값이 우선하고, 빈 값은 무시하고 별칭으로 되돌아간다.

@@ -70,7 +70,8 @@ const {
   isKamisConditionConsistent,
   isKamisFailureBody,
   normalizeKamisQuery,
-  proxyKamisRequest
+  proxyKamisRequest,
+  resolveKamisRegday
 } = require("./kamis");
 const {
   normalizeMofaTravelAlarmQuery,
@@ -4852,12 +4853,25 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
+    // An explicit `p_regday` is honored exactly as given; only the omitted
+    // default walks back to the latest published survey day.
     let upstream;
+    let effectiveQuery = normalized;
     try {
-      upstream = await proxyKamisRequest({
-        query: normalized,
-        apiKey: config.kamisApiKey
-      });
+      if (normalized.p_regday) {
+        upstream = await proxyKamisRequest({
+          query: normalized,
+          apiKey: config.kamisApiKey
+        });
+      } else {
+        const resolved = await resolveKamisRegday({
+          query: normalized,
+          apiKey: config.kamisApiKey,
+          now
+        });
+        upstream = resolved.upstream;
+        effectiveQuery = resolved.query;
+      }
     } catch (error) {
       reply.code(502);
       return {
@@ -4897,7 +4911,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         error: errorCode === "900" ? "upstream_auth_error" : "upstream_error",
         message: `KAMIS returned error code ${errorCode || upstream.statusCode}.`,
         upstream: parsed,
-        query: normalized,
+        query: effectiveQuery,
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }
         }
       };
@@ -4905,17 +4919,17 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     const data = parsed?.data || {};
     const items = Array.isArray(data.item) ? data.item : [];
-    if (!isKamisConditionConsistent(parsed?.condition, normalized)) {
+    if (!isKamisConditionConsistent(parsed?.condition, effectiveQuery)) {
       reply.code(502);
       return {
         error: "upstream_category_mismatch",
         message: "KAMIS applied filters other than the ones requested.",
-        query: normalized,
+        query: effectiveQuery,
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
       };
     }
     const payload = {
-      query: normalized,
+      query: effectiveQuery,
       items,
       upstream: {
         error_code: data.error_code || "001",

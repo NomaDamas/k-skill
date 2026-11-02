@@ -1,5 +1,6 @@
 const KAMIS_UPSTREAM_BASE_URL = "https://www.kamis.or.kr/service/price/xml.do";
 const KAMIS_ACTION = "dailyPriceByCategoryList";
+const KAMIS_DEFAULT_LOOKBACK_DAYS = 7;
 
 const KAMIS_ALLOWED_FIELDS = new Set([
   "p_product_cls_code",
@@ -132,6 +133,72 @@ function isKamisFailureBody(body) {
   return code !== null && code !== "000" && code !== "001";
 }
 
+function kamisKstToday(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(now);
+  const pick = (type) => parts.find((part) => part.type === type)?.value;
+  return `${pick("year")}-${pick("month")}-${pick("day")}`;
+}
+
+function shiftKamisDate(dateString, days) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${shifted.getUTCFullYear()}-${mm}-${dd}`;
+}
+
+function kamisItemCount(body) {
+  try {
+    const item = JSON.parse(String(body ?? ""))?.data?.item;
+    return Array.isArray(item) ? item.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// KAMIS answers code `001` (or an empty `item` list) when it has no survey for
+// the requested day, and it does not fall back to the last published day on
+// its own: a request without `p_regday` gets no rows even on a day with prices.
+// When the caller omits `p_regday`, walk back day by day from today in KST
+// until a survey day answers with rows, so the documented default ("최근
+// 조사일") actually returns data. Hard upstream failures short-circuit so the
+// existing error mapping still applies, and the walk-back is bounded.
+async function resolveKamisRegday({
+  query,
+  apiKey,
+  now = () => new Date(),
+  maxLookbackDays = KAMIS_DEFAULT_LOOKBACK_DAYS,
+  fetchImpl = global.fetch
+}) {
+  const firstDay = kamisKstToday(now());
+  const attempts = apiKey ? maxLookbackDays + 1 : 1;
+  let fallback = null;
+  for (let offset = 0; offset < attempts; offset += 1) {
+    const probeQuery = { ...query, p_regday: shiftKamisDate(firstDay, -offset) };
+    const upstream = await proxyKamisRequest({ query: probeQuery, apiKey, fetchImpl });
+    if (upstream.statusCode < 200 || upstream.statusCode >= 300) {
+      return { query: probeQuery, upstream };
+    }
+    if (isKamisFailureBody(upstream.body)) {
+      return { query: probeQuery, upstream };
+    }
+    if (kamisItemCount(upstream.body) > 0) {
+      return { query: probeQuery, upstream };
+    }
+    if (fallback === null) {
+      fallback = { query: probeQuery, upstream };
+    }
+  }
+  // Nothing in the look-back window has data: report today rather than the
+  // oldest probed day so the response date stays meaningful.
+  return fallback;
+}
+
 async function proxyKamisRequest({
   query,
   apiKey,
@@ -183,5 +250,6 @@ module.exports = {
   isKamisSuccessBody,
   kamisErrorCode,
   normalizeKamisQuery,
-  proxyKamisRequest
+  proxyKamisRequest,
+  resolveKamisRegday
 };
