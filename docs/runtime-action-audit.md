@@ -104,6 +104,7 @@ top-level `SKILL.md` 전체를 돌쇠 우선 실행 계약으로 전수 검토�
 | `korean-stock-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `korean-transit-route` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `kosis-stats` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `kpic-drug-search` | `lookup` | 의약품 이름 검색 또는 약품 코드별 상세 원문 조회를 완료하고 공식 상세 페이지 안내 |
 | `kr-whois-lookup` | `lookup` | 공개 WHOIS 등록정보 조회 완료 |
 | `komsa-ferry-info` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `kstartup-search` | `submission` | 공식 폼·첨부 준비 → `clarify` 후 제출/결제/취소 |

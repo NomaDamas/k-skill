@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
 const childProcess = require("node:child_process");
 
 const {
@@ -197,28 +198,137 @@ test("runner selection lets KSKILL_PYTHON override Python shebangs", () => {
   assert.deepEqual(runner.args, [pythonScript]);
 });
 
-test("assembled instructions match committed snapshots", () => {
-  const snapshotDir = path.join(__dirname, "snapshots");
-  const update = process.env.UPDATE_SNAPSHOTS === "1";
+test("assembled modes preserve workflows and portable bundled helper/reference access", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "k-skill-assembly-"));
 
-  for (const skillName of listSkills()) {
-    for (const runtime of [GENERIC, DOLSHOI]) {
-      const output = assemble(skillName, runtime);
-      const snapshotPath = path.join(snapshotDir, `${skillName}.${runtime.mode}.md`);
+  try {
+    const fixtureRoot = path.join(tempDir, "cli");
+    const sourceDir = path.join(fixtureRoot, "src");
+    const templatesDir = path.join(fixtureRoot, "templates");
+    const skillName = "workflow-fixture";
+    const skillDir = path.join(fixtureRoot, "skills", skillName);
+    const workDir = path.join(tempDir, "unrelated-cwd");
+    for (const dir of [
+      sourceDir,
+      templatesDir,
+      path.join(skillDir, "scripts"),
+      path.join(skillDir, "references"),
+      workDir,
+    ]) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    // Do not inherit an unrelated package.json's module type from the temp directory.
+    fs.writeFileSync(path.join(fixtureRoot, "package.json"), JSON.stringify({ type: "commonjs" }));
+    for (const file of ["assemble.js", "execute.js"]) {
+      fs.copyFileSync(path.join(packageRoot, "src", file), path.join(sourceDir, file));
+    }
 
-      if (update) {
-        fs.mkdirSync(snapshotDir, { recursive: true });
-        fs.writeFileSync(snapshotPath, output);
-        continue;
-      }
-
-      assert.ok(fs.existsSync(snapshotPath), `missing snapshot ${skillName}.${runtime.mode}.md — run UPDATE_SNAPSHOTS=1 npm test`);
-      assert.equal(
-        output,
-        fs.readFileSync(snapshotPath, "utf8").replace(/\r\n?/g, "\n"),
-        `${skillName} ${runtime.mode} assembly drifted from its snapshot — review the diff, then run UPDATE_SNAPSHOTS=1 npm test`,
+    for (const profile of ["core", "lookup"]) {
+      fs.writeFileSync(
+        path.join(templatesDir, `${profile}.md`),
+        [
+          "<!-- mode:always -->",
+          `${profile}-shared-start`,
+          "<!-- mode:generic -->",
+          `${profile}-generic-only`,
+          "<!-- mode:dolshoi -->",
+          `${profile}-dolshoi-only`,
+          "<!-- mode:always -->",
+          `${profile}-shared-end`,
+        ].join("\n"),
       );
     }
+    fs.writeFileSync(
+      path.join(skillDir, "skill.json"),
+      JSON.stringify({ name: skillName, profiles: ["lookup"] }),
+    );
+    fs.writeFileSync(
+      path.join(skillDir, "instruction.md"),
+      [
+        "<!-- mode:always -->",
+        "site-shared-start",
+        "Read [factor table](references/factors.json) before calculating.",
+        "<!-- mode:generic -->",
+        "site-generic-only",
+        "```sh",
+        "node scripts/calculate.js 6 7",
+        "```",
+        "<!-- mode:dolshoi -->",
+        "site-dolshoi-only",
+        "```sh",
+        "node scripts/calculate.js 8 9",
+        "```",
+        "<!-- mode:always -->",
+        "site-shared-end",
+      ].join("\n"),
+    );
+    fs.writeFileSync(
+      path.join(skillDir, "references", "factors.json"),
+      JSON.stringify({ multiplier: 3 }),
+    );
+    fs.writeFileSync(
+      path.join(skillDir, "scripts", "calculate.js"),
+      [
+        'const fs = require("node:fs");',
+        'const path = require("node:path");',
+        "const factors = JSON.parse(fs.readFileSync(",
+        '  path.join(process.env.KSKILL_BUNDLED_SKILL_DIR, "references", "factors.json"), "utf8"));',
+        "const total = process.argv.slice(2).map(Number).reduce((sum, value) => sum + value, 0)",
+        "  * factors.multiplier;",
+        "process.stdout.write(JSON.stringify({ total, cwd: process.cwd() }));",
+      ].join("\n"),
+    );
+
+    const fixtureAssemblePath = path.join(sourceDir, "assemble.js");
+    const { assemble: assembleFixture } = require(fixtureAssemblePath);
+    const { runBundledScript: runFixtureScript } = require(path.join(sourceDir, "execute.js"));
+    for (const runtime of [GENERIC, DOLSHOI]) {
+      const output = assembleFixture(skillName, runtime);
+      const lines = output.split("\n");
+      const otherMode = runtime.mode === "generic" ? "dolshoi" : "generic";
+      for (const section of ["core", "lookup", "site"]) {
+        for (const suffix of ["shared-start", `${runtime.mode}-only`, "shared-end"]) {
+          assert.ok(lines.includes(`${section}-${suffix}`), `${runtime.mode} keeps ${section}-${suffix}`);
+        }
+        assert.ok(!lines.includes(`${section}-${otherMode}-only`), `${runtime.mode} excludes ${section}-${otherMode}`);
+      }
+      assert.doesNotMatch(output, /<!-- mode:/);
+      assert.doesNotMatch(output, /node scripts\/|\]\(references\//);
+
+      // Extract concrete workflow commands, not the generic access-rule placeholders.
+      const execCommands = [...output.matchAll(/\bexec ([\w-]+) (scripts\/[\w./-]+) -- (\d+) (\d+)/g)];
+      const readCommands = [...output.matchAll(/\bread ([\w-]+) (references\/[\w./-]+)/g)];
+      assert.equal(execCommands.length, 1, `${runtime.mode} preserves exactly its own helper workflow`);
+      assert.equal(readCommands.length, 1, `${runtime.mode} preserves the shared reference workflow`);
+      const [, execSkill, scriptPath, ...args] = execCommands[0];
+      const result = runFixtureScript(execSkill, scriptPath, args, {
+        cwd: workDir,
+        encoding: "utf8",
+        stdio: "pipe",
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.deepEqual(JSON.parse(result.stdout), {
+        total: runtime.mode === "generic" ? 39 : 51,
+        cwd: fs.realpathSync(workDir),
+      });
+
+      const [, readSkill, referencePath] = readCommands[0];
+      const reference = childProcess.spawnSync(
+        process.execPath,
+        [
+          "-e",
+          "const { readBundledAsset } = require(process.argv[1]); process.stdout.write(readBundledAsset(process.argv[2], process.argv[3]));",
+          fixtureAssemblePath,
+          readSkill,
+          referencePath,
+        ],
+        { cwd: workDir, encoding: "utf8" },
+      );
+      assert.equal(reference.status, 0, reference.stderr);
+      assert.deepEqual(JSON.parse(reference.stdout), { multiplier: 3 });
+    }
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
   }
 });
 

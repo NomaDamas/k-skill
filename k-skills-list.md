@@ -90,6 +90,7 @@
 - **emergency-room-beds** — 근처 응급실 위치·실시간 병상 현황
 - **nhis-care-checkup-search** — 건보공단 장기요양기관·건강검진기관 조회
 - **mfds-drug-safety** — 인터뷰형 의약품 안전 체크 (식약처)
+- **kpic-drug-search** — 약학정보원(KPIC) 공개 이름 검색 및 약품 코드별 상세 원문 조회
 - **mfds-food-safety** — 인터뷰형 식품 안전 체크 (식품안전나라)
 - **animal-pharmacy-search** — 지역별 동물약국·동물용의약품 취급 약국 조회
 - **korea-weather** — 기상청 단기예보 기반 한국 날씨 요약
