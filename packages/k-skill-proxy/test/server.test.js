@@ -6628,6 +6628,7 @@ test("mfds product-report endpoint uses live key with server-side filter", async
       return new Response(
         JSON.stringify({
           I0030: {
+            total_count: "2",
             row: [
               {
                 PRDLST_REPORT_NO: "20200001",
@@ -6640,6 +6641,18 @@ test("mfds product-report endpoint uses live key with server-side filter", async
                 PRDT_SHAP_CD_NM: "분말",
                 POG_DAYCNT: "24개월",
                 PRMS_DT: "20200527"
+              },
+              {
+                PRDLST_REPORT_NO: "20200002",
+                PRDLST_NM: "맥주효모 정",
+                BSSH_NM: "다른회사",
+                RAWMTRL_NM: "맥주효모",
+                PRIMARY_FNCLTY: "단백질 보충",
+                IFTKN_ATNT_MATR_CN: "물과 함께 섭취",
+                STDR_STND: "단백질 80% 이상",
+                PRDT_SHAP_CD_NM: "정제",
+                POG_DAYCNT: "24개월",
+                PRMS_DT: "20200601"
               }
             ]
           }
@@ -6673,8 +6686,204 @@ test("mfds product-report endpoint uses live key with server-side filter", async
   assert.equal(response.statusCode, 200);
   assert.ok(fetchCalls.some((entry) => entry.includes("live-food-key")));
   assert.ok(fetchCalls.some((entry) => entry.includes("PRDLST_NM=")));
-  assert.ok(fetchCalls.some((entry) => entry.includes("RAWMTRL_NM=")));
+  // I0030 reports RAWMTRL_NM as unsupported and answers with unfiltered rows, so sending it used
+  // to leak unrelated products into the response.
+  assert.ok(!fetchCalls.some((entry) => entry.includes("RAWMTRL_NM=")));
+  assert.equal(response.json().items.length, 1);
+  assert.equal(response.json().items[0].product_name, "차전자피 솔루션");
   assert.ok(!response.json().warnings || !response.json().warnings.some((w) => /sample feed/.test(w)));
+});
+
+test("mfds food-safety search pages the recall feed past the first page to reach a match", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const recallRows = Array.from({ length: 392 }, (_, index) => ({
+    PRDLST_NM: index === 119 ? "김밥천국 참치김밥" : `예시 회수품목 ${index + 1}`,
+    BSSH_NM: "예시식품",
+    RTRVLPRVNS: "기준 규격 부적합",
+    CRET_DTM: "2026-01-01 00:00:00"
+  }));
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+
+    // I0490 exposes no name filter, so the proxy must page the feed itself.
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I0490/json/")) {
+      const [, start, end] = text.match(/\/json\/(\d+)\/(\d+)/);
+      return new Response(
+        JSON.stringify({
+          I0490: {
+            total_count: String(recallRows.length),
+            row: recallRows.slice(Number(start) - 1, Number(end))
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      FOODSAFETYKOREA_API_KEY: "live-food-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: `/v1/mfds/food-safety/search?query=${encodeURIComponent("김밥")}&limit=5`
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().items.length, 1);
+  assert.equal(response.json().items[0].product_name, "김밥천국 참치김밥");
+  assert.ok(fetchCalls.length <= 4);
+});
+
+test("mfds health-food-ingredient asks I-0040 for the name filter so matches past the first page are found", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const feedRows = Array.from({ length: 779 }, (_, index) => ({
+    APLC_RAWMTRL_NM: index === 299 ? "비타민D" : `예시 원료 ${index + 1}`,
+    HF_FNCLTY_MTRAL_RCOGN_NO: `2010-${index + 1}`,
+    FNCLTY_CN: "예시 기능성",
+    DAY_INTK_CN: "5g/일",
+    IFTKN_ATNT_MATR_CN: "예시 주의사항",
+    BSSH_NM: "예시바이오",
+    PRMS_DT: "20100315"
+  }));
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I-0040/json/")) {
+      const [, start, end] = text.match(/\/json\/(\d+)\/(\d+)/);
+      const rows = text.includes("APLC_RAWMTRL_NM=")
+        ? feedRows.filter((row) => row.APLC_RAWMTRL_NM.includes("비타민D"))
+        : feedRows;
+      return new Response(
+        JSON.stringify({
+          "I-0040": {
+            total_count: String(rows.length),
+            row: rows.slice(Number(start) - 1, Number(end))
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I-0050/json/")) {
+      return new Response(JSON.stringify({ "I-0050": { total_count: "0", row: [] } }), {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      });
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      FOODSAFETYKOREA_API_KEY: "live-food-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: `/v1/mfds/food-safety/health-food-ingredient?query=${encodeURIComponent("비타민D")}&limit=5`
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().items.length, 1);
+  assert.equal(response.json().items[0].ingredient_name, "비타민D");
+  assert.ok(
+    fetchCalls.some((entry) => entry.includes(`APLC_RAWMTRL_NM=${encodeURIComponent("비타민D")}`))
+  );
+});
+
+test("mfds product-report finds rows matched only by raw material past the first page", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const feedRows = Array.from({ length: 3000 }, (_, index) => ({
+    PRDLST_REPORT_NO: `2020${String(index).padStart(7, "0")}`,
+    PRDLST_NM: `예시 건강기능식품 ${index + 1}`,
+    BSSH_NM: "예시바이오",
+    RAWMTRL_NM: index === 119 ? "차전자피식이섬유" : `예시 원료 ${index + 1}`,
+    PRIMARY_FNCLTY: "예시 기능성",
+    IFTKN_ATNT_MATR_CN: "예시 주의사항",
+    STDR_STND: "예시 기준",
+    PRDT_SHAP_CD_NM: "분말",
+    POG_DAYCNT: "24개월",
+    PRMS_DT: "20200101"
+  }));
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I0030/json/")) {
+      const [, start, end] = text.match(/\/json\/(\d+)\/(\d+)/);
+      // I0030 supports PRDLST_NM and BSSH_NM only; a raw-material query matches neither of them.
+      const filtered = text.includes("PRDLST_NM=") || text.includes("BSSH_NM=");
+      return new Response(
+        JSON.stringify({
+          I0030: {
+            total_count: String(filtered ? 0 : feedRows.length),
+            row: filtered ? [] : feedRows.slice(Number(start) - 1, Number(end))
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      FOODSAFETYKOREA_API_KEY: "live-food-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: `/v1/mfds/food-safety/product-report?query=${encodeURIComponent("차전자피")}&limit=5`
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().items.length, 1);
+  assert.equal(response.json().items[0].product_name, "예시 건강기능식품 120");
+  assert.equal(response.json().items[0].raw_materials, "차전자피식이섬유");
+  assert.ok(fetchCalls.some((entry) => entry.includes(`PRDLST_NM=${encodeURIComponent("차전자피")}`)));
+  assert.ok(fetchCalls.some((entry) => entry.includes(`BSSH_NM=${encodeURIComponent("차전자피")}`)));
+  assert.ok(fetchCalls.length <= 12);
 });
 
 test("data4library book-search normalizes query aliases and bounds pagination", () => {
