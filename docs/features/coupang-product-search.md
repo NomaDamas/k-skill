@@ -63,6 +63,11 @@ curl -fsS --get "${BASE}/v1/coupang/products/search" \
 - `502 upstream_forbidden`: 쿠팡 API 키 또는 권한 거부.
 - `502 upstream_error` / `upstream_unavailable`: 쿠팡 API 장애 또는 네트워크 오류.
 
+쿠팡 gateway는 권한 오류도 HTTP 200과 함께 envelope로 돌려준다. proxy는
+envelope의 `rCode`(또는 `code`)가 0이 아니면 빈 검색 결과로 감추지 않고
+`upstream`에 `status_code`와 `body_snippet`을 실은 502로 표면화하며, 그 실패
+응답은 캐시하지 않는다.
+
 오류를 임의의 scraping, 구형 MCP, 또는 다른 hosted endpoint로 우회하지 않는다.
 
 ## 출처
