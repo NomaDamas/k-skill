@@ -173,6 +173,7 @@ We've divided a total of 133 skills into categories by area of Korean daily life
 | [Check nearby ER bed status](docs/features/emergency-room-beds.md) | `emergency-room-beds` | Query nearby ER operating and inpatient-room/bed operating flags and update times based on your current location (exact remaining bed counts/utilization are not in the public E-Gen nearby list) |
 | [Long-term care & health checkup institution lookup](docs/features/nhis-care-checkup-search.md) | `nhis-care-checkup-search` | Query public candidates for NHIS (국민건강보험공단) long-term care institutions and health checkup institutions (Public Data Portal 15059029·15154419, via proxy) |
 | [Drug safety check](docs/features/mfds-drug-safety.md) | `mfds-drug-safety` | Proxy query of MFDS (식약처) e-Yak-Eun-Yo and safety/OTC medicine info via an interview-first flow |
+| [KPIC drug search](docs/features/kpic-drug-search.md) | `kpic-drug-search` | Search KPIC (약학정보원) public drug names and retrieve original detail records by drug code (no API key, login, or proxy required) |
 | [Food safety check](docs/features/mfds-food-safety.md) | `mfds-food-safety` | Proxy query of MFDS (식약처) non-compliant food and Food Safety Korea recall info via an interview-first flow |
 | [Veterinary pharmacy & veterinary medicine stocking pharmacy lookup](docs/features/animal-pharmacy-search.md) | `animal-pharmacy-search` | Query veterinary pharmacies by region, search products, and find stocking pharmacies based on the last 6 months of purchase history via Hongik Medicare (홍익메디케어)'s public MCP |
 

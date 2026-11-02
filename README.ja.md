@@ -174,6 +174,7 @@ k-skill がエージェントを**韓国のサービス**につなぐのに対�
 | [近くの救急室の病床状況確認](docs/features/emergency-room-beds.md) | `emergency-room-beds` | 現在地基準で近くの救急室の運営・入院室/病床の運営フラグと更新時刻を照会します（正確な残病床数/稼働率は公開E-Gen nearbyリストにありません） |
 | [介護保険・健康診断機関の照会](docs/features/nhis-care-checkup-search.md) | `nhis-care-checkup-search` | 国民健康保険公団の介護保険機関・健康診断機関の公開候補を照会します（公共データポータル（공공데이터포털）15059029・15154419、プロキシ経由） |
 | [医薬品の安全性チェック](docs/features/mfds-drug-safety.md) | `mfds-drug-safety` | 食品医薬品安全処（식약처）のe薬はこちら（e약은요）・安全常備医薬品情報を、インタビュー優先のフローでプロキシ照会します |
+| [薬学情報院の医薬品検索](docs/features/kpic-drug-search.md) | `kpic-drug-search` | 薬学情報院(KPIC)の公開医薬品名を検索し、医薬品コードで詳細な原文を照会します（APIキー・ログイン・プロキシ不要） |
 | [食品の安全性チェック](docs/features/mfds-food-safety.md) | `mfds-food-safety` | 食品医薬品安全処（식약처）の不適合食品・Food Safety Korea（식품안전나라）の回収情報を、インタビュー優先のフローでプロキシ照会します |
 | [動物薬局・動物用医薬品取扱薬局の照会](docs/features/animal-pharmacy-search.md) | `animal-pharmacy-search` | Hongik Medcare（홍익메디케어）の公開MCPで、地域別の動物薬局、製品検索、直近6か月の購入履歴に基づく取扱薬局を照会します |
 

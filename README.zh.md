@@ -174,6 +174,7 @@ npx -y @nomadamas/k-skill@0 update
 | [附近急诊室床位状态确认](docs/features/emergency-room-beds.md) | `emergency-room-beds` | 按当前位置查询附近急诊室的运营·病房/床位运营标志与更新时间（准确的剩余床位数/使用率不在公开的 E-Gen nearby 列表中） |
 | [长期疗养·健康体检机构查询](docs/features/nhis-care-checkup-search.md) | `nhis-care-checkup-search` | 查询国民健康保险公团长期疗养机构·健康体检机构的公开候选（公共数据门户 15059029·15154419，经由代理） |
 | [药品安全核查](docs/features/mfds-drug-safety.md) | `mfds-drug-safety` | 以访谈优先(interview-first)流程，通过代理查询食药处的 e약은요·安全常备药品信息 |
+| [药学院信息院药品搜索](docs/features/kpic-drug-search.md) | `kpic-drug-search` | 搜索药学院信息院(KPIC)公开药品名称，并按药品代码查询详细原始记录（无需 API 密钥、登录或代理） |
 | [食品安全核查](docs/features/mfds-food-safety.md) | `mfds-food-safety` | 以访谈优先流程，通过代理查询食药处不合格食品·食品安全国家召回信息 |
 | [动物药房·经营动物用医药品的药房查询](docs/features/animal-pharmacy-search.md) | `animal-pharmacy-search` | 通过 Hongik Medicare (홍익메디케어) 公开 MCP 查询各地动物药房、产品搜索，以及基于最近 6 个月购买历史的经营药房 |
 
