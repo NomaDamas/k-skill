@@ -36,6 +36,7 @@ const {
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
   normalizeUnmatchedPath,
+  parseQueryStringWithEucKrFallback,
   proxyAirKoreaRequest,
   proxyData4LibraryRequest,
   proxyHrfcoWaterLevelRequest,
@@ -8737,4 +8738,162 @@ test("AirKorea and MOFA routes record the upstream failure errorCode in route us
   assert.ok(fields.some((entry) =>
     entry.route === "/v1/mofa-travel-safety/travel-alerts" && entry.statusCode === 504 && entry.errorCode === "upstream_timeout"
   ));
+});
+
+// --- EUC-KR/CP949 query parameter fallback (issue #727) ---
+// Windows 한국어 로케일 클라이언트는 쿼리 값을 CP949 바이트로 퍼센트 인코딩한다.
+// 프록시는 키/값을 엄격한 UTF-8로 먼저 디코딩하고, 유효한 UTF-8이 아닐 때만 euc-kr로 폴백한다.
+
+test("query parsing decodes EUC-KR components and leaves UTF-8 and ASCII untouched", () => {
+  assert.deepEqual(
+    { ...parseQueryStringWithEucKrFallback("target=law&query=%B0%FC%BC%BC%B9%FD") },
+    { target: "law", query: "관세법" }
+  );
+  assert.deepEqual(
+    { ...parseQueryStringWithEucKrFallback("query=%EA%B4%80%EC%84%B8%EB%B2%95&limit=1&r=a+b&s=%2B&empty=&flag") },
+    { query: "관세법", limit: "1", r: "a b", s: "+", empty: "", flag: "" }
+  );
+  assert.deepEqual(
+    {
+      ...parseQueryStringWithEucKrFallback(
+        "cond[SGG_NM::LIKE]=%B0%AD%B3%B2%B1%B8&cond[SGG_NM::LIKE]=%EA%B0%95%EB%82%A8%EA%B5%AC&plain=ascii"
+      )
+    },
+    { "cond[SGG_NM::LIKE]": ["강남구", "강남구"], plain: "ascii" }
+  );
+  // Malformed escapes stay byte-for-byte like the default parser; bytes that are
+  // valid in neither UTF-8 nor CP949 become replacement characters, never a throw.
+  assert.deepEqual(
+    { ...parseQueryStringWithEucKrFallback("a=%zz&b=100%&c=%FF%FE") },
+    { a: "%zz", b: "100%", c: "\uFFFD\uFFFD" }
+  );
+});
+
+test("korean-law search sends UTF-8 upstream for EUC-KR encoded query bytes", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(JSON.stringify({ LawSearch: { law: [{ 법령명한글: "관세법" }] } }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { LAW_OC: "server-oc", KSKILL_PROXY_CACHE_TTL_MS: "60000" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const cp949 = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=law&query=%B0%FC%BC%BC%B9%FD"
+  });
+  assert.equal(cp949.statusCode, 200);
+  assert.equal(fetchCalls.length, 1);
+  assert.match(fetchCalls[0], /\/DRF\/lawSearch\.do\?/);
+  assert.equal(new URL(fetchCalls[0]).searchParams.get("target"), "law");
+  assert.equal(new URL(fetchCalls[0]).searchParams.get("query"), "관세법");
+
+  // The UTF-8 percent-encoded form of the same value normalizes to the same
+  // request, so it reuses the cache entry the CP949 request created.
+  const utf8 = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=law&query=%EA%B4%80%EC%84%B8%EB%B2%95"
+  });
+  assert.equal(utf8.statusCode, 200);
+  assert.equal(utf8.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls.length, 1);
+});
+
+test("korean-law search forwards UTF-8 percent-encoded queries unchanged", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(JSON.stringify({ LawSearch: { law: [{ 법령명한글: "관세법" }] } }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { LAW_OC: "server-oc" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=law&query=%EA%B4%80%EC%84%B8%EB%B2%95"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(new URL(fetchCalls[0]).searchParams.get("query"), "관세법");
+});
+
+test("lh-notice search accepts EUC-KR encoded panSs", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    JSON.stringify([
+      { CMN: { CODE: "SUCCESS", ERR_MSG: "", TOTAL_CNT: 1 } },
+      {
+        dsList: [
+          {
+            PAN_ID: "2015122300019828",
+            PAN_NM: "2026년 상반기 영구임대주택 예비입주자 모집 공고",
+            PAN_SS: "공고중"
+          }
+        ]
+      }
+    ]),
+    { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+  );
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/lh-notice/search?panSs=%B0%F8%B0%ED%C1%DF&limit=10"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().query.pan_ss, "공고중");
+  assert.equal(response.json().items.length, 1);
+});
+
+test("real-estate region-code resolves EUC-KR encoded region names", async (t) => {
+  const app = buildServer();
+  t.after(async () => {
+    await app.close();
+  });
+
+  const cp949 = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%B0%AD%B3%B2%B1%B8" });
+  assert.equal(cp949.statusCode, 200);
+  assert.equal(cp949.json().query, "강남구");
+  assert.ok(cp949.json().results.some((entry) => entry.name.includes("강남구")));
+
+  // Mixed CP949 + ASCII and the UTF-8 spelling of the same value agree.
+  const mixed = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%B0%AD%B3%B2%B1%B8&limit=5" });
+  assert.equal(mixed.statusCode, 200);
+  assert.equal(mixed.json().query, "강남구");
+  const utf8 = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%EA%B0%95%EB%82%A8%EA%B5%AC" });
+  assert.equal(utf8.statusCode, 200);
+  assert.equal(utf8.json().query, "강남구");
+
+  // Repeated keys and bytes invalid in both encodings must never surface a 500.
+  const repeated = await app.inject({
+    method: "GET",
+    url: "/v1/real-estate/region-code?q=%B0%AD%B3%B2%B1%B8&q=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  });
+  assert.equal(repeated.statusCode, 200);
+  const loneBytes = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%FF%FE" });
+  assert.equal(loneBytes.statusCode, 200);
+  assert.deepEqual(loneBytes.json().results, []);
+  const malformedEscapes = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%zz" });
+  assert.equal(malformedEscapes.statusCode, 200);
 });
