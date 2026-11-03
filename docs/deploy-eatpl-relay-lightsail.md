@@ -13,10 +13,10 @@ Cloud Run k-skill-proxy --POST (primary)--> api.paybooc.ai
                          --> Lightsail relay --POST--> api.paybooc.ai
 ```
 
-BC Card should whitelist both the Cloud Run egress IP for the primary path and
-the Lightsail static IPv4 for fallback. Keep the Lightsail address registered
-until the fallback is retired; never register the relay's private `127.0.0.1`
-address.
+BC Card should whitelist both the Cloud Run static egress IP (`34.84.103.178`,
+see `docs/deploy-k-skill-proxy.md`) for the primary path and the Lightsail
+static IPv4 for fallback. Keep the Lightsail address registered until the
+fallback is retired; never register the relay's private `127.0.0.1` address.
 
 ## Cost guardrail
 
