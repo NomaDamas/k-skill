@@ -67,7 +67,7 @@ test("can send the search through an authenticated fixed-egress relay", async ()
     query: normalizeBccardEatplSearchQuery({ location: "서울 종로구", genre: "일반한식" }),
     instNm: "kskill",
     relayUrl: "https://eatpl-relay.nomadamas.org/v1/search",
-    relayToken: "relay-secret",
+    relayToken: "relay-secret-example",
     nextTraceNumber: () => {
       throw new Error("relay mode must not generate caller trace numbers");
     },
@@ -81,7 +81,7 @@ test("can send the search through an authenticated fixed-egress relay", async ()
     }
   });
   assert.equal(calls[0].url, "https://eatpl-relay.nomadamas.org/v1/search");
-  assert.equal(calls[0].options.headers.authorization, "Bearer relay-secret");
+  assert.equal(calls[0].options.headers.authorization, "Bearer relay-secret-example");
   assert.deepEqual(JSON.parse(calls[0].options.body), {
     location: "서울 종로구",
     merNm: null,

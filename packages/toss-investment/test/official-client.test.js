@@ -30,8 +30,8 @@ const {
 } = require("../src/official-client");
 
 const CLIENT_ID = "c_test_id";
-const CLIENT_SECRET = "s_super_secret_value";
-const ACCESS_TOKEN = "eyJhbGciOiJ.access.token";
+const CLIENT_SECRET = "s_super_secret_value-example";
+const ACCESS_TOKEN = "eyJhbGciOiJ.access.token-example";
 const BASE_URL = "https://openapi.tossinvest.com";
 
 function jsonResponse({ status = 200, body = {}, headers = {} } = {}) {

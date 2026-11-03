@@ -126,7 +126,7 @@ test("fetchWaterLevelReport routes through the relay with a bearer token when re
     stationCode: "1018683",
     serviceKey: "test-key",
     relayUrl: "https://relay.example.test/hrfco/",
-    relayToken: "relay-secret",
+    relayToken: "relay-secret-example",
     fetchImpl: async (url, options) => {
       calls.push({ url: String(url), authorization: options.headers.authorization });
       const content = String(url).endsWith("/waterlevel/info.json") ? stationItems : measurementItems;
@@ -141,11 +141,11 @@ test("fetchWaterLevelReport routes through the relay with a bearer token when re
   assert.deepEqual(calls, [
     {
       url: "https://relay.example.test/hrfco/test-key/waterlevel/info.json",
-      authorization: "Bearer relay-secret"
+      authorization: "Bearer relay-secret-example"
     },
     {
       url: "https://relay.example.test/hrfco/test-key/waterlevel/list/10M/1018683.json",
-      authorization: "Bearer relay-secret"
+      authorization: "Bearer relay-secret-example"
     }
   ]);
 });

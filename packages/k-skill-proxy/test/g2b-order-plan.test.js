@@ -84,7 +84,7 @@ test("g2b order-plans route proxies search to the selected PPS operation and cac
       { status: 200, headers: { "content-type": "application/json" } }
     );
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -100,7 +100,7 @@ test("g2b order-plans route proxies search to the selected PPS operation and cac
   assert.equal(body.items[0].bizNm, "청소 용역");
   assert.equal(body.query.operation, "getOrderPlanSttusListServcPPSSrch");
   assert.match(seenUrls[0], /OrderPlanSttusService\/getOrderPlanSttusListServcPPSSrch/);
-  assert.match(seenUrls[0], /ServiceKey=data-go-key/);
+  assert.match(seenUrls[0], /ServiceKey=data-go-key-example/);
   assert.doesNotMatch(seenUrls[0], /[?&]serviceKey=/);
   assert.match(seenUrls[0], /bizNm=%EC%B2%AD%EC%86%8C/);
 
@@ -119,7 +119,7 @@ test("g2b order-plans route treats upstream no-data as an empty result", async (
     }),
     { status: 200, headers: { "content-type": "application/json" } }
   );
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();

@@ -32,7 +32,7 @@ test("normalizeKomsaFerryQuery allowlists datasets and normalizes filters", () =
 test("fetchKomsaFerryInfo sends the official camelCase schedule parameters", async () => {
   let requestedUrl;
   const result = await fetchKomsaFerryInfo({
-    serviceKey: "test-key",
+    serviceKey: "test-key-example",
     ...normalizeKomsaFerryQuery("schedules", {
       date: "2026-08-24",
       vessel: "섬사랑12호"
@@ -121,7 +121,7 @@ test("KOMSA route returns 503 without an operator key and serves a cached succes
       }
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
-  const app = buildServer({ env: { KOMSA_MTIS_API_KEY: "test-key" } });
+  const app = buildServer({ env: { KOMSA_MTIS_API_KEY: "test-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -132,7 +132,7 @@ test("KOMSA route returns 503 without an operator key and serves a cached succes
   assert.equal(second.statusCode, 200);
   assert.equal(second.json().proxy.cache.hit, true);
   assert.equal(calls, 1);
-  assert.doesNotMatch(first.body, /test-key/);
+  assert.doesNotMatch(first.body, /test-key-example/);
 
   const rejected = await app.inject({
     method: "GET",

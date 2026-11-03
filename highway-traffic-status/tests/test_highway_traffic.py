@@ -103,9 +103,9 @@ class BuildUrlTests(unittest.TestCase):
 
     def test_traffic_url_uses_user_key_when_present(self):
         args = highway_traffic.parse_args(["traffic"])
-        url = highway_traffic.build_traffic_url(args, api_key="mykey123")
+        url = highway_traffic.build_traffic_url(args, api_key="mykey123-example")
         params = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
-        self.assertEqual(params["key"], ["mykey123"])
+        self.assertEqual(params["key"], ["mykey123-example"])
 
     def test_cctv_url_requires_bbox_and_targets_its(self):
         args = highway_traffic.parse_args(

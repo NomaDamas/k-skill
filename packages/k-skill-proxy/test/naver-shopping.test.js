@@ -478,7 +478,7 @@ test("naver shopping search endpoint prefers official Search API when server key
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -505,7 +505,7 @@ test("naver shopping search endpoint prefers official Search API when server key
   assert.match(fetchCalls[0].url, /display=40/);
   assert.match(fetchCalls[0].url, /sort=asc/);
   assert.equal(fetchCalls[0].headers["X-Naver-Client-Id"], "client-id");
-  assert.equal(fetchCalls[0].headers["X-Naver-Client-Secret"], "client-secret");
+  assert.equal(fetchCalls[0].headers["X-Naver-Client-Secret"], "client-secret-example");
 });
 
 test("naver shopping official Search API marks review sort as unsupported instead of silently applying relevance", async (t) => {
@@ -545,7 +545,7 @@ test("naver shopping official Search API marks review sort as unsupported instea
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
