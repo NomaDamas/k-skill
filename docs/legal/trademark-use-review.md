@@ -128,7 +128,6 @@ k-skill이 제3자 표장을 **자기 서비스의 출처표시로 사용하지 
 | `naver-ad-performance` | 네이버 검색광고 / Naver |
 | `naver-blog-research` | 네이버 블로그 / Naver |
 | `naver-news-search` | 네이버 뉴스 / Naver |
-| `naver-shopping-search` | 네이버 쇼핑 / Naver |
 | `ohou-today-deal` | 오늘의집 |
 | `olive-young-search` | 올리브영 / Olive Young |
 | `popbill` | 팝빌 / Popbill |

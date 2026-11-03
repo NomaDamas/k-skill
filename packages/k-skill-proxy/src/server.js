@@ -39,7 +39,6 @@ const {
   normalizeKakaoMobilityDirectionsQuery
 } = require("./kakao-map");
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
-const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const {
   createTraceNumberFactory,
   fetchBccardEatplSearch,
@@ -2343,7 +2342,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         kakaoMapConfigured: Boolean(config.kakaoRestApiKey),
         kakaoMobilityConfigured: Boolean(config.kakaoRestApiKey),
         kosisConfigured: Boolean(config.kosisApiKey),
-        naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
         naverNewsApiConfigured: naverSearchKeysPresent,
         bccardEatplConfigured: Boolean(config.bccardEatplInstNm),
@@ -5531,93 +5529,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   });
 
 
-  app.get("/v1/naver-shopping/search", async (request, reply) => {
-    let normalized;
-
-    try {
-      normalized = normalizeNaverShoppingSearchQuery(request.query || {});
-    } catch (error) {
-      reply.code(400);
-      return {
-        error: "bad_request",
-        message: error.message
-      };
-    }
-
-    const cacheKey = makeCacheKey({
-      route: "naver-shopping-search",
-      q: normalized.query.toLowerCase(),
-      limit: normalized.limit,
-      page: normalized.page,
-      sort: normalized.sort
-    });
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        proxy: {
-          ...cached.proxy,
-          cache: {
-            hit: true,
-            ttl_ms: config.cacheTtlMs
-          }
-        }
-      };
-    }
-
-    let result;
-    try {
-      result = await fetchNaverShoppingSearch({
-        ...normalized,
-        clientId: config.naverSearchClientId,
-        clientSecret: config.naverSearchClientSecret
-      });
-    } catch (error) {
-      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
-      const payload = {
-        error: error.code || "proxy_error",
-        message: error.message,
-        proxy: {
-          name: config.proxyName,
-          cache: {
-            hit: false,
-            ttl_ms: config.cacheTtlMs
-          }
-        }
-      };
-      if (error.upstreamStatusCode) {
-        payload.upstream = {
-          status_code: error.upstreamStatusCode,
-          body_snippet: error.upstreamBodySnippet || null
-        };
-      }
-      return payload;
-    }
-
-    const payload = {
-      items: result.items,
-      query: {
-        q: normalized.query,
-        limit: normalized.limit,
-        page: normalized.page,
-        sort: normalized.sort
-      },
-      meta: result.meta,
-      upstream: result.upstream,
-      proxy: {
-        name: config.proxyName,
-        cache: {
-          hit: false,
-          ttl_ms: config.cacheTtlMs
-        },
-        requested_at: new Date().toISOString()
-      }
-    };
-
-    cache.set(cacheKey, payload, config.cacheTtlMs);
-    return payload;
-  });
-
   app.get("/v1/coupang/products/search", async (request, reply) => {
     let normalized;
 
@@ -6697,7 +6608,6 @@ module.exports = {
   normalizeOpinetDetailQuery,
   normalizeNeisSchoolMealQuery,
   normalizeNeisSchoolSearchQuery,
-  normalizeNaverShoppingSearchQuery,
   normalizeBccardEatplSearchQuery,
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
@@ -6729,7 +6639,6 @@ module.exports = {
   proxyNhisLongTermCareRequest,
   fetchKakaoLocalEndpoint,
   fetchKakaoMobilityDirections,
-  fetchNaverShoppingSearch,
   fetchBccardEatplSearch,
   proxyOpinetRequest,
   proxySeoulBikeRealtimeRequest,
