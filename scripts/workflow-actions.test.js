@@ -44,7 +44,8 @@ const knownNode20ActionPins = new Map([
   ["googleapis/release-please-action", new Set(["v4"])],
 ]);
 
-const usesLinePattern = /^\s*(?:-\s*)?uses:\s*['"]?([^'"\s#]+)['"]?(?:\s*#.*)?\s*$/gm;
+const usesLinePattern = /^\s*(?:-\s*)?uses:\s*['"]?([^'"\s#]+)['"]?(?:\s*#\s*(.*?))?\s*$/gm;
+const fullShaPattern = /^[0-9a-f]{40}$/;
 
 function readWorkflow(name) {
   return fs.readFileSync(path.join(workflowDir, name), "utf8");
@@ -62,7 +63,15 @@ function usesFromWorkflowBody(name, body) {
     const spec = match[1];
     const at = spec.lastIndexOf("@");
     assert.notEqual(at, -1, `${name} action use must be pinned with @ref: ${spec}`);
-    return { file: name, action: spec.slice(0, at), ref: spec.slice(at + 1), spec };
+    const action = spec.slice(0, at);
+    const pinned = spec.slice(at + 1);
+    if (!fullShaPattern.test(pinned)) {
+      return { file: name, action, ref: pinned, spec };
+    }
+    // SHA-pinned: the reviewed version is the tag recorded in the trailing comment.
+    const tag = (match[2] || "").trim().split(/\s+/)[0];
+    assert.match(tag, /^v\d/, `${name} SHA-pinned ${action} must record its version tag in a trailing comment`);
+    return { file: name, action, ref: tag, sha: pinned, spec };
   });
 }
 
@@ -83,13 +92,20 @@ test("workflow action extractor includes uses lines with inline comments", () =>
       "      - uses: actions/checkout@v4 # intentionally stale fixture",
       "      - uses: 'actions/setup-node@v5' # quoted fixture",
       '      - uses: "google-github-actions/setup-gcloud@v3"',
+      "      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5",
     ].join("\n"),
   );
 
   assert.deepEqual(
     uses.map((use) => use.spec),
-    ["actions/checkout@v4", "actions/setup-node@v5", "google-github-actions/setup-gcloud@v3"],
+    [
+      "actions/checkout@v4",
+      "actions/setup-node@v5",
+      "google-github-actions/setup-gcloud@v3",
+      "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444",
+    ],
   );
+  assert.deepEqual(uses.at(-1).ref, "v5");
 });
 
 test("workflow action runtime guard documents its reviewed coverage scope", () => {
