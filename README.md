@@ -6,6 +6,13 @@
 
 ![k-skill thumbnail](docs/assets/k-skill-thumbnail.png)
 
+<p>
+  <a href="https://trendshift.io/repositories/34026?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-34026" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/34026" alt="NomaDamas%2Fk-skill | Trendshift" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/34026?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-34026" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/34026/daily?language=JavaScript" alt="NomaDamas%2Fk-skill | Trendshift Daily" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/34026?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-34026" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/34026/weekly?language=JavaScript" alt="NomaDamas%2Fk-skill | Trendshift Weekly" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/34026?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-34026" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/34026/monthly?language=JavaScript" alt="NomaDamas%2Fk-skill | Trendshift Monthly" width="250" height="55"/></a>
+</p>
+
 한국인인가요? 이 스킬 모음집을 다운로드 받아 두세요. 언젠가 **무조건** 쓸 때가 옵니다!
 KTX, KBO, 로또, 당근, 쿠팡, 카톡, 정부24, 홈택스 등등 귀찮은 것을 AI 에이전트에게 다 시켜버리세요.
 
