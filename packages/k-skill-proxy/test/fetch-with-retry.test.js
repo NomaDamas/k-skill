@@ -64,6 +64,35 @@ test("fetchWithRetry retries network failures then throws the last error", async
   assert.equal(calls, 2);
 });
 
+test("fetchWithRetry stops once the shared timeout signal has aborted", async () => {
+  const controller = new AbortController();
+  const calls = [];
+  const sleeps = [];
+  const fetchImpl = async () => {
+    calls.push(controller.signal.aborted);
+    controller.abort();
+    const error = new Error("The operation was aborted due to timeout");
+    error.name = "TimeoutError";
+    throw error;
+  };
+
+  await assert.rejects(
+    () => fetchWithRetry("https://example.invalid/v1", {
+      fetchImpl,
+      attempts: 2,
+      signal: controller.signal,
+      jitterRatio: 0,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      }
+    }),
+    /aborted due to timeout/
+  );
+
+  assert.deepEqual(calls, [false], "the aborted deadline must not trigger another upstream attempt");
+  assert.deepEqual(sleeps, [], "no backoff sleep may extend the caller's timeout budget");
+});
+
 test("retry classifiers cover 429/5xx and connection resets", () => {
   assert.equal(isRetryableStatus(429), true);
   assert.equal(isRetryableStatus(502), true);

@@ -1,4 +1,5 @@
 const { searchRegionCode } = require("./region-lookup");
+const { rethrowIfUpstreamNetworkFailure } = require("./upstream-errors");
 
 const EV_CHARGER_BASE_URL = "https://apis.data.go.kr/B552584/EvCharger";
 const EV_CHARGER_OPERATIONS = Object.freeze({
@@ -6,7 +7,10 @@ const EV_CHARGER_OPERATIONS = Object.freeze({
   status: "getChargerStatus"
 });
 const AUTH_RESULT_CODES = new Set(["20", "21", "22", "30", "31", "32", "33"]);
-const EV_CHARGER_UPSTREAM_TIMEOUT_MS = 90000;
+// data.go.kr serves this dataset from a single upstream; a 90s deadline made the
+// info route look hung for over 30s while the TCP connect was blackholed. Keep
+// the worst-case request in the same ~20s budget as the sibling adapters.
+const EV_CHARGER_UPSTREAM_TIMEOUT_MS = 20000;
 
 function trimOrNull(value) {
   if (value === undefined || value === null) return null;
@@ -178,7 +182,11 @@ async function fetchEvCharger({ params, serviceKey, fetchImpl = global.fetch }) 
   let response;
   try {
     response = await fetchImpl(url.toString(), { signal: AbortSignal.timeout(EV_CHARGER_UPSTREAM_TIMEOUT_MS) });
-  } catch {
+  } catch (error) {
+    // Hand a classified network failure (with its socket cause) to the global
+    // error handler so the route answers 504/503 instead of an opaque 502, and
+    // redact the service key from the cause chain before it can be logged.
+    rethrowIfUpstreamNetworkFailure(error, serviceKey);
     return errorResult("upstream_unavailable", "EV charger upstream request failed.");
   }
   const text = await response.text();
