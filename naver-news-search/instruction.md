@@ -83,9 +83,10 @@ curl -fsS --get "${KSKILL_PROXY_BASE_URL:-https://k-skill-proxy.nomadamas.org}/v
 
 - `400 bad_request` — 검색어 누락, 2글자 미만, 허용되지 않는 파라미터, 혹은 `start + display - 1 > 1000` 조합(네이버 1000-item search window 초과). 에러 메시지를 그대로 사용자에게 노출한다.
 - `503 upstream_not_configured` — 프록시 서버에 `NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET` 가 없는 경우. 운영자가 키를 등록해야 한다. 사용자에게는 "잠시 후 다시 시도해 주세요" 정도로 안내한다.
-- `401 upstream_error` — 프록시 서버의 Client ID/Secret 이 잘못된 경우(`errorCode: 024`). 운영자가 재발급해야 한다.
-- `429 upstream_error` — 네이버 검색 API 일일 쿼터(25,000 호출/일) 초과(`errorCode: 010`). 재시도 루프는 금지. 잠시 후 다시 시도하도록 안내한다.
-- `502 upstream_error` — 네이버 API 5xx 또는 응답 JSON 파싱 실패.
+- `502 upstream_error` — 네이버 API 가 4xx/5xx 를 돌려준 경우(프록시가 자체적으로 502 로 정규화한다. 네이버 상태 코드는 `upstream.status_code`, 네이버 오류 코드는 `upstream.error_code` 로 남는다), 또는 응답 JSON 파싱 실패.
+  - `upstream.status_code: 401` + `upstream.error_code: "024"` — 프록시 서버의 Client ID/Secret 이 잘못된 경우. 운영자가 재발급해야 하고, 사용자는 재시도해도 소용없다.
+  - `upstream.status_code: 404` + `upstream.error_code: "SE05"` — 해당 검색 API 권한이 앱에 없거나 검색 API 경로가 바뀐 경우. 운영자가 앱 권한을 확인해야 한다.
+- `429 upstream_rate_limited` — 네이버 검색 API 호출 제한 초과(`errorCode: 010`). `retry-after` 헤더 / `upstream.retry_after`(초)를 참고한다. 재시도 루프는 금지. 잠시 후 다시 시도하도록 안내한다.
 - upstream 차단이나 장애 발생 시 재시도하지 않는다. cache + rate limit 만으로 대응하고, 사용자에게는 현재 조회 불가능함을 분명히 말한다.
 
 ## Privacy

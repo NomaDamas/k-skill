@@ -1,3 +1,5 @@
+const { createUpstreamHttpError } = require("./naver-upstream-error");
+
 const NAVER_NEWS_OPEN_API_URL = "https://openapi.naver.com/v1/search/news.json";
 const DEFAULT_DISPLAY = 10;
 const MIN_DISPLAY = 1;
@@ -222,12 +224,12 @@ async function fetchNaverNewsSearch({
   const body = await response.text();
 
   if (!response.ok) {
-    const error = new Error(`Naver News Search API responded with ${response.status}.`);
-    error.code = "upstream_error";
-    error.statusCode = response.status >= 400 && response.status < 500 ? response.status : 502;
-    error.upstreamStatusCode = response.status;
-    error.upstreamBodySnippet = body.slice(0, 200);
-    throw error;
+    throw createUpstreamHttpError({
+      apiLabel: "Naver News Search API",
+      status: response.status,
+      body,
+      headers: response.headers
+    });
   }
 
   let payload;
