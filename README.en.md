@@ -60,7 +60,7 @@ If k-skill connects your agent to **Korean services**, the two below connect it 
 
 ## What Can It Do
 
-We've divided a total of 133 skills into categories by area of Korean daily life. Each area is organized in its own table below.
+We've divided a total of 134 skills into categories by area of Korean daily life. Each area is organized in its own table below.
 
 ### 🚉 Mobility, Transit & Travel
 
@@ -182,7 +182,6 @@ We've divided a total of 133 skills into categories by area of Korean daily life
 | What it can do | Skill name | Description |
 | --- | --- | --- |
 | [Coupang product search](docs/features/coupang-product-search.md) | `coupang-product-search` | Coupang product search, Rocket Delivery filter, price-range search, comparison, best sellers, and Goldbox deals |
-| [Naver Shopping price comparison](docs/features/naver-shopping-search.md) | `naver-shopping-search` | Compare product candidates, current displayed prices, and seller links via Naver Search Open API first, with a public BFF JSON fallback |
 | [Danawa (다나와) lowest price comparison](docs/features/danawa-price-search.md) | `danawa-price-search` | Compare product candidates, per-mall prices, effective purchase price including shipping, card-discounted prices, and interest-free installments via Danawa (다나와)'s public search/price-comparison surface |
 | [Market Kurly (마켓컬리) product lookup](docs/features/market-kurly-search.md) | `market-kurly-search` | Market Kurly (마켓컬리) product search, current price, discount status, and sold-out status |
 | [Daiso (다이소) product lookup](docs/features/daiso-product-search.md) | `daiso-product-search` | Check product pickup availability by Daiso (다이소) store (exact per-store stock quantities have been blocked since 2026-05-05 due to Daiso Mall's security policy) |
