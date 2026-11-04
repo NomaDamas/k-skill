@@ -68,7 +68,7 @@ npx -y @nomadamas/k-skill@0 exec highway-traffic-status scripts/highway_traffic.
 ## Data sources & fallback order
 
 1. `https://data.ex.co.kr/openapi/odtraffic/trafficAmountByRealtime?key=<key>&type=json` — 전국 VDS 실시간 스냅샷. 필터(노선/구간)는 helper가 클라이언트 측에서 수행한다.
-2. `https://openapi.its.go.kr:9443/cctvInfo?apiKey=<key>&type=ex&cctvType=1&minX=..&getType=json` — 성공 응답은 XML(문서와 달리 `getType=json`이어도 XML)이며 helper가 XML을 파싱한다.
+2. `https://openapi.its.go.kr:9443/cctvInfo?apiKey=<key>&type=ex&cctvType=1&minX=..&getType=json` — 성공 응답은 XML 또는 JSON이며 helper가 두 형식을 모두 파싱한다.
 
 두 표면 모두 데모 키 `test`가 유효하다. 개인 키가 환경변수에 있으면 그것을 우선 사용한다.
 
