@@ -68,7 +68,7 @@ k-skill이 에이전트를 **한국 서비스**에 연결해 준다면, 아래 �
 
 ## 어떤 걸 할 수 있나
 
-총 133개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
+총 134개 스킬을 한국 실생활 영역별 카테고리로 나눴습니다. 각 영역은 아래 별도 표에 정리되어 있습니다.
 
 ### 🚉 이동·교통·여행
 
@@ -190,7 +190,6 @@ k-skill이 에이전트를 **한국 서비스**에 연결해 준다면, 아래 �
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
 | [쿠팡 상품 검색](docs/features/coupang-product-search.md) | `coupang-product-search` | 쿠팡 상품 검색, 로켓배송 필터, 가격대 검색, 비교, 베스트, 골드박스 특가 조회 |
-| [네이버 쇼핑 가격비교](docs/features/naver-shopping-search.md) | `naver-shopping-search` | 네이버 검색 Open API 우선, 공개 BFF JSON fallback으로 상품 후보·현재 노출가·판매처 링크 비교 |
 | [다나와 최저가 비교](docs/features/danawa-price-search.md) | `danawa-price-search` | 다나와 공개 검색/가격비교 표면으로 상품 후보·쇼핑몰별 가격·배송비 포함 실구매가·카드 할인가·무이자 할부 비교 |
 | [마켓컬리 상품 조회](docs/features/market-kurly-search.md) | `market-kurly-search` | 마켓컬리 상품 검색, 현재 가격, 할인 여부, 품절 여부 조회 |
 | [다이소 상품 조회](docs/features/daiso-product-search.md) | `daiso-product-search` | 다이소 매장별 상품 픽업 가능 여부 확인 (정확한 매장별 재고 수량은 다이소몰 보안 정책으로 2026-05-05 부터 차단됨) |

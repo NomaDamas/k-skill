@@ -61,7 +61,7 @@ k-skill がエージェントを**韓国のサービス**につなぐのに対�
 
 ## 何ができるか
 
-合計133のスキルを、韓国の実生活の領域別カテゴリに分けました。各領域は下の個別の表にまとめています。
+合計134のスキルを、韓国の実生活の領域別カテゴリに分けました。各領域は下の個別の表にまとめています。
 
 ### 🚉 移動・交通・旅行
 
@@ -183,7 +183,6 @@ k-skill がエージェントを**韓国のサービス**につなぐのに対�
 | できること | スキル名 | 説明 |
 | --- | --- | --- |
 | [Coupang（쿠팡）商品検索](docs/features/coupang-product-search.md) | `coupang-product-search` | Coupangの商品検索、ロケット配送フィルタ、価格帯検索、比較、ベスト、ゴールドボックスの特価照会です |
-| [Naverショッピング価格比較](docs/features/naver-shopping-search.md) | `naver-shopping-search` | Naver検索Open APIを優先し、公開BFF JSON fallbackで商品候補・現在の表示価格・販売店リンクを比較します |
 | [Danawa（다나와）最安値比較](docs/features/danawa-price-search.md) | `danawa-price-search` | Danawaの公開検索/価格比較表面で、商品候補・ショッピングモール別価格・送料込みの実購入価格・カード割引価格・無利子分割を比較します |
 | [Market Kurly（마켓컬리）商品照会](docs/features/market-kurly-search.md) | `market-kurly-search` | Market Kurlyの商品検索、現在価格、割引有無、品切れ有無を照会します |
 | [Daiso（다이소）商品照会](docs/features/daiso-product-search.md) | `daiso-product-search` | Daisoの店舗別商品の受け取り可否を確認します（正確な店舗別在庫数量はダイソーモールのセキュリティポリシーにより2026-05-05から遮断されています） |

@@ -61,7 +61,7 @@ npx -y @nomadamas/k-skill@0 update
 
 ## 能做些什么
 
-共 133 个技能，按韩国实际生活领域分类整理。每个领域都汇总在下方各自的表格中。
+共 134 个技能，按韩国实际生活领域分类整理。每个领域都汇总在下方各自的表格中。
 
 ### 🚉 出行·交通·旅行
 
@@ -183,7 +183,6 @@ npx -y @nomadamas/k-skill@0 update
 | 能做的事 | 技能名称 | 说明 |
 | --- | --- | --- |
 | [Coupang (쿠팡) 商品搜索](docs/features/coupang-product-search.md) | `coupang-product-search` | Coupang 商品搜索、Rocket Delivery (로켓배송) 筛选、价格区间搜索、比较、Best、Goldbox 特价查询 |
-| [Naver 购物比价](docs/features/naver-shopping-search.md) | `naver-shopping-search` | 优先使用 Naver 搜索 Open API，以公开 BFF JSON 作为 fallback，比较商品候选·当前展示价·卖家链接 |
 | [Danawa (다나와) 最低价比较](docs/features/danawa-price-search.md) | `danawa-price-search` | 通过 Danawa 公开搜索/比价表面，比较商品候选·各商城价格·含运费的实付价·银行卡折扣价·免息分期 |
 | [Market Kurly (마켓컬리) 商品查询](docs/features/market-kurly-search.md) | `market-kurly-search` | Market Kurly 商品搜索、当前价格、是否折扣、是否售罄查询 |
 | [Daiso (다이소) 商品查询](docs/features/daiso-product-search.md) | `daiso-product-search` | 确认 Daiso 各门店商品是否可自提（准确的各门店库存数量因 Daiso Mall 安全政策，自 2026-05-05 起被屏蔽） |

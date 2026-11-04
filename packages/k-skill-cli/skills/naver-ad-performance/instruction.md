@@ -21,7 +21,7 @@
 
 - **클라우드 샌드박스 환경**: 네이버 검색광고 API는 로컬 egress가 필요하다. 클라우드 실행 에이전트(허용 도메인 목록 방식)에서는 도달하지 못할 수 있다 — 먼저 `doctor`로 확인한다.
 - **입찰가 변경, 캠페인/키워드 생성·수정·삭제**: 이 스킬은 조회 전용이다. 광고 운영에 영향을 주는 쓰기 작업은 이 스킬 범위 밖이며 구현돼 있지 않다.
-- 네이버 검색(블로그/뉴스/쇼핑) 결과 조회는 `naver-blog-research`, `naver-news-search`, `naver-shopping-search` 스킬을 쓴다 — 이 스킬과는 다른 API다.
+- 네이버 검색(블로그/뉴스) 결과 조회는 `naver-blog-research`, `naver-news-search` 스킬을 쓴다 — 이 스킬과는 다른 API다.
 
 ## Prerequisites
 

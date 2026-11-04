@@ -385,7 +385,7 @@ test("trademark-reviewed skills publish the combined legal disclaimer", () => {
     fs.existsSync(path.join(repoRoot, skillName, "references", "DISCLAIMER.md")),
   );
 
-  assert.equal(reviewedSkills.length, 44, "expected the complete trademark-reviewed skill set");
+  assert.equal(reviewedSkills.length, 43, "expected the complete trademark-reviewed skill set");
 
   for (const skillName of reviewedSkills) {
     const disclaimerPath = path.join(skillName, "references", "DISCLAIMER.md");
@@ -476,7 +476,6 @@ test("actionable skills publish a Dolshoi action path", () => {
     "market-kurly-search",
     "myrealtrip-search",
     "naver-ad-performance",
-    "naver-shopping-search",
     "nhis-care-checkup-search",
     "nts-business-registration",
     "nts-tax-delinquency",
@@ -4548,7 +4547,6 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["번개장터 검색", "bunjang-search"],
   ["한국어 맞춤법 검사", "korean-spell-check"],
   ["네이버 블로그 리서치", "naver-blog-research"],
-  ["네이버 쇼핑 가격비교", "naver-shopping-search"],
   ["네이버 뉴스 검색", "naver-news-search"],
   ["한국일보 뉴스 조회", "hankookilbo-news"],
   ["한국어 글자 수 세기", "korean-character-count"],
