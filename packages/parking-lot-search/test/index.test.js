@@ -32,7 +32,7 @@ test("parseCoordinateQuery recognizes latitude/longitude pairs", () => {
 
 test("buildOfficialParkingLotApiUrl targets the standard public parking API with safe filters", () => {
   const url = new URL(buildOfficialParkingLotApiUrl({
-    serviceKey: "data-key",
+    serviceKey: "data-key-example",
     pageNo: 2,
     numOfRows: 500,
     addressHint: "서울특별시 종로구",
@@ -41,7 +41,7 @@ test("buildOfficialParkingLotApiUrl targets the standard public parking API with
   }));
 
   assert.equal(url.origin + url.pathname, "https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api");
-  assert.equal(url.searchParams.get("serviceKey"), "data-key");
+  assert.equal(url.searchParams.get("serviceKey"), "data-key-example");
   assert.equal(url.searchParams.get("type"), "json");
   assert.equal(url.searchParams.get("pageNo"), "2");
   assert.equal(url.searchParams.get("numOfRows"), "500");
@@ -95,7 +95,7 @@ test("searchNearbyParkingLotsByCoordinates uses the official API directly when a
     limit: 1,
     radius: 500,
     addressHint: "서울특별시 종로구",
-    apiKey: "data-key",
+    apiKey: "data-key-example",
     fetchImpl
   });
 
@@ -160,7 +160,7 @@ test("searchNearbyParkingLotsByLocationQuery resolves a Kakao anchor and derives
 
   const result = await searchNearbyParkingLotsByLocationQuery("광화문", {
     limit: 2,
-    apiKey: "data-key",
+    apiKey: "data-key-example",
     fetchImpl
   });
 

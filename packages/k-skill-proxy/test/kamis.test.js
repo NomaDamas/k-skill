@@ -82,7 +82,7 @@ test("KAMIS route injects key, normalizes success, and caches", async (t) => {
       }
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
-  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret" } });
+  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -99,14 +99,14 @@ test("KAMIS route injects key, normalizes success, and caches", async (t) => {
   assert.match(calls[0], /p_country_code=1101/);
   assert.match(calls[0], /p_item_category_code=200/);
   assert.doesNotMatch(calls[0], /p_productclscode|p_countycode|p_itemcategorycode/);
-  assert.doesNotMatch(JSON.stringify(first.json()), /kamis-secret|secret-must-not-return/);
+  assert.doesNotMatch(JSON.stringify(first.json()), /kamis-secret-example|secret-must-not-return/);
 });
 
 test("KAMIS route accepts valid exceptional item codes under their category", async (t) => {
   const originalFetch = global.fetch;
   let body = {};
   global.fetch = async () => new Response(JSON.stringify(body), { status: 200 });
-  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret" } });
+  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -146,7 +146,7 @@ test("KAMIS route fails closed when the echoed filter differs from the request",
   const originalFetch = global.fetch;
   let body = {};
   global.fetch = async () => new Response(JSON.stringify(body), { status: 200 });
-  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret" } });
+  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -181,7 +181,7 @@ test("KAMIS route returns empty items for a no-data upstream reply", async (t) =
     condition: [{ p_category_code: "200", p_product_cls_code: "01" }],
     data: { error_code: "001" }
   }), { status: 200 });
-  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret" } });
+  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -193,6 +193,170 @@ test("KAMIS route returns empty items for a no-data upstream reply", async (t) =
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.json().items, []);
   assert.equal(response.json().upstream.error_code, "001");
+});
+
+function stubKamisFetch({ rowsByRegday = new Map(), onCall = null } = {}) {
+  const calls = [];
+  global.fetch = async (url) => {
+    const parsedUrl = new URL(String(url));
+    const regday = parsedUrl.searchParams.get("p_regday");
+    calls.push(regday);
+    if (onCall) {
+      const override = onCall(regday, calls.length);
+      if (override) {
+        return new Response(JSON.stringify(override), { status: 200 });
+      }
+    }
+    const rows = rowsByRegday.get(regday);
+    return new Response(JSON.stringify({
+      condition: [{ p_category_code: "200", p_product_cls_code: "01" }],
+      data: rows
+        ? { error_code: "000", item: rows }
+        : { error_code: "001" }
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  return calls;
+}
+
+test("KAMIS route walks back to the latest published survey day when p_regday is omitted", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = stubKamisFetch({
+    rowsByRegday: new Map([
+      ["2026-10-31", [{ item_code: "245", item_name: "양파", dpr1: "18,800" }]]
+    ])
+  });
+  const app = buildServer({
+    env: { KAMIS_API_KEY: "kamis-secret" },
+    now: () => new Date("2026-11-02T05:00:00Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kamis/food-price/daily-category?p_item_category_code=200"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(calls, ["2026-11-02", "2026-11-01", "2026-10-31"]);
+  assert.equal(response.json().query.p_regday, "2026-10-31");
+  assert.equal(response.json().items[0].item_name, "양파");
+  assert.equal(response.json().upstream.error_code, "000");
+
+  // The resolved payload is cached under the original (dateless) key, so the
+  // empty probes are never reused as a resolved answer.
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/kamis/food-price/daily-category?p_item_category_code=200"
+  });
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(second.json().query.p_regday, "2026-10-31");
+  assert.deepEqual(calls, ["2026-11-02", "2026-11-01", "2026-10-31"]);
+});
+
+test("KAMIS default survey day follows the KST calendar date", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = stubKamisFetch({
+    rowsByRegday: new Map([
+      ["2026-11-03", [{ item_code: "245", item_name: "양파" }]]
+    ])
+  });
+  const app = buildServer({
+    env: { KAMIS_API_KEY: "kamis-secret" },
+    // 2026-11-02T16:30Z is already 2026-11-03 01:30 in Asia/Seoul.
+    now: () => new Date("2026-11-02T16:30:00Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kamis/food-price/daily-category?p_item_category_code=200"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(calls, ["2026-11-03"]);
+  assert.equal(response.json().query.p_regday, "2026-11-03");
+  assert.equal(response.json().items.length, 1);
+});
+
+test("KAMIS route keeps an explicit p_regday without walking back", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = stubKamisFetch();
+  const app = buildServer({
+    env: { KAMIS_API_KEY: "kamis-secret" },
+    now: () => new Date("2026-11-02T05:00:00Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kamis/food-price/daily-category?p_item_category_code=200&p_regday=2026-11-01"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(calls, ["2026-11-01"]);
+  assert.deepEqual(response.json().items, []);
+  assert.equal(response.json().query.p_regday, "2026-11-01");
+});
+
+test("KAMIS default survey day walk-back is bounded and reports today", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = stubKamisFetch();
+  const app = buildServer({
+    env: { KAMIS_API_KEY: "kamis-secret" },
+    now: () => new Date("2026-11-02T05:00:00Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kamis/food-price/daily-category?p_item_category_code=200"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(calls, [
+    "2026-11-02",
+    "2026-11-01",
+    "2026-10-31",
+    "2026-10-30",
+    "2026-10-29",
+    "2026-10-28",
+    "2026-10-27",
+    "2026-10-26"
+  ]);
+  assert.deepEqual(response.json().items, []);
+  assert.equal(response.json().query.p_regday, "2026-11-02");
+  assert.equal(response.json().upstream.error_code, "001");
+});
+
+test("KAMIS default survey day surfaces a hard upstream failure without walking back", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = stubKamisFetch({
+    onCall: () => ({ data: { error_code: "900" } })
+  });
+  const app = buildServer({
+    env: { KAMIS_API_KEY: "kamis-secret" },
+    now: () => new Date("2026-11-02T05:00:00Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/kamis/food-price/daily-category?p_item_category_code=200"
+  });
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_auth_error");
+  assert.deepEqual(calls, ["2026-11-02"]);
 });
 
 test("KAMIS route reports missing key", async (t) => {

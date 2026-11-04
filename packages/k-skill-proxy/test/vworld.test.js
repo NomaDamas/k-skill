@@ -83,7 +83,7 @@ test("normalizes and bounds VWorld apartment-price pagination and unit filters",
 
 test("forwards the header credential only to the fixed VWorld host and redacts echoed secrets", async () => {
   const calls = [];
-  const secret = "synthetic+/=credential";
+  const secret = "synthetic+/=credential-example";
   const result = await proxyVWorldRequest({
     operation: "search",
     params: normalizeVWorldSearchQuery({ query: "강나루현대", type: "place" }),
@@ -167,7 +167,7 @@ test("requires a credential and recognizes only semantic VWorld successes", asyn
 });
 
 test("response projection replaces upstream error codes with fixed safe values", () => {
-  const secret = "SYNTHETICSECRET";
+  const secret = "SYNTHETICSECRET-example";
   const search = JSON.parse(projectVWorldBody(
     "search",
     JSON.stringify({ response: { status: secret, error: { code: secret, text: secret } } }),
@@ -194,7 +194,7 @@ test("response projection replaces upstream error codes with fixed safe values",
 });
 
 test("response projection fails closed for malformed and deeply nested credential encodings", () => {
-  const secret = "SyntheticSecret";
+  const secret = "SyntheticSecret-example";
   let deeplyEncoded = secret;
   for (let depth = 0; depth < 32; depth += 1) {
     deeplyEncoded = encodeURIComponent(deeplyEncoded);
@@ -207,7 +207,7 @@ test("response projection fails closed for malformed and deeply nested credentia
         result: {
           items: [{
             id: "1150010400104480001",
-            title: "%ZZ%53ynthetic%53ecret",
+            title: "%ZZ%53ynthetic%53ecret-example",
             address: { parcel: deeplyEncoded, road: "서울 강서구" }
           }]
         }
@@ -242,7 +242,7 @@ test("response projection never truncates an invalid price identity into a valid
         }]
       }
     }),
-    "synthetic-secret"
+    "synthetic-secret-example"
   );
   const record = JSON.parse(body).apartHousingPrices.field[0];
 
@@ -263,7 +263,7 @@ test("response projection never truncates invalid pagination into the requested 
         field: []
       }
     }),
-    "synthetic-secret"
+    "synthetic-secret-example"
   );
 
   assert.equal(
@@ -277,7 +277,7 @@ test("rejects redirected VWorld responses even when a custom fetch ignores redir
     proxyVWorldRequest({
       operation: "search",
       params: normalizeVWorldSearchQuery({ query: "강나루현대", type: "place" }),
-      apiKey: "synthetic-secret",
+      apiKey: "synthetic-secret-example",
       fetchImpl: async () => ({
         redirected: true,
         url: "https://redirected.example/",
@@ -291,7 +291,7 @@ test("rejects redirected VWorld responses even when a custom fetch ignores redir
 });
 
 test("sanitizes VWorld response-body read failures", async () => {
-  const secret = "synthetic-secret";
+  const secret = "synthetic-secret-example";
   await assert.rejects(
     proxyVWorldRequest({
       operation: "search",
@@ -320,7 +320,7 @@ test("rejects VWorld response bodies above the bounded streaming limit", async (
     proxyVWorldRequest({
       operation: "search",
       params: normalizeVWorldSearchQuery({ query: "강나루현대", type: "place" }),
-      apiKey: "synthetic-secret",
+      apiKey: "synthetic-secret-example",
       fetchImpl: async () => new Response("x".repeat(2 * 1024 * 1024 + 1))
     }),
     (error) =>
@@ -594,7 +594,7 @@ test("credential-scoped cache and projected responses reject reversible credenti
     await app.close();
   });
   const url = "/v1/vworld/search?query=encoded-cache-test&type=place";
-  const secret = "synthetic+/=credential";
+  const secret = "synthetic+/=credential-example";
   const first = await app.inject({
     method: "GET",
     url,

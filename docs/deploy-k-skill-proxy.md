@@ -20,6 +20,7 @@ available in `asia-northeast3`, which is why the service lives in Tokyo.
 | Deploy workflow | `.github/workflows/deploy-k-skill-proxy.yml` |
 | Deploy identity | `k-skill-deployer@k-skill.iam.gserviceaccount.com` via Workload Identity Federation |
 | Runtime identity | default Compute service account (`secretmanager.secretAccessor`) |
+| Egress | Direct VPC egress `kskill-egress` / `kskill-egress-an1` → Cloud NAT `kskill-egress-nat` → static IP `kskill-eatpl-egress-ip` (`34.84.103.178`), `--vpc-egress all-traffic` |
 
 ## Automatic deployment
 
@@ -99,6 +100,45 @@ Do not raise the hop count without re-verifying: with a tagged no-traffic
 revision, send requests with forged `X-Forwarded-For` / `CF-Connecting-IP`
 values and confirm they still hit `429` once `KSKILL_PROXY_RATE_LIMIT_MAX` is
 exceeded.
+
+## Static egress IP (BC Card eat.pl allowlist)
+
+BC Card requires a single allowlisted source IP. Cloud Run's default egress
+addresses are not stable, so the service uses Direct VPC egress with all
+outbound traffic routed through a Cloud NAT gateway that owns one reserved
+regional address:
+
+| Resource | Name |
+| --- | --- |
+| VPC (custom mode) | `kskill-egress` |
+| Subnet | `kskill-egress-an1` (`10.8.0.0/24`, `asia-northeast1`) |
+| Reserved address | `kskill-eatpl-egress-ip` = `34.84.103.178` |
+| Router / NAT | `kskill-egress-router` / `kskill-egress-nat` (manual IP pool, all subnet ranges) |
+
+Register `34.84.103.178` with BC Card. The Lightsail relay stays configured as
+the fallback until BC Card confirms the allowlist and a search returns
+`upstream.provider: "bccard-eatpl"`.
+
+The network settings live on the service template, so the image-only workflow
+deploy keeps them. Every other upstream the proxy calls (data.go.kr, KOSIS,
+Naver, and so on) now also leaves from this address. Recreate or inspect with:
+
+```bash
+gcloud compute networks create kskill-egress --subnet-mode=custom
+gcloud compute networks subnets create kskill-egress-an1 --region asia-northeast1 \
+  --network kskill-egress --range 10.8.0.0/24
+gcloud compute addresses create kskill-eatpl-egress-ip --region asia-northeast1
+gcloud compute routers create kskill-egress-router --region asia-northeast1 --network kskill-egress
+gcloud compute routers nats create kskill-egress-nat --region asia-northeast1 \
+  --router kskill-egress-router --nat-all-subnet-ip-ranges \
+  --nat-external-ip-pool=kskill-eatpl-egress-ip
+gcloud run services update k-skill-proxy --region asia-northeast1 \
+  --network kskill-egress --subnet kskill-egress-an1 --vpc-egress all-traffic
+```
+
+Verify the address a revision really uses with a throwaway Cloud Run job that
+has the same `--network`, `--subnet`, and `--vpc-egress all-traffic` flags and
+prints `fetch("https://api.ipify.org")`; delete the job afterwards.
 
 
 ## Upstream connectivity triage
@@ -200,8 +240,11 @@ Verify activation through `/health` → `upstreams.*Configured`.
 The Coupang keys enable `GET /v1/coupang/products/search`;
 `KOMSA_MTIS_API_KEY` enables `GET /v1/komsa/ferry/:dataset`.
 
-Optional BC Card eat.pl relay keys, only when the Lightsail fixed-egress relay
-is in use. Store the same random token on Lightsail as `EATPL_RELAY_TOKEN`:
+BC Card eat.pl uses the direct Cloud Run request path first. Keep the optional
+Lightsail fixed-egress relay configured as a fallback while BC Card has not yet
+allowlisted the Cloud Run egress IP, and remove the two relay bindings only
+after the direct path is stable. Store the same random token on Lightsail as
+`EATPL_RELAY_TOKEN`:
 
 ```dotenv
 BCCARD_EATPL_INST_NM=<partner-institution-code>
@@ -209,6 +252,10 @@ BCCARD_EATPL_API_BASE_URL=https://api.paybooc.ai/api/mer
 BCCARD_EATPL_RELAY_URL=https://eatpl-relay.nomadamas.org/v1/search
 BCCARD_EATPL_RELAY_TOKEN=<same-token-as-lightsail>
 ```
+
+A successful search reports `upstream.provider: "bccard-eatpl"` for the direct
+path or `"bccard-eatpl-relay"` when fallback was used. With no base URL, the
+relay remains usable as the only configured upstream.
 
 ## HRFCO relay (Han River water level)
 

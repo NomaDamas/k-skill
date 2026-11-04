@@ -363,7 +363,7 @@ test("naver news search endpoint returns 400 when query is missing", async (t) =
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -406,7 +406,7 @@ test("naver news search endpoint returns 400 preflight when start+display exceed
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -462,7 +462,7 @@ test("naver news search endpoint proxies to official API with correct headers an
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "test-client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "test-client-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "test-client-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -499,7 +499,7 @@ test("naver news search endpoint proxies to official API with correct headers an
   assert.equal(upstreamUrl.searchParams.get("display"), "5");
   assert.equal(upstreamUrl.searchParams.get("sort"), "date");
   assert.equal(fetchCalls[0].headers["X-Naver-Client-Id"], "test-client-id");
-  assert.equal(fetchCalls[0].headers["X-Naver-Client-Secret"], "test-client-secret");
+  assert.equal(fetchCalls[0].headers["X-Naver-Client-Secret"], "test-client-secret-example");
 });
 
 test("naver news search endpoint caches successful responses and serves hit on second call", async (t) => {
@@ -530,7 +530,7 @@ test("naver news search endpoint caches successful responses and serves hit on s
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -556,7 +556,7 @@ test("naver news search endpoint caches successful responses and serves hit on s
   assert.equal(fetchCount, 1);
 });
 
-test("naver news search endpoint surfaces upstream errors without caching them", async (t) => {
+test("naver news search endpoint surfaces upstream 401 auth failure as a proxy 502 without caching it", async (t) => {
   const originalFetch = global.fetch;
   let fetchCount = 0;
   global.fetch = async () => {
@@ -573,7 +573,7 @@ test("naver news search endpoint surfaces upstream errors without caching them",
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "bad-id",
-      NAVER_SEARCH_CLIENT_SECRET: "bad-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "bad-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -587,19 +587,56 @@ test("naver news search endpoint surfaces upstream errors without caching them",
     method: "GET",
     url: "/v1/naver-news/search?q=%EB%B0%B0%EB%93%A0"
   });
-  assert.equal(response.statusCode, 401);
+  assert.equal(response.statusCode, 502);
   assert.equal(response.json().error, "upstream_error");
   assert.equal(response.json().upstream.status_code, 401);
+  assert.equal(response.json().upstream.error_code, "024");
 
   const retry = await app.inject({
     method: "GET",
     url: "/v1/naver-news/search?q=%EB%B0%B0%EB%93%A0"
   });
-  assert.equal(retry.statusCode, 401);
+  assert.equal(retry.statusCode, 502);
   assert.equal(fetchCount, 2, "failures must not be cached");
 });
 
-test("naver news search endpoint surfaces upstream 429 rate-limit and echoes status code", async (t) => {
+test("naver news search endpoint hides upstream 404 behind a proxy 502 upstream_error", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        errorMessage: "Invalid search api (존재하지 않는 검색 api 입니다.)",
+        errorCode: "SE05"
+      }),
+      { status: 404, headers: { "content-type": "application/json" } }
+    );
+
+  const app = buildServer({
+    env: {
+      NAVER_SEARCH_CLIENT_ID: "client-id",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/naver-news/search?q=airpods"
+  });
+
+  assert.equal(response.statusCode, 502);
+  const body = response.json();
+  assert.equal(body.error, "upstream_error");
+  assert.equal(body.upstream.status_code, 404);
+  assert.equal(body.upstream.error_code, "SE05");
+});
+
+test("naver news search endpoint surfaces upstream 429 as upstream_rate_limited with retry-after", async (t) => {
   const originalFetch = global.fetch;
   global.fetch = async () => {
     return new Response(
@@ -607,14 +644,14 @@ test("naver news search endpoint surfaces upstream 429 rate-limit and echoes sta
         errorMessage: "Request limit exceeded",
         errorCode: "010"
       }),
-      { status: 429, headers: { "content-type": "application/json" } }
+      { status: 429, headers: { "content-type": "application/json", "retry-after": "30" } }
     );
   };
 
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -629,7 +666,11 @@ test("naver news search endpoint surfaces upstream 429 rate-limit and echoes sta
     url: "/v1/naver-news/search?q=%EC%A0%9C%ED%95%9C"
   });
   assert.equal(response.statusCode, 429);
-  assert.equal(response.json().error, "upstream_error");
+  assert.equal(response.json().error, "upstream_rate_limited");
+  assert.equal(response.json().upstream.status_code, 429);
+  assert.equal(response.json().upstream.error_code, "010");
+  assert.equal(response.json().upstream.retry_after, 30);
+  assert.equal(response.headers["retry-after"], "30");
 });
 
 test("naver news search endpoint reports 5xx upstream failures as 502 proxy error", async (t) => {
@@ -644,7 +685,7 @@ test("naver news search endpoint reports 5xx upstream failures as 502 proxy erro
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "client-secret",
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -667,7 +708,7 @@ test("health endpoint exposes naverNewsApiConfigured flag based on credentials",
   const app = buildServer({
     env: {
       NAVER_SEARCH_CLIENT_ID: "client-id",
-      NAVER_SEARCH_CLIENT_SECRET: "client-secret"
+      NAVER_SEARCH_CLIENT_SECRET: "client-secret-example"
     }
   });
 

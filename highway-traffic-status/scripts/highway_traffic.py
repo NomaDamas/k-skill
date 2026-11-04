@@ -16,8 +16,8 @@ Site-dependent access paths (discovered live 2026-07-21):
        ?apiKey=<key>&type=ex&cctvType=1&minX=&maxX=&minY=&maxY=&getType=json
    - The published demo key ``test`` works; invalid keys return HTTP 401 JSON
      {"header": {"resultCode": 4005, ...}}.
-   - Despite getType=json the success body is XML; parse XML first and fall
-     back to the JSON error envelope.
+   - Success bodies may be XML or JSON; parse both response shapes and retain
+     the JSON authentication-error envelope.
 
 Both surfaces work without user registration via the demo key, so per the
 free API proxy policy this skill calls upstream directly (no k-skill-proxy
@@ -198,9 +198,35 @@ def filter_traffic(
 
 def normalize_cctv(body: str) -> List[Dict[str, Any]]:
     text = body.strip()
+    cameras = []
+
+    def add_camera(field) -> None:
+        try:
+            lat = float(str(field("coordy") or "").strip())
+            lon = float(str(field("coordx") or "").strip())
+        except (TypeError, ValueError):
+            return
+        cameras.append({
+            "name": str(field("cctvname") or "").strip(),
+            "url": str(field("cctvurl") or "").strip(),
+            "format": str(field("cctvformat") or "").strip(),
+            "lat": lat,
+            "lon": lon,
+        })
+
     if text.startswith("{"):
         with contextlib.suppress(json.JSONDecodeError):
             payload = json.loads(text)
+            response = payload.get("response") if isinstance(payload, dict) else None
+            if isinstance(response, dict):
+                items = response.get("data", [])
+                if not isinstance(items, list):
+                    raise HelperError("upstream CCTV 응답에 데이터가 없습니다.")
+                for item in items:
+                    if isinstance(item, dict):
+                        add_camera(lambda tag, item=item: item.get(tag))
+                return cameras
+
             header = payload.get("header") if isinstance(payload, dict) else None
             message = str((header or {}).get("resultMsg") or "upstream 오류")
             raise HelperError(f"upstream 오류: {message} (인증키 확인 필요)")
@@ -209,24 +235,12 @@ def normalize_cctv(body: str) -> List[Dict[str, Any]]:
     except ET.ParseError as exc:
         raise HelperError("upstream CCTV 응답을 해석할 수 없습니다 (차단 또는 형식 변경 가능성).") from exc
 
-    cameras = []
     for item in root.iter("data"):
         def field(tag: str) -> str:
             node = item.find(tag)
             return (node.text or "").strip() if node is not None and node.text else ""
 
-        try:
-            lat = float(field("coordy"))
-            lon = float(field("coordx"))
-        except ValueError:
-            continue
-        cameras.append({
-            "name": field("cctvname"),
-            "url": field("cctvurl"),
-            "format": field("cctvformat"),
-            "lat": lat,
-            "lon": lon,
-        })
+        add_camera(field)
     if not cameras and root.tag != "response":
         raise HelperError("upstream CCTV 응답에 데이터가 없습니다.")
     return cameras

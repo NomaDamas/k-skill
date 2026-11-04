@@ -36,6 +36,7 @@ const {
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
   normalizeUnmatchedPath,
+  parseQueryStringWithEucKrFallback,
   proxyAirKoreaRequest,
   proxyData4LibraryRequest,
   proxyHrfcoWaterLevelRequest,
@@ -53,6 +54,7 @@ const {
   normalizeCoupangProducts
 } = require("../src/coupang");
 const { parseXmlItems } = require("../src/molit");
+const { getCurrentKstDate, KRX_DEFAULT_BAS_DD_MAX_LOOKBACK_DAYS } = require("../src/krx-stock");
 const { resolveEducationOfficeFromNaturalLanguage } = require("../src/neis-office-codes");
 const { classifyUpstreamFailure } = require("../src/upstream-errors");
 const { inspect } = require("node:util");
@@ -231,6 +233,128 @@ test("Coupang product search signs upstream requests and caches normalized resul
   assert.equal(calls.length, 1);
 });
 
+test("Coupang product search maps an HTTP 200 error envelope to a 502 instead of an empty success", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    // The Coupang gateway answers HTTP 200 and carries the real status in the envelope.
+    return new Response(JSON.stringify({ rCode: "403", rMessage: "Not authorized." }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      COUPANG_ACCESS_KEY: "test-access",
+      COUPANG_SECRET_KEY: "test-secret",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    },
+    now: () => new Date("2026-08-21T00:00:00.000Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/coupang/products/search?q=%EB%AC%B4%EC%84%A0%EC%B2%AD%EC%86%8C%EA%B8%B0&limit=3";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_forbidden");
+  assert.equal(first.json().upstream.body_snippet, "rCode=403 rMessage=Not authorized.");
+  assert.doesNotMatch(first.body, /test-access|test-secret/);
+  assert.equal(calls.length, 1);
+
+  // Failure responses must never be cached, so the retry reaches upstream again.
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 502);
+  assert.equal(second.json().error, "upstream_forbidden");
+  assert.equal(second.json().proxy.cache.hit, false);
+  assert.equal(calls.length, 2);
+});
+
+test("Coupang product search classifies numeric and code-style error envelopes", async (t) => {
+  const originalFetch = global.fetch;
+  const cases = [
+    {
+      body: { rCode: 401, rMessage: "Expired access key." },
+      error: "upstream_forbidden",
+      snippet: "rCode=401 rMessage=Expired access key."
+    },
+    {
+      body: { code: "ERROR", message: "Invalid request." },
+      error: "upstream_error",
+      snippet: "code=ERROR message=Invalid request."
+    }
+  ];
+  t.after(() => {
+    global.fetch = originalFetch;
+  });
+
+  for (const testCase of cases) {
+    global.fetch = async () =>
+      new Response(JSON.stringify(testCase.body), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+
+    const app = buildServer({
+      env: {
+        COUPANG_ACCESS_KEY: "test-access",
+        COUPANG_SECRET_KEY: "test-secret"
+      },
+      now: () => new Date("2026-08-21T00:00:00.000Z")
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/coupang/products/search?q=%EB%AC%B4%EC%84%A0%EC%B2%AD%EC%86%8C%EA%B8%B0"
+    });
+    await app.close();
+
+    assert.equal(response.statusCode, 502);
+    assert.equal(response.json().error, testCase.error);
+    assert.equal(response.json().upstream.body_snippet, testCase.snippet);
+  }
+});
+
+test("Coupang product search keeps successful rCode 0 responses with empty data", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return new Response(JSON.stringify({ rCode: 0, rMessage: "", data: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      COUPANG_ACCESS_KEY: "test-access",
+      COUPANG_SECRET_KEY: "test-secret",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    },
+    now: () => new Date("2026-08-21T00:00:00.000Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/coupang/products/search?q=%EB%AC%B4%EC%84%A0%EC%B2%AD%EC%86%8C%EA%B8%B0&limit=3";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.json().items, []);
+  assert.equal(first.json().upstream.response_code, "0");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(calls.length, 1);
+});
+
 test("health reports Coupang configuration only when both keys are present", async (t) => {
   const missing = buildServer({ env: { COUPANG_ACCESS_KEY: "access-only" } });
   const configured = buildServer({
@@ -366,7 +490,7 @@ test("route usage attribution normalizes unmatched paths and excludes query valu
   const fields = buildRouteUsageFields({
     route: "/v1/example",
     statusCode: 400,
-    query: { secret: "must-not-leak", page: "1" },
+    query: { secret: "must-not-leak-example", page: "1" },
     clientIp: "203.0.113.10",
     attributionSalt: "test-salt",
     errorCode: "bad_request"
@@ -376,7 +500,7 @@ test("route usage attribution normalizes unmatched paths and excludes query valu
   assert.match(fields.queryHash, /^[a-f0-9]{8}$/);
   assert.match(fields.clientHash, /^[a-f0-9]{8}$/);
   assert.equal(fields.errorCode, "bad_request");
-  assert.doesNotMatch(JSON.stringify(fields), /must-not-leak|203\.0\.113\.10/);
+  assert.doesNotMatch(JSON.stringify(fields), /must-not-leak-example|203\.0\.113\.10/);
 });
 
 test("error handler uses warn for 4xx and error for 5xx", () => {
@@ -449,7 +573,7 @@ test("Korean holiday route injects ServiceKey and caches XML success", async (t)
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -459,7 +583,7 @@ test("Korean holiday route injects ServiceKey and caches XML success", async (t)
   assert.equal(first.statusCode, 200);
   assert.match(first.body, /광복절/);
   assert.match(calls[0], /\/SpcdeInfoService\/getRestDeInfo\?/);
-  assert.match(calls[0], /ServiceKey=data-go-key/);
+  assert.match(calls[0], /ServiceKey=data-go-key-example/);
   assert.match(calls[0], /solYear=2026/);
   assert.match(calls[0], /solMonth=08/);
 
@@ -479,7 +603,7 @@ test("Korean holiday route maps solar-term operation and missing key", async (t)
     });
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   const missingApp = buildServer({ env: {} });
   t.after(async () => {
     global.fetch = originalFetch;
@@ -539,7 +663,7 @@ test("KR WHOIS domain route injects serviceKey server-side and caches success", 
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -549,7 +673,7 @@ test("KR WHOIS domain route injects serviceKey server-side and caches success", 
   assert.equal(first.statusCode, 200);
   assert.equal(first.json().name, "kisa.or.kr");
   assert.match(calls[0], /\/B551505\/whois\/domain_name\?/);
-  assert.match(calls[0], /serviceKey=data-go-key/);
+  assert.match(calls[0], /serviceKey=data-go-key-example/);
   assert.match(calls[0], /query=kisa\.or\.kr/);
   assert.match(calls[0], /answer=json/);
 
@@ -621,7 +745,7 @@ test("KR WHOIS IP and AS routes inject the server key and cache per operation", 
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -638,7 +762,7 @@ test("KR WHOIS IP and AS routes inject the server key and cache per operation", 
   assert.equal(asSecond.statusCode, 200);
   assert.equal(calls.length, 2, "each operation should cache its successful response");
   assert.equal(calls[0].pathname, "/B551505/whois/ip_address");
-  assert.equal(calls[0].searchParams.get("serviceKey"), "data-go-key");
+  assert.equal(calls[0].searchParams.get("serviceKey"), "data-go-key-example");
   assert.equal(calls[0].searchParams.get("query"), "202.30.50.51");
   assert.equal(calls[1].pathname, "/B551505/whois/as_number");
   assert.equal(calls[1].searchParams.get("query"), "AS9700");
@@ -650,12 +774,12 @@ test("KR WHOIS IP and AS routes redact echoed keys and do not cache semantic fai
   global.fetch = async () => {
     calls += 1;
     const body = calls === 1
-      ? JSON.stringify({ response: { result: { result_code: "11000", result_msg: "serviceKey=data-go-key" } } })
+      ? JSON.stringify({ response: { result: { result_code: "11000", result_msg: "serviceKey=data-go-key-example" } } })
       : JSON.stringify({ response: { result: { result_code: "10000", result_msg: "정상 응답 입니다." } } });
     return new Response(body, { status: 200, headers: { "content-type": "application/json" } });
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -664,7 +788,7 @@ test("KR WHOIS IP and AS routes redact echoed keys and do not cache semantic fai
   const url = "/v1/kr-whois/ip?ip=202.30.50.51";
   const first = await app.inject({ method: "GET", url });
   assert.equal(first.statusCode, 200);
-  assert.doesNotMatch(first.body, /data-go-key/);
+  assert.doesNotMatch(first.body, /data-go-key-example/);
   assert.match(first.body, /\[REDACTED\]/);
 
   const second = await app.inject({ method: "GET", url });
@@ -679,7 +803,7 @@ test("KR WHOIS routes do not expose the server key when fetch throws", async (t)
     throw new Error(`request failed for ${url}`);
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "super-secret-data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "super-secret-data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -693,7 +817,7 @@ test("KR WHOIS routes do not expose the server key when fetch throws", async (t)
     const response = await app.inject({ method: "GET", url });
     assert.equal(response.statusCode, 502);
     assert.equal(response.json().error, "upstream_fetch_failed");
-    assert.doesNotMatch(response.body, /super-secret-data-go-key/);
+    assert.doesNotMatch(response.body, /super-secret-data-go-key-example/);
     assert.doesNotMatch(response.body, /serviceKey=/i);
   }
 });
@@ -774,7 +898,7 @@ test("NHIS checkup route injects serviceKey and caches XML success", async (t) =
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -785,7 +909,7 @@ test("NHIS checkup route injects serviceKey and caches XML success", async (t) =
   assert.equal(first.statusCode, 200);
   assert.match(first.body, /강남검진센터/);
   assert.match(calls[0], /HmcSearchService\/getRegnHmcList/);
-  assert.match(calls[0], /serviceKey=data-go-key/);
+  assert.match(calls[0], /serviceKey=data-go-key-example/);
   assert.match(calls[0], /hmcNm=%EA%B2%80%EC%A7%84/);
   assert.match(calls[0], /siDoCd=11/);
   assert.match(calls[0], /siGunGuCd=11680/);
@@ -850,7 +974,7 @@ test("NHIS long-term care route injects serviceKey and caches XML success", asyn
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -860,7 +984,7 @@ test("NHIS long-term care route injects serviceKey and caches XML success", asyn
   assert.equal(first.statusCode, 200);
   assert.match(first.body, /강남요양원/);
   assert.match(calls[0], /getBillGreentInsttSearchList02/);
-  assert.match(calls[0], /serviceKey=data-go-key/);
+  assert.match(calls[0], /serviceKey=data-go-key-example/);
   assert.match(calls[0], /adminNm=%EA%B0%95%EB%82%A8/);
   assert.match(calls[0], /siDoCd=11/);
   assert.match(calls[0], /numOfRows=5/);
@@ -935,7 +1059,7 @@ test("Assembly routes inject KEY server-side and cache successful responses", as
     );
   };
 
-  const app = buildServer({ env: { ASSEMBLY_API_KEY: "assembly-key" } });
+  const app = buildServer({ env: { ASSEMBLY_API_KEY: "assembly-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -945,7 +1069,7 @@ test("Assembly routes inject KEY server-side and cache successful responses", as
   assert.equal(first.statusCode, 200);
   assert.equal(first.json().ALLBILLV2[1].row[0].BILL_NM, "간호법");
   assert.match(calls[0], /\/portal\/openapi\/ALLBILLV2\?/);
-  assert.match(calls[0], /KEY=assembly-key/);
+  assert.match(calls[0], /KEY=assembly-key-example/);
   assert.match(calls[0], /Type=json/);
   assert.match(calls[0], /BILL_NM=%EA%B0%84%ED%98%B8%EB%B2%95/);
   assert.match(calls[0], /pSize=5/);
@@ -966,7 +1090,7 @@ test("Assembly bill detail and votes route to documented operations", async (t) 
     });
   };
 
-  const app = buildServer({ env: { KSKILL_ASSEMBLY_API_KEY: "assembly-key" } });
+  const app = buildServer({ env: { KSKILL_ASSEMBLY_API_KEY: "assembly-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1027,7 +1151,7 @@ test("KOPIS routes inject service key and cache list responses", async (t) => {
     });
   };
 
-  const app = buildServer({ env: { KOPIS_API_KEY: "kopis-key" } });
+  const app = buildServer({ env: { KOPIS_API_KEY: "kopis-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1038,7 +1162,7 @@ test("KOPIS routes inject service key and cache list responses", async (t) => {
   assert.match(first.body, /햄릿/);
   assert.match(calls[0], /^https:\/\/kopis\.or\.kr\/openApi\/restful\/pblprfr\?/);
   assert.match(calls[0], /\/openApi\/restful\/pblprfr\?/);
-  assert.match(calls[0], /service=kopis-key/);
+  assert.match(calls[0], /service=kopis-key-example/);
   assert.match(calls[0], /stdate=20260101/);
   assert.match(calls[0], /eddate=20260131/);
   assert.match(calls[0], /rows=5/);
@@ -1067,7 +1191,7 @@ test("Assembly and KOPIS semantic errors are not cached so retries self-heal", a
     return new Response(body, { status: 200, headers: { "content-type": "application/xml" } });
   };
 
-  const app = buildServer({ env: { ASSEMBLY_API_KEY: "assembly-key", KOPIS_API_KEY: "kopis-key" } });
+  const app = buildServer({ env: { ASSEMBLY_API_KEY: "assembly-key-example", KOPIS_API_KEY: "kopis-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1095,7 +1219,7 @@ test("KOPIS detail and facility routes preserve narrow upstream paths", async (t
     });
   };
 
-  const app = buildServer({ env: { KSKILL_KOPIS_API_KEY: "kopis-key" } });
+  const app = buildServer({ env: { KSKILL_KOPIS_API_KEY: "kopis-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1106,8 +1230,8 @@ test("KOPIS detail and facility routes preserve narrow upstream paths", async (t
   assert.equal((await app.inject({ method: "GET", url: "/v1/kopis/facilities/FC001247" })).statusCode, 200);
   assert.match(calls[0], /\/openApi\/restful\/prfplc\?/);
   assert.match(calls[0], /shprfnmfct=%EC%84%B8%EC%A2%85/);
-  assert.match(calls[1], /\/openApi\/restful\/pblprfr\/PF132236\?service=kopis-key/);
-  assert.match(calls[2], /\/openApi\/restful\/prfplc\/FC001247\?service=kopis-key/);
+  assert.match(calls[1], /\/openApi\/restful\/pblprfr\/PF132236\?service=kopis-key-example/);
+  assert.match(calls[2], /\/openApi\/restful\/prfplc\/FC001247\?service=kopis-key-example/);
 });
 
 test("KOPIS routes report missing API key", async (t) => {
@@ -1133,7 +1257,7 @@ test("food-safety search does not cache upstream failures so transient errors se
         { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
       );
     }
-    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I0490/json/1/50")) {
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key-example/I0490/json/1/50")) {
       recallCalls.push(recallMode);
       if (recallMode === "fail") {
         return new Response(
@@ -1161,8 +1285,8 @@ test("food-safety search does not cache upstream failures so transient errors se
 
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "data-go-key",
-      FOODSAFETYKOREA_API_KEY: "live-food-key"
+      DATA_GO_KR_API_KEY: "data-go-key-example",
+      FOODSAFETYKOREA_API_KEY: "live-food-key-example"
     }
   });
 
@@ -1270,7 +1394,7 @@ test("NTS business status route proxies POST body with service key server-side",
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1287,7 +1411,7 @@ test("NTS business status route proxies POST body with service key server-side",
   assert.equal(response.statusCode, 200);
   assert.equal(body.data[0].b_stt, "계속사업자");
   assert.equal(body.proxy.cache.hit, false);
-  assert.match(calls[0].url, /\/nts-businessman\/v1\/status\?serviceKey=data-go-key$/);
+  assert.match(calls[0].url, /\/nts-businessman\/v1\/status\?serviceKey=data-go-key-example$/);
   assert.deepEqual(JSON.parse(calls[0].options.body), { b_no: ["1234567890"] });
   assert.equal(calls[0].options.method, "POST");
   assert.equal(calls[0].options.headers["content-type"], "application/json");
@@ -1330,7 +1454,7 @@ test("NTS business validate route normalizes businesses and reports missing key"
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1346,7 +1470,7 @@ test("NTS business validate route normalizes businesses and reports missing key"
 
   assert.equal(response.statusCode, 200);
   assert.equal(body.data[0].valid, "01");
-  assert.match(calls[0].url, /\/nts-businessman\/v1\/validate\?serviceKey=data-go-key$/);
+  assert.match(calls[0].url, /\/nts-businessman\/v1\/validate\?serviceKey=data-go-key-example$/);
   assert.deepEqual(JSON.parse(calls[0].options.body), {
     businesses: [{ b_no: "1234567890", start_dt: "20200101", p_nm: "홍길동", b_adr: "서울" }]
   });
@@ -1376,7 +1500,7 @@ test("NTS business validate route does not cache or echo sensitive query fields"
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1430,7 +1554,7 @@ test("NTS business semantic upstream failures are non-cacheable errors", async (
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1466,7 +1590,7 @@ test("NTS business route maps upstream fetch failures to 502 without caching", a
     throw new Error("network down");
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1498,7 +1622,7 @@ test("NTS business route does not leak service keys from upstream fetch exceptio
     throw new Error(`proxy tunnel failed for ${url}`);
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "super-secret-data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "super-secret-data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -1515,7 +1639,7 @@ test("NTS business route does not leak service keys from upstream fetch exceptio
   assert.equal(response.statusCode, 502);
   assert.equal(body.error, "proxy_error");
   assert.equal(body.message, "NTS business upstream request failed.");
-  assert.equal(bodyText.includes("super-secret-data-go-key"), false);
+  assert.equal(bodyText.includes("super-secret-data-go-key-example"), false);
   assert.equal(bodyText.includes("serviceKey"), false);
 });
 
@@ -1589,7 +1713,7 @@ test("health endpoint reports KRX upstream status when configured", async (t) =>
 test("health endpoint reports KOMSA upstream status when configured", async (t) => {
   const app = buildServer({
     env: {
-      KOMSA_MTIS_API_KEY: "komsa-key"
+      KOMSA_MTIS_API_KEY: "komsa-key-example"
     }
   });
 
@@ -1604,7 +1728,7 @@ test("health endpoint reports KOMSA upstream status when configured", async (t) 
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().upstreams.komsaConfigured, true);
-  assert.doesNotMatch(response.body, /komsa-key/);
+  assert.doesNotMatch(response.body, /komsa-key-example/);
 });
 
 test("KOSIS normalizers map public query aliases to upstream params", () => {
@@ -1681,7 +1805,7 @@ test("KOSIS proxy injects the server-side key without accepting client apiKey", 
   const calls = [];
   const upstream = await proxyKosisRequest({
     operation: "search",
-    apiKey: "server-kosis-key",
+    apiKey: "server-kosis-key-example",
     params: {
       method: "getList",
       format: "json",
@@ -1689,7 +1813,7 @@ test("KOSIS proxy injects the server-side key without accepting client apiKey", 
       searchNm: "인구",
       resultCount: 1,
       startCount: 1,
-      apiKey: "client-supplied-key"
+      apiKey: "client-supplied-key-example"
     },
     fetchImpl: async (url) => {
       calls.push(String(url));
@@ -1704,7 +1828,7 @@ test("KOSIS proxy injects the server-side key without accepting client apiKey", 
   assert.equal(calls.length, 1);
   const url = new URL(calls[0]);
   assert.equal(url.origin + url.pathname, "https://kosis.kr/openapi/statisticsSearch.do");
-  assert.equal(url.searchParams.get("apiKey"), "server-kosis-key");
+  assert.equal(url.searchParams.get("apiKey"), "server-kosis-key-example");
   assert.equal(url.searchParams.get("searchNm"), "인구");
 });
 
@@ -1719,7 +1843,7 @@ test("KOSIS proxy routes the additional official operations", async () => {
     const calls = [];
     const upstream = await proxyKosisRequest({
       operation,
-      apiKey: "server-kosis-key",
+      apiKey: "server-kosis-key-example",
       params: { method: "getList", format: "json", jsonVD: "Y" },
       fetchImpl: async (url) => {
         calls.push(new URL(String(url)));
@@ -1729,7 +1853,7 @@ test("KOSIS proxy routes the additional official operations", async () => {
 
     assert.equal(upstream.statusCode, 200);
     assert.equal(calls[0].pathname, expectedPath);
-    assert.equal(calls[0].searchParams.get("apiKey"), "server-kosis-key");
+    assert.equal(calls[0].searchParams.get("apiKey"), "server-kosis-key-example");
   }
 });
 
@@ -1746,7 +1870,7 @@ test("KOSIS search endpoint stays public and caches successful upstream response
 
   const app = buildServer({
     env: {
-      KOSIS_API_KEY: "server-kosis-key"
+      KOSIS_API_KEY: "server-kosis-key-example"
     }
   });
 
@@ -1765,7 +1889,132 @@ test("KOSIS search endpoint stays public and caches successful upstream response
   assert.equal(second.json()[0].TBL_NM, "1인 가구 비율");
 
   assert.equal(calls.length, 1, "second request should be served from proxy cache");
-  assert.equal(new URL(calls[0]).searchParams.get("apiKey"), "server-kosis-key");
+  assert.equal(new URL(calls[0]).searchParams.get("apiKey"), "server-kosis-key-example");
+});
+
+test("KOSIS data route turns an err 31 body delivered with HTTP 200 into a 400", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({ err: "31", errMsg: " 40,000셀을 초과한 결과값은 요청하실 수 없습니다." }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kosis/data?tableId=DT_1JC1501&prdSe=Y&start=2020&end=2023&objL1=ALL";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 400);
+  const payload = first.json();
+  assert.equal(payload.error, "bad_request");
+  assert.equal(payload.upstream.err, "31");
+  assert.equal(payload.upstream.errMsg, " 40,000셀을 초과한 결과값은 요청하실 수 없습니다.");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 400);
+  assert.equal(calls.length, 2, "error responses must never be cached");
+});
+
+test("KOSIS data route maps an err 40 quota body to 503 and err 41 to 502", async (t) => {
+  const originalFetch = global.fetch;
+  let body = { err: "40", errMsg: "호출가능건수 제한을 초과하였습니다." };
+  global.fetch = async () => new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json;charset=UTF-8" }
+  });
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kosis/data?tableId=DT_1JC1501&prdSe=Y&start=2020&end=2023&objL1=ALL";
+  const quota = await app.inject({ method: "GET", url });
+  assert.equal(quota.statusCode, 503);
+  assert.equal(quota.json().upstream.err, "40");
+
+  body = { err: "41", errMsg: "호출가능ROW수 제한을 초과하였습니다." };
+  const rowLimit = await app.inject({ method: "GET", url });
+  assert.equal(rowLimit.statusCode, 502);
+  assert.equal(rowLimit.json().error, "upstream_forbidden");
+  assert.equal(rowLimit.json().upstream.err, "41");
+});
+
+test("KOSIS route turns an XML error body into a non-2xx response", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("<error><err>31</err><errMsg>40,000셀 초과</errMsg></error>", {
+    status: 200,
+    headers: { "content-type": "text/xml;charset=UTF-8" }
+  });
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = `/v1/kosis/search?q=${encodeURIComponent("1인 가구")}&limit=1`;
+  const response = await app.inject({ method: "GET", url });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "bad_request");
+  assert.equal(response.json().upstream.err, "31");
+  assert.equal(response.json().upstream.errMsg, "40,000셀 초과");
+});
+
+test("KOSIS data route keeps a successful array body at 200 and caches it", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify([{ TBL_ID: "DT_1JC1501", PRD_DE: "2022", DT: "22383187" }]), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kosis/data?tableId=DT_1JC1501&prdSe=Y&start=2022&end=2023&objL1=00&itmId=T1100";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.json()[0].DT, "22383187");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json()[0].DT, "22383187");
+  assert.equal(calls.length, 1, "successful array responses should be cached");
 });
 
 test("Kakao Local geocode normalizer maps public aliases to upstream params", () => {
@@ -1780,11 +2029,11 @@ test("Kakao Local proxy injects the server-side REST API key", async () => {
   const calls = [];
   const upstream = await proxyKakaoLocalRequest({
     endpoint: "address",
-    apiKey: "server-kakao-key",
+    apiKey: "server-kakao-key-example",
     params: {
       query: "서울역",
       size: 1,
-      apiKey: "client-supplied-key"
+      apiKey: "client-supplied-key-example"
     },
     fetchImpl: async (url, options) => {
       calls.push({ url: String(url), headers: options.headers });
@@ -1801,7 +2050,7 @@ test("Kakao Local proxy injects the server-side REST API key", async () => {
   assert.equal(url.origin + url.pathname, "https://dapi.kakao.com/v2/local/search/address.json");
   assert.equal(url.searchParams.get("query"), "서울역");
   assert.equal(url.searchParams.get("apiKey"), null);
-  assert.equal(calls[0].headers.authorization, "KakaoAK server-kakao-key");
+  assert.equal(calls[0].headers.authorization, "KakaoAK server-kakao-key-example");
 });
 
 test("Kakao Local geocode endpoint falls back from address to keyword and caches", async (t) => {
@@ -1824,7 +2073,7 @@ test("Kakao Local geocode endpoint falls back from address to keyword and caches
 
   const app = buildServer({
     env: {
-      KAKAO_REST_API_KEY: "server-kakao-key"
+      KAKAO_REST_API_KEY: "server-kakao-key-example"
     }
   });
 
@@ -1864,7 +2113,7 @@ test("Kakao Map keyword search injects KakaoAK header, forwards x/y/radius/sort,
 
   const app = buildServer({
     env: {
-      KAKAO_REST_API_KEY: "server-kakao-key"
+      KAKAO_REST_API_KEY: "server-kakao-key-example"
     }
   });
 
@@ -1891,7 +2140,7 @@ test("Kakao Map keyword search injects KakaoAK header, forwards x/y/radius/sort,
   assert.equal(parsed.searchParams.get("radius"), "500");
   assert.equal(parsed.searchParams.get("sort"), "distance");
   assert.equal(parsed.searchParams.get("apiKey"), null);
-  assert.equal(calls[0].headers.authorization, "KakaoAK server-kakao-key");
+  assert.equal(calls[0].headers.authorization, "KakaoAK server-kakao-key-example");
 });
 
 test("Kakao Map keyword search validates coordinate pairing and radius bounds", async (t) => {
@@ -1903,7 +2152,7 @@ test("Kakao Map keyword search validates coordinate pairing and radius bounds", 
   };
 
   const app = buildServer({
-    env: { KAKAO_REST_API_KEY: "server-kakao-key" }
+    env: { KAKAO_REST_API_KEY: "server-kakao-key-example" }
   });
   t.after(async () => {
     global.fetch = originalFetch;
@@ -1946,7 +2195,7 @@ test("Kakao Map keyword search validates coordinate pairing and radius bounds", 
 
 test("Kakao Map category search rejects unsupported category group codes", async (t) => {
   const app = buildServer({
-    env: { KAKAO_REST_API_KEY: "server-kakao-key" }
+    env: { KAKAO_REST_API_KEY: "server-kakao-key-example" }
   });
   t.after(async () => {
     await app.close();
@@ -3031,11 +3280,308 @@ test("korean stock trade-info endpoint treats empty trade snapshots as not_found
   ]);
 });
 
+// korean-stock: instruction.md promises that an omitted bas_dd resolves to the
+// most recent trading day. These tests pin the calendar-day fallback behavior.
+function shiftKrxYmd(ymd, deltaDays) {
+  const shifted = new Date(Date.UTC(
+    Number(ymd.slice(0, 4)),
+    Number(ymd.slice(4, 6)) - 1,
+    Number(ymd.slice(6, 8)) + deltaDays
+  ));
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${shifted.getUTCFullYear()}${pad(shifted.getUTCMonth() + 1)}${pad(shifted.getUTCDate())}`;
+}
+
+function krxRequestedDate(url) {
+  return new URL(String(url)).searchParams.get("basDd");
+}
+
+function krxSamsungBaseRow() {
+  return {
+    ISU_CD: "KR7005930003",
+    ISU_SRT_CD: "005930",
+    ISU_NM: "삼성전자",
+    ISU_ABBRV: "삼성전자",
+    ISU_ENG_NM: "Samsung Electronics",
+    LIST_DD: "19750611",
+    MKT_TP_NM: "KOSPI",
+    SECUGRP_NM: "주권",
+    SECT_TP_NM: "대형주",
+    KIND_STKCERT_TP_NM: "보통주",
+    PARVAL: "100",
+    LIST_SHRS: "5969782550"
+  };
+}
+
+function krxJsonResponse(rows) {
+  return new Response(
+    JSON.stringify({ OutBlock_1: rows }),
+    {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    }
+  );
+}
+
+test("korean stock search without bas_dd falls back to the most recent trading day", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const yesterday = shiftKrxYmd(today, -1);
+  const lastTradingDay = shiftKrxYmd(today, -2);
+  const fetchCalls = [];
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    assert.match(text, /isu_base_info/);
+    // Today and yesterday are holidays / data is not published yet.
+    const hasRows = krxRequestedDate(text) === lastTradingDay && text.includes("stk_isu_base_info");
+    return krxJsonResponse(hasRows ? [krxSamsungBaseRow()] : []);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().items[0].code, "005930");
+  assert.equal(response.json().query.bas_dd, lastTradingDay);
+  // Stops at the first day that has rows: 3 markets x (today, yesterday, D-2).
+  assert.deepEqual([...new Set(fetchCalls.map(krxRequestedDate))], [today, yesterday, lastTradingDay]);
+  assert.equal(fetchCalls.length, 9);
+
+  const repeat = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90"
+  });
+  assert.equal(repeat.json().proxy.cache.hit, true);
+  assert.equal(repeat.json().query.bas_dd, lastTradingDay);
+  assert.equal(fetchCalls.length, 9);
+});
+
+test("korean stock base-info without bas_dd falls back to the most recent trading day", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const lastTradingDay = shiftKrxYmd(today, -2);
+  const fetchCalls = [];
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    assert.match(text, /stk_isu_base_info/);
+    return krxJsonResponse(krxRequestedDate(text) === lastTradingDay ? [krxSamsungBaseRow()] : []);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/base-info?market=KOSPI&code=005930"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().item.code, "005930");
+  assert.equal(response.json().item.name, "삼성전자");
+  assert.equal(response.json().query.bas_dd, lastTradingDay);
+  assert.deepEqual([...new Set(fetchCalls.map(krxRequestedDate))], [today, shiftKrxYmd(today, -1), lastTradingDay]);
+  assert.equal(fetchCalls.length, 3);
+});
+
+test("korean stock trade-info without bas_dd falls back to the most recent trading day", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const lastTradingDay = shiftKrxYmd(today, -2);
+  const fetchCalls = [];
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    assert.match(text, /stk_bydd_trd/);
+    if (krxRequestedDate(text) !== lastTradingDay) {
+      return krxJsonResponse([]);
+    }
+    return krxJsonResponse([
+      {
+        BAS_DD: lastTradingDay,
+        ISU_CD: "KR7005930003",
+        ISU_SRT_CD: "005930",
+        ISU_NM: "삼성전자",
+        MKT_NM: "KOSPI",
+        TDD_CLSPRC: "84000",
+        ACC_TRDVOL: "12345678"
+      }
+    ]);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/trade-info?market=KOSPI&code=005930"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().item.close_price, 84000);
+  assert.equal(response.json().query.bas_dd, lastTradingDay);
+  assert.deepEqual([...new Set(fetchCalls.map(krxRequestedDate))], [today, shiftKrxYmd(today, -1), lastTradingDay]);
+  assert.equal(fetchCalls.length, 3);
+});
+
+test("korean stock endpoints honor an explicit bas_dd without fallback probing", async (t) => {
+  const originalFetch = global.fetch;
+  t.after(() => {
+    global.fetch = originalFetch;
+  });
+
+  // A fresh app per endpoint keeps the snapshot cache from hiding upstream
+  // calls, so the per-request call counts are the real fallback behavior.
+  async function injectWithFreshApp(url) {
+    const fetchCalls = [];
+    global.fetch = async (rawUrl) => {
+      fetchCalls.push(String(rawUrl));
+      return krxJsonResponse([]);
+    };
+
+    const app = buildServer({
+      env: {
+        KRX_API_KEY: "krx-key"
+      }
+    });
+
+    try {
+      const response = await app.inject({ method: "GET", url });
+      return { response, fetchCalls };
+    } finally {
+      await app.close();
+    }
+  }
+
+  const search = await injectWithFreshApp("/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90&bas_dd=20260404");
+  assert.equal(search.response.statusCode, 200);
+  assert.deepEqual(search.response.json().items, []);
+  assert.equal(search.response.json().query.bas_dd, "20260404");
+  assert.deepEqual(search.fetchCalls.map(krxRequestedDate), ["20260404", "20260404", "20260404"]);
+
+  const baseInfo = await injectWithFreshApp("/v1/korean-stock/base-info?market=KOSPI&code=005930&bas_dd=20260404");
+  assert.equal(baseInfo.response.statusCode, 404);
+  assert.equal(baseInfo.response.json().error, "not_found");
+  assert.match(baseInfo.response.json().message, /20260404/);
+  assert.deepEqual(baseInfo.fetchCalls.map(krxRequestedDate), ["20260404"]);
+
+  const tradeInfo = await injectWithFreshApp("/v1/korean-stock/trade-info?market=KOSPI&code=005930&bas_dd=20260404");
+  assert.equal(tradeInfo.response.statusCode, 404);
+  assert.equal(tradeInfo.response.json().error, "not_found");
+  assert.match(tradeInfo.response.json().message, /20260404/);
+  assert.deepEqual(tradeInfo.fetchCalls.map(krxRequestedDate), ["20260404"]);
+});
+
+test("korean stock default bas_dd fallback stops after a bounded lookback", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const fetchCalls = [];
+
+  // Nothing was ever published: the proxy must give up, not walk back forever.
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return krxJsonResponse([]);
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().items, []);
+  assert.equal(response.json().query.bas_dd, today);
+  const maxProbeCount = KRX_DEFAULT_BAS_DD_MAX_LOOKBACK_DAYS + 1;
+  const probedDates = [...new Set(fetchCalls.map(krxRequestedDate))];
+  assert.equal(probedDates.length, maxProbeCount);
+  assert.deepEqual(
+    probedDates,
+    Array.from({ length: maxProbeCount }, (_value, index) => shiftKrxYmd(today, -index))
+  );
+  assert.equal(fetchCalls.length, maxProbeCount * 3);
+});
+
+test("korean stock default bas_dd does not probe older days while the upstream is failing", async (t) => {
+  const originalFetch = global.fetch;
+  const today = getCurrentKstDate();
+  const fetchCalls = [];
+
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    throw new Error("krx upstream down");
+  };
+
+  const app = buildServer({
+    env: {
+      KRX_API_KEY: "krx-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/search?q=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90"
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.deepEqual([...new Set(fetchCalls.map(krxRequestedDate))], [today]);
+  assert.equal(fetchCalls.length, 3);
+});
+
 test("fine dust endpoint stays publicly callable without proxy auth", async (t) => {
   let providerCalls = 0;
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-key"
+      AIR_KOREA_OPEN_API_KEY: "airkorea-key-example"
     },
     provider: async () => {
       providerCalls += 1;
@@ -3060,7 +3606,7 @@ test("fine dust endpoint stays publicly callable without proxy auth", async (t) 
 test("fine dust endpoint returns candidate stations when region resolution is ambiguous", async (t) => {
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-key"
+      AIR_KOREA_OPEN_API_KEY: "airkorea-key-example"
     },
     provider: async () => {
       const error = new Error("단일 측정소를 확정하지 못했습니다.");
@@ -3091,7 +3637,7 @@ test("fine dust endpoint caches successful provider responses", async (t) => {
   let providerCalls = 0;
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-key",
+      AIR_KOREA_OPEN_API_KEY: "airkorea-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     },
     provider: async () => {
@@ -3155,7 +3701,7 @@ test("proxyAirKoreaRequest injects serviceKey and preserves caller query params"
 });
 
 test("proxyAirKoreaRequest redacts service keys echoed with URLSearchParams encoding", async () => {
-  for (const serviceKey of ["fake~secret", "fake secret", "fake!secret", "airkorea-secret+/="]) {
+  for (const serviceKey of ["fake~secret", "fake secret", "fake!secret", "airkorea-secret-example+/=-example"]) {
     const serialized = new URLSearchParams({ serviceKey }).toString();
     const result = await proxyAirKoreaRequest({
       service: "ArpltnInforInqireSvc",
@@ -3169,7 +3715,7 @@ test("proxyAirKoreaRequest redacts service keys echoed with URLSearchParams enco
     });
 
     assert.equal(result.statusCode, 500);
-    assert.doesNotMatch(result.body, /fake|airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+    assert.doesNotMatch(result.body, /fake|airkorea-secret-example|serviceKey=(?!\[REDACTED\])/);
     assert.match(result.body, /serviceKey=\[REDACTED\]/);
   }
 });
@@ -3180,7 +3726,7 @@ test("proxyAirKoreaRequest preserves AirKorea 403 operation context", async () =
       service: "ArpltnInforInqireSvc",
       operation: "getMsrstnAcctoRltmMesureDnsty",
       query: { returnType: "json", stationName: "강남구" },
-      serviceKey: "airkorea-key",
+      serviceKey: "airkorea-key-example",
       fetchImpl: async () => new Response("forbidden", { status: 403 })
     }),
     (error) => {
@@ -3202,7 +3748,7 @@ test("AirKorea fetch rejections do not expose credential-bearing URLs", async (t
 
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-secret+/="
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example+/=-example"
     }
   });
 
@@ -3218,7 +3764,7 @@ test("AirKorea fetch rejections do not expose credential-bearing URLs", async (t
     const response = await app.inject({ method: "GET", url });
     assert.equal(response.statusCode, 502);
     assert.equal(response.json().error, "upstream_fetch_failed");
-    assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+    assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=/);
   }
 });
 
@@ -3232,7 +3778,7 @@ test("public AirKorea passthrough route forwards allowed upstream responses", as
 
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-key"
+      AIR_KOREA_OPEN_API_KEY: "airkorea-key-example"
     }
   });
 
@@ -3253,7 +3799,7 @@ test("public AirKorea passthrough route forwards allowed upstream responses", as
 test("public AirKorea passthrough does not expose service-key usage statistics", async (t) => {
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-key"
+      AIR_KOREA_OPEN_API_KEY: "airkorea-key-example"
     }
   });
 
@@ -3272,11 +3818,11 @@ test("public AirKorea passthrough does not expose service-key usage statistics",
 
 test("fine dust upstream HTTP errors answer 502 upstream_error without exposing the AirKorea service key", async (t) => {
   const originalFetch = global.fetch;
-  global.fetch = async () => new Response("failed serviceKey=airkorea-secret", { status: 500 });
+  global.fetch = async () => new Response("failed serviceKey=airkorea-secret-example", { status: 500 });
 
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-secret"
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example"
     }
   });
 
@@ -3292,22 +3838,22 @@ test("fine dust upstream HTTP errors answer 502 upstream_error without exposing 
 
   assert.equal(response.statusCode, 502);
   assert.equal(response.json().error, "upstream_error");
-  assert.doesNotMatch(response.body, /airkorea-secret/);
+  assert.doesNotMatch(response.body, /airkorea-secret-example/);
   assert.doesNotMatch(response.body, /serviceKey=(?!\[REDACTED\])/);
   assert.match(response.json().message, /HTTP 500/);
   assert.equal(response.json().upstream.status_code, 500);
-  assert.doesNotMatch(response.json().upstream.body_snippet, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+  assert.doesNotMatch(response.json().upstream.body_snippet, /airkorea-secret-example|serviceKey=(?!\[REDACTED\])/);
 });
 
 test("fine dust upstream 403 answers 403 upstream_forbidden with redacted metadata", async (t) => {
   const originalFetch = global.fetch;
-  global.fetch = async () => new Response("forbidden serviceKey=airkorea-secret", {
+  global.fetch = async () => new Response("forbidden serviceKey=airkorea-secret-example", {
     status: 403,
     headers: { "content-type": "text/plain" }
   });
 
   const app = buildServer({
-    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example" }
   });
 
   t.after(async () => {
@@ -3323,19 +3869,19 @@ test("fine dust upstream 403 answers 403 upstream_forbidden with redacted metada
   assert.equal(response.statusCode, 403);
   assert.equal(response.json().error, "upstream_forbidden");
   assert.equal(response.json().upstream.status_code, 403);
-  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+  assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=(?!\[REDACTED\])/);
 });
 
 test("AirKorea HTTP error bodies redact the service key from responses and Pino logs", async (t) => {
   const originalFetch = global.fetch;
   const { logger, text } = createCapturingLogger();
   global.fetch = async (url) => new Response(
-    `upstream failure for ${url} serviceKey=airkorea-secret`,
+    `upstream failure for ${url} serviceKey=airkorea-secret-example`,
     { status: 500, headers: { "content-type": "text/plain" } }
   );
 
   const app = buildServer({
-    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example" },
     loggerInstance: logger
   });
 
@@ -3349,11 +3895,11 @@ test("AirKorea HTTP error bodies redact the service key from responses and Pino 
     "/v1/fine-dust/report?stationName=%EA%B0%95%EB%82%A8%EA%B5%AC"
   ]) {
     const response = await app.inject({ method: "GET", url });
-    assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+    assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=(?!\[REDACTED\])/);
   }
 
   const logs = text();
-  assert.doesNotMatch(logs, /airkorea-secret/);
+  assert.doesNotMatch(logs, /airkorea-secret-example/);
   assert.doesNotMatch(logs, /serviceKey=(?!\[REDACTED\])/);
 });
 
@@ -3365,7 +3911,7 @@ test("AirKorea fetch rejections redact the credential-bearing URL from responses
   };
 
   const app = buildServer({
-    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret+/=" },
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example+/=-example" },
     loggerInstance: logger
   });
 
@@ -3381,11 +3927,11 @@ test("AirKorea fetch rejections redact the credential-bearing URL from responses
     const response = await app.inject({ method: "GET", url });
     assert.equal(response.statusCode, 502);
     assert.equal(response.json().error, "upstream_fetch_failed");
-    assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+    assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=(?!\[REDACTED\])/);
   }
 
   const logs = text();
-  assert.doesNotMatch(logs, /airkorea-secret/);
+  assert.doesNotMatch(logs, /airkorea-secret-example/);
   assert.doesNotMatch(logs, /serviceKey=(?!\[REDACTED\])/);
 });
 
@@ -3421,7 +3967,7 @@ test("seoul subway endpoint caches successful upstream responses for normalized 
 
   const app = buildServer({
     env: {
-      SEOUL_OPEN_API_KEY: "seoul-key",
+      SEOUL_OPEN_API_KEY: "seoul-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -3479,7 +4025,7 @@ test("seoul subway endpoint stays publicly callable without proxy auth", async (
 
   const app = buildServer({
     env: {
-      SEOUL_OPEN_API_KEY: "seoul-key"
+      SEOUL_OPEN_API_KEY: "seoul-key-example"
     }
   });
 
@@ -3520,7 +4066,7 @@ test("proxySeoulSubwayRequest injects API key and preserves index/station params
     stationName: "강남",
     startIndex: "2",
     endIndex: "5",
-    apiKey: "test-seoul-key",
+    apiKey: "test-seoul-key-example",
     fetchImpl: async (url) => {
       calledUrl = String(url);
       return new Response('{"ok":true}', {
@@ -3531,7 +4077,7 @@ test("proxySeoulSubwayRequest injects API key and preserves index/station params
   });
 
   assert.equal(result.statusCode, 200);
-  assert.match(calledUrl, /\/api\/subway\/test-seoul-key\/json\/realtimeStationArrival\/2\/5\/%EA%B0%95%EB%82%A8$/);
+  assert.match(calledUrl, /\/api\/subway\/test-seoul-key-example\/json\/realtimeStationArrival\/2\/5\/%EA%B0%95%EB%82%A8$/);
 });
 
 test("seoul density endpoint caches successful upstream responses for normalized area queries", async (t) => {
@@ -3562,7 +4108,7 @@ test("seoul density endpoint caches successful upstream responses for normalized
 
   const app = buildServer({
     env: {
-      SEOUL_OPEN_API_KEY: "seoul-key",
+      SEOUL_OPEN_API_KEY: "seoul-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -3606,7 +4152,7 @@ test("seoul density endpoint stays publicly callable without proxy auth", async 
   };
 
   const app = buildServer({
-    env: { SEOUL_OPEN_API_KEY: "seoul-key" }
+    env: { SEOUL_OPEN_API_KEY: "seoul-key-example" }
   });
 
   t.after(async () => {
@@ -3620,7 +4166,7 @@ test("seoul density endpoint stays publicly callable without proxy auth", async 
   });
 
   assert.equal(response.statusCode, 200);
-  assert.match(calledUrl, /\/seoul-key\/json\/citydata_ppltn\/1\/1\/%EA%B0%95%EB%82%A8%EC%97%AD$/);
+  assert.match(calledUrl, /\/seoul-key-example\/json\/citydata_ppltn\/1\/1\/%EA%B0%95%EB%82%A8%EC%97%AD$/);
 });
 
 test("seoul density endpoint returns 503 when proxy server lacks Seoul API key", async (t) => {
@@ -3640,7 +4186,7 @@ test("seoul density endpoint returns 503 when proxy server lacks Seoul API key",
 });
 
 test("seoul density endpoint returns 400 when area is missing", async (t) => {
-  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key-example" } });
 
   t.after(async () => {
     await app.close();
@@ -3659,7 +4205,7 @@ test("proxySeoulCityDataRequest injects API key and encodes area name", async ()
   let calledUrl;
   const result = await proxySeoulCityDataRequest({
     area: "강남역",
-    apiKey: "test-seoul-key",
+    apiKey: "test-seoul-key-example",
     fetchImpl: async (url) => {
       calledUrl = String(url);
       return new Response('{"ok":true}', {
@@ -3670,7 +4216,7 @@ test("proxySeoulCityDataRequest injects API key and encodes area name", async ()
   });
 
   assert.equal(result.statusCode, 200);
-  assert.match(calledUrl, /\/test-seoul-key\/json\/citydata_ppltn\/1\/1\/%EA%B0%95%EB%82%A8%EC%97%AD$/);
+  assert.match(calledUrl, /\/test-seoul-key-example\/json\/citydata_ppltn\/1\/1\/%EA%B0%95%EB%82%A8%EC%97%AD$/);
 });
 
 
@@ -3704,7 +4250,7 @@ test("seoul bike realtime endpoint caches successful upstream responses for norm
 
   const app = buildServer({
     env: {
-      SEOUL_OPEN_API_KEY: "seoul-key",
+      SEOUL_OPEN_API_KEY: "seoul-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -3736,7 +4282,7 @@ test("seoul bike routes stay publicly callable without proxy auth", async (t) =>
     });
   };
 
-  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key-example" } });
 
   t.after(async () => {
     global.fetch = originalFetch;
@@ -3748,8 +4294,8 @@ test("seoul bike routes stay publicly callable without proxy auth", async (t) =>
 
   assert.equal(realtime.statusCode, 200);
   assert.equal(stations.statusCode, 200);
-  assert.match(calledUrls[0], /\/seoul-key\/json\/bikeList\/1\/1000\/?$/);
-  assert.match(calledUrls[1], /\/seoul-key\/json\/tbCycleStationInfo\/2\/5\/?$/);
+  assert.match(calledUrls[0], /\/seoul-key-example\/json\/bikeList\/1\/1000\/?$/);
+  assert.match(calledUrls[1], /\/seoul-key-example\/json\/tbCycleStationInfo\/2\/5\/?$/);
 });
 
 test("seoul bike routes return 503 when proxy server lacks Seoul API key", async (t) => {
@@ -3782,20 +4328,20 @@ test("proxySeoulBikeRealtimeRequest and stations request inject API key and pres
   const realtime = await proxySeoulBikeRealtimeRequest({
     startIndex: 2,
     endIndex: 5,
-    apiKey: "test-seoul-key",
+    apiKey: "test-seoul-key-example",
     fetchImpl
   });
   const stations = await proxySeoulBikeStationsRequest({
     startIndex: 3,
     endIndex: 7,
-    apiKey: "test-seoul-key",
+    apiKey: "test-seoul-key-example",
     fetchImpl
   });
 
   assert.equal(realtime.statusCode, 200);
   assert.equal(stations.statusCode, 200);
-  assert.match(calledUrls[0], /\/test-seoul-key\/json\/bikeList\/2\/5\/?$/);
-  assert.match(calledUrls[1], /\/test-seoul-key\/json\/tbCycleStationInfo\/3\/7\/?$/);
+  assert.match(calledUrls[0], /\/test-seoul-key-example\/json\/bikeList\/2\/5\/?$/);
+  assert.match(calledUrls[1], /\/test-seoul-key-example\/json\/tbCycleStationInfo\/3\/7\/?$/);
 });
 
 test("seoul bike nearby endpoint filters and sorts realtime stations by distance", async (t) => {
@@ -3845,7 +4391,7 @@ test("seoul bike nearby endpoint filters and sorts realtime stations by distance
 
   const app = buildServer({
     env: {
-      SEOUL_OPEN_API_KEY: "seoul-key",
+      SEOUL_OPEN_API_KEY: "seoul-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -3891,7 +4437,7 @@ test("seoul bike nearby endpoint returns non-cacheable error for upstream semant
 
   const app = buildServer({
     env: {
-      SEOUL_OPEN_API_KEY: "seoul-key",
+      SEOUL_OPEN_API_KEY: "seoul-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -3935,7 +4481,7 @@ test("seoul bike realtime and stations endpoints do not cache upstream semantic 
 
   const app = buildServer({
     env: {
-      SEOUL_OPEN_API_KEY: "seoul-key",
+      SEOUL_OPEN_API_KEY: "seoul-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -3959,7 +4505,7 @@ test("seoul bike realtime and stations endpoints do not cache upstream semantic 
 
 test("seoul bike routes sanitize upstream fetch failures without leaking API keys", async (t) => {
   const originalFetch = global.fetch;
-  const secret = "SECRETSEOULKEY";
+  const secret = "SECRETSEOULKEY-example";
   let fetchCalls = 0;
   global.fetch = async (url) => {
     fetchCalls += 1;
@@ -4000,7 +4546,7 @@ test("seoul bike routes sanitize upstream fetch failures without leaking API key
 });
 
 test("seoul bike nearby endpoint validates coordinates", async (t) => {
-  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key-example" } });
   t.after(async () => {
     await app.close();
   });
@@ -4020,7 +4566,7 @@ test("seoul bike nearby endpoint validates coordinates", async (t) => {
 });
 
 test("seoul bike endpoints reject partially numeric integer query params", async (t) => {
-  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key" } });
+  const app = buildServer({ env: { SEOUL_OPEN_API_KEY: "seoul-key-example" } });
   t.after(async () => {
     await app.close();
   });
@@ -4230,7 +4776,7 @@ test("proxyKmaWeatherRequest injects API key and preserves caller query params",
     pageNo: 2,
     numOfRows: 50,
     dataType: "JSON",
-    apiKey: "test-kma-key",
+    apiKey: "test-kma-key-example",
     fetchImpl: async (url) => {
       calledUrl = String(url);
       return new Response('{"ok":true}', {
@@ -4243,7 +4789,7 @@ test("proxyKmaWeatherRequest injects API key and preserves caller query params",
   assert.equal(result.statusCode, 200);
   assert.ok(calledUrl.startsWith("https://apis.data.go.kr/"));
   assert.match(calledUrl, /\/1360000\/VilageFcstInfoService_2\.0\/getVilageFcst\?/);
-  assert.match(calledUrl, /serviceKey=test-kma-key/);
+  assert.match(calledUrl, /serviceKey=test-kma-key-example/);
   assert.match(calledUrl, /base_date=20260405/);
   assert.match(calledUrl, /base_time=0500/);
   assert.match(calledUrl, /nx=60/);
@@ -4454,7 +5000,7 @@ test("proxyKmaWeatherRequest targets ultra-short operations when requested", asy
     baseTime: "0630",
     nx: 60,
     ny: 127,
-    apiKey: "test-kma-key",
+    apiKey: "test-kma-key-example",
     fetchImpl
   });
   assert.equal(ultraSrtFcst.statusCode, 200);
@@ -4467,7 +5013,7 @@ test("proxyKmaWeatherRequest targets ultra-short operations when requested", asy
     baseTime: "0600",
     nx: 60,
     ny: 127,
-    apiKey: "test-kma-key",
+    apiKey: "test-kma-key-example",
     fetchImpl
   });
   assert.equal(ultraSrtNcst.statusCode, 200);
@@ -4481,7 +5027,7 @@ test("proxyKmaWeatherRequest targets ultra-short operations when requested", asy
       baseTime: "0600",
       nx: 60,
       ny: 127,
-      apiKey: "test-kma-key",
+      apiKey: "test-kma-key-example",
       fetchImpl
     }),
     /Unsupported KMA forecast operation/
@@ -4654,7 +5200,7 @@ test("korea weather ultra-short routes guard malformed upstream JSON without lea
   });
 
   const app = buildServer({
-    env: { KMA_OPEN_API_KEY: "secret-kma-key" },
+    env: { KMA_OPEN_API_KEY: "secret-kma-key-example" },
     now: () => new Date("2026-04-05T06:45:00+09:00")
   });
 
@@ -4667,7 +5213,7 @@ test("korea weather ultra-short routes guard malformed upstream JSON without lea
     const response = await app.inject({ method: "GET", url: `/v1/korea-weather/${route}?nx=60&ny=127` });
     assert.equal(response.statusCode, 502);
     assert.equal(response.json().error, "upstream_invalid_response");
-    assert.doesNotMatch(response.body, /secret-kma-key/);
+    assert.doesNotMatch(response.body, /secret-kma-key-example/);
     assert.doesNotMatch(response.body, /serviceKey/);
   }
 });
@@ -4759,7 +5305,7 @@ test("han river water-level endpoint stays publicly callable without proxy auth"
 
   const app = buildServer({
     env: {
-      HRFCO_OPEN_API_KEY: "hrfco-key"
+      HRFCO_OPEN_API_KEY: "hrfco-key-example"
     }
   });
 
@@ -4833,7 +5379,7 @@ test("han river water-level endpoint caches normalized station queries", async (
 
   const app = buildServer({
     env: {
-      HRFCO_OPEN_API_KEY: "hrfco-key",
+      HRFCO_OPEN_API_KEY: "hrfco-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -4884,7 +5430,7 @@ test("han river water-level endpoint returns ambiguous candidates for broad stat
 
   const app = buildServer({
     env: {
-      HRFCO_OPEN_API_KEY: "hrfco-key"
+      HRFCO_OPEN_API_KEY: "hrfco-key-example"
     }
   });
 
@@ -4923,7 +5469,7 @@ test("proxyHrfcoWaterLevelRequest injects API key and resolves station code path
   let calledUrls = [];
   const result = await proxyHrfcoWaterLevelRequest({
     stationName: "한강대교",
-    apiKey: "test-hrfco-key",
+    apiKey: "test-hrfco-key-example",
     fetchImpl: async (url) => {
       calledUrls.push(String(url));
 
@@ -4957,8 +5503,8 @@ test("proxyHrfcoWaterLevelRequest injects API key and resolves station code path
 
   assert.equal(result.statusCode, 200);
   assert.equal(JSON.parse(result.body).station_code, "1018683");
-  assert.match(calledUrls[0], /\/test-hrfco-key\/waterlevel\/info\.json$/);
-  assert.match(calledUrls[1], /\/test-hrfco-key\/waterlevel\/list\/10M\/1018683\.json$/);
+  assert.match(calledUrls[0], /\/test-hrfco-key-example\/waterlevel\/info\.json$/);
+  assert.match(calledUrls[1], /\/test-hrfco-key-example\/waterlevel\/list\/10M\/1018683\.json$/);
 });
 
 const SAMPLE_APT_TRADE_XML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -5072,7 +5618,7 @@ test("real estate transaction endpoint returns 503 without API key", async (t) =
 
 test("real estate transaction endpoint returns 404 for invalid asset type", async (t) => {
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5089,7 +5635,7 @@ test("real estate transaction endpoint returns 404 for invalid asset type", asyn
 
 test("real estate transaction endpoint returns 404 for commercial/rent", async (t) => {
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5106,7 +5652,7 @@ test("real estate transaction endpoint returns 404 for commercial/rent", async (
 
 test("real estate transaction endpoint returns 400 for invalid lawd_cd", async (t) => {
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5131,7 +5677,7 @@ test("real estate transaction endpoint fetches and returns parsed data", async (
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5169,7 +5715,7 @@ test("real estate transaction endpoint retries a single upstream 502 then succee
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5225,7 +5771,7 @@ test("real estate quota response returns 503 with Retry-After", async (t) => {
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5257,7 +5803,7 @@ test("real estate transaction endpoint caches successful responses", async (t) =
 
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "test-key",
+      DATA_GO_KR_API_KEY: "test-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -5293,7 +5839,7 @@ test("real estate transaction endpoint calls apis.data.go.kr over https", async 
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5322,7 +5868,7 @@ test("real estate transaction endpoint maps an upstream timeout to HTTP 504", as
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5352,7 +5898,7 @@ test("real estate transaction endpoint maps a refused connection to HTTP 503", a
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5385,7 +5931,7 @@ test("real estate transaction endpoint reports upstream failures as JSON and nev
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5417,7 +5963,7 @@ test("real estate transaction endpoint reports upstream failures as JSON and nev
 
 test("health endpoint reports molitConfigured status", async (t) => {
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5434,7 +5980,7 @@ test("health endpoint reports molitConfigured status", async (t) => {
 
 test("health endpoint reports foodsafetyKoreaConfigured when FOODSAFETYKOREA_API_KEY is set", async (t) => {
   const app = buildServer({
-    env: { FOODSAFETYKOREA_API_KEY: "food-key" }
+    env: { FOODSAFETYKOREA_API_KEY: "food-key-example" }
   });
 
   t.after(async () => {
@@ -5486,7 +6032,7 @@ test("neis school-meal endpoint returns 503 without KEDU_INFO_KEY", async (t) =>
 
 test("neis school-meal endpoint returns 400 when mealDate is invalid", async (t) => {
   const app = buildServer({
-    env: { KEDU_INFO_KEY: "test-key" }
+    env: { KEDU_INFO_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5732,7 +6278,7 @@ test("neis school-meal maps rejected upstream fetches to a 502 proxy error", asy
 
 test("household waste info endpoint requires SGG_NM filter", async (t) => {
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5766,7 +6312,7 @@ test("household waste info endpoint reports 503 when DATA_GO_KR_API_KEY is missi
 
 test("household waste info endpoint requires pageNo and numOfRows with cond", async (t) => {
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5810,7 +6356,7 @@ test("household waste info endpoint injects serviceKey, forces returnType=json, 
 
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "test-key",
+      DATA_GO_KR_API_KEY: "test-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -5835,7 +6381,7 @@ test("household waste info endpoint injects serviceKey, forces returnType=json, 
   assert.equal(fetchCalls.length, 1);
   const upstream = new URL(fetchCalls[0]);
   assert.equal(upstream.origin + upstream.pathname, "https://apis.data.go.kr/1741000/household_waste_info/info");
-  assert.equal(upstream.searchParams.get("serviceKey"), "test-key");
+  assert.equal(upstream.searchParams.get("serviceKey"), "test-key-example");
   assert.equal(upstream.searchParams.get("returnType"), "json");
   assert.equal(upstream.searchParams.get("pageNo"), "1");
   assert.equal(upstream.searchParams.get("numOfRows"), "100");
@@ -5859,7 +6405,7 @@ test("household waste info endpoint rejects user-supplied pageNo and numOfRows w
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5889,7 +6435,7 @@ test("household waste info endpoint accepts explicit pageNo=1 and numOfRows=100"
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5910,7 +6456,7 @@ test("household waste info endpoint accepts explicit pageNo=1 and numOfRows=100"
 
 test("household waste info endpoint rejects non-integer pageNo", async (t) => {
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5938,7 +6484,7 @@ test("household waste info endpoint ignores user-supplied returnType override", 
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -5960,7 +6506,7 @@ test("household waste info endpoint surfaces upstream non-200 as 502", async (t)
   global.fetch = async () => new Response("oops", { status: 500 });
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "test-key" }
+    env: { DATA_GO_KR_API_KEY: "test-key-example" }
   });
 
   t.after(async () => {
@@ -6047,7 +6593,7 @@ test("mfds drug-safety lookup endpoint proxies official drug surfaces and caches
 
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "test-key",
+      DATA_GO_KR_API_KEY: "test-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -6069,7 +6615,7 @@ test("mfds drug-safety lookup endpoint proxies official drug surfaces and caches
   assert.equal(first.json().query.item_names[0], "타이레놀");
   assert.equal(first.json().items[0].source, "drug_easy_info");
   assert.equal(first.json().items[1].source, "safe_standby_medicine");
-  assert.ok(fetchCalls.every((entry) => entry.includes("test-key")));
+  assert.ok(fetchCalls.every((entry) => entry.includes("test-key-example")));
 });
 
 test("mfds drug-safety lookup endpoint still parses legacy body.items.item shape", async (t) => {
@@ -6121,7 +6667,7 @@ test("mfds drug-safety lookup endpoint still parses legacy body.items.item shape
 
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "legacy-key"
+      DATA_GO_KR_API_KEY: "legacy-key-example"
     }
   });
 
@@ -6151,7 +6697,7 @@ test("mfds drug-safety lookup classifies upstream connect timeouts", async (t) =
   };
 
   const app = buildServer({
-    env: { DATA_GO_KR_API_KEY: "mfds-secret" }
+    env: { DATA_GO_KR_API_KEY: "mfds-secret-example" }
   });
 
   t.after(async () => {
@@ -6168,7 +6714,7 @@ test("mfds drug-safety lookup classifies upstream connect timeouts", async (t) =
   assert.equal(body.upstream.failure, "upstream_timeout");
   assert.equal(body.upstream.cause, "UND_ERR_CONNECT_TIMEOUT");
   assert.equal(body.upstream.route, url);
-  assert.doesNotMatch(response.body, /mfds-secret|serviceKey=/i);
+  assert.doesNotMatch(response.body, /mfds-secret-example|serviceKey=/i);
 });
 
 test("mfds food-safety search endpoint requires query", async (t) => {
@@ -6270,7 +6816,7 @@ test("mfds food-safety search endpoint uses live recall key when configured", as
       );
     }
 
-    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I0490/json/1/50")) {
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key-example/I0490/json/1/50")) {
       return new Response(
         JSON.stringify({
           I0490: {
@@ -6295,8 +6841,8 @@ test("mfds food-safety search endpoint uses live recall key when configured", as
 
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "data-go-key",
-      FOODSAFETYKOREA_API_KEY: "live-food-key"
+      DATA_GO_KR_API_KEY: "data-go-key-example",
+      FOODSAFETYKOREA_API_KEY: "live-food-key-example"
     }
   });
 
@@ -6312,8 +6858,8 @@ test("mfds food-safety search endpoint uses live recall key when configured", as
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().items[0].product_name, "예시 유부초밥");
-  assert.ok(fetchCalls.some((entry) => entry.includes("data-go-key")));
-  assert.ok(fetchCalls.some((entry) => entry.includes("live-food-key")));
+  assert.ok(fetchCalls.some((entry) => entry.includes("data-go-key-example")));
+  assert.ok(fetchCalls.some((entry) => entry.includes("live-food-key-example")));
   assert.doesNotMatch(response.json().warnings.join(" "), /sample feed/);
 });
 
@@ -6407,7 +6953,7 @@ test("mfds health-food-ingredient endpoint uses live key when configured", async
     const text = String(url);
     fetchCalls.push(text);
 
-    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I-0040/json/1/")) {
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key-example/I-0040/json/1/")) {
       return new Response(
         JSON.stringify({
           "I-0040": {
@@ -6431,7 +6977,7 @@ test("mfds health-food-ingredient endpoint uses live key when configured", async
       );
     }
 
-    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I-0050/json/1/")) {
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key-example/I-0050/json/1/")) {
       return new Response(
         JSON.stringify({ "I-0050": { total_count: "0", row: [] } }),
         {
@@ -6446,7 +6992,7 @@ test("mfds health-food-ingredient endpoint uses live key when configured", async
 
   const app = buildServer({
     env: {
-      FOODSAFETYKOREA_API_KEY: "live-food-key"
+      FOODSAFETYKOREA_API_KEY: "live-food-key-example"
     }
   });
 
@@ -6461,7 +7007,7 @@ test("mfds health-food-ingredient endpoint uses live key when configured", async
   });
 
   assert.equal(response.statusCode, 200);
-  assert.ok(fetchCalls.some((entry) => entry.includes("live-food-key")));
+  assert.ok(fetchCalls.some((entry) => entry.includes("live-food-key-example")));
   assert.ok(!response.json().warnings || !response.json().warnings.some((w) => /sample feed/.test(w)));
 });
 
@@ -6624,10 +7170,11 @@ test("mfds product-report endpoint uses live key with server-side filter", async
     const text = String(url);
     fetchCalls.push(text);
 
-    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I0030/json/1/")) {
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key-example/I0030/json/1/")) {
       return new Response(
         JSON.stringify({
           I0030: {
+            total_count: "2",
             row: [
               {
                 PRDLST_REPORT_NO: "20200001",
@@ -6640,8 +7187,81 @@ test("mfds product-report endpoint uses live key with server-side filter", async
                 PRDT_SHAP_CD_NM: "분말",
                 POG_DAYCNT: "24개월",
                 PRMS_DT: "20200527"
+              },
+              {
+                PRDLST_REPORT_NO: "20200002",
+                PRDLST_NM: "맥주효모 정",
+                BSSH_NM: "다른회사",
+                RAWMTRL_NM: "맥주효모",
+                PRIMARY_FNCLTY: "단백질 보충",
+                IFTKN_ATNT_MATR_CN: "물과 함께 섭취",
+                STDR_STND: "단백질 80% 이상",
+                PRDT_SHAP_CD_NM: "정제",
+                POG_DAYCNT: "24개월",
+                PRMS_DT: "20200601"
               }
             ]
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      FOODSAFETYKOREA_API_KEY: "live-food-key-example"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/mfds/food-safety/product-report?query=%EC%B0%A8%EC%A0%84%EC%9E%90%ED%94%BC&limit=5"
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.ok(fetchCalls.some((entry) => entry.includes("live-food-key-example")));
+  assert.ok(fetchCalls.some((entry) => entry.includes("PRDLST_NM=")));
+  // I0030 reports RAWMTRL_NM as unsupported and answers with unfiltered rows, so sending it used
+  // to leak unrelated products into the response.
+  assert.ok(!fetchCalls.some((entry) => entry.includes("RAWMTRL_NM=")));
+  assert.equal(response.json().items.length, 1);
+  assert.equal(response.json().items[0].product_name, "차전자피 솔루션");
+  assert.ok(!response.json().warnings || !response.json().warnings.some((w) => /sample feed/.test(w)));
+});
+
+test("mfds food-safety search pages the recall feed past the first page to reach a match", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const recallRows = Array.from({ length: 392 }, (_, index) => ({
+    PRDLST_NM: index === 119 ? "김밥천국 참치김밥" : `예시 회수품목 ${index + 1}`,
+    BSSH_NM: "예시식품",
+    RTRVLPRVNS: "기준 규격 부적합",
+    CRET_DTM: "2026-01-01 00:00:00"
+  }));
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+
+    // I0490 exposes no name filter, so the proxy must page the feed itself.
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I0490/json/")) {
+      const [, start, end] = text.match(/\/json\/(\d+)\/(\d+)/);
+      return new Response(
+        JSON.stringify({
+          I0490: {
+            total_count: String(recallRows.length),
+            row: recallRows.slice(Number(start) - 1, Number(end))
           }
         }),
         {
@@ -6667,14 +7287,149 @@ test("mfds product-report endpoint uses live key with server-side filter", async
 
   const response = await app.inject({
     method: "GET",
-    url: "/v1/mfds/food-safety/product-report?query=%EC%B0%A8%EC%A0%84%EC%9E%90%ED%94%BC&limit=5"
+    url: `/v1/mfds/food-safety/search?query=${encodeURIComponent("김밥")}&limit=5`
   });
 
   assert.equal(response.statusCode, 200);
-  assert.ok(fetchCalls.some((entry) => entry.includes("live-food-key")));
-  assert.ok(fetchCalls.some((entry) => entry.includes("PRDLST_NM=")));
-  assert.ok(fetchCalls.some((entry) => entry.includes("RAWMTRL_NM=")));
-  assert.ok(!response.json().warnings || !response.json().warnings.some((w) => /sample feed/.test(w)));
+  assert.equal(response.json().items.length, 1);
+  assert.equal(response.json().items[0].product_name, "김밥천국 참치김밥");
+  assert.ok(fetchCalls.length <= 4);
+});
+
+test("mfds health-food-ingredient asks I-0040 for the name filter so matches past the first page are found", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const feedRows = Array.from({ length: 779 }, (_, index) => ({
+    APLC_RAWMTRL_NM: index === 299 ? "비타민D" : `예시 원료 ${index + 1}`,
+    HF_FNCLTY_MTRAL_RCOGN_NO: `2010-${index + 1}`,
+    FNCLTY_CN: "예시 기능성",
+    DAY_INTK_CN: "5g/일",
+    IFTKN_ATNT_MATR_CN: "예시 주의사항",
+    BSSH_NM: "예시바이오",
+    PRMS_DT: "20100315"
+  }));
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I-0040/json/")) {
+      const [, start, end] = text.match(/\/json\/(\d+)\/(\d+)/);
+      const rows = text.includes("APLC_RAWMTRL_NM=")
+        ? feedRows.filter((row) => row.APLC_RAWMTRL_NM.includes("비타민D"))
+        : feedRows;
+      return new Response(
+        JSON.stringify({
+          "I-0040": {
+            total_count: String(rows.length),
+            row: rows.slice(Number(start) - 1, Number(end))
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I-0050/json/")) {
+      return new Response(JSON.stringify({ "I-0050": { total_count: "0", row: [] } }), {
+        status: 200,
+        headers: { "content-type": "application/json;charset=UTF-8" }
+      });
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      FOODSAFETYKOREA_API_KEY: "live-food-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: `/v1/mfds/food-safety/health-food-ingredient?query=${encodeURIComponent("비타민D")}&limit=5`
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().items.length, 1);
+  assert.equal(response.json().items[0].ingredient_name, "비타민D");
+  assert.ok(
+    fetchCalls.some((entry) => entry.includes(`APLC_RAWMTRL_NM=${encodeURIComponent("비타민D")}`))
+  );
+});
+
+test("mfds product-report finds rows matched only by raw material past the first page", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const feedRows = Array.from({ length: 3000 }, (_, index) => ({
+    PRDLST_REPORT_NO: `2020${String(index).padStart(7, "0")}`,
+    PRDLST_NM: `예시 건강기능식품 ${index + 1}`,
+    BSSH_NM: "예시바이오",
+    RAWMTRL_NM: index === 119 ? "차전자피식이섬유" : `예시 원료 ${index + 1}`,
+    PRIMARY_FNCLTY: "예시 기능성",
+    IFTKN_ATNT_MATR_CN: "예시 주의사항",
+    STDR_STND: "예시 기준",
+    PRDT_SHAP_CD_NM: "분말",
+    POG_DAYCNT: "24개월",
+    PRMS_DT: "20200101"
+  }));
+
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+
+    if (text.includes("openapi.foodsafetykorea.go.kr/api/live-food-key/I0030/json/")) {
+      const [, start, end] = text.match(/\/json\/(\d+)\/(\d+)/);
+      // I0030 supports PRDLST_NM and BSSH_NM only; a raw-material query matches neither of them.
+      const filtered = text.includes("PRDLST_NM=") || text.includes("BSSH_NM=");
+      return new Response(
+        JSON.stringify({
+          I0030: {
+            total_count: String(filtered ? 0 : feedRows.length),
+            row: filtered ? [] : feedRows.slice(Number(start) - 1, Number(end))
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        }
+      );
+    }
+
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const app = buildServer({
+    env: {
+      FOODSAFETYKOREA_API_KEY: "live-food-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: `/v1/mfds/food-safety/product-report?query=${encodeURIComponent("차전자피")}&limit=5`
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().items.length, 1);
+  assert.equal(response.json().items[0].product_name, "예시 건강기능식품 120");
+  assert.equal(response.json().items[0].raw_materials, "차전자피식이섬유");
+  assert.ok(fetchCalls.some((entry) => entry.includes(`PRDLST_NM=${encodeURIComponent("차전자피")}`)));
+  assert.ok(fetchCalls.some((entry) => entry.includes(`BSSH_NM=${encodeURIComponent("차전자피")}`)));
+  assert.ok(fetchCalls.length <= 12);
 });
 
 test("data4library book-search normalizes query aliases and bounds pagination", () => {
@@ -6807,7 +7562,7 @@ test("data4library proxy helper injects authKey and strips caller auth overrides
       authKey: "caller-key",
       format: "xml"
     },
-    authKey: "server-key",
+    authKey: "server-key-example",
     fetchImpl: async (url) => {
       fetchCalls.push(String(url));
       return new Response(JSON.stringify({ response: { resultNum: 0, docs: [] } }), {
@@ -6821,7 +7576,7 @@ test("data4library proxy helper injects authKey and strips caller auth overrides
   assert.equal(fetchCalls.length, 1);
   const url = new URL(fetchCalls[0]);
   assert.equal(url.origin + url.pathname, "https://data4library.kr/api/srchBooks");
-  assert.equal(url.searchParams.get("authKey"), "server-key");
+  assert.equal(url.searchParams.get("authKey"), "server-key-example");
   assert.equal(url.searchParams.get("keyword"), "역사");
   assert.equal(url.searchParams.get("format"), "json");
 });
@@ -6879,7 +7634,7 @@ test("data4library book-search endpoint proxies JSON and caches normalized query
 
   const app = buildServer({
     env: {
-      DATA4LIBRARY_AUTH_KEY: "server-key",
+      DATA4LIBRARY_AUTH_KEY: "server-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -6906,7 +7661,7 @@ test("data4library book-search endpoint proxies JSON and caches normalized query
   assert.equal(first.json().query.keyword, "역사");
 
   const upstream = new URL(fetchCalls[0]);
-  assert.equal(upstream.searchParams.get("authKey"), "server-key");
+  assert.equal(upstream.searchParams.get("authKey"), "server-key-example");
   assert.equal(upstream.searchParams.get("format"), "json");
   assert.equal(upstream.searchParams.get("authKey") === "caller-key", false);
 });
@@ -6932,7 +7687,7 @@ test("data4library detail, libraries-by-book, and library-search endpoints proxy
 
   const app = buildServer({
     env: {
-      DATA4LIBRARY_AUTH_KEY: "server-key"
+      DATA4LIBRARY_AUTH_KEY: "server-key-example"
     }
   });
 
@@ -6979,7 +7734,7 @@ test("data4library detail, libraries-by-book, and library-search endpoints proxy
   assert.equal(librarySearchUrl.searchParams.get("pageSize"), "30");
 
   for (const upstream of [detailUrl, librariesByBookUrl, librarySearchUrl]) {
-    assert.equal(upstream.searchParams.get("authKey"), "server-key");
+    assert.equal(upstream.searchParams.get("authKey"), "server-key-example");
     assert.equal(upstream.searchParams.get("format"), "json");
   }
 
@@ -7016,7 +7771,7 @@ test("data4library book-exists endpoint requires library code and isbn13 then pr
 
   const app = buildServer({
     env: {
-      DATA4LIBRARY_AUTH_KEY: "server-key"
+      DATA4LIBRARY_AUTH_KEY: "server-key-example"
     }
   });
 
@@ -7077,13 +7832,215 @@ test("data4library book-exists endpoint requires library code and isbn13 then pr
   });
 });
 
+const DATA4LIBRARY_QUOTA_ENVELOPE = {
+  response: {
+    errCode: "outOflimit",
+    error: "1일 500건 이상 요청 시 IP 등록이 필요합니다. 등록 된 IP를 확인하시기 바랍니다."
+  }
+};
+
+test("data4library quota error envelope in a 200 answers 503 and is never cached", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(JSON.stringify(DATA4LIBRARY_QUOTA_ENVELOPE), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      DATA4LIBRARY_AUTH_KEY: "server-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const routes = [
+    "/v1/data4library/library-search?libraryCode=111001",
+    "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC",
+    "/v1/data4library/book-detail?isbn13=9788971998557",
+    "/v1/data4library/book-exists?libraryCode=111001&isbn13=9788971998557",
+    "/v1/data4library/libraries-by-book?isbn=9788971998557&region=11"
+  ];
+
+  for (const url of routes) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 503, url);
+    assert.equal(response.headers["retry-after"], "3600", url);
+    const body = response.json();
+    assert.equal(body.error, "upstream_quota_exceeded", url);
+    assert.equal(body.status_code, 503, url);
+    assert.equal(body.retry_after, 3600, url);
+    assert.equal(body.upstream_code, "outOflimit", url);
+    assert.match(body.message, /outOflimit/);
+    assert.equal(body.upstream_message, DATA4LIBRARY_QUOTA_ENVELOPE.response.error);
+    assert.equal(body.proxy.cache.hit, false);
+  }
+
+  const callsBeforeRepeat = fetchCalls.length;
+  const repeat = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+
+  assert.equal(repeat.statusCode, 503);
+  assert.equal(repeat.json().proxy.cache.hit, false);
+  assert.equal(fetchCalls.length, callsBeforeRepeat + 1);
+});
+
+test("data4library auth and unknown error envelopes map to 502 without caching", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    const envelope = text.includes("/srchBooks")
+      ? { response: { errCode: "authErr", error: "인증정보가 일치하지 않습니다." } }
+      : { response: { errCode: "unknownFailure", error: "처리 중 오류가 발생했습니다." } };
+    return new Response(JSON.stringify(envelope), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      DATA4LIBRARY_AUTH_KEY: "server-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+  const other = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-detail?isbn13=9788971998557"
+  });
+
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_forbidden");
+  assert.equal(first.json().upstream_code, "authErr");
+  assert.equal(first.json().upstream_message, "인증정보가 일치하지 않습니다.");
+  assert.equal(first.headers["retry-after"], undefined);
+  assert.equal(second.statusCode, 502);
+  assert.equal(second.json().proxy.cache.hit, false);
+
+  assert.equal(other.statusCode, 502);
+  assert.equal(other.json().error, "upstream_error");
+  assert.equal(other.json().upstream_code, "unknownFailure");
+  assert.equal(fetchCalls.length, 3);
+});
+
+test("data4library XML error body is not relayed as a 200 success", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    "<response><errCode>outOflimit</errCode><error>IP 등록이 필요합니다.</error></response>",
+    {
+      status: 200,
+      headers: { "content-type": "text/xml;charset=UTF-8" }
+    }
+  );
+
+  const app = buildServer({
+    env: { DATA4LIBRARY_AUTH_KEY: "server-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_quota_exceeded");
+  assert.equal(response.json().upstream_code, "outOflimit");
+  assert.equal(response.json().upstream_message, "IP 등록이 필요합니다.");
+});
+
+test("data4library successful payload still answers 200 with the upstream body and stays cached", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const successEnvelope = {
+    response: {
+      resultNum: 1,
+      docs: [
+        {
+          doc: {
+            bookname: "역사의 역사",
+            authors: "유시민",
+            isbn13: "9788971998557"
+          }
+        }
+      ]
+    }
+  };
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(JSON.stringify(successEnvelope), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      DATA4LIBRARY_AUTH_KEY: "server-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.json().response, successEnvelope.response);
+  assert.deepEqual(first.json().query, { keyword: "역사", pageNo: 1, pageSize: 10 });
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls.length, 1);
+});
+
 function buildParkingDatasetFetchMock({ fetchCalls, totalCount, seoulRow, otherRows = [] }) {
   return async (url) => {
     const resolved = String(url);
     fetchCalls.push(resolved);
     const urlObject = new URL(resolved);
     assert.match(resolved, /^https:\/\/api\.data\.go\.kr\/openapi\/tn_pubr_prkplce_info_api\?/);
-    assert.equal(urlObject.searchParams.get("serviceKey"), "data-key");
+    assert.equal(urlObject.searchParams.get("serviceKey"), "data-key-example");
     assert.equal(urlObject.searchParams.get("type"), "json");
     assert.ok(!urlObject.searchParams.has("rdnmadr"));
     assert.ok(!urlObject.searchParams.has("lnmadr"));
@@ -7149,7 +8106,7 @@ test("parking lot search endpoint caches the full dataset and serves nearby quer
 
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "data-key",
+      DATA_GO_KR_API_KEY: "data-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -7224,7 +8181,7 @@ test("parking lot search endpoint filters cached dataset by radius and excludes 
     otherRows: [privateSeoulRow]
   });
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-key-example" } });
 
   t.after(async () => {
     global.fetch = originalFetch;
@@ -7254,7 +8211,7 @@ test("parking lot search endpoint filters cached dataset by radius and excludes 
 test("parking lot search endpoint validates coordinates before upstream calls", async (t) => {
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "data-key"
+      DATA_GO_KR_API_KEY: "data-key-example"
     }
   });
 
@@ -7330,7 +8287,7 @@ test("lh-notice search endpoint stays public and caches normalized queries", asy
 
   const app = buildServer({
     env: {
-      DATA_GO_KR_API_KEY: "data-go-key",
+      DATA_GO_KR_API_KEY: "data-go-key-example",
       KSKILL_PROXY_CACHE_TTL_MS: "60000"
     }
   });
@@ -7356,7 +8313,7 @@ test("lh-notice search endpoint stays public and caches normalized queries", asy
   assert.equal(fetchCalls.length, 1);
   assert.match(fetchCalls[0], /PG_SZ=10/);
   assert.match(fetchCalls[0], /PAGE=1/);
-  assert.match(fetchCalls[0], /serviceKey=data-go-key/);
+  assert.match(fetchCalls[0], /serviceKey=data-go-key-example/);
 
   const second = await app.inject({
     method: "GET",
@@ -7369,7 +8326,7 @@ test("lh-notice search endpoint stays public and caches normalized queries", asy
 });
 
 test("lh-notice search returns 400 for unsupported panSs", async (t) => {
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { await app.close(); });
 
   const response = await app.inject({
@@ -7423,7 +8380,7 @@ test("lh-notice search does not cache upstream XML auth errors so retries self-h
     });
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   const first = await app.inject({ method: "GET", url: "/v1/lh-notice/search" });
@@ -7464,7 +8421,7 @@ test("lh-notice detail endpoint requires all three codes and caches successful l
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   const missing = await app.inject({ method: "GET", url: "/v1/lh-notice/detail" });
@@ -7547,7 +8504,7 @@ test("lh-notice detail does not cache upstream XML auth errors so retries self-h
     });
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   const detailUrl =
@@ -7593,8 +8550,174 @@ test("lh-notice detail does not cache upstream XML auth errors so retries self-h
   );
 });
 
+const LH_XML_AUTH_ERROR = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OpenAPI_ServiceResponse>
+  <cmmMsgHeader>
+    <errMsg>SERVICE ERROR</errMsg>
+    <returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg>
+    <returnReasonCode>30</returnReasonCode>
+  </cmmMsgHeader>
+</OpenAPI_ServiceResponse>`;
+
+// Upstream-failure warn logs carry the failing route + message as (fields, message).
+function upstreamAttributionLogs(entries) {
+  return entries
+    .filter(
+      (entry) =>
+        entry.level === "warn" &&
+        typeof entry.args[1] === "string" &&
+        /upstream error$/.test(entry.args[1])
+    )
+    .map((entry) => ({ route: entry.args[0].route, message: entry.args[1] }));
+}
+
+test("lh-notice detail upstream failure is attributed to /v1/lh-notice/detail, never to KRX", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () =>
+    new Response(LH_XML_AUTH_ERROR, { status: 200, headers: { "content-type": "text/xml" } });
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    loggerInstance: logger
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/lh-notice/detail?panId=2015122300019828&ccrCnntSysDsCd=03&splInfTpCd=051"
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_error");
+
+  const attribution = upstreamAttributionLogs(entries).find(
+    (entry) => entry.route === "/v1/lh-notice/detail"
+  );
+  assert.ok(
+    attribution,
+    `expected a warn log attributed to /v1/lh-notice/detail, got ${JSON.stringify(
+      upstreamAttributionLogs(entries)
+    )}`
+  );
+  assert.equal(attribution.message, "LH upstream error");
+  assert.equal(
+    upstreamAttributionLogs(entries).some((entry) =>
+      entry.route.startsWith("/v1/korean-stock/")
+    ),
+    false,
+    "an LH detail failure must never be attributed to a KRX route"
+  );
+});
+
+test("lh-notice search upstream failure is attributed to /v1/lh-notice/search", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () =>
+    new Response(LH_XML_AUTH_ERROR, { status: 200, headers: { "content-type": "text/xml" } });
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    loggerInstance: logger
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: "/v1/lh-notice/search" });
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_error");
+
+  const attribution = upstreamAttributionLogs(entries).find(
+    (entry) => entry.route === "/v1/lh-notice/search"
+  );
+  assert.ok(
+    attribution,
+    `expected a warn log attributed to /v1/lh-notice/search, got ${JSON.stringify(
+      upstreamAttributionLogs(entries)
+    )}`
+  );
+  assert.equal(attribution.message, "LH upstream error");
+});
+
+test("parking-lots search upstream failure is attributed to /v1/parking-lots/search", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () => {
+    throw new Error("parking upstream boom");
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    loggerInstance: logger
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/parking-lots/search?latitude=37.57371315593711&longitude=126.97833785777944&limit=2&radius=1000"
+  });
+
+  assert.equal(response.statusCode, 502);
+
+  const attribution = upstreamAttributionLogs(entries).find(
+    (entry) => entry.route === "/v1/parking-lots/search"
+  );
+  assert.ok(
+    attribution,
+    `expected a warn log attributed to /v1/parking-lots/search, got ${JSON.stringify(
+      upstreamAttributionLogs(entries)
+    )}`
+  );
+});
+
+test("korean stock trade-info upstream failure is attributed to /v1/korean-stock/trade-info", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () =>
+    new Response(JSON.stringify({}), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+
+  const app = buildServer({
+    env: { KRX_API_KEY: "krx-key" },
+    loggerInstance: logger
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/trade-info?market=KOSPI&code=005930&bas_dd=20260404"
+  });
+
+  assert.equal(response.statusCode, 502);
+
+  const attribution = upstreamAttributionLogs(entries).find(
+    (entry) => entry.route === "/v1/korean-stock/trade-info"
+  );
+  assert.ok(
+    attribution,
+    `expected a warn log attributed to /v1/korean-stock/trade-info, got ${JSON.stringify(
+      upstreamAttributionLogs(entries)
+    )}`
+  );
+  assert.equal(attribution.message, "KRX upstream error");
+});
+
 test("health endpoint reports lhNoticeConfigured when DATA_GO_KR_API_KEY is set", async (t) => {
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { await app.close(); });
 
   const response = await app.inject({ method: "GET", url: "/health" });
@@ -7651,7 +8774,7 @@ test("K-Startup announcements route proxies GET with server-side ServiceKey", as
       { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
     );
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   const response = await app.inject({
@@ -7666,7 +8789,7 @@ test("K-Startup announcements route proxies GET with server-side ServiceKey", as
   const upstreamUrl = new URL(calls[0].url);
   assert.equal(upstreamUrl.origin + upstreamUrl.pathname,
     "https://apis.data.go.kr/B552735/kisedKstartupService01/getAnnouncementInformation01");
-  assert.equal(upstreamUrl.searchParams.get("ServiceKey"), "data-go-key");
+  assert.equal(upstreamUrl.searchParams.get("ServiceKey"), "data-go-key-example");
   assert.equal(upstreamUrl.searchParams.get("rcrt_prgs_yn"), "Y");
   assert.equal(upstreamUrl.searchParams.get("returnType"), "json");
 
@@ -7694,7 +8817,7 @@ test("K-Startup route returns 400 for invalid params before hitting upstream", a
   const originalFetch = global.fetch;
   let called = false;
   global.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   const response = await app.inject({
@@ -7718,7 +8841,7 @@ test("K-Startup route surfaces data.go.kr error envelopes without caching", asyn
       { status: 200, headers: { "content-type": "application/json" } }
     );
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   const first = await app.inject({ method: "GET", url: "/v1/kstartup/contents?page=1" });
@@ -7738,7 +8861,7 @@ test("K-Startup unknown operation returns 404 via proxyKstartupRequest", async (
 });
 
 test("health endpoint reports kstartupConfigured when DATA_GO_KR_API_KEY is set", async (t) => {
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { await app.close(); });
 
   const response = await app.inject({ method: "GET", url: "/health" });
@@ -7755,7 +8878,7 @@ test("K-Startup cache keys partition by query so distinct filters trigger distin
       status: 200, headers: { "content-type": "application/json" }
     });
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   await app.inject({ method: "GET", url: "/v1/kstartup/announcements?supt_regin=" + encodeURIComponent("서울특별시") });
@@ -7776,7 +8899,7 @@ test("K-Startup proxy forces returnType=json even when caller asks for xml", asy
       status: 200, headers: { "content-type": "application/json" }
     });
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   const response = await app.inject({
@@ -7793,7 +8916,7 @@ test("K-Startup integer fields reject non-numeric input before upstream call", a
   const originalFetch = global.fetch;
   let called = false;
   global.fetch = async () => { called = true; return new Response("{}", { status: 200 }); };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
 
   for (const bad of ["abc", "0", "-1"]) {
@@ -7893,7 +9016,7 @@ test("national-pension route orchestrates basic+detail+monthly and keeps the key
     throw new Error(`unexpected NPS URL: ${u}`);
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -7917,8 +9040,8 @@ test("national-pension route orchestrates basic+detail+monthly and keeps the key
     "getDetailInfoSearchV2",
     "getPdAcctoSttusInfoSearchV2"
   ]);
-  assert.ok(calls.every((u) => new URL(u).searchParams.get("serviceKey") === "data-go-key"));
-  assert.equal(JSON.stringify(body).includes("data-go-key"), false, "service key must not leak into the response");
+  assert.ok(calls.every((u) => new URL(u).searchParams.get("serviceKey") === "data-go-key-example"));
+  assert.equal(JSON.stringify(body).includes("data-go-key-example"), false, "service key must not leak into the response");
 
   const cached = await app.inject({
     method: "GET",
@@ -7937,7 +9060,7 @@ test("national-pension route reports missing key and rejects nameless queries", 
   assert.equal(noKey.statusCode, 503);
   assert.equal(noKey.json().error, "upstream_not_configured");
 
-  const keyedApp = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const keyedApp = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     await keyedApp.close();
   });
@@ -7961,7 +9084,7 @@ test("fsc corp-outline route returns name-matched candidates and cross-checks bz
   global.fetch = async (url) => {
     fetchCalls += 1;
     assert.match(String(url), /corpNm=/);
-    assert.match(String(url), /serviceKey=data-go-key/);
+    assert.match(String(url), /serviceKey=data-go-key-example/);
     return new Response(
       JSON.stringify({
         response: {
@@ -7973,7 +9096,7 @@ test("fsc corp-outline route returns name-matched candidates and cross-checks bz
     );
   };
 
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8010,7 +9133,7 @@ test("fsc corp-outline zero result explains dataset and naming limits", async (t
     }),
     { status: 200, headers: { "content-type": "application/json" } }
   );
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8030,7 +9153,7 @@ test("fsc corp-outline zero result explains dataset and naming limits", async (t
 test("fsc corp-outline route maps upstream 403 to a 502 forbidden error", async (t) => {
   const originalFetch = global.fetch;
   global.fetch = async () => new Response("Forbidden", { status: 403 });
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8074,7 +9197,7 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
       { status: 200, headers: { "content-type": "application/json" } }
     );
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8091,7 +9214,7 @@ test("g2b sanctioned-supplier route returns active sanctions and uses capital-S 
   assert.equal(body.source.data_go_kr_dataset, "15129466");
   assert.equal(body.source.query.inqryDiv, "1");
   assert.equal(body.upstream_response.response.body.totalCount, 1);
-  assert.match(seenUrls[0], /ServiceKey=data-go-key/);
+  assert.match(seenUrls[0], /ServiceKey=data-go-key-example/);
   assert.match(seenUrls[0], /inqryDiv=1/);
   const cached = await app.inject({ method: "GET", url: "/v1/g2b/sanctioned-supplier?bizno=1234567890" });
   assert.equal(cached.json().proxy.cache.hit, true);
@@ -8118,7 +9241,7 @@ test("g2b sanctioned-supplier zero result explains excluded historical sanctions
     }),
     { status: 200, headers: { "content-type": "application/json" } }
   );
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8137,7 +9260,7 @@ test("g2b sanctioned-supplier zero result explains excluded historical sanctions
 test("g2b sanctioned-supplier distinguishes failed lookups from no sanctions", async (t) => {
   const originalFetch = global.fetch;
   global.fetch = async () => new Response("upstream unavailable", { status: 503 });
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8161,7 +9284,7 @@ test("keyed data.go.kr routes classify upstream connect timeouts as 504 with cau
     });
     throw error;
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8192,7 +9315,7 @@ test("keyed data.go.kr routes classify refused connections as 503 upstream_unrea
     error.cause = Object.assign(new Error("connect ECONNREFUSED 27.101.236.63:443"), { code: "ECONNREFUSED" });
     throw error;
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8216,7 +9339,7 @@ test("keyed data.go.kr routes map unclassifiable fetch errors to 502 upstream_er
   global.fetch = async () => {
     throw new Error("socket hang up");
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8249,7 +9372,7 @@ test("national-pension propagates classification when the detail call fails", as
     });
     throw error;
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -8404,7 +9527,7 @@ test("health endpoint reports koreanLawConfigured from LAW_OC", async (t) => {
 
 test("health endpoint reports evChargerConfigured from DATA_GO_KR_API_KEY", async (t) => {
   const off = buildServer({ env: {} });
-  const on = buildServer({ env: { DATA_GO_KR_API_KEY: "server-key" } });
+  const on = buildServer({ env: { DATA_GO_KR_API_KEY: "server-key-example" } });
   t.after(async () => {
     await off.close();
     await on.close();
@@ -8419,7 +9542,7 @@ test("health endpoint reports evChargerConfigured from DATA_GO_KR_API_KEY", asyn
 
 test("health endpoint reports buildingRegisterConfigured from DATA_GO_KR_API_KEY", async (t) => {
   const off = buildServer({ env: {} });
-  const on = buildServer({ env: { DATA_GO_KR_API_KEY: "server-key" } });
+  const on = buildServer({ env: { DATA_GO_KR_API_KEY: "server-key-example" } });
   t.after(async () => {
     await off.close();
     await on.close();
@@ -8482,6 +9605,36 @@ test("classifyUpstreamFailure separates unreachable, timeout, and opaque failure
   assert.equal(classifyUpstreamFailure(new Error("bad request")), null);
   assert.equal(classifyUpstreamFailure(undefined), null);
 });
+  // An adapter wrapper's own `code` must never mask the socket cause.
+  const wrappedReset = new Error("fetch failed", { cause: upstreamFetchFailure("ECONNRESET") });
+  wrappedReset.code = "proxy_error";
+  assert.deepEqual(classifyUpstreamFailure(wrappedReset), {
+    error: "upstream_unreachable",
+    cause: "ECONNRESET",
+    statusCode: 503
+  });
+
+  const wrappedTimeout = new Error("fetch failed", { cause: upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT") });
+  wrappedTimeout.code = "proxy_error";
+  assert.deepEqual(classifyUpstreamFailure(wrappedTimeout), {
+    error: "upstream_timeout",
+    cause: "UND_ERR_CONNECT_TIMEOUT",
+    statusCode: 504
+  });
+
+  // AbortSignal.timeout rejects with a DOMException whose numeric legacy code is
+  // indistinguishable from other aborts, so the root cause is only identifiable
+  // by name — and the wrapper's own code must not shadow it.
+  const wrappedAbortSignal = new Error("fetch failed", {
+    cause: new DOMException("The operation was aborted due to timeout", "TimeoutError")
+  });
+  wrappedAbortSignal.code = "proxy_error";
+  assert.deepEqual(classifyUpstreamFailure(wrappedAbortSignal), {
+    error: "upstream_timeout",
+    cause: "TimeoutError",
+    statusCode: 504
+  });
+
 
 test("data.go.kr and KOSIS connect failures answer 503 upstream_unreachable with a cause", async (t) => {
   const originalFetch = global.fetch;
@@ -8492,8 +9645,8 @@ test("data.go.kr and KOSIS connect failures answer 503 upstream_unreachable with
   const app = buildServer({
     env: {
       KMA_OPEN_API_KEY: "kma-key",
-      KOSIS_API_KEY: "kosis-key",
-      DATA_GO_KR_API_KEY: "data-key"
+      KOSIS_API_KEY: "kosis-key-example",
+      DATA_GO_KR_API_KEY: "data-key-example"
     }
   });
 
@@ -8527,7 +9680,7 @@ test("upstream connect timeouts answer 504 upstream_timeout", async (t) => {
   const app = buildServer({
     env: {
       KMA_OPEN_API_KEY: "kma-key",
-      KOSIS_API_KEY: "kosis-key"
+      KOSIS_API_KEY: "kosis-key-example"
     }
   });
 
@@ -8554,7 +9707,7 @@ test("fine-dust route surfaces upstream connect timeout as 504 upstream_timeout 
 
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-secret"
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example"
     }
   });
 
@@ -8570,7 +9723,7 @@ test("fine-dust route surfaces upstream connect timeout as 504 upstream_timeout 
   assert.equal(response.json().upstream.failure, "upstream_timeout");
   assert.equal(response.json().upstream.cause, "UND_ERR_CONNECT_TIMEOUT");
   assert.equal(response.json().upstream.route, url);
-  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+  assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=/);
 });
 
 test("fine-dust route surfaces connection resets as 503 upstream_unreachable", async (t) => {
@@ -8581,7 +9734,7 @@ test("fine-dust route surfaces connection resets as 503 upstream_unreachable", a
 
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-secret"
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example"
     }
   });
 
@@ -8597,7 +9750,7 @@ test("fine-dust route surfaces connection resets as 503 upstream_unreachable", a
   assert.equal(response.statusCode, 503);
   assert.equal(response.json().error, "upstream_unreachable");
   assert.equal(response.json().upstream.cause, "ECONNRESET");
-  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+  assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=/);
 });
 
 const AIRKOREA_PASSTHROUGH_URL = "/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?returnType=json&stationName=%EA%B0%95%EB%82%A8%EA%B5%AC";
@@ -8616,7 +9769,7 @@ test("AirKorea passthrough route classifies network timeouts as 504 upstream_tim
   };
 
   const app = buildServer({
-    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example" },
     loggerInstance: logger
   });
 
@@ -8630,12 +9783,12 @@ test("AirKorea passthrough route classifies network timeouts as 504 upstream_tim
   assert.equal(response.json().error, "upstream_timeout");
   assert.equal(response.json().upstream.cause, "UND_ERR_CONNECT_TIMEOUT");
   assert.equal(response.json().upstream.route, AIRKOREA_PASSTHROUGH_URL);
-  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+  assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=(?!\[REDACTED\])/);
 
   assert.ok(routeUsageFields(entries).some((fields) =>
     fields.errorCode === "upstream_timeout" && fields.statusCode === 504
   ));
-  assert.doesNotMatch(text(), /airkorea-secret|serviceKey=(?!\[REDACTED\])/);
+  assert.doesNotMatch(text(), /airkorea-secret-example|serviceKey=(?!\[REDACTED\])/);
 });
 
 test("AirKorea passthrough route classifies unreachable upstreams as 503 upstream_unreachable", async (t) => {
@@ -8645,7 +9798,7 @@ test("AirKorea passthrough route classifies unreachable upstreams as 503 upstrea
   };
 
   const app = buildServer({
-    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example" }
   });
 
   t.after(async () => {
@@ -8657,7 +9810,7 @@ test("AirKorea passthrough route classifies unreachable upstreams as 503 upstrea
   assert.equal(response.statusCode, 503);
   assert.equal(response.json().error, "upstream_unreachable");
   assert.equal(response.json().upstream.cause, "ENOTFOUND");
-  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+  assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=/);
 });
 
 test("AirKorea passthrough route keeps opaque fetch failures as 502 upstream_fetch_failed", async (t) => {
@@ -8667,7 +9820,7 @@ test("AirKorea passthrough route keeps opaque fetch failures as 502 upstream_fet
   };
 
   const app = buildServer({
-    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" }
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example" }
   });
 
   t.after(async () => {
@@ -8678,7 +9831,7 @@ test("AirKorea passthrough route keeps opaque fetch failures as 502 upstream_fet
   const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
   assert.equal(response.statusCode, 502);
   assert.equal(response.json().error, "upstream_fetch_failed");
-  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+  assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=/);
 });
 
 test("AirKorea passthrough route maps upstream HTTP 403 to 403 upstream_forbidden", async (t) => {
@@ -8688,7 +9841,7 @@ test("AirKorea passthrough route maps upstream HTTP 403 to 403 upstream_forbidde
     new Response("forbidden", { status: 403, headers: { "content-type": "text/plain" } });
 
   const app = buildServer({
-    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret" },
+    env: { AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example" },
     loggerInstance: logger
   });
 
@@ -8700,7 +9853,7 @@ test("AirKorea passthrough route maps upstream HTTP 403 to 403 upstream_forbidde
   const response = await app.inject({ method: "GET", url: AIRKOREA_PASSTHROUGH_URL });
   assert.equal(response.statusCode, 403);
   assert.equal(response.json().error, "upstream_forbidden");
-  assert.doesNotMatch(response.body, /airkorea-secret|serviceKey=/);
+  assert.doesNotMatch(response.body, /airkorea-secret-example|serviceKey=/);
 
   assert.ok(routeUsageFields(entries).some((fields) =>
     fields.errorCode === "upstream_forbidden" && fields.statusCode === 403
@@ -8716,8 +9869,8 @@ test("AirKorea and MOFA routes record the upstream failure errorCode in route us
 
   const app = buildServer({
     env: {
-      AIR_KOREA_OPEN_API_KEY: "airkorea-secret",
-      DATA_GO_KR_API_KEY: "mofa-secret"
+      AIR_KOREA_OPEN_API_KEY: "airkorea-secret-example",
+      DATA_GO_KR_API_KEY: "mofa-secret-example"
     },
     loggerInstance: logger
   });
@@ -8737,4 +9890,451 @@ test("AirKorea and MOFA routes record the upstream failure errorCode in route us
   assert.ok(fields.some((entry) =>
     entry.route === "/v1/mofa-travel-safety/travel-alerts" && entry.statusCode === 504 && entry.errorCode === "upstream_timeout"
   ));
+});
+
+// ---------------------------------------------------------------------------
+// Issue #712: every route that talks to a keyed upstream must answer the
+// documented 503 upstream_unreachable / 504 upstream_timeout contract with the
+// socket cause (see docs/deploy-k-skill-proxy.md) instead of an opaque 502 or an
+// unbounded hang, while real upstream HTTP errors keep their own status/body.
+//
+// `upstreamHttpError` pins what a 403 from upstream must keep returning; the
+// mfds food-safety routes deliberately degrade to 200 + `warnings` while at
+// least one of their sources answered, so only a total outage of every source
+// may surface as 503/504.
+// ---------------------------------------------------------------------------
+const NETWORK_CLASSIFICATION_ROUTES = [
+  {
+    label: "household-waste/info",
+    url: "/v1/household-waste/info?cond%5BSGG_NM%3A%3ALIKE%5D=%EA%B0%95%EB%82%A8%EA%B5%AC&pageNo=1&numOfRows=100",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_error" }
+  },
+  {
+    label: "parking-lots/search",
+    url: "/v1/parking-lots/search?latitude=37.57371315593711&longitude=126.97833785777944&limit=2&radius=1000",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "proxy_error" }
+  },
+  {
+    label: "ev-charger/info",
+    url: "/v1/ev-charger/info?zcode=11",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_forbidden" }
+  },
+  {
+    label: "ev-charger/status",
+    url: "/v1/ev-charger/status?statId=ME000001",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_forbidden" }
+  },
+  {
+    label: "building-register/title",
+    url: "/v1/building-register/title?pnu=1168010100101230004",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_forbidden" }
+  },
+  {
+    label: "lh-notice/search",
+    url: "/v1/lh-notice/search?limit=10",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_error" }
+  },
+  {
+    label: "lh-notice/detail",
+    url: "/v1/lh-notice/detail?panId=2015122300019828&ccrCnntSysDsCd=03&splInfTpCd=051",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_error" }
+  },
+  {
+    label: "kstartup/announcements",
+    url: "/v1/kstartup/announcements?page=1",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 403, error: "upstream_invalid_response" }
+  },
+  {
+    label: "mfds/drug-safety/lookup",
+    url: "/v1/mfds/drug-safety/lookup?itemName=%ED%83%80%EC%9D%B4%EB%A0%88%EB%86%80",
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    secrets: ["data-go-key"],
+    upstreamHttpError: { statusCode: 502, error: "upstream_error" }
+  },
+  {
+    label: "mfds/food-safety/search",
+    url: "/v1/mfds/food-safety/search?query=%EA%B9%80%EB%B0%A5&limit=3",
+    env: { DATA_GO_KR_API_KEY: "data-go-key", FOODSAFETYKOREA_API_KEY: "foodsafety-key" },
+    secrets: ["data-go-key", "foodsafety-key"],
+    upstreamHttpError: { statusCode: 200, error: null }
+  },
+  {
+    label: "mfds/food-safety/health-food-ingredient",
+    url: "/v1/mfds/food-safety/health-food-ingredient?query=%EC%B0%A8%EC%A0%84%EC%9E%90%ED%94%BC&limit=3",
+    env: { FOODSAFETYKOREA_API_KEY: "foodsafety-key" },
+    secrets: ["foodsafety-key"],
+    upstreamHttpError: { statusCode: 200, error: null }
+  },
+  {
+    label: "mfds/food-safety/inspection-fail",
+    url: "/v1/mfds/food-safety/inspection-fail?query=%EC%AA%BD%EA%B0%93&limit=3",
+    env: { FOODSAFETYKOREA_API_KEY: "foodsafety-key" },
+    secrets: ["foodsafety-key"],
+    upstreamHttpError: { statusCode: 200, error: null }
+  },
+  {
+    label: "mfds/food-safety/product-report",
+    url: "/v1/mfds/food-safety/product-report?query=%EC%B0%A8%EC%A0%84%EC%9E%90%ED%94%BC&limit=3",
+    env: { FOODSAFETYKOREA_API_KEY: "foodsafety-key" },
+    secrets: ["foodsafety-key"],
+    upstreamHttpError: { statusCode: 200, error: null }
+  }
+];
+
+async function withMockedFetch(fetchImpl, run) {
+  const originalFetch = global.fetch;
+  global.fetch = fetchImpl;
+  try {
+    return await run();
+  } finally {
+    global.fetch = originalFetch;
+  }
+}
+
+function trackServer(t, env, loggerInstance) {
+  const app = loggerInstance ? buildServer({ env, loggerInstance }) : buildServer({ env });
+  t.after(async () => {
+    await app.close();
+  });
+  return app;
+}
+
+test("keyed upstream routes answer 504 upstream_timeout with the socket cause (#712)", async (t) => {
+  await withMockedFetch(async () => {
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  }, async () => {
+    for (const entry of NETWORK_CLASSIFICATION_ROUTES) {
+      const app = trackServer(t, entry.env);
+      const response = await app.inject({ method: "GET", url: entry.url });
+      const body = response.json();
+
+      assert.equal(response.statusCode, 504, `${entry.label} must map a connect timeout to 504`);
+      assert.equal(body.error, "upstream_timeout", `${entry.label} error code`);
+      assert.equal(body.upstream?.failure, "upstream_timeout", `${entry.label} upstream failure`);
+      assert.equal(body.upstream?.cause, "UND_ERR_CONNECT_TIMEOUT", `${entry.label} upstream cause`);
+      assert.equal(body.upstream?.route, entry.url, `${entry.label} upstream route`);
+    }
+  });
+});
+
+test("keyed upstream routes answer 503 upstream_unreachable for DNS and reset failures (#712)", async (t) => {
+  for (const code of ["ENOTFOUND", "ECONNRESET"]) {
+    await withMockedFetch(async () => {
+      throw upstreamFetchFailure(code);
+    }, async () => {
+      for (const entry of NETWORK_CLASSIFICATION_ROUTES) {
+        const app = trackServer(t, entry.env);
+        const response = await app.inject({ method: "GET", url: entry.url });
+        const body = response.json();
+
+        assert.equal(response.statusCode, 503, `${entry.label} must map ${code} to 503`);
+        assert.equal(body.error, "upstream_unreachable", `${entry.label} error code`);
+        assert.equal(body.upstream?.cause, code, `${entry.label} upstream cause`);
+      }
+    });
+  }
+});
+
+test("keyed upstream routes keep real upstream HTTP errors distinct from network failures (#712)", async (t) => {
+  await withMockedFetch(async () =>
+    new Response("forbidden", { status: 403, headers: { "content-type": "text/plain" } }), async () => {
+    for (const entry of NETWORK_CLASSIFICATION_ROUTES) {
+      const app = trackServer(t, entry.env);
+      const response = await app.inject({ method: "GET", url: entry.url });
+      const body = response.json();
+
+      assert.equal(
+        response.statusCode,
+        entry.upstreamHttpError.statusCode,
+        `${entry.label} must keep its upstream HTTP status`
+      );
+      assert.equal(
+        body.error ?? null,
+        entry.upstreamHttpError.error,
+        `${entry.label} must keep its upstream error code`
+      );
+      assert.equal(body.upstream, undefined, `${entry.label} must not be classified as a network failure`);
+    }
+  });
+});
+
+test("keyed upstream network failures never echo the service key in the response or logs (#712)", async (t) => {
+  for (const entry of NETWORK_CLASSIFICATION_ROUTES) {
+    const [primarySecret, secondarySecret] = entry.secrets;
+    const leakyUrl =
+      `https://apis.data.go.kr/example?serviceKey=${primarySecret}` +
+      (secondarySecret ? `&altKey=${secondarySecret}` : "");
+    const fail = async () => {
+      const error = new TypeError(`fetch failed: request to ${leakyUrl} failed`);
+      error.cause = Object.assign(new Error(`Connect Timeout Error (${leakyUrl})`), {
+        code: "UND_ERR_CONNECT_TIMEOUT"
+      });
+      throw error;
+    };
+
+    const { logger, text } = createCapturingLogger();
+    await withMockedFetch(fail, async () => {
+      const app = trackServer(t, entry.env, logger);
+      const response = await app.inject({ method: "GET", url: entry.url });
+
+      for (const secret of entry.secrets) {
+        assert.equal(
+          response.body.includes(secret),
+          false,
+          `${entry.label} response body must not echo the service key`
+        );
+        assert.equal(
+          text().includes(secret),
+          false,
+          `${entry.label} logs must not echo the service key`
+        );
+      }
+      assert.doesNotMatch(response.body, /serviceKey=(?!\[REDACTED\])/, entry.label);
+    });
+  }
+});
+
+test("mfds food-safety search queries its sources concurrently so deadlines are not added up (#712)", async (t) => {
+  const originalFetch = global.fetch;
+  const started = [];
+  let releaseGate;
+  const gate = new Promise((resolve) => {
+    releaseGate = resolve;
+  });
+  // Safety valve: without it a sequential handler would deadlock the test. When
+  // it fires the assertion below still fails with a readable message.
+  const safety = setTimeout(() => releaseGate(), 2000);
+  let startedAtFirstFailure = null;
+  global.fetch = async (url) => {
+    started.push(String(url));
+    if (started.length === 2) {
+      releaseGate();
+    }
+    await gate;
+    if (startedAtFirstFailure === null) {
+      startedAtFirstFailure = started.length;
+    }
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "data-go-key", FOODSAFETYKOREA_API_KEY: "foodsafety-key" }
+  });
+  t.after(async () => {
+    clearTimeout(safety);
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/mfds/food-safety/search?query=%EA%B9%80%EB%B0%A5&limit=3"
+  });
+
+  assert.equal(response.statusCode, 504);
+  assert.equal(
+    startedAtFirstFailure,
+    2,
+    "both sources must be in flight before either answers; waiting for them in series doubles the timeout budget"
+  );
+});
+
+test("mfds routes bound every upstream request with a proxy timeout signal (#712)", async (t) => {
+  const originalFetch = global.fetch;
+  const seenSignals = [];
+  global.fetch = async (_url, options) => {
+    seenSignals.push(options?.signal ?? null);
+    throw upstreamFetchFailure("UND_ERR_CONNECT_TIMEOUT");
+  };
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/mfds/drug-safety/lookup?itemName=%ED%83%80%EC%9D%B4%EB%A0%88%EB%86%80"
+  });
+
+  assert.equal(response.statusCode, 504);
+  assert.equal(seenSignals.length, 2, "both drug-safety upstream calls must be issued");
+  for (const signal of seenSignals) {
+    assert.ok(signal instanceof AbortSignal, "mfds requestJson must pass an AbortSignal to fetch");
+  }
+});
+
+// --- EUC-KR/CP949 query parameter fallback (issue #727) ---
+// Windows 한국어 로케일 클라이언트는 쿼리 값을 CP949 바이트로 퍼센트 인코딩한다.
+// 프록시는 키/값을 엄격한 UTF-8로 먼저 디코딩하고, 유효한 UTF-8이 아닐 때만 euc-kr로 폴백한다.
+
+test("query parsing decodes EUC-KR components and leaves UTF-8 and ASCII untouched", () => {
+  assert.deepEqual(
+    { ...parseQueryStringWithEucKrFallback("target=law&query=%B0%FC%BC%BC%B9%FD") },
+    { target: "law", query: "관세법" }
+  );
+  assert.deepEqual(
+    { ...parseQueryStringWithEucKrFallback("query=%EA%B4%80%EC%84%B8%EB%B2%95&limit=1&r=a+b&s=%2B&empty=&flag") },
+    { query: "관세법", limit: "1", r: "a b", s: "+", empty: "", flag: "" }
+  );
+  assert.deepEqual(
+    {
+      ...parseQueryStringWithEucKrFallback(
+        "cond[SGG_NM::LIKE]=%B0%AD%B3%B2%B1%B8&cond[SGG_NM::LIKE]=%EA%B0%95%EB%82%A8%EA%B5%AC&plain=ascii"
+      )
+    },
+    { "cond[SGG_NM::LIKE]": ["강남구", "강남구"], plain: "ascii" }
+  );
+  // Malformed escapes stay byte-for-byte like the default parser; bytes that are
+  // valid in neither UTF-8 nor CP949 become replacement characters, never a throw.
+  assert.deepEqual(
+    { ...parseQueryStringWithEucKrFallback("a=%zz&b=100%&c=%FF%FE") },
+    { a: "%zz", b: "100%", c: "\uFFFD\uFFFD" }
+  );
+});
+
+test("korean-law search sends UTF-8 upstream for EUC-KR encoded query bytes", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(JSON.stringify({ LawSearch: { law: [{ 법령명한글: "관세법" }] } }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { LAW_OC: "server-oc", KSKILL_PROXY_CACHE_TTL_MS: "60000" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const cp949 = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=law&query=%B0%FC%BC%BC%B9%FD"
+  });
+  assert.equal(cp949.statusCode, 200);
+  assert.equal(fetchCalls.length, 1);
+  assert.match(fetchCalls[0], /\/DRF\/lawSearch\.do\?/);
+  assert.equal(new URL(fetchCalls[0]).searchParams.get("target"), "law");
+  assert.equal(new URL(fetchCalls[0]).searchParams.get("query"), "관세법");
+
+  // The UTF-8 percent-encoded form of the same value normalizes to the same
+  // request, so it reuses the cache entry the CP949 request created.
+  const utf8 = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=law&query=%EA%B4%80%EC%84%B8%EB%B2%95"
+  });
+  assert.equal(utf8.statusCode, 200);
+  assert.equal(utf8.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls.length, 1);
+});
+
+test("korean-law search forwards UTF-8 percent-encoded queries unchanged", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(JSON.stringify({ LawSearch: { law: [{ 법령명한글: "관세법" }] } }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({ env: { LAW_OC: "server-oc" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-law/search?target=law&query=%EA%B4%80%EC%84%B8%EB%B2%95"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(new URL(fetchCalls[0]).searchParams.get("query"), "관세법");
+});
+
+test("lh-notice search accepts EUC-KR encoded panSs", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    JSON.stringify([
+      { CMN: { CODE: "SUCCESS", ERR_MSG: "", TOTAL_CNT: 1 } },
+      {
+        dsList: [
+          {
+            PAN_ID: "2015122300019828",
+            PAN_NM: "2026년 상반기 영구임대주택 예비입주자 모집 공고",
+            PAN_SS: "공고중"
+          }
+        ]
+      }
+    ]),
+    { status: 200, headers: { "content-type": "application/json;charset=UTF-8" } }
+  );
+
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key" } });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/lh-notice/search?panSs=%B0%F8%B0%ED%C1%DF&limit=10"
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().query.pan_ss, "공고중");
+  assert.equal(response.json().items.length, 1);
+});
+
+test("real-estate region-code resolves EUC-KR encoded region names", async (t) => {
+  const app = buildServer();
+  t.after(async () => {
+    await app.close();
+  });
+
+  const cp949 = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%B0%AD%B3%B2%B1%B8" });
+  assert.equal(cp949.statusCode, 200);
+  assert.equal(cp949.json().query, "강남구");
+  assert.ok(cp949.json().results.some((entry) => entry.name.includes("강남구")));
+
+  // Mixed CP949 + ASCII and the UTF-8 spelling of the same value agree.
+  const mixed = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%B0%AD%B3%B2%B1%B8&limit=5" });
+  assert.equal(mixed.statusCode, 200);
+  assert.equal(mixed.json().query, "강남구");
+  const utf8 = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%EA%B0%95%EB%82%A8%EA%B5%AC" });
+  assert.equal(utf8.statusCode, 200);
+  assert.equal(utf8.json().query, "강남구");
+
+  // Repeated keys and bytes invalid in both encodings must never surface a 500.
+  const repeated = await app.inject({
+    method: "GET",
+    url: "/v1/real-estate/region-code?q=%B0%AD%B3%B2%B1%B8&q=%EA%B0%95%EB%82%A8%EA%B5%AC"
+  });
+  assert.equal(repeated.statusCode, 200);
+  const loneBytes = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%FF%FE" });
+  assert.equal(loneBytes.statusCode, 200);
+  assert.deepEqual(loneBytes.json().results, []);
+  const malformedEscapes = await app.inject({ method: "GET", url: "/v1/real-estate/region-code?q=%zz" });
+  assert.equal(malformedEscapes.statusCode, 200);
 });

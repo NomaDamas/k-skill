@@ -81,60 +81,74 @@ async function fetchBccardEatplSearch({
     throw new Error("fetch is not available in this Node runtime.");
   }
 
-  const url = relayUrl ? new URL(String(relayUrl)) : buildBccardEatplSearchUrl(baseUrl);
-  const body = relayUrl
-    ? query
-    : {
-      trnsTrceNo: nextTraceNumber(),
-      instNm,
-      ...(query.merNm ? { merNm: query.merNm } : {}),
-      ...(query.location ? { location: query.location } : {}),
-      ...(query.merTpbuzNm ? { merTpbuzNm: query.merTpbuzNm } : {})
-    };
-  const response = await fetchImpl(url, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      "user-agent": "k-skill-proxy/bccard-eatpl",
-      ...(relayUrl ? { authorization: `Bearer ${relayToken}` } : {})
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs)
-  });
-  const text = await response.text();
-  if (!response.ok) {
-    const error = new Error(`BC카드 eat.pl API responded with ${response.status}.`);
-    error.code = "upstream_error";
-    error.statusCode = response.status >= 400 && response.status < 500 ? response.status : 502;
-    error.upstreamStatusCode = response.status;
-    error.upstreamBodySnippet = text.slice(0, 200);
-    throw error;
-  }
-  let payload;
-  try {
-    payload = JSON.parse(text);
-  } catch {
-    const error = new Error("BC카드 eat.pl API returned invalid JSON.");
-    error.code = "invalid_upstream_response";
-    error.statusCode = 502;
-    throw error;
-  }
-  if (payload?.rspCode !== "00000" || !Array.isArray(payload?.data)) {
-    const error = new Error(payload?.rspMessage || "BC카드 eat.pl API returned an application-level error.");
-    error.code = "upstream_semantic_error";
-    error.statusCode = 502;
-    throw error;
-  }
-  return {
-    items: payload.data.slice(0, 100),
-    query,
-    attribution: "eat.pl 잇플 · BC카드 결제 데이터 기반",
-    upstream: {
-      status_code: response.status,
-      provider: relayUrl ? "bccard-eatpl-relay" : "bccard-eatpl"
+  async function requestSearch({ viaRelay }) {
+    const url = viaRelay ? new URL(String(relayUrl)) : buildBccardEatplSearchUrl(baseUrl);
+    const body = viaRelay
+      ? query
+      : {
+        trnsTrceNo: nextTraceNumber(),
+        instNm,
+        ...(query.merNm ? { merNm: query.merNm } : {}),
+        ...(query.location ? { location: query.location } : {}),
+        ...(query.merTpbuzNm ? { merTpbuzNm: query.merTpbuzNm } : {})
+      };
+    const response = await fetchImpl(url, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        "user-agent": "k-skill-proxy/bccard-eatpl",
+        ...(viaRelay ? { authorization: `Bearer ${relayToken}` } : {})
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      const error = new Error(`BC카드 eat.pl API responded with ${response.status}.`);
+      error.code = "upstream_error";
+      error.statusCode = response.status >= 400 && response.status < 500 ? response.status : 502;
+      error.upstreamStatusCode = response.status;
+      error.upstreamBodySnippet = text.slice(0, 200);
+      throw error;
     }
-  };
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      const error = new Error("BC카드 eat.pl API returned invalid JSON.");
+      error.code = "invalid_upstream_response";
+      error.statusCode = 502;
+      throw error;
+    }
+    if (payload?.rspCode !== "00000" || !Array.isArray(payload?.data)) {
+      const error = new Error(payload?.rspMessage || "BC카드 eat.pl API returned an application-level error.");
+      error.code = "upstream_semantic_error";
+      error.statusCode = 502;
+      throw error;
+    }
+    return {
+      items: payload.data.slice(0, 100),
+      query,
+      attribution: "eat.pl 잇플 · BC카드 결제 데이터 기반",
+      upstream: {
+        status_code: response.status,
+        provider: viaRelay ? "bccard-eatpl-relay" : "bccard-eatpl"
+      }
+    };
+  }
+
+  if (!baseUrl) {
+    return requestSearch({ viaRelay: true });
+  }
+  try {
+    return await requestSearch({ viaRelay: false });
+  } catch (error) {
+    if (!relayUrl) {
+      throw error;
+    }
+    return requestSearch({ viaRelay: true });
+  }
 }
 
 module.exports = {

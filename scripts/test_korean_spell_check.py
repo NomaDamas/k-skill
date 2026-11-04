@@ -24,7 +24,6 @@ $(document).ready(function(){
     if(1){
         totalPageCnt = 1;
     }
-    data = eval(data);
 });
 </script>
 </body>
@@ -132,7 +131,6 @@ $(document).ready(function(){{
     if(1){{
         totalPageCnt = 1;
     }}
-    data = eval(data);
 }});
 </script>
 </body>

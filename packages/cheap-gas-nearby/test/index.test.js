@@ -153,7 +153,7 @@ test("searchCheapGasStationsByLocationQuery resolves the anchor, queries Opinet,
   };
 
   const result = await searchCheapGasStationsByLocationQuery("서울역", {
-    apiKey: "test-opinet-key",
+    apiKey: "test-opinet-key-example",
     radius: 1000,
     limit: 2,
     detailLimit: 2,
@@ -234,7 +234,7 @@ test("searchCheapGasStationsByLocationQuery falls back to the next ranked Kakao 
   };
 
   const result = await searchCheapGasStationsByLocationQuery("서울역", {
-    apiKey: "test-opinet-key",
+    apiKey: "test-opinet-key-example",
     limit: 1,
     detailLimit: 1,
     fetchImpl
@@ -325,7 +325,7 @@ test("searchCheapGasStationsByLocationQuery keeps score-ranked Kakao fallback or
   };
 
   const result = await searchCheapGasStationsByLocationQuery("강남역", {
-    apiKey: "test-opinet-key",
+    apiKey: "test-opinet-key-example",
     limit: 1,
     detailLimit: 1,
     fetchImpl
@@ -345,7 +345,7 @@ test("searchCheapGasStationsByLocationQuery keeps score-ranked Kakao fallback or
 test("searchCheapGasStationsByLocationQuery rejects non-numeric limit and detailLimit values instead of returning an empty list", async () => {
   await assert.rejects(
     searchCheapGasStationsByLocationQuery("37.55472,126.97068", {
-      apiKey: "test-opinet-key",
+      apiKey: "test-opinet-key-example",
       limit: "abc",
       fetchImpl: async () => {
         throw new Error("fetch should not run for invalid limit input");
@@ -356,7 +356,7 @@ test("searchCheapGasStationsByLocationQuery rejects non-numeric limit and detail
 
   await assert.rejects(
     searchCheapGasStationsByLocationQuery("37.55472,126.97068", {
-      apiKey: "test-opinet-key",
+      apiKey: "test-opinet-key-example",
       detailLimit: "abc",
       fetchImpl: async () => {
         throw new Error("fetch should not run for invalid detailLimit input");

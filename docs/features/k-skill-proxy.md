@@ -38,7 +38,6 @@ client/skill -> k-skill-proxy -> upstream public API
 - `GET /v1/korean-stock/search`
 - `GET /v1/korean-stock/base-info`
 - `GET /v1/korean-stock/trade-info`
-- `GET /v1/naver-shopping/search` (네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 공개 BFF JSON 기반 상품/가격 후보 조회)
 - `GET /v1/coupang/products/search` (쿠팡 파트너스 상품검색, `COUPANG_ACCESS_KEY` + `COUPANG_SECRET_KEY`)
 - `GET /v1/opinet/around`
 - `GET /v1/opinet/detail`
@@ -282,10 +281,13 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/kosis/meta' \
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/kosis/data' \
   --data-urlencode 'tableId=DT_1JC1501' \
   --data-urlencode 'prdSe=Y' \
-  --data-urlencode 'start=2020' \
+  --data-urlencode 'start=2022' \
   --data-urlencode 'end=2023' \
-  --data-urlencode 'objL1=ALL'
+  --data-urlencode 'objL1=00' \
+  --data-urlencode 'itmId=T1100'
 ```
+
+`DT_1JC1501` 을 `objL1=ALL`+`itmId=ALL` 로 조회하면 40,000셀 한도를 넘어 KOSIS가 에러 코드 `31` 을 응답한다. 프록시는 이런 KOSIS 앱 레벨 에러를 HTTP 200 으로 흘려보내지 않고 매핑한다: `20`/`21`/`30`/`31` → `400`, `10`/`11`/`41`/`42` → `502 upstream_forbidden`, `40`(분당 호출 한도) → `503 upstream_quota_exceeded`, `50`/`99`/기타/빈 응답 → `502 upstream_error`. 응답 본문에는 `upstream.err`/`upstream.errMsg` 가 그대로 담긴다.
 
 Kakao Local geocoding endpoint (`KAKAO_REST_API_KEY` 필요, caller `apiKey`는 무시하고 서버 쪽 키를 주입):
 
@@ -323,20 +325,6 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/data4library/book-exists
 ```
 
 프록시는 caller가 넘긴 `authKey`/`format`을 무시하고 서버 쪽 `DATA4LIBRARY_AUTH_KEY`와 `format=json`을 주입한다.
-
-네이버 쇼핑 가격비교 endpoint (`NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET`이 있으면 공식 Search API 우선):
-
-```bash
-curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/naver-shopping/search' \
-  --data-urlencode 'q=에어팟 프로 2세대' \
-  --data-urlencode 'limit=10'
-```
-
-키가 없는 no-key fallback은 `search.shopping.naver.com/search/all` HTML 페이지 대신
-`ns-portal.shopping.naver.com/api/v2/shopping-paged-slot?query=<검색어>&source=shp_gui`
-공개 JSON path를 사용한다. `page`는 BFF에 전달한 뒤 해당 페이지 카드만 정규화하고, no-key
-`price_asc`/`price_dsc`/`review` 정렬은 선택된 BFF 페이지 안에서 로컬 적용한다. BFF에는 날짜
-필드가 없어 no-key `date` 요청은 `meta.sort_applied: "unsupported"`로 표시한다.
 
 한국 주식 검색 endpoint:
 

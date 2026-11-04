@@ -12,6 +12,9 @@
 // Error payloads can also arrive as XML from the common data.go.kr error path, e.g.
 // unregistered ServiceKey, so both JSON and XML fault paths must be handled.
 
+const { classifyUpstreamFailure } = require("./upstream-errors");
+const { redactErrorChain } = require("./redaction");
+
 const LH_UPSTREAM_BASE_URL = "http://apis.data.go.kr/B552555";
 const LH_LIST_PATH = "lhLeaseNoticeInfo1/lhLeaseNoticeInfo1";
 const LH_DETAIL_PATH = "lhLeaseNoticeDtlInfo1/getLeaseNoticeDtlInfo1";
@@ -264,8 +267,8 @@ function parseXmlErrorEnvelope(xmlText) {
   };
 }
 
-function buildError({ message, statusCode, code, upstreamCode }) {
-  const error = new Error(message);
+function buildError({ message, statusCode, code, upstreamCode, cause }) {
+  const error = new Error(message, cause === undefined ? undefined : { cause });
   error.statusCode = statusCode;
   error.code = code;
   if (upstreamCode) {
@@ -398,7 +401,7 @@ function buildNoticeDetailResponseBody(envelope, filters) {
   };
 }
 
-async function fetchLhUpstream({ url, fetchImpl = global.fetch, timeoutMs = 20000 }) {
+async function fetchLhUpstream({ url, serviceKey, fetchImpl = global.fetch, timeoutMs = 20000 }) {
   let response;
   try {
     response = await fetchImpl(url.toString(), {
@@ -406,11 +409,19 @@ async function fetchLhUpstream({ url, fetchImpl = global.fetch, timeoutMs = 2000
       signal: AbortSignal.timeout(timeoutMs)
     });
   } catch (err) {
-    throw buildError({
+    if (classifyUpstreamFailure(err)) {
+      // Keep the original failure (and its socket cause) so the route can let
+      // the global error handler answer 504 upstream_timeout / 503
+      // upstream_unreachable. The chain is redacted first because undici's
+      // `fetch failed` wrapper can carry the credential-bearing request URL.
+      throw redactErrorChain(err, serviceKey);
+    }
+    throw redactErrorChain(buildError({
       message: `LH upstream request failed: ${err.message}`,
       statusCode: 502,
-      code: "upstream_fetch_failed"
-    });
+      code: "upstream_fetch_failed",
+      cause: err
+    }), serviceKey);
   }
 
   const text = await response.text();
@@ -485,7 +496,7 @@ async function fetchLhNoticeList({ serviceKey, filters, fetchImpl = global.fetch
     url.searchParams.set("CLSG_DT", filters.clsgDt);
   }
 
-  const parsed = await fetchLhUpstream({ url, fetchImpl });
+  const parsed = await fetchLhUpstream({ url, serviceKey, fetchImpl });
   const envelope = extractNoticeEnvelope(parsed);
   return buildNoticeListResponseBody(envelope, {
     page: filters.page,
@@ -509,7 +520,7 @@ async function fetchLhNoticeDetail({ serviceKey, filters, fetchImpl = global.fet
   url.searchParams.set("CCR_CNNT_SYS_DS_CD", filters.ccrCnntSysDsCd);
   url.searchParams.set("SPL_INF_TP_CD", filters.splInfTpCd);
 
-  const parsed = await fetchLhUpstream({ url, fetchImpl });
+  const parsed = await fetchLhUpstream({ url, serviceKey, fetchImpl });
   const envelope = extractNoticeEnvelope(parsed);
   return buildNoticeDetailResponseBody(envelope, {
     pan_id: filters.panId,

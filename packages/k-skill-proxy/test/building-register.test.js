@@ -153,7 +153,7 @@ test("building register route validates, caches semantic successes only, and doe
     }
     return new Response(SUCCESS_XML, { status: 200, headers: { "content-type": "application/xml" } });
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "proxy-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "proxy-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -200,7 +200,7 @@ test("building register route maps PNU land categories without changing explicit
       { status: 200, headers: { "content-type": "application/xml" } }
     );
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "server-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "server-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();

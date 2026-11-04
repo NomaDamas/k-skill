@@ -44,7 +44,7 @@ def run_main(payload, argv, env=None):
 class RunKamisTests(unittest.TestCase):
     def test_direct_dry_run_redacts_secret_from_url_and_query(self):
         with tempfile.TemporaryDirectory() as directory:
-            secret = "live-kamis-secret"
+            secret = "live-kamis-secret-example"
             secrets_path = Path(directory) / "secrets.env"
             secrets_path.write_text(f"KSKILL_KAMIS_API_KEY={secret}\n", encoding="utf-8")
             stdout = io.StringIO()

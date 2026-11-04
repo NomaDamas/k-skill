@@ -85,6 +85,25 @@ CCTV_XML = """<?xml version='1.0' encoding='UTF-8'?>
 </response>
 """
 
+CCTV_JSON = json.dumps(
+    {
+        "response": {
+            "coordtype": 1,
+            "data": [
+                {
+                    "cctvtype": 1,
+                    "cctvurl": "https://cctvsec.example/stream1",
+                    "coordy": 37.42889,
+                    "cctvformat": "HLS",
+                    "cctvname": "[수도권제1순환선] 성남",
+                    "coordx": 127.12361,
+                }
+            ],
+        }
+    },
+    ensure_ascii=False,
+)
+
 CCTV_KEY_ERROR = json.dumps(
     {"header": {"resultCode": 4005, "resultMsg": "존재하지 않는 인증키입니다."}, "body": ""}
 )
@@ -103,9 +122,9 @@ class BuildUrlTests(unittest.TestCase):
 
     def test_traffic_url_uses_user_key_when_present(self):
         args = highway_traffic.parse_args(["traffic"])
-        url = highway_traffic.build_traffic_url(args, api_key="mykey123")
+        url = highway_traffic.build_traffic_url(args, api_key="mykey123-example")
         params = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
-        self.assertEqual(params["key"], ["mykey123"])
+        self.assertEqual(params["key"], ["mykey123-example"])
 
     def test_cctv_url_requires_bbox_and_targets_its(self):
         args = highway_traffic.parse_args(
@@ -174,6 +193,15 @@ class ParseTests(unittest.TestCase):
         self.assertAlmostEqual(cams[0]["lat"], 37.42889)
         self.assertAlmostEqual(cams[0]["lon"], 127.12361)
         self.assertTrue(cams[0]["url"].startswith("http://cctvsec.example/"))
+
+    def test_normalize_cctv_parses_json_metadata(self):
+        cams = highway_traffic.normalize_cctv(CCTV_JSON)
+        self.assertEqual(len(cams), 1)
+        self.assertEqual(cams[0]["name"], "[수도권제1순환선] 성남")
+        self.assertEqual(cams[0]["format"], "HLS")
+        self.assertAlmostEqual(cams[0]["lat"], 37.42889)
+        self.assertAlmostEqual(cams[0]["lon"], 127.12361)
+        self.assertEqual(cams[0]["url"], "https://cctvsec.example/stream1")
 
     def test_normalize_cctv_raises_on_key_error_json(self):
         with self.assertRaises(highway_traffic.HelperError) as ctx:

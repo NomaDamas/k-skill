@@ -38,7 +38,7 @@ npx -y @nomadamas/k-skill@0 exec highway-traffic-status scripts/highway_traffic.
 
 - 소통등급: upstream `grade` 1/2/3 → 원활/서행/정체
 - 방향: `updownTypeCode` S/N → 상행, E/W → 하행
-- CCTV 성공 응답은 `getType=json`이어도 XML이며 helper가 XML을 파싱한다. `url`은 만료될 수 있는 서명 HLS 주소다.
+- CCTV 성공 응답은 XML 또는 JSON이며 helper가 두 형식을 모두 파싱한다. `url`은 만료될 수 있는 서명 HLS 주소다.
 
 ## 실패 처리
 

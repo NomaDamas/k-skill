@@ -270,13 +270,13 @@ test("listReports sends caller GitHub headers and token to discovery requests", 
 
   const result = await listReports({
     limit: 1,
-    githubToken: "test-token",
+    githubToken: "test-token-example",
     githubHeaders: { "x-github-api-version": "2022-11-28" },
     fetcher
   })
 
   assert.equal(result.items.length, 1)
-  assert.equal(calls[0].headers.authorization, "Bearer test-token")
+  assert.equal(calls[0].headers.authorization, "Bearer test-token-example")
   assert.equal(calls[0].headers["x-github-api-version"], "2022-11-28")
   assert.equal(calls[1].headers.authorization, undefined)
   assert.equal(calls[1].headers["x-github-api-version"], undefined)
@@ -290,7 +290,7 @@ test("fetchReport does not forward caller GitHub auth to raw detail requests", a
   }
 
   const report = await fetchReport("20260511082352", {
-    githubToken: "test-token",
+    githubToken: "test-token-example",
     githubHeaders: { "x-github-api-version": "2022-11-28" },
     fetcher
   })
@@ -317,7 +317,7 @@ test("fetchReport falls back to GitHub contents API when raw exact report fetch 
   }
 
   const report = await fetchReport("20260511082352", {
-    githubToken: "test-token",
+    githubToken: "test-token-example",
     githubHeaders: { "x-github-api-version": "2022-11-28" },
     fetcher
   })
@@ -327,7 +327,7 @@ test("fetchReport falls back to GitHub contents API when raw exact report fetch 
   assert.match(calls[0].url, /raw\.githubusercontent\.com/)
   assert.equal(calls[0].headers.authorization, undefined)
   assert.match(calls[1].url, /api\.github\.com/)
-  assert.equal(calls[1].headers.authorization, "Bearer test-token")
+  assert.equal(calls[1].headers.authorization, "Bearer test-token-example")
   assert.equal(calls[1].headers["x-github-api-version"], "2022-11-28")
 })
 

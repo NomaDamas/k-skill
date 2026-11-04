@@ -4,6 +4,10 @@
 
 개인정보 처리 기준은 공개 서비스의 [`/privacy`](https://k-skill-proxy.nomadamas.org/privacy)에서 확인할 수 있습니다. 모든 응답은 `Link: </privacy>; rel="privacy-policy"` 헤더로 같은 경로를 안내합니다.
 
+## 쿼리 파라미터 인코딩
+
+쿼리 키/값은 UTF-8 percent-encoding 을 기준으로 해석한다. Windows 한국어 로케일(`--data-urlencode` 등이 시스템 코드페이지로 인코딩하는) 클라이언트가 EUC-KR(CP949) 바이트를 퍼센트 인코딩해 보내면, 각 키/값을 엄격한 UTF-8 `TextDecoder({fatal: true})` 로 먼저 디코딩하고 유효한 UTF-8 이 아닐 때만 WHATWG `euc-kr`(CP949 상위집합) 디코더로 폴백해 받아들인다. 그래서 `?query=%B0%FC%BC%BC%B9%FD`(관세법, CP949) 와 `?query=%EA%B4%80%EC%84%B8%EB%B2%95`(UTF-8) 은 동일한 `관세법` 으로 처리되고 같은 캐시 항목을 공유한다. 유효한 UTF-8·ASCII 값은 바이트 단위로 그대로 유지되며(`+`=`%20`, `%2B`=`+`, 반복 키는 배열, `cond[SGG_NM::LIKE]` 같은 대괄호 키도 그대로), `%` 이스케이프 자체가 깨진 값은 기존 동작대로 받은 원문을 상류에 전달한다.
+
 ## 현재 제공 엔드포인트
 
 - `GET /health`
@@ -51,7 +55,6 @@
 - `GET /v1/kstartup/announcements` — 창업진흥원 K-Startup 지원사업 공고 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/kstartup/contents` — 창업진흥원 K-Startup 창업 콘텐츠 정보(`DATA_GO_KR_API_KEY`)
 - `GET /v1/kstartup/statistics` — 창업진흥원 K-Startup 통계보고서 정보(`DATA_GO_KR_API_KEY`)
-- `GET /v1/naver-shopping/search` — 네이버 검색 Open API 쇼핑 검색 우선, 키가 없으면 네이버 쇼핑 공개 BFF JSON 기반 상품/가격 후보 조회
 - `GET /v1/coupang/products/search` — 쿠팡 파트너스 상품검색(`COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`; `keyword`/`q`, `limit` 최대 10, 선택 `subId`)
 - `GET /v1/naver-news/search` — 네이버 검색 Open API 뉴스 검색(`news.json`) 기반 최신 뉴스 기사 제목/요약/링크/발행시각 조회(`NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` 필요)
 - `GET /v1/vworld/search` — VWorld 단지명·지번 검색(호출자가 `x-k-skill-vworld-api-key` 헤더로 자기 키를 위임)
@@ -73,8 +76,7 @@
 
 `/health` 의 `upstreams` 는 각 라우트의 **운영 가능 여부**를 보고하며, 같은 환경변수를 공유하는 라우트라도 **폴백 유무에 따라 의미가 달라진다**:
 
-- `naverShoppingConfigured` — 네이버 쇼핑 라우트는 공개 BFF JSON fallback 이 있어서 **항상 `true`** 다. 키가 없어도 public BFF 경로로 응답이 나간다.
-- `naverSearchApiConfigured` — 네이버 검색 Open API 키(`NAVER_SEARCH_CLIENT_ID` + `NAVER_SEARCH_CLIENT_SECRET`) 설정 여부. 네이버 쇼핑 라우트는 이 값이 `true` 면 공식 API 를 선호하고, `false` 면 BFF fallback 으로 자동 전환한다. 즉 이 플래그는 **쇼핑 쪽에서는 advisory** 다.
+- `naverSearchApiConfigured` — 네이버 검색 Open API 키(`NAVER_SEARCH_CLIENT_ID` + `NAVER_SEARCH_CLIENT_SECRET`) 설정 여부.
 - `naverNewsApiConfigured` — 네이버 뉴스 라우트의 **운영 가능 여부**. 뉴스에는 fallback 이 없어서 키가 없으면 뉴스 라우트는 `503 upstream_not_configured` 를 돌려준다.
 - `vworldRelayAvailable` — VWorld 읽기 전용 relay 라우트가 등록되었음을 뜻한다. 키는 서버에 저장하지 않고 매 요청의 `x-k-skill-vworld-api-key` 헤더로 받으므로 credential 설정 여부를 뜻하지 않는다.
 - `askSeoulWeatherRiskConfigured` — ASK 서울 기상 위험 세 route가 실제로 호출 가능한지 뜻한다. proxy 서버에만 origin과 전용 서비스 키가 함께 설정됐을 때만 `true`이며, 값 자체는 절대 응답에 포함하지 않는다.
@@ -95,7 +97,7 @@
 - `KOSIS_API_KEY` 또는 `KSKILL_KOSIS_API_KEY` — 프록시 서버 쪽 KOSIS Open API upstream key (`kosis/search`, `kosis/meta`, `kosis/data`, `kosis/list`, `kosis/explain`, `kosis/indicator`)
 - `ASK_SEOUL_SKILL_API_BASE_URL` — 프록시 서버 쪽 ASK Seoul `/skill/v1` HTTPS origin (기상 위험 route 전용)
 - `ASK_SEOUL_KSKILL_API_KEY` — 프록시 서버 쪽 ASK Seoul 전용·회수 가능한 서비스 키. 사용자 환경·로그·응답에는 넣지 않는다.
-- `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 네이버 검색 Open API 키(`shop.json`, `news.json` 공통). 네이버 뉴스 route(`naver-news/search`)는 이 키가 **필수**이며 없으면 `503 upstream_not_configured` 를 돌려준다. 네이버 쇼핑 route(`naver-shopping/search`)는 **선택**이며 설정되면 공식 API 를 우선 사용하고, 없으면 공개 BFF JSON 파서로 fallback 한다. 공식 쇼핑 API 는 `review` 정렬을 지원하지 않아 `meta.sort_applied: "unsupported"`로 표시한다. no-key 쇼핑 fallback 은 `page`를 BFF에 전달해 해당 페이지를 고르고, `price_asc`/`price_dsc`/`review`는 선택 페이지 안에서 로컬 정렬하며, `date`는 `meta.sort_applied: "unsupported"`로 표시
+- `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET` — 네이버 검색 Open API 키(`news.json`). 네이버 뉴스 route(`naver-news/search`)는 이 키가 **필수**이며 없으면 `503 upstream_not_configured` 를 돌려준다.
 - `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY` — 쿠팡 파트너스 API 키. 두 값이 모두 있어야 `/v1/coupang/products/search`가 활성화되며 HMAC 서명은 proxy 서버 안에서만 생성된다.
 - `KSKILL_PROXY_HOST` — 기본 `127.0.0.1`
 - `KSKILL_PROXY_PORT` — local development listen port. Set it explicitly in your shell.
@@ -285,16 +287,6 @@ curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/mfds/food-safety/search" \
   --data-urlencode 'limit=5'
 ```
 
-
-네이버 쇼핑 가격비교 예시 (`NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET`이 있으면 공식 Search API를 우선 사용):
-
-```bash
-curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/naver-shopping/search" \
-  --data-urlencode 'q=에어팟 프로 2세대' \
-  --data-urlencode 'limit=10'
-```
-
-
 도서관 정보나루 도서 검색 예시 (`DATA4LIBRARY_AUTH_KEY` 필요):
 
 ```bash
@@ -359,10 +351,13 @@ curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kosis/meta" \
 curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/kosis/data" \
   --data-urlencode 'tableId=DT_1JC1501' \
   --data-urlencode 'prdSe=Y' \
-  --data-urlencode 'start=2020' \
+  --data-urlencode 'start=2022' \
   --data-urlencode 'end=2023' \
-  --data-urlencode 'objL1=ALL'
+  --data-urlencode 'objL1=00' \
+  --data-urlencode 'itmId=T1100'
 ```
+
+`DT_1JC1501` 처럼 읍면동 단위 표는 `objL1=ALL`+`itmId=ALL` 로 조회하면 40,000셀을 넘어 KOSIS가 에러 코드 `31` 을 돌려준다. 이때 프록시는 HTTP 200 대신 `400 bad_request` 와 함께 `{"error":"bad_request","message":"...","upstream":{"err":"31","errMsg":"..."}}` 를 반환하므로, 위 예시처럼 분류(`objL1`)·항목(`itmId`)·기간을 좁혀 호출한다. KOSIS 앱 레벨 에러 매핑: 코드 `20`/`21`/`30`/`31` → `400`, `10`/`11`/`41`/`42` → `502 upstream_forbidden`, `40`(분당 호출 한도) → `503 upstream_quota_exceeded`, 그 외(`50`/`99`/빈 응답) → `502 upstream_error`.
 
 Kakao Local geocoding 예시 (`KAKAO_REST_API_KEY` 필요, caller `apiKey`는 무시하고 서버 쪽 키를 주입):
 

@@ -31,12 +31,14 @@ test("creates documented trace number format", () => {
   assert.match(next(), /^bccard20260826\d{10}$/);
 });
 
-test("posts server-side credentials and returns eatpl data", async () => {
+test("prefers a direct request with server-side credentials over the relay", async () => {
   const calls = [];
   const result = await fetchBccardEatplSearch({
     query: normalizeBccardEatplSearchQuery({ location: "서울 종로구", genre: "카페" }),
     instNm: "bccard",
     baseUrl: "https://api.paybooc.ai/api/mer",
+    relayUrl: "https://eatpl-relay.nomadamas.org/v1/search",
+    relayToken: "relay-secret",
     nextTraceNumber: () => "bccard202608260000000001",
     fetchImpl: async (url, options) => {
       calls.push({ url: String(url), options });
@@ -47,11 +49,14 @@ test("posts server-side credentials and returns eatpl data", async () => {
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
   });
+  assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "https://api.paybooc.ai/api/mer/v1/search");
+  assert.equal(calls[0].options.headers.authorization, undefined);
   assert.equal(JSON.parse(calls[0].options.body).trnsTrceNo, "bccard202608260000000001");
   assert.equal(JSON.parse(calls[0].options.body).instNm, "bccard");
   assert.equal(result.items[0].merUrl, "https://web.paybooc.ai/mer/web/profile/test");
   assert.equal(result.attribution, "eat.pl 잇플 · BC카드 결제 데이터 기반");
+  assert.equal(result.upstream.provider, "bccard-eatpl");
 });
 
 test("builds the documented upstream path", () => {
@@ -67,7 +72,7 @@ test("can send the search through an authenticated fixed-egress relay", async ()
     query: normalizeBccardEatplSearchQuery({ location: "서울 종로구", genre: "일반한식" }),
     instNm: "kskill",
     relayUrl: "https://eatpl-relay.nomadamas.org/v1/search",
-    relayToken: "relay-secret",
+    relayToken: "relay-secret-example",
     nextTraceNumber: () => {
       throw new Error("relay mode must not generate caller trace numbers");
     },
@@ -81,7 +86,7 @@ test("can send the search through an authenticated fixed-egress relay", async ()
     }
   });
   assert.equal(calls[0].url, "https://eatpl-relay.nomadamas.org/v1/search");
-  assert.equal(calls[0].options.headers.authorization, "Bearer relay-secret");
+  assert.equal(calls[0].options.headers.authorization, "Bearer relay-secret-example");
   assert.deepEqual(JSON.parse(calls[0].options.body), {
     location: "서울 종로구",
     merNm: null,
@@ -89,6 +94,42 @@ test("can send the search through an authenticated fixed-egress relay", async ()
   });
   assert.equal(result.upstream.provider, "bccard-eatpl-relay");
   assert.equal(result.upstream.url, undefined);
+});
+
+test("falls back to the authenticated relay when the direct request is rejected", async () => {
+  const calls = [];
+  const result = await fetchBccardEatplSearch({
+    query: normalizeBccardEatplSearchQuery({ location: "서울 종로구", genre: "일반한식" }),
+    instNm: "kskill",
+    baseUrl: "https://api.paybooc.ai/api/mer",
+    relayUrl: "https://eatpl-relay.nomadamas.org/v1/search",
+    relayToken: "relay-secret",
+    nextTraceNumber: () => "kskill202608260000000001",
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), options });
+      if (calls.length === 1) {
+        return new Response("IP not allowlisted", { status: 403 });
+      }
+      return new Response(JSON.stringify({
+        rspCode: "00000",
+        rspMessage: "Success",
+        data: [{ merNm: "Fallback 식당" }]
+      }), { status: 200 });
+    }
+  });
+
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, "https://api.paybooc.ai/api/mer/v1/search");
+  assert.equal(JSON.parse(calls[0].options.body).trnsTrceNo, "kskill202608260000000001");
+  assert.equal(calls[1].url, "https://eatpl-relay.nomadamas.org/v1/search");
+  assert.equal(calls[1].options.headers.authorization, "Bearer relay-secret");
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    location: "서울 종로구",
+    merNm: null,
+    merTpbuzNm: "일반한식"
+  });
+  assert.equal(result.items[0].merNm, "Fallback 식당");
+  assert.equal(result.upstream.provider, "bccard-eatpl-relay");
 });
 
 test("refuses to call upstream directly without a configured base URL", async () => {
