@@ -7715,6 +7715,172 @@ test("lh-notice detail does not cache upstream XML auth errors so retries self-h
   );
 });
 
+const LH_XML_AUTH_ERROR = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OpenAPI_ServiceResponse>
+  <cmmMsgHeader>
+    <errMsg>SERVICE ERROR</errMsg>
+    <returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg>
+    <returnReasonCode>30</returnReasonCode>
+  </cmmMsgHeader>
+</OpenAPI_ServiceResponse>`;
+
+// Upstream-failure warn logs carry the failing route + message as (fields, message).
+function upstreamAttributionLogs(entries) {
+  return entries
+    .filter(
+      (entry) =>
+        entry.level === "warn" &&
+        typeof entry.args[1] === "string" &&
+        /upstream error$/.test(entry.args[1])
+    )
+    .map((entry) => ({ route: entry.args[0].route, message: entry.args[1] }));
+}
+
+test("lh-notice detail upstream failure is attributed to /v1/lh-notice/detail, never to KRX", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () =>
+    new Response(LH_XML_AUTH_ERROR, { status: 200, headers: { "content-type": "text/xml" } });
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    loggerInstance: logger
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/lh-notice/detail?panId=2015122300019828&ccrCnntSysDsCd=03&splInfTpCd=051"
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_error");
+
+  const attribution = upstreamAttributionLogs(entries).find(
+    (entry) => entry.route === "/v1/lh-notice/detail"
+  );
+  assert.ok(
+    attribution,
+    `expected a warn log attributed to /v1/lh-notice/detail, got ${JSON.stringify(
+      upstreamAttributionLogs(entries)
+    )}`
+  );
+  assert.equal(attribution.message, "LH upstream error");
+  assert.equal(
+    upstreamAttributionLogs(entries).some((entry) =>
+      entry.route.startsWith("/v1/korean-stock/")
+    ),
+    false,
+    "an LH detail failure must never be attributed to a KRX route"
+  );
+});
+
+test("lh-notice search upstream failure is attributed to /v1/lh-notice/search", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () =>
+    new Response(LH_XML_AUTH_ERROR, { status: 200, headers: { "content-type": "text/xml" } });
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    loggerInstance: logger
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({ method: "GET", url: "/v1/lh-notice/search" });
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(response.json().error, "upstream_error");
+
+  const attribution = upstreamAttributionLogs(entries).find(
+    (entry) => entry.route === "/v1/lh-notice/search"
+  );
+  assert.ok(
+    attribution,
+    `expected a warn log attributed to /v1/lh-notice/search, got ${JSON.stringify(
+      upstreamAttributionLogs(entries)
+    )}`
+  );
+  assert.equal(attribution.message, "LH upstream error");
+});
+
+test("parking-lots search upstream failure is attributed to /v1/parking-lots/search", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () => {
+    throw new Error("parking upstream boom");
+  };
+
+  const app = buildServer({
+    env: { DATA_GO_KR_API_KEY: "data-go-key" },
+    loggerInstance: logger
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/parking-lots/search?latitude=37.57371315593711&longitude=126.97833785777944&limit=2&radius=1000"
+  });
+
+  assert.equal(response.statusCode, 502);
+
+  const attribution = upstreamAttributionLogs(entries).find(
+    (entry) => entry.route === "/v1/parking-lots/search"
+  );
+  assert.ok(
+    attribution,
+    `expected a warn log attributed to /v1/parking-lots/search, got ${JSON.stringify(
+      upstreamAttributionLogs(entries)
+    )}`
+  );
+});
+
+test("korean stock trade-info upstream failure is attributed to /v1/korean-stock/trade-info", async (t) => {
+  const originalFetch = global.fetch;
+  const { logger, entries } = createCapturingLogger();
+  global.fetch = async () =>
+    new Response(JSON.stringify({}), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+
+  const app = buildServer({
+    env: { KRX_API_KEY: "krx-key" },
+    loggerInstance: logger
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/korean-stock/trade-info?market=KOSPI&code=005930&bas_dd=20260404"
+  });
+
+  assert.equal(response.statusCode, 502);
+
+  const attribution = upstreamAttributionLogs(entries).find(
+    (entry) => entry.route === "/v1/korean-stock/trade-info"
+  );
+  assert.ok(
+    attribution,
+    `expected a warn log attributed to /v1/korean-stock/trade-info, got ${JSON.stringify(
+      upstreamAttributionLogs(entries)
+    )}`
+  );
+  assert.equal(attribution.message, "KRX upstream error");
+});
+
 test("health endpoint reports lhNoticeConfigured when DATA_GO_KR_API_KEY is set", async (t) => {
   const app = buildServer({ env: { DATA_GO_KR_API_KEY: "data-go-key-example" } });
   t.after(async () => { await app.close(); });

@@ -4000,10 +4000,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       });
     } catch (error) {
       request.log.warn({
-        route: "/v1/korean-stock/search",
+        route: "/v1/parking-lots/search",
         upstreamError: error.code || "proxy_error",
         upstreamMessage: error.message
-      }, "KRX upstream error");
+      }, "parking lots upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.upstreamCode ? "upstream_error" : "proxy_error",
@@ -4188,10 +4188,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       });
     } catch (error) {
       request.log.warn({
-        route: "/v1/korean-stock/base-info",
+        route: "/v1/lh-notice/search",
         upstreamError: error.code || "proxy_error",
         upstreamMessage: error.message
-      }, "KRX upstream error");
+      }, "LH upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -4274,10 +4274,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       });
     } catch (error) {
       request.log.warn({
-        route: "/v1/korean-stock/trade-info",
+        route: "/v1/lh-notice/detail",
         upstreamError: error.code || "proxy_error",
         upstreamMessage: error.message
-      }, "KRX upstream error");
+      }, "LH upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5495,6 +5495,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         cacheTtlMs: config.cacheTtlMs
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/search",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -6448,6 +6453,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         apiKey: config.krxApiKey
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/base-info",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -6541,6 +6551,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         apiKey: config.krxApiKey
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/trade-info",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
