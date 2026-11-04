@@ -4,6 +4,10 @@
 
 개인정보 처리 기준은 공개 서비스의 [`/privacy`](https://k-skill-proxy.nomadamas.org/privacy)에서 확인할 수 있습니다. 모든 응답은 `Link: </privacy>; rel="privacy-policy"` 헤더로 같은 경로를 안내합니다.
 
+## 쿼리 파라미터 인코딩
+
+쿼리 키/값은 UTF-8 percent-encoding 을 기준으로 해석한다. Windows 한국어 로케일(`--data-urlencode` 등이 시스템 코드페이지로 인코딩하는) 클라이언트가 EUC-KR(CP949) 바이트를 퍼센트 인코딩해 보내면, 각 키/값을 엄격한 UTF-8 `TextDecoder({fatal: true})` 로 먼저 디코딩하고 유효한 UTF-8 이 아닐 때만 WHATWG `euc-kr`(CP949 상위집합) 디코더로 폴백해 받아들인다. 그래서 `?query=%B0%FC%BC%BC%B9%FD`(관세법, CP949) 와 `?query=%EA%B4%80%EC%84%B8%EB%B2%95`(UTF-8) 은 동일한 `관세법` 으로 처리되고 같은 캐시 항목을 공유한다. 유효한 UTF-8·ASCII 값은 바이트 단위로 그대로 유지되며(`+`=`%20`, `%2B`=`+`, 반복 키는 배열, `cond[SGG_NM::LIKE]` 같은 대괄호 키도 그대로), `%` 이스케이프 자체가 깨진 값은 기존 동작대로 받은 원문을 상류에 전달한다.
+
 ## 현재 제공 엔드포인트
 
 - `GET /health`

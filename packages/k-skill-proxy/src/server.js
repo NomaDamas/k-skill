@@ -2419,6 +2419,112 @@ function validateHouseholdWastePaginationQuery(query) {
   return { ok: true };
 }
 
+// Windows 한국어 로케일 클라이언트(CP949 콘솔 코드페이지)는 쿼리 값을 EUC-KR 바이트로 퍼센트
+// 인코딩해서 보낸다. Fastify 기본 파서는 UTF-8만 알기 때문에 이런 값은 원문 `%XX` 텍스트로
+// 남아 상류까지 그대로 전달된다. 키/값마다 raw 바이트를 엄격한 UTF-8로 먼저 디코딩하고,
+// 유효한 UTF-8이 아닐 때만 WHATWG `euc-kr`(CP949 상위집합) 디코더로 폴백한다. `%` 이스케이프
+// 자체가 깨진 컴포넌트는 기본 파서와 동일하게 받은 그대로(단, `+`는 공백) 둔다.
+const QUERY_COMPONENT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
+const QUERY_COMPONENT_EUC_KR_DECODER = new TextDecoder("euc-kr");
+
+function queryComponentHexDigit(byte) {
+  if (byte >= 0x30 && byte <= 0x39) {
+    return byte - 0x30;
+  }
+  if (byte >= 0x41 && byte <= 0x46) {
+    return byte - 0x37;
+  }
+  if (byte >= 0x61 && byte <= 0x66) {
+    return byte - 0x57;
+  }
+  return -1;
+}
+
+function decodeRawQueryComponent(rawBytes) {
+  const bytes = [];
+
+  for (let index = 0; index < rawBytes.length; index += 1) {
+    const byte = rawBytes[index];
+
+    if (byte === 0x2b) {
+      // '+'
+      bytes.push(0x20);
+      continue;
+    }
+
+    if (byte !== 0x25) {
+      // '%'
+      bytes.push(byte);
+      continue;
+    }
+
+    const high = queryComponentHexDigit(rawBytes[index + 1]);
+    const low = queryComponentHexDigit(rawBytes[index + 2]);
+    if (high < 0 || low < 0) {
+      // Malformed escape: keep the component as received ('+' already spaced),
+      // matching the default fast-querystring parser.
+      return rawBytes.toString("latin1").replace(/\+/g, " ");
+    }
+
+    bytes.push((high << 4) | low);
+    index += 2;
+  }
+
+  const decoded = Buffer.from(bytes);
+  try {
+    return QUERY_COMPONENT_UTF8_DECODER.decode(decoded);
+  } catch {
+    return QUERY_COMPONENT_EUC_KR_DECODER.decode(decoded);
+  }
+}
+
+// Fastify `querystringParser`: structurally identical to the default
+// fast-querystring parser (repeated keys become arrays, bracket keys stay
+// literal, '+' means space) but tolerant of EUC-KR percent-encoded components.
+function parseQueryStringWithEucKrFallback(rawQuery) {
+  const parsed = Object.create(null);
+
+  if (typeof rawQuery !== "string" || rawQuery.length === 0) {
+    return parsed;
+  }
+
+  // request.url is latin1-decoded by Node's HTTP parser, so a latin1 round-trip
+  // recovers the exact bytes the client sent.
+  const raw = Buffer.from(rawQuery, "latin1");
+  let pairStart = 0;
+
+  for (let index = 0; index <= raw.length; index += 1) {
+    if (index < raw.length && raw[index] !== 0x26) {
+      // '&'
+      continue;
+    }
+
+    const pair = raw.subarray(pairStart, index);
+    pairStart = index + 1;
+
+    const separator = pair.indexOf(0x3d); // '='
+    const hasValue = separator !== -1;
+    const key = decodeRawQueryComponent(hasValue ? pair.subarray(0, separator) : pair);
+
+    if (!hasValue && key.length === 0) {
+      continue;
+    }
+
+    const value = hasValue ? decodeRawQueryComponent(pair.subarray(separator + 1)) : "";
+    const existing = parsed[key];
+
+    if (existing === undefined) {
+      parsed[key] = value;
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      parsed[key] = [existing, value];
+    }
+  }
+
+  return parsed;
+}
+
 function buildServer({ env = process.env, provider = null, now = () => new Date(), loggerInstance = null } = {}) {
   const config = buildConfig(env);
   const cache = createMemoryCache({ maxEntries: config.cacheMaxEntries });
@@ -2435,6 +2541,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   const app = Fastify({
     ...(loggerInstance ? { loggerInstance } : { logger: true }),
     logController: new LogController({ disableRequestLogging: true }),
+    routerOptions: { querystringParser: parseQueryStringWithEucKrFallback },
     trustProxy: config.trustProxyHops || false
   });
 
@@ -6947,6 +7054,7 @@ module.exports = {
   normalizeSeoulSubwayQuery,
   normalizeVWorldPriceQuery,
   normalizeVWorldSearchQuery,
+  parseQueryStringWithEucKrFallback,
   proxyAirKoreaRequest,
   proxyAssemblyRequest,
   proxyData4LibraryRequest,
