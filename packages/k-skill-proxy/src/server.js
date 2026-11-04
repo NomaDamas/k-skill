@@ -4696,11 +4696,13 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   }));
 
   // Shared handler for keyed data.go.kr GET lookups that reuse the operator's
-  // DATA_GO_KR_API_KEY server-side (national pension, FSC corp, G2B sanctions).
+  // DATA_GO_KR_API_KEY server-side (national pension, FSC corp, G2B sanctions
+  // and order plans). Normalizers receive the injected clock so date defaults
+  // stay testable; normalizers that ignore it are unaffected.
   async function handleKeyedDataGoKrLookup({ route, normalizer, fetcher, request, reply }) {
     let normalized;
     try {
-      normalized = normalizer(request.query || {});
+      normalized = normalizer(request.query || {}, now());
     } catch (error) {
       reply.code(400);
       return { error: "bad_request", message: error.message };
