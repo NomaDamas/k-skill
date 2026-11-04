@@ -1891,6 +1891,131 @@ test("KOSIS search endpoint stays public and caches successful upstream response
   assert.equal(new URL(calls[0]).searchParams.get("apiKey"), "server-kosis-key-example");
 });
 
+test("KOSIS data route turns an err 31 body delivered with HTTP 200 into a 400", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({ err: "31", errMsg: " 40,000셀을 초과한 결과값은 요청하실 수 없습니다." }), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kosis/data?tableId=DT_1JC1501&prdSe=Y&start=2020&end=2023&objL1=ALL";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 400);
+  const payload = first.json();
+  assert.equal(payload.error, "bad_request");
+  assert.equal(payload.upstream.err, "31");
+  assert.equal(payload.upstream.errMsg, " 40,000셀을 초과한 결과값은 요청하실 수 없습니다.");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 400);
+  assert.equal(calls.length, 2, "error responses must never be cached");
+});
+
+test("KOSIS data route maps an err 40 quota body to 503 and err 41 to 502", async (t) => {
+  const originalFetch = global.fetch;
+  let body = { err: "40", errMsg: "호출가능건수 제한을 초과하였습니다." };
+  global.fetch = async () => new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json;charset=UTF-8" }
+  });
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kosis/data?tableId=DT_1JC1501&prdSe=Y&start=2020&end=2023&objL1=ALL";
+  const quota = await app.inject({ method: "GET", url });
+  assert.equal(quota.statusCode, 503);
+  assert.equal(quota.json().upstream.err, "40");
+
+  body = { err: "41", errMsg: "호출가능ROW수 제한을 초과하였습니다." };
+  const rowLimit = await app.inject({ method: "GET", url });
+  assert.equal(rowLimit.statusCode, 502);
+  assert.equal(rowLimit.json().error, "upstream_forbidden");
+  assert.equal(rowLimit.json().upstream.err, "41");
+});
+
+test("KOSIS route turns an XML error body into a non-2xx response", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response("<error><err>31</err><errMsg>40,000셀 초과</errMsg></error>", {
+    status: 200,
+    headers: { "content-type": "text/xml;charset=UTF-8" }
+  });
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = `/v1/kosis/search?q=${encodeURIComponent("1인 가구")}&limit=1`;
+  const response = await app.inject({ method: "GET", url });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error, "bad_request");
+  assert.equal(response.json().upstream.err, "31");
+  assert.equal(response.json().upstream.errMsg, "40,000셀 초과");
+});
+
+test("KOSIS data route keeps a successful array body at 200 and caches it", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify([{ TBL_ID: "DT_1JC1501", PRD_DE: "2022", DT: "22383187" }]), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      KOSIS_API_KEY: "server-kosis-key"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/kosis/data?tableId=DT_1JC1501&prdSe=Y&start=2022&end=2023&objL1=00&itmId=T1100";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.json()[0].DT, "22383187");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json()[0].DT, "22383187");
+  assert.equal(calls.length, 1, "successful array responses should be cached");
+});
+
 test("Kakao Local geocode normalizer maps public aliases to upstream params", () => {
   assert.deepEqual(normalizeKakaoLocalGeocodeQuery({ q: "서울역", limit: "3" }), {
     query: "서울역",

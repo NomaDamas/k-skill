@@ -282,10 +282,13 @@ curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/kosis/meta' \
 curl -fsS --get 'https://k-skill-proxy.nomadamas.org/v1/kosis/data' \
   --data-urlencode 'tableId=DT_1JC1501' \
   --data-urlencode 'prdSe=Y' \
-  --data-urlencode 'start=2020' \
+  --data-urlencode 'start=2022' \
   --data-urlencode 'end=2023' \
-  --data-urlencode 'objL1=ALL'
+  --data-urlencode 'objL1=00' \
+  --data-urlencode 'itmId=T1100'
 ```
+
+`DT_1JC1501` 을 `objL1=ALL`+`itmId=ALL` 로 조회하면 40,000셀 한도를 넘어 KOSIS가 에러 코드 `31` 을 응답한다. 프록시는 이런 KOSIS 앱 레벨 에러를 HTTP 200 으로 흘려보내지 않고 매핑한다: `20`/`21`/`30`/`31` → `400`, `10`/`11`/`41`/`42` → `502 upstream_forbidden`, `40`(분당 호출 한도) → `503 upstream_quota_exceeded`, `50`/`99`/기타/빈 응답 → `502 upstream_error`. 응답 본문에는 `upstream.err`/`upstream.errMsg` 가 그대로 담긴다.
 
 Kakao Local geocoding endpoint (`KAKAO_REST_API_KEY` 필요, caller `apiKey`는 무시하고 서버 쪽 키를 주입):
 
