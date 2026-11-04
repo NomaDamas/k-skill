@@ -82,7 +82,7 @@ test("KAMIS route injects key, normalizes success, and caches", async (t) => {
       }
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
-  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret" } });
+  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -99,14 +99,14 @@ test("KAMIS route injects key, normalizes success, and caches", async (t) => {
   assert.match(calls[0], /p_country_code=1101/);
   assert.match(calls[0], /p_item_category_code=200/);
   assert.doesNotMatch(calls[0], /p_productclscode|p_countycode|p_itemcategorycode/);
-  assert.doesNotMatch(JSON.stringify(first.json()), /kamis-secret|secret-must-not-return/);
+  assert.doesNotMatch(JSON.stringify(first.json()), /kamis-secret-example|secret-must-not-return/);
 });
 
 test("KAMIS route accepts valid exceptional item codes under their category", async (t) => {
   const originalFetch = global.fetch;
   let body = {};
   global.fetch = async () => new Response(JSON.stringify(body), { status: 200 });
-  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret" } });
+  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -146,7 +146,7 @@ test("KAMIS route fails closed when the echoed filter differs from the request",
   const originalFetch = global.fetch;
   let body = {};
   global.fetch = async () => new Response(JSON.stringify(body), { status: 200 });
-  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret" } });
+  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -181,7 +181,7 @@ test("KAMIS route returns empty items for a no-data upstream reply", async (t) =
     condition: [{ p_category_code: "200", p_product_cls_code: "01" }],
     data: { error_code: "001" }
   }), { status: 200 });
-  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret" } });
+  const app = buildServer({ env: { KAMIS_API_KEY: "kamis-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();

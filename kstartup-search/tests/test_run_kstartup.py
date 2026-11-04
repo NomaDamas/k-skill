@@ -127,9 +127,9 @@ class BuildUrlTests(unittest.TestCase):
     def test_direct_url_includes_service_key(self):
         args = make_args("statistics", direct=True, titl_nm="창업기업 실태조사")
         query = run_kstartup.build_query(args, "statistics")
-        url = run_kstartup.build_url("statistics", query, direct=True, api_key="dummy-key", proxy_base_url=args.proxy_base_url)
+        url = run_kstartup.build_url("statistics", query, direct=True, api_key="dummy-key-example", proxy_base_url=args.proxy_base_url)
         self.assertIn("apis.data.go.kr/B552735/kisedKstartupService01/getStatisticalInformation01", url)
-        self.assertIn("ServiceKey=dummy-key", url)
+        self.assertIn("ServiceKey=dummy-key-example", url)
 
     def test_direct_without_key_raises(self):
         args = make_args("contents", direct=True)

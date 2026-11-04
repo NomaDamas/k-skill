@@ -56,7 +56,7 @@ for (const skill of skills) {
 
   const dolshoi = run(["instruct", skill], {
     DOLSHOI_ACTION_BROKER_URL: "http://registry-e2e.invalid",
-    CLOAKBROWSER_PEEK_TOKEN: "registry-e2e",
+    CLOAKBROWSER_PEEK_TOKEN: "<registry-e2e-token>",
   });
   check(dolshoi.status === 0, `${skill} Dolshoi assembly failed: ${dolshoi.stderr}`);
   check(

@@ -321,7 +321,7 @@ test("searchNearbyPublicRestroomsByCoordinates merges CSV, Kakao restroom keywor
     longitude: 126.97833785777944,
     limit: 5,
     maxDistanceMeters: 2000,
-    kakaoRestApiKey: "test-key",
+    kakaoRestApiKey: "test-key-example",
     fetchImpl
   });
 
@@ -336,7 +336,7 @@ test("searchNearbyPublicRestroomsByCoordinates merges CSV, Kakao restroom keywor
   assert.equal(result.items[0].source, "kakao_keyword");
   assert.equal(result.items[0].sourceLayer, 2);
   assert.ok(result.items[0].distanceMeters < result.items[2].distanceMeters, "local haversine distance, not Kakao distance, controls sorting");
-  assert.ok(calls.filter((call) => call.url.includes("dapi.kakao.com")).every((call) => call.authorization === "KakaoAK test-key"));
+  assert.ok(calls.filter((call) => call.url.includes("dapi.kakao.com")).every((call) => call.authorization === "KakaoAK test-key-example"));
 });
 
 test("searchNearbyPublicRestroomsByCoordinates deduplicates merged sources within 50 meters with CSV priority", async () => {
@@ -362,7 +362,7 @@ test("searchNearbyPublicRestroomsByCoordinates deduplicates merged sources withi
     latitude: 37.57371315593711,
     longitude: 126.97833785777944,
     limit: 10,
-    kakaoRestApiKey: "test-key",
+    kakaoRestApiKey: "test-key-example",
     fetchImpl
   });
 
@@ -403,7 +403,7 @@ test("searchNearbyPublicRestroomsByCoordinates can correct CSV display names and
     latitude: 37.57371315593711,
     longitude: 126.97833785777944,
     limit: 1,
-    kakaoRestApiKey: "test-key",
+    kakaoRestApiKey: "test-key-example",
     correctCsvWithKakao: true,
     fetchImpl
   });
@@ -439,7 +439,7 @@ test("searchNearbyPublicRestroomsByCoordinates only corrects the default visible
     latitude: 37.57371315593711,
     longitude: 126.97833785777944,
     limit: 1,
-    kakaoRestApiKey: "test-key",
+    kakaoRestApiKey: "test-key-example",
     correctCsvWithKakao: true,
     includeKakaoSources: false,
     fetchImpl
@@ -468,7 +468,7 @@ test("searchNearbyPublicRestroomsByCoordinates keeps CSV results when coord2addr
     latitude: 37.57371315593711,
     longitude: 126.97833785777944,
     limit: 1,
-    kakaoRestApiKey: "test-key",
+    kakaoRestApiKey: "test-key-example",
     correctCsvWithKakao: true,
     includeKakaoSources: false,
     fetchImpl
@@ -507,7 +507,7 @@ test("searchNearbyPublicRestroomsByCoordinates returns CSV results with warnings
     latitude: 37.57371315593711,
     longitude: 126.97833785777944,
     limit: 1,
-    kakaoRestApiKey: "test-key",
+    kakaoRestApiKey: "test-key-example",
     fetchImpl
   });
 
@@ -561,7 +561,7 @@ test("searchNearbyPublicRestroomsByCoordinates applies maxDistanceMeters after K
     longitude: 126.97833785777944,
     limit: 5,
     maxDistanceMeters: 100,
-    kakaoRestApiKey: "test-key",
+    kakaoRestApiKey: "test-key-example",
     fetchImpl
   });
 
