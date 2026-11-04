@@ -6,6 +6,8 @@
 // therefore walks the `cause` chain instead of only inspecting the top error.
 "use strict";
 
+const { redactErrorChain } = require("./redaction");
+
 const UNREACHABLE_CAUSE_CODES = new Set([
   "ENOTFOUND",
   "EAI_AGAIN",
@@ -48,18 +50,45 @@ function walkCauseChain(error, visit) {
   return null;
 }
 
-function failureCode(error) {
-  return walkCauseChain(error, directFailureCode);
+const SOCKET_CAUSE_CODES = new Set([...UNREACHABLE_CAUSE_CODES, ...TIMEOUT_CAUSE_CODES]);
+
+// Route adapters that wrap a fetch error add their own application-level `code`
+// (e.g. "proxy_error"), and that wrapper sits nearer the top of the chain than
+// the socket code the caller needs. Report the first socket/undici code found
+// anywhere in the chain instead of the wrapper's bookkeeping code.
+function socketFailureCode(error) {
+  return walkCauseChain(error, (current) => {
+    const code = directFailureCode(current);
+    return code && SOCKET_CAUSE_CODES.has(code) ? code : null;
+  });
 }
 
 const GENERIC_ERROR_NAMES = new Set(["Error", "TypeError"]);
 
-function failureName(error) {
-  return walkCauseChain(error, (current) =>
-    typeof current?.name === "string" && current.name && !GENERIC_ERROR_NAMES.has(current.name)
-      ? current.name
-      : null
-  );
+// Identity of the root failure in a wrapped chain: its own code, or its specific
+// error name when it carries none (an AbortSignal.timeout DOMException exposes
+// only the numeric legacy code and `name: "TimeoutError"`). The deepest node wins
+// so an adapter wrapper's bookkeeping `code` cannot shadow the real cause.
+function rootCauseIdentity(error) {
+  let current = error;
+  let identity = null;
+  for (let depth = 0; current && typeof current === "object" && depth < MAX_CAUSE_DEPTH; depth += 1) {
+    const code = stringCode(current.code);
+    const name = stringCode(current.name);
+    if (code) {
+      identity = code;
+    } else if (name && !GENERIC_ERROR_NAMES.has(name)) {
+      identity = name;
+    }
+    current = current.cause;
+  }
+  return identity;
+}
+
+// Label reported as `cause`: the socket/undici code that identifies the failure
+// wherever it sits in the chain, else the root failure's own identity.
+function failureCauseLabel(error) {
+  return socketFailureCode(error) || rootCauseIdentity(error);
 }
 
 function isTimeoutFailure(error) {
@@ -85,15 +114,15 @@ function classifyUpstreamFailure(error) {
   if (!error || typeof error !== "object") {
     return null;
   }
-  const code = failureCode(error);
+  const cause = failureCauseLabel(error);
   if (isTimeoutFailure(error)) {
-    return { error: "upstream_timeout", cause: code || failureName(error) || "timeout", statusCode: 504 };
+    return { error: "upstream_timeout", cause: cause || "timeout", statusCode: 504 };
   }
-  if (code && UNREACHABLE_CAUSE_CODES.has(code)) {
-    return { error: "upstream_unreachable", cause: code, statusCode: 503 };
+  if (cause && UNREACHABLE_CAUSE_CODES.has(cause)) {
+    return { error: "upstream_unreachable", cause, statusCode: 503 };
   }
   if (isFetchFailedFailure(error)) {
-    return { error: "upstream_unreachable", cause: code, statusCode: 503 };
+    return { error: "upstream_unreachable", cause, statusCode: 503 };
   }
   return null;
 }
@@ -104,7 +133,7 @@ function classifyUpstreamFailure(error) {
 // errors from the keyed data.go.kr routes are described consistently.
 function describeUpstreamFailure(error) {
   const base = String(error?.message || "unknown upstream failure");
-  const code = failureCode(error);
+  const code = failureCauseLabel(error);
   const causeMessage = walkCauseChain(error, (current) =>
     typeof current?.message === "string" && current.message && current.message !== base
       ? current.message
@@ -126,9 +155,27 @@ function upstreamFailureResult(error) {
   return { error: "upstream_error", message };
 }
 
+// Route adapters call this in their catch before mapping an upstream failure to
+// their own status/body: a classified network failure is rethrown (with its
+// cause chain intact) so the global error handler answers 504 upstream_timeout /
+// 503 upstream_unreachable including `cause`. The service key is redacted out of
+// the message/stack chain first, because undici's `fetch failed` wrapper can
+// carry the credential-bearing request URL all the way into the response and the
+// logs. Anything that is not a network failure returns normally so the adapter
+// keeps its own HTTP-status/body mapping. Adapters that fan out to several
+// upstreams pass every key they may have embedded in a request URL.
+function rethrowIfUpstreamNetworkFailure(error, secret) {
+  if (!classifyUpstreamFailure(error)) {
+    return;
+  }
+  const secrets = Array.isArray(secret) ? secret : [secret];
+  throw secrets.reduce((current, candidate) => redactErrorChain(current, candidate), error);
+}
+
 module.exports = {
   UNREACHABLE_CAUSE_CODES,
   TIMEOUT_CAUSE_CODES,
   classifyUpstreamFailure,
+  rethrowIfUpstreamNetworkFailure,
   upstreamFailureResult
 };
