@@ -7622,6 +7622,208 @@ test("data4library book-exists endpoint requires library code and isbn13 then pr
   });
 });
 
+const DATA4LIBRARY_QUOTA_ENVELOPE = {
+  response: {
+    errCode: "outOflimit",
+    error: "1일 500건 이상 요청 시 IP 등록이 필요합니다. 등록 된 IP를 확인하시기 바랍니다."
+  }
+};
+
+test("data4library quota error envelope in a 200 answers 503 and is never cached", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(JSON.stringify(DATA4LIBRARY_QUOTA_ENVELOPE), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      DATA4LIBRARY_AUTH_KEY: "server-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const routes = [
+    "/v1/data4library/library-search?libraryCode=111001",
+    "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC",
+    "/v1/data4library/book-detail?isbn13=9788971998557",
+    "/v1/data4library/book-exists?libraryCode=111001&isbn13=9788971998557",
+    "/v1/data4library/libraries-by-book?isbn=9788971998557&region=11"
+  ];
+
+  for (const url of routes) {
+    const response = await app.inject({ method: "GET", url });
+    assert.equal(response.statusCode, 503, url);
+    assert.equal(response.headers["retry-after"], "3600", url);
+    const body = response.json();
+    assert.equal(body.error, "upstream_quota_exceeded", url);
+    assert.equal(body.status_code, 503, url);
+    assert.equal(body.retry_after, 3600, url);
+    assert.equal(body.upstream_code, "outOflimit", url);
+    assert.match(body.message, /outOflimit/);
+    assert.equal(body.upstream_message, DATA4LIBRARY_QUOTA_ENVELOPE.response.error);
+    assert.equal(body.proxy.cache.hit, false);
+  }
+
+  const callsBeforeRepeat = fetchCalls.length;
+  const repeat = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+
+  assert.equal(repeat.statusCode, 503);
+  assert.equal(repeat.json().proxy.cache.hit, false);
+  assert.equal(fetchCalls.length, callsBeforeRepeat + 1);
+});
+
+test("data4library auth and unknown error envelopes map to 502 without caching", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  global.fetch = async (url) => {
+    const text = String(url);
+    fetchCalls.push(text);
+    const envelope = text.includes("/srchBooks")
+      ? { response: { errCode: "authErr", error: "인증정보가 일치하지 않습니다." } }
+      : { response: { errCode: "unknownFailure", error: "처리 중 오류가 발생했습니다." } };
+    return new Response(JSON.stringify(envelope), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      DATA4LIBRARY_AUTH_KEY: "server-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+  const other = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-detail?isbn13=9788971998557"
+  });
+
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_forbidden");
+  assert.equal(first.json().upstream_code, "authErr");
+  assert.equal(first.json().upstream_message, "인증정보가 일치하지 않습니다.");
+  assert.equal(first.headers["retry-after"], undefined);
+  assert.equal(second.statusCode, 502);
+  assert.equal(second.json().proxy.cache.hit, false);
+
+  assert.equal(other.statusCode, 502);
+  assert.equal(other.json().error, "upstream_error");
+  assert.equal(other.json().upstream_code, "unknownFailure");
+  assert.equal(fetchCalls.length, 3);
+});
+
+test("data4library XML error body is not relayed as a 200 success", async (t) => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(
+    "<response><errCode>outOflimit</errCode><error>IP 등록이 필요합니다.</error></response>",
+    {
+      status: 200,
+      headers: { "content-type": "text/xml;charset=UTF-8" }
+    }
+  );
+
+  const app = buildServer({
+    env: { DATA4LIBRARY_AUTH_KEY: "server-key" }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.json().error, "upstream_quota_exceeded");
+  assert.equal(response.json().upstream_code, "outOflimit");
+  assert.equal(response.json().upstream_message, "IP 등록이 필요합니다.");
+});
+
+test("data4library successful payload still answers 200 with the upstream body and stays cached", async (t) => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+  const successEnvelope = {
+    response: {
+      resultNum: 1,
+      docs: [
+        {
+          doc: {
+            bookname: "역사의 역사",
+            authors: "유시민",
+            isbn13: "9788971998557"
+          }
+        }
+      ]
+    }
+  };
+  global.fetch = async (url) => {
+    fetchCalls.push(String(url));
+    return new Response(JSON.stringify(successEnvelope), {
+      status: 200,
+      headers: { "content-type": "application/json;charset=UTF-8" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      DATA4LIBRARY_AUTH_KEY: "server-key",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    }
+  });
+
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const first = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+  const second = await app.inject({
+    method: "GET",
+    url: "/v1/data4library/book-search?keyword=%EC%97%AD%EC%82%AC"
+  });
+
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.json().response, successEnvelope.response);
+  assert.deepEqual(first.json().query, { keyword: "역사", pageNo: 1, pageSize: 10 });
+  assert.equal(first.json().proxy.cache.hit, false);
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(fetchCalls.length, 1);
+});
+
 function buildParkingDatasetFetchMock({ fetchCalls, totalCount, seoulRow, otherRows = [] }) {
   return async (url) => {
     const resolved = String(url);

@@ -753,6 +753,109 @@ function normalizeData4LibraryLibrarySearchQuery(query) {
   return normalized;
 }
 
+// Data4Library answers HTTP 200 even when it rejects a request: the failure
+// arrives inside the payload (`response.errCode` / `response.error`, e.g.
+// `outOflimit` when the calling IP exceeds the daily allowance, or `authErr`
+// when the authKey is not accepted). Relaying that as 200 hides the failure
+// from clients and caches the error for the full TTL, so detect the envelope
+// and answer with the shared upstream_* failure codes instead.
+// The quota/auth split mirrors molit.js (`upstream_quota_exceeded` => 503 with
+// Retry-After, auth/config rejections => 502) so the keyed data.go.kr family
+// and this route fail the same way.
+function classifyData4LibraryErrorCode(errCode) {
+  const code = String(errCode || "").toLowerCase();
+
+  if (/limit|exceed|quota/.test(code)) {
+    return {
+      error: "upstream_quota_exceeded",
+      statusCode: 503,
+      retryAfterSeconds: 3600,
+      reason: "Data4Library daily quota exceeded; register the proxy egress IP at data4library.kr."
+    };
+  }
+
+  if (/auth|key/.test(code)) {
+    return {
+      error: "upstream_forbidden",
+      statusCode: 502,
+      reason: "Data4Library rejected the proxy authKey."
+    };
+  }
+
+  return {
+    error: "upstream_error",
+    statusCode: 502,
+    reason: "Data4Library returned an error envelope."
+  };
+}
+
+// Extracts the hidden error envelope from an upstream body, or null for a
+// normal result. JSON is the only format the proxy requests, but the XML/tag
+// shape is recognized too so a non-JSON error body can never be relayed as a
+// 200 success.
+function extractData4LibraryErrorEnvelope(body) {
+  const text = typeof body === "string" ? body.trim() : "";
+  if (!text) {
+    return null;
+  }
+
+  if (text.startsWith("{")) {
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return null;
+    }
+
+    const envelope = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed.response
+      : null;
+    if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) {
+      return null;
+    }
+
+    const errCode = trimOrNull(envelope.errCode ?? envelope.errorCode);
+    const message = trimOrNull(envelope.error ?? envelope.errorMessage);
+    if (!errCode && !message) {
+      return null;
+    }
+
+    return {
+      errCode: errCode || null,
+      message: message || null
+    };
+  }
+
+  const errCode = trimOrNull(text.match(/<errCode>\s*([^<]*?)\s*<\/errCode>/i)?.[1]);
+  const message = trimOrNull(text.match(/<error>\s*([^<]*?)\s*<\/error>/i)?.[1]);
+  if (!errCode && !message) {
+    return null;
+  }
+
+  return {
+    errCode: errCode || null,
+    message: message || null
+  };
+}
+
+// The upstream envelope plus the HTTP status/code the route must answer with,
+// carrying the upstream errCode and message so callers can act on them.
+function data4LibraryErrorResult(envelope) {
+  const classified = classifyData4LibraryErrorCode(envelope.errCode);
+  return {
+    statusCode: classified.statusCode,
+    contentType: "application/json; charset=utf-8",
+    body: JSON.stringify({
+      error: classified.error,
+      message: `${classified.reason} (${envelope.errCode || "unknown"}: ${envelope.message || "no message"})`,
+      status_code: classified.statusCode,
+      upstream_code: envelope.errCode || null,
+      upstream_message: envelope.message || null,
+      ...(classified.retryAfterSeconds ? { retry_after: classified.retryAfterSeconds } : {})
+    })
+  };
+}
+
 function normalizeSeoulSubwayQuery(query) {
   const stationName = trimOrNull(query.stationName ?? query.station_name ?? query.station);
   if (!stationName) {
@@ -1875,11 +1978,19 @@ async function proxyData4LibraryRequest({
   const response = await fetchImpl(url, {
     signal: AbortSignal.timeout(20000)
   });
+  const body = await response.text();
+
+  // A 200 carrying an error envelope must not be relayed as success (and must
+  // not be cached), so answer with the classified upstream_* failure instead.
+  const errorEnvelope = extractData4LibraryErrorEnvelope(body);
+  if (errorEnvelope) {
+    return data4LibraryErrorResult(errorEnvelope);
+  }
 
   return {
     statusCode: response.status,
     contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
-    body: await response.text()
+    body
   };
 }
 
@@ -6224,8 +6335,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       requested_at: new Date().toISOString()
     };
 
+    // Only successful bodies are cached, so a hidden upstream error envelope is
+    // never replayed from cache.
     if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
       cache.set(cacheKey, payload, config.cacheTtlMs);
+    } else if (payload.retry_after) {
+      reply.header("retry-after", String(payload.retry_after));
     }
 
     return payload;
