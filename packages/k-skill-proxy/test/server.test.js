@@ -231,6 +231,128 @@ test("Coupang product search signs upstream requests and caches normalized resul
   assert.equal(calls.length, 1);
 });
 
+test("Coupang product search maps an HTTP 200 error envelope to a 502 instead of an empty success", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    // The Coupang gateway answers HTTP 200 and carries the real status in the envelope.
+    return new Response(JSON.stringify({ rCode: "403", rMessage: "Not authorized." }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      COUPANG_ACCESS_KEY: "test-access",
+      COUPANG_SECRET_KEY: "test-secret",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    },
+    now: () => new Date("2026-08-21T00:00:00.000Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/coupang/products/search?q=%EB%AC%B4%EC%84%A0%EC%B2%AD%EC%86%8C%EA%B8%B0&limit=3";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 502);
+  assert.equal(first.json().error, "upstream_forbidden");
+  assert.equal(first.json().upstream.body_snippet, "rCode=403 rMessage=Not authorized.");
+  assert.doesNotMatch(first.body, /test-access|test-secret/);
+  assert.equal(calls.length, 1);
+
+  // Failure responses must never be cached, so the retry reaches upstream again.
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 502);
+  assert.equal(second.json().error, "upstream_forbidden");
+  assert.equal(second.json().proxy.cache.hit, false);
+  assert.equal(calls.length, 2);
+});
+
+test("Coupang product search classifies numeric and code-style error envelopes", async (t) => {
+  const originalFetch = global.fetch;
+  const cases = [
+    {
+      body: { rCode: 401, rMessage: "Expired access key." },
+      error: "upstream_forbidden",
+      snippet: "rCode=401 rMessage=Expired access key."
+    },
+    {
+      body: { code: "ERROR", message: "Invalid request." },
+      error: "upstream_error",
+      snippet: "code=ERROR message=Invalid request."
+    }
+  ];
+  t.after(() => {
+    global.fetch = originalFetch;
+  });
+
+  for (const testCase of cases) {
+    global.fetch = async () =>
+      new Response(JSON.stringify(testCase.body), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+
+    const app = buildServer({
+      env: {
+        COUPANG_ACCESS_KEY: "test-access",
+        COUPANG_SECRET_KEY: "test-secret"
+      },
+      now: () => new Date("2026-08-21T00:00:00.000Z")
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/coupang/products/search?q=%EB%AC%B4%EC%84%A0%EC%B2%AD%EC%86%8C%EA%B8%B0"
+    });
+    await app.close();
+
+    assert.equal(response.statusCode, 502);
+    assert.equal(response.json().error, testCase.error);
+    assert.equal(response.json().upstream.body_snippet, testCase.snippet);
+  }
+});
+
+test("Coupang product search keeps successful rCode 0 responses with empty data", async (t) => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return new Response(JSON.stringify({ rCode: 0, rMessage: "", data: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const app = buildServer({
+    env: {
+      COUPANG_ACCESS_KEY: "test-access",
+      COUPANG_SECRET_KEY: "test-secret",
+      KSKILL_PROXY_CACHE_TTL_MS: "60000"
+    },
+    now: () => new Date("2026-08-21T00:00:00.000Z")
+  });
+  t.after(async () => {
+    global.fetch = originalFetch;
+    await app.close();
+  });
+
+  const url = "/v1/coupang/products/search?q=%EB%AC%B4%EC%84%A0%EC%B2%AD%EC%86%8C%EA%B8%B0&limit=3";
+  const first = await app.inject({ method: "GET", url });
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.json().items, []);
+  assert.equal(first.json().upstream.response_code, "0");
+
+  const second = await app.inject({ method: "GET", url });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.json().proxy.cache.hit, true);
+  assert.equal(calls.length, 1);
+});
+
 test("health reports Coupang configuration only when both keys are present", async (t) => {
   const missing = buildServer({ env: { COUPANG_ACCESS_KEY: "access-only" } });
   const configured = buildServer({
