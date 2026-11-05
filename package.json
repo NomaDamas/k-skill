@@ -10,6 +10,8 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "build:manus-bundle": "node scripts/build-manus-bundle.js",
+    "build:official-plugin": "node scripts/build-official-plugin.js",
+    "check:official-plugin": "node scripts/build-official-plugin.js --check",
     "generate:plugin-manifest": "node scripts/generate-plugin-manifest.js",
     "lint": "node scripts/run-lint.js",
     "typecheck": "tsc --noEmit",

@@ -29,3 +29,4 @@ runBatched(resolvePython(), ["-m", "py_compile"], pyFiles);
 run(npmCommand(), ["run", "lint", "--workspaces", "--if-present"]);
 run(bashCommand(), [path.join(repoRoot, "scripts", "validate-skills.sh")]);
 run(process.execPath, [path.join(repoRoot, "scripts", "generate-plugin-manifest.js"), "--check"]);
+run(process.execPath, [path.join(repoRoot, "scripts", "build-official-plugin.js"), "--check"]);

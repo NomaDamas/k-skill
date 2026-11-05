@@ -1,0 +1,16 @@
+{
+  "name": "k-skill",
+  "displayName": "K-Skill",
+  "version": "1.0.0",
+  "description": "129 Korean everyday and work skills with packaged instructions and local helpers.",
+  "author": {
+    "name": "NomaDamas"
+  },
+  "homepage": "https://github.com/NomaDamas/k-skill",
+  "repository": "https://github.com/NomaDamas/k-skill",
+  "license": "MIT",
+  "supportUrl": "https://github.com/NomaDamas/k-skill/issues",
+  "documentationUrl": "https://github.com/NomaDamas/k-skill",
+  "privacyPolicyUrl": "https://k-skill-proxy.nomadamas.org/privacy",
+  "icon": "./assets/icon.png"
+}

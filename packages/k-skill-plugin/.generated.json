@@ -1,0 +1,2206 @@
+{
+  "generator": "scripts/build-official-plugin.js",
+  "skills": [
+    "animal-pharmacy-search",
+    "assembly-bill-vote-search",
+    "bccard-eatpl-search",
+    "biz-health-check",
+    "bok-ecos-stats",
+    "building-register-search",
+    "bunjang-search",
+    "cheap-gas-nearby",
+    "company-analysis",
+    "consumer-price-safety-search",
+    "corporate-registration-consulting",
+    "coupang-product-search",
+    "court-auction-notice-search",
+    "court-payment-order-assistant",
+    "d2b-notice-search",
+    "daangn-cars-search",
+    "daangn-jobs-search",
+    "daangn-realty-search",
+    "daangn-used-goods-search",
+    "daishin-report-search",
+    "daiso-product-search",
+    "danawa-price-search",
+    "delivery-tracking",
+    "donation-place-search",
+    "emergency-room-beds",
+    "ev-charger-nearby",
+    "ev-subsidy-status",
+    "express-bus-booking",
+    "fine-dust-location",
+    "flight-ticket-search",
+    "foresttrip-vacancy",
+    "fsc-corporate-info",
+    "g2b-order-plan-search",
+    "g2b-sanctioned-supplier",
+    "geeknews-search",
+    "gongsijiga-search",
+    "gov-overseas-trip-report",
+    "government-bond-analysis",
+    "government-support-survey",
+    "han-river-water-level",
+    "hankookilbo-news",
+    "highway-traffic-status",
+    "hola-poke-yeoksam",
+    "household-waste-info",
+    "housing-official-price",
+    "hwp",
+    "intercity-bus-booking",
+    "iros-registry-automation",
+    "job-posting-match",
+    "jobkorea-talent-search",
+    "joseon-sillok-search",
+    "k-dart",
+    "k-schoollunch-menu",
+    "k-skill-cleaner",
+    "k-skill-setup",
+    "kakao-bar-nearby",
+    "kakao-map",
+    "kakaotalk-mac",
+    "kamis-food-price",
+    "kbl-results",
+    "kbo-results",
+    "keris-academic-search",
+    "kleague-results",
+    "komsa-ferry-info",
+    "kopis-performance-search",
+    "korea-weather",
+    "korean-bond-search",
+    "korean-character-count",
+    "korean-cinema-search",
+    "korean-heritage-search",
+    "korean-holiday-calendar",
+    "korean-humanizer",
+    "korean-law-search",
+    "korean-marathon-schedule",
+    "korean-middle-korean",
+    "korean-patent-search",
+    "korean-scholarship-search",
+    "korean-slang-writing",
+    "korean-spell-check",
+    "korean-stock-search",
+    "korean-transit-route",
+    "kosis-stats",
+    "kr-whois-lookup",
+    "kstartup-search",
+    "lck-analytics",
+    "lh-notice-search",
+    "library-book-search",
+    "localdata-business-status",
+    "lotto-results",
+    "market-event-impact",
+    "market-kurly-search",
+    "mfds-drug-safety",
+    "mfds-food-safety",
+    "mofa-travel-safety",
+    "multi-asset-morning-briefing",
+    "myrealtrip-search",
+    "naming-house",
+    "national-pension-workplace",
+    "naver-ad-performance",
+    "naver-blog-research",
+    "naver-news-search",
+    "naver-shopping-search",
+    "nhis-care-checkup-search",
+    "nts-business-registration",
+    "nts-tax-delinquency",
+    "ohou-today-deal",
+    "olive-young-search",
+    "parking-lot-search",
+    "popbill",
+    "public-restroom-nearby",
+    "railway-timetable",
+    "real-estate-search",
+    "religious-facility-search",
+    "rhwp-advanced",
+    "rhwp-edit",
+    "s2b-notice-search",
+    "saju-fortune",
+    "saramin-talent-search",
+    "seoul-bike",
+    "seoul-density",
+    "seoul-subway-arrival",
+    "seoul-weather-risk",
+    "sh-notice-search",
+    "sharenuri-facility-search",
+    "store-longevity-radar",
+    "subway-lost-property",
+    "ticket-availability",
+    "toss-investment",
+    "zipcode-search"
+  ],
+  "excluded": [
+    {
+      "name": "heyyumi",
+      "reason": "Requires behavioral rules fetched from the provider's guide endpoint at runtime; a static, provider-approved workflow is needed before directory submission."
+    },
+    {
+      "name": "korean-jangbu-for",
+      "reason": "Installs an upstream skill workflow at runtime. Bundle and review the licensed upstream workflow before including it."
+    },
+    {
+      "name": "korean-privacy-terms",
+      "reason": "Installs upstream behavioral interview/render/install instructions at runtime. Bundle and review the licensed upstream workflow before including it."
+    }
+  ],
+  "files": [
+    {
+      "path": ".claude-plugin/plugin.json",
+      "mode": 420
+    },
+    {
+      "path": "LICENSE",
+      "mode": 420
+    },
+    {
+      "path": "README.md",
+      "mode": 420
+    },
+    {
+      "path": "assets/icon.png",
+      "mode": 420
+    },
+    {
+      "path": "runtime/assemble.js",
+      "mode": 420
+    },
+    {
+      "path": "runtime/execute.js",
+      "mode": 420
+    },
+    {
+      "path": "runtime/k-skill.js",
+      "mode": 420
+    },
+    {
+      "path": "skills/animal-pharmacy-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/animal-pharmacy-search/scripts/animal_pharmacy_mcp.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/assembly-bill-vote-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/bccard-eatpl-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/bccard-eatpl-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/bccard-eatpl-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/bccard-eatpl-search/scripts/kakao-place-rating.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/biz-health-check/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/biz-health-check/scripts/biz_health_check.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/bok-ecos-stats/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/bok-ecos-stats/scripts/bok_ecos.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/building-register-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/building-register-search/scripts/building_register.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/building-register-search/scripts/building_register_xml.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/bunjang-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/bunjang-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/bunjang-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/cheap-gas-nearby/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/company-analysis/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/company-analysis/references/source-contract.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/company-analysis/scripts/dart-rows.js",
+      "mode": 420
+    },
+    {
+      "path": "skills/company-analysis/scripts/dart-rows.ts",
+      "mode": 420
+    },
+    {
+      "path": "skills/company-analysis/scripts/evidence.js",
+      "mode": 420
+    },
+    {
+      "path": "skills/company-analysis/scripts/evidence.ts",
+      "mode": 420
+    },
+    {
+      "path": "skills/company-analysis/scripts/fetch-public.js",
+      "mode": 420
+    },
+    {
+      "path": "skills/company-analysis/scripts/fetch-public.ts",
+      "mode": 420
+    },
+    {
+      "path": "skills/consumer-price-safety-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/scripts/fill_official_hwp.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/articles-of-incorporation.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/board-minutes.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/corporate-seal-report.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/founder-meeting-minutes.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/founder-meeting-period-shortening-consent.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/inspection-report.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/officer-acceptance-auditor.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/officer-acceptance-director-ceo.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/power-of-attorney.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/share-issuance-consent.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/share-subscription.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/shareholder-register.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/source-manifest.json",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/attachment-hwp/standard-articles-startup-moj.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/incorporation-document-pack.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/official-form-sources.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/official/form-65-1-fill-map.json",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/official/form-65-1-stock-company-incorporation-promoter.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/official/form-65-2-stock-company-incorporation-subscription.hwp",
+      "mode": 420
+    },
+    {
+      "path": "skills/corporate-registration-consulting/templates/official/source-manifest.json",
+      "mode": 420
+    },
+    {
+      "path": "skills/coupang-product-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/coupang-product-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/coupang-product-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/court-auction-notice-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/court-payment-order-assistant/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/d2b-notice-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-cars-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-cars-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-cars-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-cars-search/scripts/daangn_cars.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/daangn-jobs-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-jobs-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-jobs-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-jobs-search/scripts/daangn_jobs.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/daangn-realty-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-realty-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-realty-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-realty-search/scripts/daangn_detail_ld.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-realty-search/scripts/daangn_realty.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/daangn-realty-search/scripts/daangn_relay_store.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-used-goods-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-used-goods-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-used-goods-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daangn-used-goods-search/scripts/daangn_used_goods.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/daishin-report-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daishin-report-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daishin-report-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daiso-product-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daiso-product-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/daiso-product-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/danawa-price-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/danawa-price-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/danawa-price-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/danawa-price-search/scripts/danawa_search.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/delivery-tracking/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/delivery-tracking/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/delivery-tracking/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/donation-place-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/emergency-room-beds/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/ev-charger-nearby/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/ev-charger-nearby/scripts/ev_charger.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/ev-subsidy-status/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/express-bus-booking/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/express-bus-booking/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/express-bus-booking/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/express-bus-booking/references/kobus-http-flow.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/express-bus-booking/scripts/kobus_express_booking.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/fine-dust-location/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/fine-dust-location/scripts/fine_dust.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/flight-ticket-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/flight-ticket-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/flight-ticket-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/flight-ticket-search/scripts/flight_ticket_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/foresttrip-vacancy/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/foresttrip-vacancy/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/foresttrip-vacancy/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/foresttrip-vacancy/scripts/run_foresttrip_vacancy.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/fsc-corporate-info/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/fsc-corporate-info/scripts/fsc_corporate_info.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/g2b-order-plan-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/g2b-order-plan-search/scripts/g2b_order_plan.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/g2b-sanctioned-supplier/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/g2b-sanctioned-supplier/scripts/g2b_sanctioned_supplier.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/geeknews-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/geeknews-search/scripts/geeknews_search.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/gongsijiga-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/gov-overseas-trip-report/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/gov-overseas-trip-report/references/k-skill-official-workflow.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/gov-overseas-trip-report/scripts/gov_overseas_trip_report.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/government-bond-analysis/LICENSE",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/references/methodology.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/cli.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/collect.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/core.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/dual.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/harness.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/modes.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/news.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/render.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/schedule.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-bond-analysis/scripts/ust.mjs",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-support-survey/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-support-survey/references/NOTICE.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/government-support-survey/scripts/run_survey.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/han-river-water-level/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/hankookilbo-news/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/highway-traffic-status/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/highway-traffic-status/scripts/highway_traffic.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/hola-poke-yeoksam/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/household-waste-info/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/housing-official-price/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/hwp/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/intercity-bus-booking/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/intercity-bus-booking/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/intercity-bus-booking/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/intercity-bus-booking/references/tmoney-intercity-http-flow.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/intercity-bus-booking/scripts/intercity_bus_search.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/iros-registry-automation/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/iros-registry-automation/scripts/iros_pdf_summary.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/iros-registry-automation/scripts/upstream.pin",
+      "mode": 420
+    },
+    {
+      "path": "skills/job-posting-match/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/job-posting-match/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/job-posting-match/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/job-posting-match/scripts/job_posting_match.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/jobkorea-talent-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/jobkorea-talent-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/jobkorea-talent-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/jobkorea-talent-search/scripts/jobkorea_talent_models.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/jobkorea-talent-search/scripts/jobkorea_talent_parse.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/jobkorea-talent-search/scripts/jobkorea_talent_search.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/jobkorea-talent-search/scripts/jobkorea_talent_search_condition.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/joseon-sillok-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/joseon-sillok-search/scripts/sillok_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/k-dart/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/k-dart/references/k-skill-official-workflow.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/k-schoollunch-menu/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/k-skill-cleaner/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/k-skill-cleaner/scripts/k_skill_cleaner.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/k-skill-setup/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/k-skill-setup/scripts/check-setup.sh",
+      "mode": 493
+    },
+    {
+      "path": "skills/kakao-bar-nearby/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kakao-bar-nearby/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kakao-bar-nearby/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kakao-map/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kakao-map/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kakao-map/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kakaotalk-mac/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kakaotalk-mac/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kakaotalk-mac/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kamis-food-price/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kamis-food-price/scripts/run_kamis.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/kbl-results/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kbl-results/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kbl-results/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kbo-results/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kbo-results/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kbo-results/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/keris-academic-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/keris-academic-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/keris-academic-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/keris-academic-search/scripts/keris_academic.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/kleague-results/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kleague-results/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kleague-results/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/komsa-ferry-info/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/komsa-ferry-info/scripts/komsa_ferry_info.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/kopis-performance-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kopis-performance-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kopis-performance-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korea-weather/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-bond-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-bond-search/references/fields.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-bond-search/references/source-notes.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-bond-search/scripts/bond_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-character-count/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-character-count/scripts/korean_character_count.js",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-cinema-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-cinema-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-cinema-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-heritage-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-heritage-search/scripts/korean_heritage_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-holiday-calendar/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-humanizer/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-humanizer/references/ai-tell-taxonomy.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-law-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-marathon-schedule/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-middle-korean/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-middle-korean/scripts/korean_middle_korean.js",
+      "mode": 493
+    },
+    {
+      "path": "skills/korean-patent-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-patent-search/scripts/patent_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-scholarship-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-scholarship-search/references/report-format.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-scholarship-search/references/school-discovery.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-scholarship-search/references/search-clues.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-scholarship-search/references/source-patterns.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-scholarship-search/scripts/scholarship_filter.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-scholarship-search/scripts/university_search_plan.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-slang-writing/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-slang-writing/scripts/_slang_http.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-slang-writing/scripts/slang_lookup.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-slang-writing/scripts/slang_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-spell-check/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-spell-check/scripts/korean_spell_check.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-stock-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-stock-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-stock-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-transit-route/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-transit-route/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/korean-transit-route/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kosis-stats/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kosis-stats/references/kosis-openapi-guide.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kosis-stats/scripts/run_kosis_stats.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/kr-whois-lookup/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kstartup-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/kstartup-search/scripts/run_kstartup.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/lck-analytics/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/lck-analytics/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/lck-analytics/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/lck-analytics/scripts/_lib.js",
+      "mode": 493
+    },
+    {
+      "path": "skills/lck-analytics/scripts/analyze-live-game.js",
+      "mode": 493
+    },
+    {
+      "path": "skills/lck-analytics/scripts/build-match-report.js",
+      "mode": 493
+    },
+    {
+      "path": "skills/lck-analytics/scripts/sync-oracle.js",
+      "mode": 493
+    },
+    {
+      "path": "skills/lh-notice-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/library-book-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/localdata-business-status/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/localdata-business-status/scripts/localdata_business_status.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/lotto-results/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/lotto-results/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/lotto-results/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/references/event-taxonomy.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/references/methodology.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/references/research-contract.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/references/source-priority.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/scripts/adapters.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/scripts/asset_selector.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/scripts/calendars.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/scripts/event_resolver.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/scripts/event_study.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/scripts/market_data.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/scripts/market_event.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-event-impact/scripts/research.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-kurly-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-kurly-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/market-kurly-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/mfds-drug-safety/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/mfds-drug-safety/scripts/mfds_drug_safety.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/mfds-food-safety/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/mfds-food-safety/scripts/mfds_food_safety.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/mofa-travel-safety/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/mofa-travel-safety/scripts/run_mofa_travel_safety.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/multi-asset-morning-briefing/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/multi-asset-morning-briefing/references/format-rules.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/multi-asset-morning-briefing/scripts/market_data.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/myrealtrip-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/myrealtrip-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/myrealtrip-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/myrealtrip-search/scripts/myrealtrip_mcp.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/naming-house/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/national-pension-workplace/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/national-pension-workplace/scripts/national_pension_workplace.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-ad-performance/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-ad-performance/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-ad-performance/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-ad-performance/scripts/naver_ad_performance.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-blog-research/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-blog-research/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-blog-research/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-blog-research/scripts/_naver_http.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-blog-research/scripts/naver_download_images.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-blog-research/scripts/naver_read.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-blog-research/scripts/naver_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-news-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-news-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-news-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-shopping-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-shopping-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/naver-shopping-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/nhis-care-checkup-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/nts-business-registration/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/nts-business-registration/scripts/nts_business_registration.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/nts-tax-delinquency/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/nts-tax-delinquency/scripts/nts_tax_delinquency.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/ohou-today-deal/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/ohou-today-deal/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/ohou-today-deal/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/ohou-today-deal/scripts/ohou_today_deal.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/olive-young-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/olive-young-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/olive-young-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/parking-lot-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/popbill/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/popbill/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/popbill/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/popbill/scripts/popbill_cli.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/popbill/scripts/popbill_registry.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/popbill/scripts/popbill_safety.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/popbill/scripts/popbill_templates.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/public-restroom-nearby/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/references/AUTOMATION-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/scripts/ktx_backend.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/scripts/ktx_backend.py.lock",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/scripts/ktx_timetable.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/scripts/railway_timetable.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/railway-timetable/scripts/railway_timetable.py.lock",
+      "mode": 420
+    },
+    {
+      "path": "skills/real-estate-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/real-estate-search/scripts/nationwide_daily_report.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/religious-facility-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/religious-facility-search/scripts/religious_facility_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/rhwp-advanced/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/rhwp-edit/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/s2b-notice-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/saju-fortune/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/saramin-talent-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/saramin-talent-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/saramin-talent-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/seoul-bike/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/seoul-bike/scripts/seoul_bike.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/seoul-density/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/seoul-density/scripts/seoul_density.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/seoul-subway-arrival/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/seoul-weather-risk/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/seoul-weather-risk/references/admin-dong-place-map.json",
+      "mode": 420
+    },
+    {
+      "path": "skills/seoul-weather-risk/scripts/seoul_weather_risk.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/sh-notice-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/sharenuri-facility-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/sharenuri-facility-search/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/sharenuri-facility-search/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/sharenuri-facility-search/scripts/sharenuri_search.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/store-longevity-radar/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/store-longevity-radar/scripts/store_longevity_download.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/store-longevity-radar/scripts/store_longevity_radar.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/subway-lost-property/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/subway-lost-property/scripts/subway_lost_property.py",
+      "mode": 493
+    },
+    {
+      "path": "skills/ticket-availability/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/ticket-availability/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/ticket-availability/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/ticket-availability/scripts/ticket_availability.py",
+      "mode": 420
+    },
+    {
+      "path": "skills/toss-investment/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/toss-investment/references/DISCLAIMER.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/toss-investment/references/TRADEMARK-LEGAL-STATEMENT.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/zipcode-search/SKILL.md",
+      "mode": 420
+    },
+    {
+      "path": "skills/zipcode-search/scripts/zipcode_search.py",
+      "mode": 493
+    }
+  ],
+  "sources": {
+    ".claude-plugin/plugin.json": "07cb73f32bba9e0f93a76f4120ae4a9e44ea71fba7a73d6e1a777c8ba67a0e6d",
+    "animal-pharmacy-search/instruction.md": "b2d469d366f828736065958654498233f0748dc2a6b4ce3db695c675c0896059",
+    "animal-pharmacy-search/scripts/animal_pharmacy_mcp.py": "b4756db05404b58bb865383598aaf8a48ecf0b43088eb7b89fb76ba98812bc1a",
+    "animal-pharmacy-search/skill.json": "a7a44eb843ea7353390ddf31423a285ac20f582bad78dee9e1b799d127614a27",
+    "assembly-bill-vote-search/instruction.md": "1567cdf4b5e87d1b30e740c8b5da1f279501e9ecd50972740745be11ea086d13",
+    "assembly-bill-vote-search/skill.json": "e62af651cf2ddea6ba563490623afe002cb9ec6f6ce9dc739caa074fef9c090d",
+    "bccard-eatpl-search/instruction.md": "e85a5bc446c66525cd38c373a34664aca18091e6a11790a7fb1f40ee6e0678f2",
+    "bccard-eatpl-search/references/DISCLAIMER.md": "b093089a2d7146266c612c53a1d6bcc6385f78d85859a99757e6ed47955bd093",
+    "bccard-eatpl-search/references/TRADEMARK-LEGAL-STATEMENT.md": "f6cdcb1ce7e22f001d8f729814504a5941e5c193ba522fcb8edfc13be755d653",
+    "bccard-eatpl-search/scripts/kakao-place-rating.mjs": "a8da5b10b46f2a36f3b04303a8093e613cb57aee7fd4c0f9020f1bb1e89d0e3c",
+    "bccard-eatpl-search/skill.json": "c559cf5de71f979260478f26df6ba9536eba2af244d8d87ea3017fa90053b62a",
+    "biz-health-check/instruction.md": "55f44a19550d94b20ad4e51af26199b8e86fb0d5a7c8b10a00211a44361f8902",
+    "biz-health-check/scripts/biz_health_check.py": "42d37c31911595195e0526feb7e0ceddb8bad4dcbc7c9d192e0a992b478b3c5c",
+    "biz-health-check/skill.json": "2cfa25199bf5b36d15056b819baed1d3d61f04d73c4e9f1bfd00bbc2ac110499",
+    "bok-ecos-stats/instruction.md": "d03421a7339ecd4b2bbf38aab21bf482bd09f90bda59d0c5b2d0ab08ae9d828f",
+    "bok-ecos-stats/scripts/bok_ecos.py": "849629392ea51f7ee2fe42e14bc463828b858c60bf3b343d2eefa96766d01e28",
+    "bok-ecos-stats/skill.json": "7d4a48e21ef038da7fafac9b56c6a0508b58a0a1f4584cff1a2b728c304ce12c",
+    "building-register-search/instruction.md": "ccc6c00de9826224f54e5479ef536ef7b0453fdbed59e853cf1af65e8445f8e6",
+    "building-register-search/scripts/building_register_xml.py": "35b3a599924db21f6a5c74728a89e3a6020c6ef75944f5c3b4eb7bcfe5add9ff",
+    "building-register-search/scripts/building_register.py": "0794fef8ebaed6ef31094ef0863c981c33fd2641279ba1b0f8ac1821228f4fa9",
+    "building-register-search/skill.json": "7fe0ca2f6c8c0d969c59cb7345b62569c3a90aaea2c5287c3bd43551fbbd4f3b",
+    "bunjang-search/instruction.md": "7c1f414d42f0a5463e2f9cd3ff70bbd5a77544264b1cddba85f24eaf4a5975f9",
+    "bunjang-search/references/DISCLAIMER.md": "9514185978f9733d0e8925991f90addd78618df3f8029608885fa9418e9b97d9",
+    "bunjang-search/references/TRADEMARK-LEGAL-STATEMENT.md": "67f74c0f8277651accf6f58e12c7f55ff9bfa2a2b85e383a0eb9c285c42210da",
+    "bunjang-search/skill.json": "417c9f3c1d81325806ea3788d1adf7469771d15cdc5f11a8b33c55373d1155c0",
+    "cheap-gas-nearby/instruction.md": "6bbbd6a4e6961c45cc0152307492598bdc621a316afccbb89e9b429a1259cbf4",
+    "cheap-gas-nearby/skill.json": "1265157a60fb0a363b5a8d2eaff8d61f021d196d366c15c6ee7df6246f8c0c00",
+    "company-analysis/instruction.md": "5e3e68f0461d6baca56bfab0a30f9ba051b02bd6d3769ab0504188547eb042ba",
+    "company-analysis/references/source-contract.md": "ae8b61cae2890722ad05c98cb0e008c5e451d1a4836bafa63c113358b0c5d1e0",
+    "company-analysis/scripts/dart-rows.js": "bafa954ab6d47f7dcb3951ccf425fd52b82273fc0e8fcdbc3f019237a453d154",
+    "company-analysis/scripts/dart-rows.ts": "71ab212923768800b6442f9bdd1a80f0aedfb295020cbfe39ff742f6030d7933",
+    "company-analysis/scripts/evidence.js": "de03334aeca66f1f0fae8dd112088abe8156b6737ea9a64fda8fd7d47f6830ea",
+    "company-analysis/scripts/evidence.ts": "d8449b8fb3020b61fc5e65e8966ce4641be4c7ddfb09eff3636e2f4574863a33",
+    "company-analysis/scripts/fetch-public.js": "8be24dd1df638fa1173b2c0acc646a6ae71a242ea4005d44c0266fd63ba9a920",
+    "company-analysis/scripts/fetch-public.ts": "21d38e5d70ad0327781bcce406abe71ed5ca8ce8dc3367a88a10e4c922cdad4b",
+    "company-analysis/skill.json": "e615aeb175ba4a29d04795ba16723100fd04070d3976099b3f1c263e6cbb5569",
+    "consumer-price-safety-search/instruction.md": "464f7a282374fc53d8bb5231319df58fbd303057eb663e357c2c80b5625c6cfd",
+    "consumer-price-safety-search/skill.json": "25204ea09ee6a223db2f627647d0ccd202ed044940a4c3430ed4e0c90394820e",
+    "corporate-registration-consulting/instruction.md": "36d8d684a2d939953ec8a4fcfd9f643eea559aba5f18c2e3623907c04eeb3a9e",
+    "corporate-registration-consulting/scripts/fill_official_hwp.py": "35d0da8e927c75507a50bb766ed9b2d5b9e06d6e504d9e222df948ca642d51dd",
+    "corporate-registration-consulting/skill.json": "2b420a877c6dc86b5f181addbbce356234b9d3fcbc2361bfe7e97f2cc0ea630c",
+    "corporate-registration-consulting/templates/attachment-hwp/articles-of-incorporation.hwp": "244f5eddd3bda1b200ad28c2a4bd1295182949c502255821d418f6605dc8cb52",
+    "corporate-registration-consulting/templates/attachment-hwp/board-minutes.hwp": "735eaece6ec2fc617d8768bd30098f1f4808099aeeeed91aebf48e988238d003",
+    "corporate-registration-consulting/templates/attachment-hwp/corporate-seal-report.hwp": "26aa32cce44a4cb1d3a92e5684c02fc210c65b2d344acaa470ebc91c2579bd5b",
+    "corporate-registration-consulting/templates/attachment-hwp/founder-meeting-minutes.hwp": "62971efa2ace88d8df7fa827538fc6b9d31b60d14e945d0769327531fee6a77b",
+    "corporate-registration-consulting/templates/attachment-hwp/founder-meeting-period-shortening-consent.hwp": "d65e2f21cfa29ee98a24770965ba5f3c9e78dbaee4e6062f0e01c19e5bf1f31b",
+    "corporate-registration-consulting/templates/attachment-hwp/inspection-report.hwp": "7ad5c9bbfb416a4196352ab91715b6e7ed87d329714c81f624285a46b6c437ea",
+    "corporate-registration-consulting/templates/attachment-hwp/officer-acceptance-auditor.hwp": "6d9ca0907faf7ddb976b8d7e2569d87f7d5efc7c9e1550d12a7d90aed7a517c6",
+    "corporate-registration-consulting/templates/attachment-hwp/officer-acceptance-director-ceo.hwp": "7c5f4e7d44d69db6578c1a12640a2ef5ef0c2f3279f7faad7c65fca505878f24",
+    "corporate-registration-consulting/templates/attachment-hwp/power-of-attorney.hwp": "d9141458d779dd781178ca187c2466fe9c2ec7467971b9fcdb6ad52e4ff42d66",
+    "corporate-registration-consulting/templates/attachment-hwp/share-issuance-consent.hwp": "cacdf5e9b95f734fc708b9258f72836c6acb9dfc0f0550a52a0ca36df6b1f3eb",
+    "corporate-registration-consulting/templates/attachment-hwp/share-subscription.hwp": "4b6cd23af21211294362dea2ff5c0e3018c7a8ccc93543d28e1cdd1f8ef5dad8",
+    "corporate-registration-consulting/templates/attachment-hwp/shareholder-register.hwp": "5dc27e306c0384bad4c59073c402f0bd3085d1049c24afe68cc75dc83702c3af",
+    "corporate-registration-consulting/templates/attachment-hwp/source-manifest.json": "316a89c1951c2cf169dafa0b68837726d96043050fea00c758e44e47cdc3e5c9",
+    "corporate-registration-consulting/templates/attachment-hwp/standard-articles-startup-moj.hwp": "64d84ff1bd9ba10db1f5ba9c7ee0442725385ce44b587730e7984c69bd3034d6",
+    "corporate-registration-consulting/templates/incorporation-document-pack.md": "4324d50dd2488772fa24435a8f7cdd8e8567c42e116f426770380b4d64703c1e",
+    "corporate-registration-consulting/templates/official-form-sources.md": "f48003a099356c1a5a30cf5caf82e04c3267d26db2d05dd73567d4e78555f829",
+    "corporate-registration-consulting/templates/official/form-65-1-fill-map.json": "5276be2030708a3d5e1e44e0699f2e909a629c5ceab6fd7117a314248863976e",
+    "corporate-registration-consulting/templates/official/form-65-1-stock-company-incorporation-promoter.hwp": "793dc933df06bd7dee117c6613e369d6918be22114d8682d6e8c5f54850ddc98",
+    "corporate-registration-consulting/templates/official/form-65-2-stock-company-incorporation-subscription.hwp": "aefa665b1d57f856041a648bb8b9cbcfd291049112d683e9504310295d2a7848",
+    "corporate-registration-consulting/templates/official/source-manifest.json": "131e4012e84b120892908b43315aade33c5322f37b446409ca1c5fbebf4f9707",
+    "coupang-product-search/instruction.md": "bbbbc8f0ee6a100adfad401ffc07d5fbecb47b3ab87c9bca0462d8fb36d2d69e",
+    "coupang-product-search/references/DISCLAIMER.md": "de2dfcdee6fa7cfeec94df9d17d5bcd33e9ead4b6527c91431163f143b97ef6c",
+    "coupang-product-search/references/TRADEMARK-LEGAL-STATEMENT.md": "66981624e337048c480254e779c222f2c196ea3b7d096d8e6862844701c1c294",
+    "coupang-product-search/skill.json": "f0376c99848cea25538fe15e27ab034ad7e3649c81d65513e91ba320b2701af1",
+    "court-auction-notice-search/instruction.md": "ec725c85035b9270a3cb379221fc90f2b6198287b2f547ea2d04dce7f03d1866",
+    "court-auction-notice-search/skill.json": "e80a0bcda18430199f43a2151446048f811f5790ef4ebdf27e7793b89d18b97d",
+    "court-payment-order-assistant/instruction.md": "0ce691cb560c2d63c079e55dc37bede39bee6a3a573b107b41a0a4d702aff760",
+    "court-payment-order-assistant/skill.json": "86e791fa1ef78f9794b0365f59038862fcf26e6483669689ce0ffbe2c34b9708",
+    "d2b-notice-search/instruction.md": "4e3d5d298952992c31c1c012c5e43f4a3256eebea2767e17e766d6d96402f3c8",
+    "d2b-notice-search/skill.json": "8cc6df176ad81185c6a8f1296fa98e9d2cfe36f6d672d45ca85867d1dfb54199",
+    "daangn-cars-search/instruction.md": "38040c1211eeabb337c830b365afd99f8a2de62cf023f066fc86e3bb8fc20230",
+    "daangn-cars-search/references/DISCLAIMER.md": "5dc5d972dbd0df6a911a6c1be78e3ce30b94728674136707b17c2564f51f5e49",
+    "daangn-cars-search/references/TRADEMARK-LEGAL-STATEMENT.md": "c1534b5c9fbc10c39c664c9c7e2d48635a9c306544a9ebc90ec4f94da26f555e",
+    "daangn-cars-search/scripts/daangn_cars.py": "533b604af30706db9a7933252871b233c09a4cfdf825b558b21e6749a944baa6",
+    "daangn-cars-search/skill.json": "1221f9381e0864c405b692856fd7185541820836ddcf75ff66d9a178b4a2615e",
+    "daangn-jobs-search/instruction.md": "05e20060f7350933d0202114bdedbdbb1bdd2ebaea5be14f5fb04f3bcc0ffa81",
+    "daangn-jobs-search/references/DISCLAIMER.md": "2412b0ded954221a6a966bafe1be653d7b290a92d11bf2f8213643a4711a90f1",
+    "daangn-jobs-search/references/TRADEMARK-LEGAL-STATEMENT.md": "287fd2be82c1cf6d431fcc28b83848321f3be94950216237887ff5bd8c635c59",
+    "daangn-jobs-search/scripts/daangn_jobs.py": "92228cf2b18092a07efbb20b0986c06fa4f22dcfbca91393620ae2bcb51bed38",
+    "daangn-jobs-search/skill.json": "ff3ebde0031db4ef2e2d348fabdda575661fb5b38368723b4f555cf761beebfb",
+    "daangn-realty-search/instruction.md": "9af6ccefb5e1329d30bdf59b547d31340dc6a8b55f50d7996caa6d47273489bd",
+    "daangn-realty-search/references/DISCLAIMER.md": "51d2b6891d89535dd96c71741613c40c342f8296d7961e3e6785af28df9a81bd",
+    "daangn-realty-search/references/TRADEMARK-LEGAL-STATEMENT.md": "8f75984d600937585c44ac1d1b90eac9ee3451e10bdd4f6ee93d8fc0e8a240f9",
+    "daangn-realty-search/scripts/daangn_detail_ld.py": "0bc6cef0b3e518d047adb74ba9195da7f1465c851264fcc6effa76c7a17a18e6",
+    "daangn-realty-search/scripts/daangn_realty.py": "78a92a5750bf10950c0997dd1e5eb7913d461056cdfc95c5e88fe2d51d8a5a1d",
+    "daangn-realty-search/scripts/daangn_relay_store.py": "a75a082accc62b3093e5676f58937e55d6ad5b2ded85d6b07536ac1345dde6d4",
+    "daangn-realty-search/skill.json": "afed0758681fbe18205563f35ea7fb631c52e75bc907c9cde324430d0577d07a",
+    "daangn-used-goods-search/instruction.md": "9aa38da6e39ecbf5b504029c44cea6eae168b38942806b22a401ee4db3ce42e8",
+    "daangn-used-goods-search/references/DISCLAIMER.md": "eef3f4d99fe191ae6ea5bb43467de9b1bb693928dbf473a5f763613a6b527499",
+    "daangn-used-goods-search/references/TRADEMARK-LEGAL-STATEMENT.md": "57ac453ea9ec25324ca624c2f78fa5b1361a7175ff6a2f4ea03f5c42e30c7c5b",
+    "daangn-used-goods-search/scripts/daangn_used_goods.py": "c8b86a56a80e4365e6e0b65b4fa51e741f276e82aa81487f651069095172df6f",
+    "daangn-used-goods-search/skill.json": "17eb9beddbfe2d13e8f857fb70d109a393c552750b773716974054c901fc32e9",
+    "daishin-report-search/instruction.md": "a3036560198efa64b0596b22930577bf76e8cf6411dfac6281c69245e6ce6c6e",
+    "daishin-report-search/references/DISCLAIMER.md": "979a7ccff9be2dcc7ed7ab1b7c80f0e3ea46dc1b0dc39847701f63fa0f3d8cfd",
+    "daishin-report-search/references/TRADEMARK-LEGAL-STATEMENT.md": "17ad635f3a5d172642c7582138935b67022082ce1c4d92ed61c576fbfa495ea0",
+    "daishin-report-search/skill.json": "c3be1d37a44709189f6ab3b2dddd91fe5adf6073c12048ec10222f0a8d7d27d7",
+    "daiso-product-search/instruction.md": "42369c51c69c6e3c4c973248e3e59fc60ac05e1ac252f4bf54c43780324a033a",
+    "daiso-product-search/references/DISCLAIMER.md": "91ae4d47bd54448e9de2b10a28b989340346c2fa5bea7e36fccac26d1c0382e2",
+    "daiso-product-search/references/TRADEMARK-LEGAL-STATEMENT.md": "9b32ae15a324d78e1323d2c80bf20c99e8a41248174512e115ea98e7e19b21aa",
+    "daiso-product-search/skill.json": "6f9d4bc58b9a2cbc1a22b35b535b33d5d5dbbc87bfba61ad4b0c7bfd725d5508",
+    "danawa-price-search/instruction.md": "83c675bffa729980ad3e492722f6393c7631504cd2e2535946197671fe054e37",
+    "danawa-price-search/references/DISCLAIMER.md": "6d4c4cb5bad66aa6314f0de88e466f7e25f99adfe10fd6a2fad5d6d18bb1a907",
+    "danawa-price-search/references/TRADEMARK-LEGAL-STATEMENT.md": "e46030f7969a094046edf29c3872cec28ffdaff360d3442b3cfb756eabefc593",
+    "danawa-price-search/scripts/danawa_search.py": "02ee2a8fec31e3ad30440be933906118edd69276e167593c17512a65e9e5a184",
+    "danawa-price-search/skill.json": "75f9d9fee6c58dc3fe757b5a6550f4b04d67c4ac3f74754eb690ba8177e612f7",
+    "delivery-tracking/instruction.md": "9459ed4dc66f9fccd1ab7e3de32c844fd57c29e15496c0d491464d6d0668fde0",
+    "delivery-tracking/references/DISCLAIMER.md": "3ad786e87a608ee8d1eed1c7b74ecaf3a359956708ded218c2b3b65837c77ac2",
+    "delivery-tracking/references/TRADEMARK-LEGAL-STATEMENT.md": "d87620ccb9889529f6e0a7a389978a1a5f33e19ff1fb8d74ee9e75882afa870a",
+    "delivery-tracking/skill.json": "dfee7e8c86f2e36cf856622692ddd38aecebe495c85972d6083786e267e42088",
+    "donation-place-search/instruction.md": "2a3ad234f5967911fe13d1aaf26d645938bb40f0a8c1a91692346d25d1ecee11",
+    "donation-place-search/skill.json": "82e7c533e052ecfa95eab6a70e289fa6dcdd67f27b8074a6271ae5e065384e6e",
+    "emergency-room-beds/instruction.md": "f87f453ec4579672d6ee7ecb0cb844c542c108e27a60305652ce6baf8d39a33e",
+    "emergency-room-beds/skill.json": "6d7378ba787d353162c067c94cb4dd5e5ac28d0785fd27719796bd0fe63d8f97",
+    "ev-charger-nearby/instruction.md": "c9dc0f9ca50c4f3c9cc30cfa5eb0df8a239e2e6c54e0c055cd37732011ed1235",
+    "ev-charger-nearby/scripts/ev_charger.py": "9277a36d3e10554925ae797f953d9fd4f34724634944e98a3c41082a9baa6baa",
+    "ev-charger-nearby/skill.json": "b4c5887221559cfa7796edcceed7d07ea5b66cda2a05ac5ce4cf57fd0c73ce5e",
+    "ev-subsidy-status/instruction.md": "9b587471040fe3cb0b3720f7c27a4f9b49964fc1a39ad9b40b7dc9adbb315339",
+    "ev-subsidy-status/skill.json": "d0d27ec23196e4c1f26bc39f2f62bffdfd0c7b1f8e1534957c5fc662e8510689",
+    "express-bus-booking/instruction.md": "199b882d5cda03e773fda5f4255364e62d3dff1de8366fa74355e7b4f50aa399",
+    "express-bus-booking/references/DISCLAIMER.md": "0f5ab7ecdac70bff95c44f8d41a3d17bc7a036997e7203d0f19df304e7c9fb5a",
+    "express-bus-booking/references/kobus-http-flow.md": "54b544e39b4424bbe4c74892d23e777fda5d5571144bde906ebdb94f4439acc0",
+    "express-bus-booking/references/TRADEMARK-LEGAL-STATEMENT.md": "7aca5fe741a5e8c4f046c3284617c16ed3f224c14c9fe59c83f4ea54e2b87952",
+    "express-bus-booking/scripts/kobus_express_booking.py": "a0e80c3c2b68f85318e95af9daf384225391b7ca16e9fbf36848e1077713a5c9",
+    "express-bus-booking/skill.json": "9d3986605621dbfafb9f9475ec05c80b933fe2109ee693e6dc5e05f05aad1e71",
+    "fine-dust-location/instruction.md": "5a5d17b4fc75868a1db1e8867936d0068a4c6d197738e0d875b74801a4bbcdc4",
+    "fine-dust-location/scripts/fine_dust.py": "bfede76b6ae6a5b6ca730a4c8338f5d4cfa9beb4c9023736c2f54c5d68457898",
+    "fine-dust-location/skill.json": "8057ea3c33be48a97ba5b3e53010785a7f8132760455a9f81ce290cf53323f0d",
+    "flight-ticket-search/instruction.md": "d913516e6ebbf131ad5016e073dc8e1850571b4f038aebc49449693763942ab6",
+    "flight-ticket-search/references/DISCLAIMER.md": "f09236551da7a50d2961ef7777cb2e0acbb16ebb9a68cb1243fff3a92caa3b5b",
+    "flight-ticket-search/references/TRADEMARK-LEGAL-STATEMENT.md": "23ce7e3d93dbc24f8d45feb414f8edd41e63fd5787eee62438881f5bab89d286",
+    "flight-ticket-search/scripts/flight_ticket_search.py": "426dbdc6e5499f7e70083e58f835b3996289458b84e61b4229f273ece9a0ad67",
+    "flight-ticket-search/skill.json": "14db7a6cb9009bb154bb1f7cd99e8a751da9157d4f4f1c4b27fcf1c085480a12",
+    "foresttrip-vacancy/instruction.md": "6d14e74b1935d4057439cb7719bd1b98efd4c1aba9010051f213fd5fd15462a0",
+    "foresttrip-vacancy/references/DISCLAIMER.md": "77c39a94a21622ff8dcdc644a1330cdf612089d47cbb46a491bd35e7218e15cc",
+    "foresttrip-vacancy/references/TRADEMARK-LEGAL-STATEMENT.md": "0fc4f850a8a8fdd76f3878e8ba4cf088874f529557327784455ef4936caff919",
+    "foresttrip-vacancy/scripts/run_foresttrip_vacancy.py": "c8d97228ecd56a32d72cf9c4f96424d681ca04c12f18e544bc8b1e2d082a69a5",
+    "foresttrip-vacancy/skill.json": "741e4f4e59e216aba4f941b430957f088384b628f02f089cbad822dbee191ed8",
+    "fsc-corporate-info/instruction.md": "75f96761477b5dfce0ab7fd7107092443437454b8dcf5b5dfb063d993c57a1a6",
+    "fsc-corporate-info/scripts/fsc_corporate_info.py": "e354776b30a83c58ea9448d1e5ef989226239ddc61064f596823ceae9d0e7a38",
+    "fsc-corporate-info/skill.json": "13a267f7849425e867766ba4aaf48ec68a82c0d22b002607c8f8ab53e8690b98",
+    "g2b-order-plan-search/instruction.md": "316d0195e12862eed9e76069125c793de6e4a55b25961e2466271c180165d784",
+    "g2b-order-plan-search/scripts/g2b_order_plan.py": "be71bbe492cc112007fcf08f5095b0aaf91fe582fddc62ff2a2531dadb83d934",
+    "g2b-order-plan-search/skill.json": "7aab2d9b9335c72018b5b7cb47e672f8d808fae7f7d52735a1e97bfc8edc32a0",
+    "g2b-sanctioned-supplier/instruction.md": "f683523af904d4bd8ca9b9330c4c4681b0c959e91e70825b8ed738e39ba06926",
+    "g2b-sanctioned-supplier/scripts/g2b_sanctioned_supplier.py": "d2fba1c3f3b40fed7a5a40b3e264f32ddb95213d13498b97a2659e50cee1e740",
+    "g2b-sanctioned-supplier/skill.json": "154cbdf38f49962a01f44872c10b8c6841732e5d074bb6622a810cabf2ba0101",
+    "geeknews-search/instruction.md": "af97bc6559c61ed9bc6289ec5e7cef72c56a2bf88d7eac79870fbe42f33245af",
+    "geeknews-search/scripts/geeknews_search.py": "32b6b38bf42e2c3268fadf7105f84a0be38ec806ef7e92cf15e8db0f6e8d592c",
+    "geeknews-search/skill.json": "eb87947c12d16d0900d6ae0a3781fbbfa07ab2ff9f49b7ae0f102826ab733a51",
+    "gongsijiga-search/instruction.md": "8c918940926532d7baea2ce0813a60690687c6a36930159a09bb9b3986e36df2",
+    "gongsijiga-search/skill.json": "ffe2f8b0c0171bc2c6a4016ae0a3b3a6461b7410942b28131666a6b4029766ed",
+    "gov-overseas-trip-report/instruction.md": "116254bfd2a68bc3022945e44197b23a40dc28136c277a4e2f005bc454f0191b",
+    "gov-overseas-trip-report/scripts/gov_overseas_trip_report.py": "af03c2be5389035f3bbf263d8bf46a1e3341360ec4bb9e5a17bd3eafc8e717d9",
+    "gov-overseas-trip-report/skill.json": "9f7357fe52f7a3928be82d92062f4413f517059e077fb7902f5e0a5af7955f3e",
+    "government-bond-analysis/instruction.md": "c3823e13ced299cdbc5e8a3c51a30e9adaff75a044f3f660e12e1ed4efbea4cf",
+    "government-bond-analysis/LICENSE": "1126322e2cc8d165adc4c792eeb195717de2bcc7b39be1ce77959d78e87ef685",
+    "government-bond-analysis/references/methodology.md": "71e5ba8f3bcf330f3ab68a826c6e4c7a09d1e8d398fee2fc5b6a0aa36a89d667",
+    "government-bond-analysis/scripts/cli.mjs": "e662479769099afa19d8826e3a9e7271f4765f6d5b27132034a35c2b1004e693",
+    "government-bond-analysis/scripts/collect.mjs": "3fe6f3c2f94d772ec0006c73e3970658e450266e2229d10d9e44a5e03753a20b",
+    "government-bond-analysis/scripts/core.mjs": "1d549a1d1ce38ff3fc2217603409b5ff3d936f1afc0ea3570ff4e8c95ce1bf74",
+    "government-bond-analysis/scripts/dual.mjs": "deee378a038bcfe3883f851c605dc1f16d0084201b0f6c7cac5bb44eb7034458",
+    "government-bond-analysis/scripts/harness.mjs": "d25bbc1a31d0f2240982083b634b3a6b2b2d00d52318d4ab652762f8817b570f",
+    "government-bond-analysis/scripts/modes.mjs": "6650ee0be423ec31568319d26b6f5386434d35f3f3a80e7927f469412e2804f7",
+    "government-bond-analysis/scripts/news.mjs": "f2551414907ad21a84b5491569e5eebffccc7d9117a6b60c643f102f3743724b",
+    "government-bond-analysis/scripts/render.mjs": "188fdd052dc0be2de2833727c64b4733ff0bc85b9ddd622f189245f427eb05bd",
+    "government-bond-analysis/scripts/schedule.mjs": "38a259395b926e60b8626d07720e020998b9d48fa2253d023c288e3450073059",
+    "government-bond-analysis/scripts/ust.mjs": "bdb2b336691ae051fe6e0828f11bbf4d4146e6de049f509e78f88003380b8629",
+    "government-bond-analysis/skill.json": "d4b419bfdce3ebc108e702fe12d48ea366710facc280020e7ae504a343fee103",
+    "government-support-survey/instruction.md": "cf8d813913efd1a79a4a7994840bc7369e8e43abcad7cc44206f8cb198032151",
+    "government-support-survey/references/NOTICE.md": "1b0f2c63fa28943507be9dff572223ae409e830b0e380161bae1340de0c147b5",
+    "government-support-survey/scripts/run_survey.py": "581e590c6fccab647643f10e30f0fe0a6d91f7e7d51fdbc0cc6de3018d2e8fff",
+    "government-support-survey/skill.json": "ef8672d08f2e5e90807febcd71c818dd93ef58a4cccfe7ec239d54a07ea10fcf",
+    "han-river-water-level/instruction.md": "c543295c1785b384052aa890f9a42f029e59eeaafcfbe5591af910db5281693f",
+    "han-river-water-level/skill.json": "52a26209412a8bda86e0a22f3e726a4f1812ec2df477a7e8352c1e7c75348fa9",
+    "hankookilbo-news/instruction.md": "ad01ce71b6e730d60b0c70636c74b64e3c7f78603804c4e2ac19a7ab40fd0585",
+    "hankookilbo-news/skill.json": "429e39a4e34b51bccd320e7352497d0b5757de17d3489a3447bac44cfef92bd7",
+    "highway-traffic-status/instruction.md": "0246c6e6636afa4bf349cbd0de2a4784d6d0f93829004f230d45ad1d08493400",
+    "highway-traffic-status/scripts/highway_traffic.py": "5bd64fc570bc313b73790a78be2584f71128e43e0e74257ccd3396b69eecbbea",
+    "highway-traffic-status/skill.json": "0b407c9f5f1f6407561ff7acea93949de6bf7215a2b48e491d38be512b4a5ac6",
+    "hola-poke-yeoksam/instruction.md": "ef9ea94321bd81cd5fe586d3e5922d9ceebbb8f08a6aa2e29f7385c642715661",
+    "hola-poke-yeoksam/skill.json": "909303989c5ee612cc47a2fde1f639e2e35ae9c69ad794dc054c74c94b0c2bab",
+    "household-waste-info/instruction.md": "80849ba360f800cc45857cf188d3724ddf4fc08203d2d6cdabb02079fa2e477d",
+    "household-waste-info/skill.json": "c9b4fa676fc9e2a39620fdd4266917477592eec131e200c177a3d9e7d173b66c",
+    "housing-official-price/instruction.md": "2e1afb6edd2ad8d0af34ca4193e2c49009c95e7e7826d2620c6a814c3d74e6eb",
+    "housing-official-price/skill.json": "0b10774b2adedf9dec8d8738882e42235438c378a93e13b36b71d0bbe9a87f59",
+    "hwp/instruction.md": "6bd9fc8f0aa2a48f1da7b284326503f058f0a259164c4eef6750511a0d4f5a4c",
+    "hwp/skill.json": "d616381d716a3afb85fc2aac887d871d655b74ab8590dfdf9edc216df7319cb0",
+    "intercity-bus-booking/instruction.md": "865b7073cdfa6ef0cc3cbdc171a653f8921ed7728f252e0c5dad7fbd319e758a",
+    "intercity-bus-booking/references/DISCLAIMER.md": "11ec5796d68bd4d41d1b5ba88850ae206f8bfd0dfcd2f22657101068f3c12e2f",
+    "intercity-bus-booking/references/tmoney-intercity-http-flow.md": "d44bd436b0c3b111faccdf9da9253123f2fe65d6e3f207433964c84149f11245",
+    "intercity-bus-booking/references/TRADEMARK-LEGAL-STATEMENT.md": "4a8f095aa6332335936742b7553f486c67c664997bef1540033a1be2e6d1edc8",
+    "intercity-bus-booking/scripts/intercity_bus_search.py": "9cc37e7ab73c10c7bbbc35bd657603a642c5136afb0c847c62e2d3a35ad167ef",
+    "intercity-bus-booking/skill.json": "b95dc22e34ca9c52b3341a30473981eef23f53f855e82d4b13274c6c917a4562",
+    "iros-registry-automation/instruction.md": "bf0d37f751afbe945aba32eceba5969986003753007bf0404e8c77edcb98ccb5",
+    "iros-registry-automation/scripts/iros_pdf_summary.py": "3572fee26cc5bf50648fdb6b7b21e3593e7ca8f284408d242b5f3d12b0484822",
+    "iros-registry-automation/scripts/upstream.pin": "2726a7d1c03878e4a352efab1755c464902383a072a2555514941b986063a118",
+    "iros-registry-automation/skill.json": "1d6599d45d32cf78bd42eb26a9dc91230db492b80001b592bc9c50c422d419d4",
+    "job-posting-match/instruction.md": "9f87e1aede0db5bffa857290a0bdaf37ec394f356e0307563c80a2130621d0ce",
+    "job-posting-match/references/DISCLAIMER.md": "33b314161be69ffac2ed9d98399076a4546ce4084b75b7adde72beb1872ed122",
+    "job-posting-match/references/TRADEMARK-LEGAL-STATEMENT.md": "4e69f0356e79badb62f76b2b547765d0884317cdd71f7cf98394284df36f249d",
+    "job-posting-match/scripts/job_posting_match.py": "04b10a9e4dbe0879bc8bd587f05f211b72da25d03f80efdafdeff970e3f270ec",
+    "job-posting-match/skill.json": "9671fce593c540f698eb146488ff8a3d0122ba353b55294a544110b794b509d9",
+    "jobkorea-talent-search/instruction.md": "c2d7b193750bca140c258032034473cececfe0362fc0a522733b67bb1fee9c61",
+    "jobkorea-talent-search/references/DISCLAIMER.md": "2da5c0d5e7bb6da83ec4cb3bf257e4c99da9bb9d08a5517e28404cf05d885677",
+    "jobkorea-talent-search/references/TRADEMARK-LEGAL-STATEMENT.md": "916f4ac1456683ee88889f353f88a94791e26d47c3473385a203132eb0c1d336",
+    "jobkorea-talent-search/scripts/jobkorea_talent_models.py": "a4924fab49fdf2a44a767b35df042fd5151107a1dfa42f5c115ef1f608399515",
+    "jobkorea-talent-search/scripts/jobkorea_talent_parse.py": "1f76bded85228260231cb4adfcd1366ec866ef0cef8e5afb2e51eb4b05094edd",
+    "jobkorea-talent-search/scripts/jobkorea_talent_search_condition.py": "04d519505a6a4fec71d5e7e36341daaffdd7996acb7fedfb86a376a0315a57d7",
+    "jobkorea-talent-search/scripts/jobkorea_talent_search.py": "079e0e07339675cb1bca322f7b87d902dab0959a3762c27cbdd8abc6dbaeb657",
+    "jobkorea-talent-search/skill.json": "c297419cc40523da3974f44e3f273c396eed5cb5ef0e5d3e5167cc35aa0d1538",
+    "joseon-sillok-search/instruction.md": "186bff175ec0c58f27472c6fd608a8f88e40bb9f723db94017aa351e25cc7301",
+    "joseon-sillok-search/scripts/sillok_search.py": "767e298e35e321a9ce397f91a66cf1920c593575de7be48ea4c4d038585d645b",
+    "joseon-sillok-search/skill.json": "8e732aa2659fd2628e963d87bcb74c86d7e41226905f2fb092de4032aeacd6a7",
+    "k-dart/instruction.md": "658135298abd3df6f36db703ca7c482e91bfccde0b68cca1fa69234f1b6b891e",
+    "k-dart/skill.json": "1732f234e9532f6c08e79fd42160d547e41b6656fd3a41b0282463b8f55c44e6",
+    "k-schoollunch-menu/instruction.md": "d27f21e9870c97ecf3402ac47a31baa8bd3742ac5913842e43ba4e071c055bcf",
+    "k-schoollunch-menu/skill.json": "72082870ed1b2d6c5d2976e4cb86f0d46768a6b62b0d5b13affde985c04f8e44",
+    "k-skill-cleaner/instruction.md": "fabd430e6c15663f4ba5b2f11037479c1c4aca57cac0f1ef578c79cd58f7bb51",
+    "k-skill-cleaner/scripts/k_skill_cleaner.py": "705ffc937c86639c5bc9f56fce42b92d486aaf8bc4e6bbfe62f7ebc239b95c1a",
+    "k-skill-cleaner/skill.json": "d01c209bab2f6eff486b75f55849a4a6a24a9f5034592ab6964b38c7f492e664",
+    "k-skill-setup/scripts/check-setup.sh": "66da07463d9c42ac1f258755bc12d27b4e657dfb1c70b2bb4c7b4c2a3f6e9b84",
+    "k-skill-setup/skill.json": "a59f6f615daa12b049b67c8dcdb3020fc682c7bc94d1d6eb946941056938d558",
+    "kakao-bar-nearby/instruction.md": "2cd14813be3d4f3b46f64c1d71c9553c21c1f04957e9bff10f96acb8eb8de3db",
+    "kakao-bar-nearby/references/DISCLAIMER.md": "d15c187dd75f53a51cee9974641edb6943a902f87653b11fa451742495ad9b33",
+    "kakao-bar-nearby/references/TRADEMARK-LEGAL-STATEMENT.md": "c6a38f51e2039ccd056ecdf628f818283114a81d77c723ae837710665742ed51",
+    "kakao-bar-nearby/skill.json": "74ea7e10b0a413b6c617478c8e893ff7c43ce6545a0e395146e0843ad49019f5",
+    "kakao-map/instruction.md": "1eaea79a2c3d718b3dca751e5f6a8cbfd15f8fb512b6f44abdc45fc50b321348",
+    "kakao-map/references/DISCLAIMER.md": "0278225b77801ad57238aa23a614a1a95c137bc848a471bf2e3d6fca005c1943",
+    "kakao-map/references/TRADEMARK-LEGAL-STATEMENT.md": "f58ca71d0d5564e6ac0dcace08bbdbb544492020277044636745f8db00f580ca",
+    "kakao-map/skill.json": "44a82a150198da1ce2e854b95af99fd68375c13fdd34b4fdf7d7d9064c79251b",
+    "kakaotalk-mac/instruction.md": "f589481f9aae71c748e2ed3d7e99c55b1b7eecc6bbe437eff6c7a016d4e2753e",
+    "kakaotalk-mac/references/DISCLAIMER.md": "25695927e86e2764737f3d6ee60d41376002d7aab39470cc3db54de413f265b6",
+    "kakaotalk-mac/references/TRADEMARK-LEGAL-STATEMENT.md": "afdc05a777449b2bcbef40a83cfd1b43e72ce9aad7cfb7969291a4486e64bb0a",
+    "kakaotalk-mac/skill.json": "9770f43faba03c4437fd82dce8423e49d079adc60ea2e5ffe3cc5b5f851eab40",
+    "kamis-food-price/instruction.md": "b8ca65231c05a833e7d194e55a4207ff79ad7f551c5aea649ec15ef4d0b4c54f",
+    "kamis-food-price/scripts/run_kamis.py": "11fb8550a8c78b5323da56da77b1772c68da3acd249ed11e232e2fd5eb86ccd5",
+    "kamis-food-price/skill.json": "9b3f1b6fa0413c4334a7ccb4f17d6b0fd623ea6633d9e9592f994d689ef24a56",
+    "kbl-results/instruction.md": "6ae18ebdb1b4690a0bb0018f035f39236500b5b984fe17d3f8f3b3ce34debd0f",
+    "kbl-results/references/DISCLAIMER.md": "0827cc41f8767e133c3ca524a119785cbb945f6a18d24a8dde3223c9c95a0ce6",
+    "kbl-results/references/TRADEMARK-LEGAL-STATEMENT.md": "631af42467ffa1bd4f49c0d67314df2c9a135d931e3354f449fd20bac67699af",
+    "kbl-results/skill.json": "7ff14889fbbbed2e9e6acb977d09b807b349c102e2250d76584d69cfc4c4ca64",
+    "kbo-results/instruction.md": "44f305fe5f53ac8acf35db5aadc232a52114018d49de1238854f5537b9d88bba",
+    "kbo-results/references/DISCLAIMER.md": "2d618b8b8238a88bbebfdd54b3609932006948aa06517c5a03ce782a648a33b3",
+    "kbo-results/references/TRADEMARK-LEGAL-STATEMENT.md": "0fdf6671bb8d357ff7865803b70900e101f42bf8ceb565448f8b06f39dd179de",
+    "kbo-results/skill.json": "30e79c5c246534ec99e0e72735ae646d1cad732a411cdbc2c123b9a4aa9a1021",
+    "keris-academic-search/instruction.md": "1b74cd888d190f96e6448c01de06e4e917c1927ee0a7abced117712f47c8a9df",
+    "keris-academic-search/references/DISCLAIMER.md": "b2cec4ae51d4d5322fb1cc1ea31fe32c60b42e42316b29e284298f3e0af2e360",
+    "keris-academic-search/references/TRADEMARK-LEGAL-STATEMENT.md": "e66de23e7186507275d6f29342ba58fad56f5a046d9768383cd7ee0c76db1977",
+    "keris-academic-search/scripts/keris_academic.py": "102487b042c453365cf3122cb6833d40f5904d0caa724ae25bdece77b74f999e",
+    "keris-academic-search/skill.json": "242cd762aae72bf95e12c5f84350c77b4df6deb117878b7ea1c222d6765dac11",
+    "kleague-results/instruction.md": "bdde179dcd07dc52fd03b2dff396328fe792fb8d008848203e063c77b4ce0eba",
+    "kleague-results/references/DISCLAIMER.md": "729a34a04a185f828ed731c9448b8848f6ffca30cb7bd4e7ad5fdc3897c4ed75",
+    "kleague-results/references/TRADEMARK-LEGAL-STATEMENT.md": "f39bc75a4bcfe88a6d65a8442d5a62765e5bf1c2a730987bb0bb3b9138b9e0f0",
+    "kleague-results/skill.json": "d8a2da00b1060224a844228ede6a450da9b6e6ae214316e53ca0e541c0bbf0ac",
+    "komsa-ferry-info/instruction.md": "f1703ece5afec53c84e5390cbf5fbf0a7a879b5f321603db0c5abda8c43d8dde",
+    "komsa-ferry-info/scripts/komsa_ferry_info.py": "da9d6fe44f5d86038ec9b8305c0117127892392a2ebaf24c1c8719ae01b0e8cf",
+    "komsa-ferry-info/skill.json": "70596c6a208c37320a43aac6ef9bd1af431a9c014b7362ccb1cc0c9a6a460e09",
+    "kopis-performance-search/instruction.md": "7845b20774c22693c55af6ac6f034117a0227095f490c16303a410ae57cdd3eb",
+    "kopis-performance-search/references/DISCLAIMER.md": "a1734d77b77abfeb68a32131a22e3140d55ae248c6da04f508c6c11d9686e74b",
+    "kopis-performance-search/references/TRADEMARK-LEGAL-STATEMENT.md": "4954f1cef1d85c878459ce58796e95266dabeea527c107ea67c3bb5a6b759114",
+    "kopis-performance-search/skill.json": "07e828522c568d4f96da4952357b77c7a44d4df871e413289d4e7f3e3b7c9b3e",
+    "korea-weather/instruction.md": "5c3ecab9ecf8ce6afd0a10a79954847e31ae95cd28812fa856db8a04cd7c5852",
+    "korea-weather/skill.json": "dd46b441a9552d477617352aaa1f01679778b18f55b391a58b78068ad3deb064",
+    "korean-bond-search/instruction.md": "3070cea7e325ddd4f9b5e7234a59e1b47d4b1cb8c4b63404ebb7987c5646d264",
+    "korean-bond-search/references/fields.md": "c68d8578b26eda9502813015c851ed73b918e0423043ef4e2f12e71c59cd90d8",
+    "korean-bond-search/references/source-notes.md": "d0decf9ff13c2f6a6e9bbaa734a662f1884fd50545264fa485f6974c2aff0f77",
+    "korean-bond-search/scripts/bond_search.py": "79279b1d2a95c516f879bf84a6ae3c5649fe17a1e0176176b62e676461272143",
+    "korean-bond-search/skill.json": "40d1e2d166d1c40c25d9364f30215e7f5779a5163822cb1a2289888f2e860510",
+    "korean-character-count/instruction.md": "e20b0e28e12a3674db928192925881f85b69006bda55aa70e71ca71537316603",
+    "korean-character-count/scripts/korean_character_count.js": "a120c371fa7290a2a0917f5c7de539a6052899c9f0ed5f1467bc9ce5cd8e23a5",
+    "korean-character-count/skill.json": "eea5078d1752f3e933211814b159f1c9b91916c7dc6e4cb30d904683b2ae5082",
+    "korean-cinema-search/instruction.md": "83d9293968d7fdf2df7cb93e8f60cfa7e0bd8cf04a9b8b11b535c45d3698a912",
+    "korean-cinema-search/references/DISCLAIMER.md": "6f7c59db1b611d3f67ee644abf198b48bb026eace2f315d4df750811e914b7f3",
+    "korean-cinema-search/references/TRADEMARK-LEGAL-STATEMENT.md": "459822ed7b87b4b6228461e111cfe097ff49418fdf10118f59191ce5abe28d45",
+    "korean-cinema-search/skill.json": "8323943cb6d58190e8f992e0eb386ab89a03fc4879c3159c64414037efc75571",
+    "korean-heritage-search/instruction.md": "ccc0fbddae9315a9b760c7811b25b0a5b3fafa5d13a6e3e919d2ebc9d2974d0f",
+    "korean-heritage-search/scripts/korean_heritage_search.py": "1fdda4dc4c12d54bbfe2dc812bb07d073195df328e972d4b9e6f96026b0ea7ad",
+    "korean-heritage-search/skill.json": "bcbabfd7202b29472fd333b7182eb6e91bee10926c070f4a3e52ff1330d64b90",
+    "korean-holiday-calendar/instruction.md": "4273743c615037cda3a5ab3cf3a1403e68eff9fda4c0e0df2771612da8011b10",
+    "korean-holiday-calendar/skill.json": "5504dbda59acc812fb81052de44c1b7f5fa21cc1f638e1164ada1d7c540ed80f",
+    "korean-humanizer/instruction.md": "681e938e9414233a495b056f1778c5bd5dd35f78bd40185398ea4c5d46b48e63",
+    "korean-humanizer/references/ai-tell-taxonomy.md": "d6feaf0ccda3818b29d59931b7b80baeec8178d5f3fe807eaad949804f5117d6",
+    "korean-humanizer/skill.json": "9069efd48e294c9ce30079203596a2c4f36063df977e8e80618ff400bb582b0a",
+    "korean-law-search/instruction.md": "2d71f535e6055591dea033541415300a9aa4f9eff3ae1013a173a375d7510edb",
+    "korean-law-search/skill.json": "546046544071c7fe344ac7dec008ac49bc613951b8c1b9dd62cbe7ccc631caa9",
+    "korean-marathon-schedule/instruction.md": "dd7422455513c250ede67a6081b14d26971814ec1d853f986d539682a53c960c",
+    "korean-marathon-schedule/skill.json": "2157261a58765d786014b1d56bb803068a6f2fff190e9159f410b92449797920",
+    "korean-middle-korean/instruction.md": "8375553e9d013c786ad181b9466c5b58232471dcb7d07e62c3ebf23d81a61e3a",
+    "korean-middle-korean/scripts/korean_middle_korean.js": "97b399bf7becbe406e3cad678ecd88c51798972f51ac99c87214ce38362ad8e7",
+    "korean-middle-korean/skill.json": "522cfc9aff2d40a85bca3dce225c879bb7282751ac41e7fb59effb114f790a77",
+    "korean-patent-search/instruction.md": "e0007794b28838794388b33757cf7c954917f1e9f63ea34ef28aaf316c612853",
+    "korean-patent-search/scripts/patent_search.py": "10d6ae3d190c86707d409421f1ca6477926a1e9b6b640ab68fff204fd0bc2d13",
+    "korean-patent-search/skill.json": "d2846388867707fdacd22f2e0ef78482fc99051ff37fea9b64fa003c8ae7de70",
+    "korean-scholarship-search/instruction.md": "7112ab105e38988cd9f302a2dbc815f9bbdac80631ff4352b6493a9cd0b0fa99",
+    "korean-scholarship-search/references/report-format.md": "d7b959ea08cfc4ab64efc4e9611ef63d2c4124c9db9ccce4a2e94c78b024870c",
+    "korean-scholarship-search/references/school-discovery.md": "8eb4d235fc5a6f7bce7ea58a11058551d4959fcfaac150b9c312c84e21fd6e2e",
+    "korean-scholarship-search/references/search-clues.md": "cda32072a4fc068e9153604a07c7c3db769ccba1eafdea6e889fabe398b0e986",
+    "korean-scholarship-search/references/source-patterns.md": "493a7935a4e5fcd533356127056450c4f331ebc06f777a33ea92e728db6756d4",
+    "korean-scholarship-search/scripts/scholarship_filter.py": "9b689b261f74ebde20defa272e34bd77007f34386ea08b01c46598a9dadb61b8",
+    "korean-scholarship-search/scripts/university_search_plan.py": "6120cc09f6fd9a1c808eb41bf94aa198089fcebc00db0294fe01fbff9769a411",
+    "korean-scholarship-search/skill.json": "2232a98b96ee6fca3e597dc475a48e8da0c02932648debe6e0b2c55b120c4cac",
+    "korean-slang-writing/instruction.md": "cb806b9818c6aa5483740e975e84df700dd4970b0b50ccec19eaaca9be6ba639",
+    "korean-slang-writing/scripts/_slang_http.py": "ec7b4390dbbfca57882ae11fd80f370cddbd74349998d6f6f735db31035047d4",
+    "korean-slang-writing/scripts/slang_lookup.py": "0299481ed388ec1a736ad68e9c56916cb1393c496dbe41e25e62cfc0dbab60e0",
+    "korean-slang-writing/scripts/slang_search.py": "028bea62d64a087467e149baad0b53cfb9e314b1e861a7e5fdabef46a55ba9e7",
+    "korean-slang-writing/skill.json": "8422fe0080f115eae450d2ee69b6485a0ffb2ea1e06ee889186092a6ee9480c1",
+    "korean-spell-check/instruction.md": "7219309f39cd2970a2a81aaf82d0cf5cdea25c56a0cc2148ccfe1e3683c41dba",
+    "korean-spell-check/scripts/korean_spell_check.py": "6e327a5be99cd0b357695bcf1a4a8fff11f0ad4f64f74570ea756a69b27668bd",
+    "korean-spell-check/skill.json": "3e80026386ccc38bd64440a30baaed210c41bde9856d969b87918981cd28fddd",
+    "korean-stock-search/instruction.md": "d51adb12c46fef958887589edcae5687a90cbe4e10d0d3a078aa769d3455b33a",
+    "korean-stock-search/references/DISCLAIMER.md": "8300796cdb5cfb964b9c18174156031355b0304ef04776551b2ab167100cfc66",
+    "korean-stock-search/references/TRADEMARK-LEGAL-STATEMENT.md": "3da817d8b7e0f7c75846453d8a7fe7502bea47340d930af0ad692394ed290eff",
+    "korean-stock-search/skill.json": "c82edb745201beef297d66a33adf607a8c614f879828b2ea370314de8b486d02",
+    "korean-transit-route/instruction.md": "ecfddd8d7d37e6c852ccf50261492cb12383e31ccb2326d2b9ffd2eaa14f2542",
+    "korean-transit-route/references/DISCLAIMER.md": "5552bc4ce2e5483c4201560ed814349453c7da09851d0d95ee2aef6e205405d6",
+    "korean-transit-route/references/TRADEMARK-LEGAL-STATEMENT.md": "db4b1272806b476dfe725918a2d891add2c68079aaa09dfcd7f5397f31eacc73",
+    "korean-transit-route/skill.json": "7f16cd255d2f55ffe1bb6924ed66abf879cad01697ea21d72dd76fcc0a563d52",
+    "kosis-stats/instruction.md": "0ec6579cf5dbf9e8b4abb8c8dee461dc3fcbb0a1df23606f788f2412e301d8d7",
+    "kosis-stats/references/kosis-openapi-guide.md": "0187eb775888e9f73bc4f5260c906a648d62fb5ae1a70bbc2512313b3080aaba",
+    "kosis-stats/scripts/run_kosis_stats.py": "b46674eb9b47ab721974fb9a5d178b8acbe0865614d38e2fd8b9ca6510535801",
+    "kosis-stats/skill.json": "51bcde5ed3cc631ea997907af001eb188ae3c9bfe41d4e07d9fb758e1c80314a",
+    "kr-whois-lookup/instruction.md": "cf7ac647533bad8fbe6f4df90d43d054dedfebb1a5b198a908ac0f8dea5e8530",
+    "kr-whois-lookup/skill.json": "cbbf934b5f6b6b9e664bcb909c0e2d979a2f2bb20dd8d9be27b5e91c6674b8c7",
+    "kstartup-search/instruction.md": "2ddd26db440dff3376bb3ac5d4f8fdff7bd2e8919772030293b978f6ba5e05ea",
+    "kstartup-search/scripts/run_kstartup.py": "5edf5e6176eb02b30935dc6f61c1332d5c4b2276bb51c2d33f4840d2ed26b793",
+    "kstartup-search/skill.json": "511983bf95dbe7115a95c5221b9dc82471d391689f22a1165446c0d259fbe3ad",
+    "lck-analytics/instruction.md": "77983f8fb7920d839e5d8254262ff0f49b0b5752bd16a06dd8b2d05282499457",
+    "lck-analytics/references/DISCLAIMER.md": "dda855b1ee2cd16759ab14fab2fb5260f96734a68efbeb4eae80f81372588bb1",
+    "lck-analytics/references/TRADEMARK-LEGAL-STATEMENT.md": "b25930c931f560f0e9e70d6d6ffd6543bbabe872455e37459ed8d792d9f7b81d",
+    "lck-analytics/scripts/_lib.js": "dbcc1535b63121785d803c1e106ec722c54563100a1f43a4a473b2a64b0e4dd4",
+    "lck-analytics/scripts/analyze-live-game.js": "7b5754f0847b28f9277db90e0394a8c60c73462e76c5b84ff84939d934dd828d",
+    "lck-analytics/scripts/build-match-report.js": "5591aa774588e008d74a792de6554e6029a90666036653112db9f506a3485d87",
+    "lck-analytics/scripts/sync-oracle.js": "3c906c96c7db18c05d528aecd62ef5fb9fd755719f32ee59dc97b531ff3f9cf6",
+    "lck-analytics/skill.json": "baa3dadd807df860c6e78aa62f568cdbdedddc6c27171361fcc957046fa2bfdb",
+    "lh-notice-search/instruction.md": "d91dd1e9392785de98fd8c249ebe25430c74f7775d6846bb55f63ad50651feac",
+    "lh-notice-search/skill.json": "dedb32d431fd54345fe7bb9c8ad083d917300fd93102d0e3fbbcf74dacbebf50",
+    "library-book-search/instruction.md": "6276426dbc266a845010be357093e1d737dce93a79621f1cea5a1f75d504439f",
+    "library-book-search/skill.json": "a96190ff6d930d3e9341eed4dc37af593f7e5d1ca46b3a8992002ecdabfdf7f9",
+    "LICENSE": "1126322e2cc8d165adc4c792eeb195717de2bcc7b39be1ce77959d78e87ef685",
+    "localdata-business-status/instruction.md": "bedf7683989d99e743374828c20314d713a6e5f408189eb07067f57fffa42ae6",
+    "localdata-business-status/scripts/localdata_business_status.py": "23824e8d263fb302cf1404261c96c1507f6e3412303ad790a6c5cce7881f628d",
+    "localdata-business-status/skill.json": "e3e1a2f516daead26bcbb02c0c803710a59e0fed23c858a137bf5afbee55dc9a",
+    "lotto-results/instruction.md": "e21e0ae9943accb2e9ab4d124f6307d0755eb2ba88946516b3dcda4c0a44e3c0",
+    "lotto-results/references/DISCLAIMER.md": "b2aa3237b8262fc162cda694b3c088a58ca1f06f11b6874f73ecf9811f3bf5b8",
+    "lotto-results/references/TRADEMARK-LEGAL-STATEMENT.md": "eac6430057a715b1fced3d185d0054cb10dd1e035429954e04d5280245c0045d",
+    "lotto-results/skill.json": "35a703073a48670f19741a5d74b1cecf09ccf43e699278faa67ead845ed6cff0",
+    "market-event-impact/instruction.md": "abd343a794727fd391826b108d9e6217df611fc8178a06a870fabf5dfa6da0f3",
+    "market-event-impact/references/event-taxonomy.md": "ae6b53aab96cb0cfd4a1997a25120d34efa8394d573a9c6c4c72439f00042899",
+    "market-event-impact/references/methodology.md": "bab74a831227a8586d95ce38ec0ae7c6aab7d5a418e6a307049a39001ef385dd",
+    "market-event-impact/references/research-contract.md": "8fe27b4d13d48bbaa03f44476a56dd4602e7a900baf851797a214783e520e831",
+    "market-event-impact/references/source-priority.md": "0169d531759a452268b8fd0783e442d1b006ccdd36a43c727d44a65113cec3e9",
+    "market-event-impact/scripts/adapters.py": "313096f0c6f218f6163ded7d8653cf94c807bfa6f7d47ac6c9afb9f88791da74",
+    "market-event-impact/scripts/asset_selector.py": "fc7833801958441c107a2c43696338c0cb0d1a878235e73563c1c66813499e2f",
+    "market-event-impact/scripts/calendars.py": "3ae836205b12b60d71acf5c0df62bfc3c5f5c48e05245531dc265d9746262881",
+    "market-event-impact/scripts/event_resolver.py": "80e441f238c5b5f68f06e758f06c7d1565b617e410d680a30913524738eb1f2e",
+    "market-event-impact/scripts/event_study.py": "3d4f315d18d66798b7b6984fd8a682f9e86035cf38d4cb52e4cb883ee7b246bc",
+    "market-event-impact/scripts/market_data.py": "3573cf26c79882d1bc758ee3577de4f78aeb075e6cb27f8a7c9dacf94b9b5dd3",
+    "market-event-impact/scripts/market_event.py": "a1ab5e21fd16ea2ca0e89d31721b5402ef356ed85300f4e0b35b151ac26a6063",
+    "market-event-impact/scripts/research.py": "f8a617e1900bb268fb01408de34e0d8ffbfbbf2b84dafb59b651e67ecfb38384",
+    "market-event-impact/skill.json": "500f62eb8df040159734eaa84d6c808e8782bfc1c576c68bb7577e6a647cc0f6",
+    "market-kurly-search/instruction.md": "191d7dcbabca8d13440a0faee4e997708e4223fa0c62ef00b579a131e246934e",
+    "market-kurly-search/references/DISCLAIMER.md": "f3fce24782edd61bca7165fc0d49c91084cddf821f0a29b52cb1e1d430c09db9",
+    "market-kurly-search/references/TRADEMARK-LEGAL-STATEMENT.md": "528fa41b85c26fb2b0cda86311173b708660b62c657528815dc09e8279be5e30",
+    "market-kurly-search/skill.json": "7a2e1e2c57363da0c27cf503e2f28198a80b157f6c0f67c5f277e7ddf98769a8",
+    "mfds-drug-safety/instruction.md": "e50f78ead5f4600af8b74b17d16c96f6d5539ead0ed2afbaa5ddda925e84676e",
+    "mfds-drug-safety/scripts/mfds_drug_safety.py": "4b90b6a677d5532a089d93bddae2d7a83c25188bd6849fcbd5933d4bbd49c4c1",
+    "mfds-drug-safety/skill.json": "c6d2c09078eeaab2e958fb2ef48d86efd171b9a80e93fd1ad6b31152c38c0651",
+    "mfds-food-safety/instruction.md": "eb5ae1a5516ad100770a70cbbd6f49abab087601d7513810df48ef172ee6d9c8",
+    "mfds-food-safety/scripts/mfds_food_safety.py": "7dc91e50d66cfd253b2963aee36f53afc9a4ab483289200e773bf8147f5a1fa5",
+    "mfds-food-safety/skill.json": "3670798f63178eb64a89df2c78b5ae970754068e3e2bc0085d84e9a60ee7cf0d",
+    "mofa-travel-safety/instruction.md": "e28a37f096b52a064dc52fa89ede2397d635ea19b5a22539f6f4ec88596d6350",
+    "mofa-travel-safety/scripts/run_mofa_travel_safety.py": "c5108a8176eddcde01d43f63356a985c83c3fd914bfed34ad0137c50f8b1a87f",
+    "mofa-travel-safety/skill.json": "5d90216f8943d38dec1e3cf4c147b656ee4ba3ccfd9c72048e14003d91b3451c",
+    "multi-asset-morning-briefing/instruction.md": "93a13b1e40c4c35acc06f4701dabce13a925ec3f96fc2c45b64868231122bca8",
+    "multi-asset-morning-briefing/references/format-rules.md": "1c7f58c486c354f51258e32caf0a8714ec712955ca8933fc366e8ddc69c96b50",
+    "multi-asset-morning-briefing/scripts/market_data.py": "30f2df565561616eab7d634cd96e1ba1b6c2c701e7e18e120e3294f182ae99fb",
+    "multi-asset-morning-briefing/skill.json": "8363ed6d68c4674fe871938e506a9b367ab25f5e16b4c0206713a8afe8fdcfad",
+    "myrealtrip-search/instruction.md": "cbe90a016a46583732e97da998ccfe854db4969cbe01bf782e3bb3f00d7cb173",
+    "myrealtrip-search/references/DISCLAIMER.md": "bec82efd065e48566a9f36030b4869b57dadd329b32189fa158c5055f2800cc3",
+    "myrealtrip-search/references/TRADEMARK-LEGAL-STATEMENT.md": "e0d04aae2a178a9bf3fd766693fd5ff696e86148173f329036fe182406aa9099",
+    "myrealtrip-search/scripts/myrealtrip_mcp.py": "47101b8e9155439986e492d2d4db564c998dee1e3ac7f1852303bd16eff656a9",
+    "myrealtrip-search/skill.json": "c8d30270b7bb2f88b4b165ae4c878f35a4f0fcbd43113bfa15c16a5b6b12d4a6",
+    "naming-house/instruction.md": "b0d9f49bf70c4565636d1cc9022425312f6a3a88a3252180518089d1d5c67512",
+    "naming-house/skill.json": "9fd603c380054ba0e364e4d39d2f8de0fc165f7b85a0a7f309606bf89a4fbb4f",
+    "national-pension-workplace/instruction.md": "4c0fbd63f3051102f7512d51f3ac41c0d7ce2d8cb8eaaa77e75347d8a8ce27a5",
+    "national-pension-workplace/scripts/national_pension_workplace.py": "36c428d167ad13a18f4d471eeb30be7ba5a1020dda299c90caeb3d400b758432",
+    "national-pension-workplace/skill.json": "c86a40bfdbf719305df6ff47cafd3ca7cba65b39621d64d22941a6eccba553f5",
+    "naver-ad-performance/instruction.md": "9fab72d8ec09f91a2823322d6d773fead4fa8437be48cb61a16201c5a4095102",
+    "naver-ad-performance/references/DISCLAIMER.md": "af9a4a4526c1f6c9335a3fdeb63d687fe968431af27edb28a82c360964cc1f17",
+    "naver-ad-performance/references/TRADEMARK-LEGAL-STATEMENT.md": "35320e9bf40411f8256fd1e348f985fd948e5db28383e4d42f064345c821d2a5",
+    "naver-ad-performance/scripts/naver_ad_performance.py": "b26601e24385d4a0dfe4d5ef81d0e412079f2386172d1a449415b2f0e73b1d72",
+    "naver-ad-performance/skill.json": "9d406702a0e273b22a13dc2a88a8e7a15241ec7fbd385da1d13feab30b00feac",
+    "naver-blog-research/instruction.md": "7d30b19fdfded4d41faa87bfb11cafe37f5909005ae9a32ea39f106373193f07",
+    "naver-blog-research/references/DISCLAIMER.md": "d6f62d23d1b7802bb4d5c71e21c5c9af51cb84c1c96daa9ee5a4be3911002e5b",
+    "naver-blog-research/references/TRADEMARK-LEGAL-STATEMENT.md": "f0388e17cf25522296a174eda3e68571c045539f63ed52e7884f342cd668d7fe",
+    "naver-blog-research/scripts/_naver_http.py": "79dd10876df3d124321e701b7c436ebf4bc10befadde5569fb439eac4330d30f",
+    "naver-blog-research/scripts/naver_download_images.py": "aa179595d4372d307ae4e2765efe29d26bc6fbe461fb450b84afbe8349dd62b2",
+    "naver-blog-research/scripts/naver_read.py": "1966a35ed5880e5241512979b2c6aa4221966bb71fb4abaa621af4a9d0a47bdf",
+    "naver-blog-research/scripts/naver_search.py": "6fa58439132e5776b7a00b138121e7e6e98f5675596562a937ce462620734505",
+    "naver-blog-research/skill.json": "5d58ba1332c593746f63cd9a64f89a23015cf429c6f63c90a97b8666670ab216",
+    "naver-news-search/instruction.md": "bec6fddda5325bdc1bf70474ce6319f02cacf489ab50816ccf1adb0758c3aeec",
+    "naver-news-search/references/DISCLAIMER.md": "36e8393f185e3f6a74fdfe0cc0774d0946d6bee64e89a25419b1e6eeec56594c",
+    "naver-news-search/references/TRADEMARK-LEGAL-STATEMENT.md": "736a04ea003c401cfe51ee1b0b3dca0db035479016c4532bdd828ee4058abbee",
+    "naver-news-search/skill.json": "8365f8c851f5db70da747d6089048660280bd0c5b177de26200038d5cfca26e8",
+    "naver-shopping-search/instruction.md": "daee20770b605651d6df4b49fa9364b6697cea7c6c3ff3cc7aa8b7764b70e86a",
+    "naver-shopping-search/references/DISCLAIMER.md": "05c900dd3146520aa6329575194e6111686696049a12f9bd6db925c4d7f207d2",
+    "naver-shopping-search/references/TRADEMARK-LEGAL-STATEMENT.md": "5a3cf701c46f5a1e2bb7f6fd869a66f6fa27992e1c1b80803b22906669b05fbb",
+    "naver-shopping-search/skill.json": "7da31d4601a2dfa1e836a94f4a764e614c2d7d024aa1ecb5f3c37fa0495562b9",
+    "nhis-care-checkup-search/instruction.md": "8ebcc48f7a14fed63da2ac6b5ab1f3374d400cdf8eb11e65a451e7bcd80d10b5",
+    "nhis-care-checkup-search/skill.json": "6c4500e7c4df5784eee84d64a2bed265c0087d72fb42ca1fd5607ae646ced497",
+    "nts-business-registration/instruction.md": "8300cfddcd48a1e2e67cf446f0ba3d4e476729f531865693e4846a76f91a8333",
+    "nts-business-registration/scripts/nts_business_registration.py": "ad9c46a5262e0c0170637d319cb8b0d7c41149e9785f82a3e76bc7faf9242ec9",
+    "nts-business-registration/skill.json": "1ba76313fda85c74309ad627504402ca82abc386287b883ae34861bcb254db09",
+    "nts-tax-delinquency/instruction.md": "21479a1974bb5b3436f488ad9e84051291012146a09009568d2724593103f970",
+    "nts-tax-delinquency/scripts/nts_tax_delinquency.py": "c63ba5a052a252c486fe4c4d64919147af65b44fc49772286b20dde54475aacf",
+    "nts-tax-delinquency/skill.json": "5778acf03c941035dac7e3acdae6c50cbe7ce854dd6749c72e418e7dd7e6f89a",
+    "ohou-today-deal/instruction.md": "e91cdc19cbd089512bd29c4e6a4e20e7201b5b43401c7806d6024432dfa9318a",
+    "ohou-today-deal/references/DISCLAIMER.md": "bf1d3bca2add4b50fbb58d50d9645f6f045a4bce3a18c9dc68163b8782e7f26e",
+    "ohou-today-deal/references/TRADEMARK-LEGAL-STATEMENT.md": "f86375e23239e6a1bdd43e76aa1e71932011fb896bb9abbd348ddf8367441e9a",
+    "ohou-today-deal/scripts/ohou_today_deal.py": "519171efa1f9043b066f99740b8e1b0ec2a2ecfe5aacbfefc7fb0954e1d1426c",
+    "ohou-today-deal/skill.json": "196b264fea104e68c49d1aa6a55a277c5c5b03cd9721d34e62c2c132d609226c",
+    "olive-young-search/instruction.md": "37fb0afba10e3a3837b67a1e28448098d09776f0e06036dfc8167ed9014fb3a5",
+    "olive-young-search/references/DISCLAIMER.md": "21be2b5100ed4714243cbe6ef39fda3d6d863470622e162e936070342902734b",
+    "olive-young-search/references/TRADEMARK-LEGAL-STATEMENT.md": "e32301d21c5af2471a4e31dfe0364ee28cf2fe5c1eb83fa38fe419d9a8b0c375",
+    "olive-young-search/skill.json": "ebe6a276995432a670541702131f3ad7f01e89e0ad783878068bfb2c63431374",
+    "packages/k-skill-cli/src/execute.js": "990db0c254e712f1393ba3794e12a278de9903f695066bead772fbbbbc7514c1",
+    "packages/k-skill-cli/templates/action-account.md": "d6d1fd43ca4d9eecd59a9ef904b3fe1db8a0008bed52cfcf2ec057e3acd854f8",
+    "packages/k-skill-cli/templates/action-booking.md": "f59a78ae133c3974f1c34f08eb929e555e833da2b18ffd3876fc0a2598b2e583",
+    "packages/k-skill-cli/templates/action-commerce.md": "3e00f4d08e81cb5e3cfa22e611071bc02dc886cdc57cd24156b70bf5147640e6",
+    "packages/k-skill-cli/templates/action-recruiting.md": "886262b3b2017112b7c0add70ebada32fc85fa700d21655f38559b5fe7d18236",
+    "packages/k-skill-cli/templates/action-submission.md": "e445b1a3199610e36bdddc5a6d27b97bb87a77bdcb9f4f37bff90554ac9f3063",
+    "packages/k-skill-cli/templates/browser.md": "d24ffd0ee3380af2162d2c21de514772980cc779e74375a6e588d0e9c3756042",
+    "packages/k-skill-cli/templates/core.md": "d628993d0df8b09d560ff49e6a3aa9e9f310fe76c7126aab92161a0e1d110983",
+    "packages/k-skill-cli/templates/legal.md": "42003979775a8364cccb506c8a447d16baf248cf36b590fa3acd1092e9726096",
+    "packages/k-skill-cli/templates/local.md": "b7265decc7ed9ec5508452433fdb21167579cd6abf5484a1cf45fcb219427f31",
+    "packages/k-skill-cli/templates/lookup.md": "10a99bbdb5f126ed5ff701e53700386cf7c22a9f5b55572f480378ceb7676710",
+    "packages/k-skill-cli/templates/operations.md": "61166020a1d1d5f497b022b638647cde3d40bf11fcdf43235a0c545f25399ceb",
+    "packages/k-skill-cli/templates/proxy.md": "f4aff82ee64c54138e89aa1aa0204a492103049ea49797f562f302bb0a14c3f9",
+    "packages/k-skill-cli/templates/vault.md": "2133982d39cf975828c6033e98e7c7c481722f4c4fca25ff5f35ff861b6591d5",
+    "parking-lot-search/instruction.md": "39720d46e16b02ef5a81e14ba254deaea4895ddd8c341bb7bb6f85695d3542cb",
+    "parking-lot-search/skill.json": "0d0e4a60615eaf4ca36f83aaa68cbc4e6b94b8c57b663f44f10aa44afbb8e9cf",
+    "popbill/instruction.md": "21d52cdfcac383ad92f92160b363ecc2fed3d8ef7dfa158182f614b05c8e9d9c",
+    "popbill/references/DISCLAIMER.md": "1c6d55a4a0d925103f7f1797c85cafe8da1b007e44c6bb64039ffa62adbe3f5e",
+    "popbill/references/TRADEMARK-LEGAL-STATEMENT.md": "f0227bed99eab5012e45e73a80aafb9d6a538f285f3970f2cffb870cd67a1897",
+    "popbill/scripts/popbill_cli.py": "1906150f9db56a189b847bdc98d2c88009bbb76cdd3b39e0a22a89529957814a",
+    "popbill/scripts/popbill_registry.py": "68d8b4506eaf48b621caa353a4346301079857757f5da5986dd72592e5f98da5",
+    "popbill/scripts/popbill_safety.py": "f7ef3ba1dc636e76275fc9a91e58fe5c4594729ec208802c2cfac5a61e231eea",
+    "popbill/scripts/popbill_templates.py": "2385f487496a9683ab21c56897f2f650eb40c7b1b4f66da6f7ffb34e236e8b20",
+    "popbill/skill.json": "8d1ee4aac5d1cc50a4e918cfd68970b243e60f27e3ed912fcd2d9118862046ad",
+    "public-restroom-nearby/instruction.md": "c6cf6906dfbe1037668179c08f43854f49b2b007a2b10104350e20aed26f0041",
+    "public-restroom-nearby/skill.json": "b3dcf34bc345abd7c405616939daa795c986ae22026d58ad48b5585dd663ff26",
+    "railway-timetable/instruction.md": "5f03a024ff57d4b6b5cfeb501e909ad396e3506bcdcbde8704f93208a2e7d803",
+    "railway-timetable/references/AUTOMATION-LEGAL-STATEMENT.md": "f63445d20adda09aec0d021550cff19dc54436579bad5f82233a48c7d43b2cb4",
+    "railway-timetable/references/DISCLAIMER.md": "63932224cc2bded0a3a036f44b14aec26ca6cbf8c8bcc98e4804c6e0924ffdb7",
+    "railway-timetable/references/TRADEMARK-LEGAL-STATEMENT.md": "4ba158153cad4a5fc412e4694ca03ff41f6aad143dc4347528444dc53fbce227",
+    "railway-timetable/scripts/ktx_backend.py": "8626f5c7cbdfe2557a499ae7fa5523954e994fa639b12627d1cd534041de605e",
+    "railway-timetable/scripts/ktx_backend.py.lock": "b1957b6ffd34798b23cbb6d8192f5c95eae38d05bb5686876755dfea3a8fcb17",
+    "railway-timetable/scripts/ktx_timetable.py": "4a08c80eb029f44af0ae51a125c9788155a61c58f7e74f5563ba686688dd08b3",
+    "railway-timetable/scripts/railway_timetable.py": "4fc796c7f1f0ac71523735c5a3c43f4204532778cb67c4b2633d24210b284be6",
+    "railway-timetable/scripts/railway_timetable.py.lock": "b1957b6ffd34798b23cbb6d8192f5c95eae38d05bb5686876755dfea3a8fcb17",
+    "railway-timetable/skill.json": "90b3778c6007f783e36e18185affe6d899483e10ef32f1ac9b23d3444be34bdd",
+    "real-estate-search/instruction.md": "ebc35fca03ad1f74ecc0a0b9f32f1bbe7d3c6626e846e7debdbbb6527e09f9d3",
+    "real-estate-search/scripts/nationwide_daily_report.py": "40f965d1322723c4de33fd178faca68da74e0122283d8ea88936e24236675668",
+    "real-estate-search/skill.json": "8dff32d80ccfb9a34d32074aa78f666e50e537fef22b9ef94f17c20cade5f1e4",
+    "religious-facility-search/instruction.md": "c748014d2f44ceac0759910c64969288714dc1deab29819beaf17fd34503b812",
+    "religious-facility-search/scripts/religious_facility_search.py": "d9b3d9dd63486013655d48080f4bd2e2bcfa60e43f984a5f3fd8a31ac404c84c",
+    "religious-facility-search/skill.json": "82fa8e33f9e4779bc13c8eff8a363d0fbb045c3807bbf8e050e3e531e7d97f91",
+    "rhwp-advanced/instruction.md": "c7c64cf1e9f02ddc98be796cfd0d97e9b5e7c87780c24c0b53c899c281593ba6",
+    "rhwp-advanced/skill.json": "74d7879c3b491aa8769066275bce9f8d2a27395e740758adcde4fc2f6f2292a4",
+    "rhwp-edit/instruction.md": "e8253eb4d3304abc819816ab107b7c7a139fa7b7b8f99495bea9bc51346d8a1b",
+    "rhwp-edit/skill.json": "3542c35ef330c3ef40a798185245fbdfd1e4c7e15f247488ea8430b18d33d170",
+    "s2b-notice-search/instruction.md": "140613163c25480db9f57aa925b4543afad2206f6bb43f41adee56d29a65b776",
+    "s2b-notice-search/skill.json": "789937378eca77936efe97d34fef5729007a7cf7f65cc9217c69658cb6e1c6d0",
+    "saju-fortune/instruction.md": "14262d0c9a257abe8c1193746bd41cad26a927fad145f2c36c181eb88cd9536b",
+    "saju-fortune/skill.json": "5e1501d74e6e52996d95359b135baf955cecb0d5c33cd369d00880ec45552291",
+    "saramin-talent-search/instruction.md": "32a4f92fd8acef992b3537860a5386083f9386c2aa32db5d77a500fa88a0d149",
+    "saramin-talent-search/references/DISCLAIMER.md": "58e15251ee7144d5ab9d956994eb8f56b24ede0b932145ff85345939fc7b93e3",
+    "saramin-talent-search/references/TRADEMARK-LEGAL-STATEMENT.md": "048d3414b24e8bf04a906e6b5a9c1fb7fff312ddc7b9da0065c2a51b19a7948d",
+    "saramin-talent-search/skill.json": "9edc270cd03ff6d29aaa211ccaf9a88dc99ca09c190bd974922d00a6f0cdf293",
+    "scripts/official-plugin/asset-resolver.js": "05382fabea4627928df2a2e3abcd39e3d4cd3f19d1b92fe119e07cf13e5582a9",
+    "scripts/official-plugin/icon.png": "e48b7d1a27e52a2d43a6e1c9428d69c4d49b8ac840c8fcd7d469378c0c1063ba",
+    "scripts/official-plugin/runtime.js": "1bb275da8cc2ce3bc5998facbd8f36f3b3954037f9a8c55332b96a354879e318",
+    "scripts/official-plugin/setup.md": "4d3d6a37cbb1873259fd6fae21cf77191ce4294a89e3626278f35d8d93ea6ff6",
+    "seoul-bike/instruction.md": "dd0e013ccd2dbb486158008301e27c77334bb4ae09888f89a1b9ddbd1438f983",
+    "seoul-bike/scripts/seoul_bike.py": "ad7cd6b66ae18935919a3fa312ac2f4f2eadef03f343ae5a44316bbd811d5ffa",
+    "seoul-bike/skill.json": "b65b5e1ab7766309640aad8139866e4b885d243d4d1970bfb7c58dcab0501dd6",
+    "seoul-density/instruction.md": "c174a6a57b8fadba94164767256877601103741335c4dab399848ee8c171129e",
+    "seoul-density/scripts/seoul_density.py": "7f2f43605c413b70fb5db8ffedcdcf02970873317cb88308bc9c0750210f9edc",
+    "seoul-density/skill.json": "0ddf1226b5d536c5af0c2c78fd8d439ffed12a609508db6b052b41a82a62a4b7",
+    "seoul-subway-arrival/instruction.md": "0b2a86645c4a5a543e9e51b44dae81f330abf4e56a419ba642d6857be8e09bab",
+    "seoul-subway-arrival/skill.json": "bd939a7435e59d79fd503c2bc5590df33bab0fb7bf512db2efc9accc720ffaaf",
+    "seoul-weather-risk/instruction.md": "6f78d45356496804eb79f2bf3c3f0876fd0861def32383f9b088763d2e716b43",
+    "seoul-weather-risk/references/admin-dong-place-map.json": "d0f99bd96aff19684ede2ec8700f9bf6086a2b48208166d91a37126b147aaf23",
+    "seoul-weather-risk/scripts/seoul_weather_risk.py": "87096d9857f7195114644a1ae2e0e6de526a4f21f72d31c4d955989e112d7f0b",
+    "seoul-weather-risk/skill.json": "723de21c09307e30bbe303622b21e2b52080a5df0647c787893f6e8339228ca7",
+    "sh-notice-search/instruction.md": "320c9aee14f5f6ee90d021e70bedd8d2e538df610ea8105c08cd697a38b0894f",
+    "sh-notice-search/skill.json": "ef2edcbac485fd0cc2891614dc7142850a358a999dd290a89338ba62a58b59d1",
+    "sharenuri-facility-search/instruction.md": "2fd9f894e88e8d2dac76e1234f06e2ad9325135cff8777150a428bd116364d2a",
+    "sharenuri-facility-search/references/DISCLAIMER.md": "85726033e554ded70b8864a63e173ed8891f1c559231fbf7b373ce9434ab0bf4",
+    "sharenuri-facility-search/references/TRADEMARK-LEGAL-STATEMENT.md": "c4d5ce3c90ef40bc110d3d879139a2ca090cbf11724ce2d91bb33337bbb57687",
+    "sharenuri-facility-search/scripts/sharenuri_search.py": "1e2bee7b4cf5efb5acb12ee32ace18476e8caebda4a0839cf274043ff491fb9e",
+    "sharenuri-facility-search/skill.json": "e170fa1006fce33385b9677c1c2fc944528c1c6ba31a03366dceeb53ddb26e58",
+    "store-longevity-radar/instruction.md": "7340e07ecd20a2c2f606b4ac5401045da1f89b921d25afc8cf5fc29a32281e75",
+    "store-longevity-radar/scripts/store_longevity_download.py": "ed56c29f51000936af431bddcb47d33110ac8ff48e83b286f6e937545f3f1f78",
+    "store-longevity-radar/scripts/store_longevity_radar.py": "5cb3b93afc7cf726a0f4983474ace5f68333161d1ee89d81dd93d51d7a8ab5a1",
+    "store-longevity-radar/skill.json": "f9374fcb198c09b3d0cb6f343809fc373fd419ffa73903f5817f73190ce2665d",
+    "subway-lost-property/instruction.md": "414d29db287ae44878304eedfa69837c1d09814e6d37eb5fc9b86052d35c8351",
+    "subway-lost-property/scripts/subway_lost_property.py": "b2241529d75d2c36c5b3eed78d3107e91f14659e2e06f32a1fb4a58831047d4b",
+    "subway-lost-property/skill.json": "391b2015df574f623a7c1ee3a3eb09b55be1738f313ab3b88f1f28bdd72de581",
+    "ticket-availability/instruction.md": "739e8b3bdfc2755d6b9854c079e3a12bdb7264b3254162ae35727375fa6560cd",
+    "ticket-availability/references/DISCLAIMER.md": "40398d926eaf59f7c1e84a91aed491c216c2ed41d8bb43d4a21426156de743e2",
+    "ticket-availability/references/TRADEMARK-LEGAL-STATEMENT.md": "109d3cb9ab0982ae58db2a74d12bd5baa13162b435ee7ead901a987e2e0aed50",
+    "ticket-availability/scripts/ticket_availability.py": "1d6434a55d05d1afcdd471fdd0d45de581ae0a6597db81f49f7c5361f90997aa",
+    "ticket-availability/skill.json": "6de78b4f390abd3939b81769e97321c8a1637887e9cf77b4a4db7c68262a5c59",
+    "toss-investment/instruction.md": "32d26b740a951f0c039800b096fe17c6cf7b30ea5da96e37e471889539fedfaf",
+    "toss-investment/references/DISCLAIMER.md": "2986500ecfda5dc1c48b21a1cd030718bdfe2c80ee0ceb3e03df25299cf77b05",
+    "toss-investment/references/TRADEMARK-LEGAL-STATEMENT.md": "a2b7dc1cfbd62441dcd0eb1a642fdd3d17c49abab898e51557ebcf2d44b78dac",
+    "toss-investment/skill.json": "e2ecf533bb659f56d2480ee736979ec92f7180166b0a0e5e7a5643d5db84864b",
+    "zipcode-search/instruction.md": "41192aa22b33e4523c2db3be6bdb80b3df351d6050fc4fbc00e10173fa3d1181",
+    "zipcode-search/scripts/zipcode_search.py": "41029e1da5654d4914efbc34891486317b141eecd5f59feda4d0fccd30b2e4f4",
+    "zipcode-search/skill.json": "d7da519f4d61f22ecca73b8a6ae7ab8f6fe0dfef075d1ce5f43b51e48efbcc7f"
+  }
+}
