@@ -1,5 +1,11 @@
 # k-skill-proxy
 
+## 0.12.1
+
+### Patch Changes
+
+- 86bdd75: Remove the `naver-shopping-search` skill, its bundled CLI assets, and the `/v1/naver-shopping/search` proxy route. Naver announced that the Search shopping/book/specialist-document APIs end on 2026-07-31; the official endpoint now answers 404 `SE05` and the no-key BFF fallback answers HTTP 418. `/v1/naver-news/search` is unaffected.
+
 ## 0.12.0
 
 ### Minor Changes

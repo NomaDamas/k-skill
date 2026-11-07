@@ -1,5 +1,15 @@
 # @nomadamas/k-skill
 
+## 0.11.2
+
+### Patch Changes
+
+- 1e41cb0: `highway-traffic-status`의 CCTV 조회가 개인 ITS 키의 정상 JSON 응답을 인증키 오류로 처리하지 않고 XML과 동일한 카메라 메타데이터로 정규화합니다.
+- 1843781: `kamis-food-price`에서 `p_regday`를 생략하면 KST 기준 최근 조사일을 하루씩 되짚어 찾고, 응답 `query.p_regday`에 실제 사용한 조사일을 담아 반환하도록 고칩니다. 그전에는 `p_regday`를 생략하면 proxy가 조사일을 넘기지 않아 KAMIS가 `001`(자료 없음)만 돌려주고 조사일을 명시해야만 실제 시세가 나왔습니다.
+- d448466: `kosis-stats` 의 `data` 예시를 실제로 데이터가 반환되는 좁은 슬라이스(기간·`--itm-id`·`--obj-l`)로 고치고, 프록시가 KOSIS 앱 레벨 에러 코드(예: `31`)를 HTTP 200 대신 `400`/`502`/`503` 으로 매핑한다는 안내를 추가합니다.
+- 2031557: `naver-news-search` 스킬 문서의 실패 모드를 프록시의 새 오류 규약에 맞춥니다. 네이버 API 4xx/5xx는 이제 프록시가 502 `upstream_error`로 정규화하며(네이버 상태/오류 코드는 `upstream.status_code`, `upstream.error_code`로 보존), 호출 제한은 429 `upstream_rate_limited` + `retry-after`로 안내합니다.
+- 86bdd75: Remove the `naver-shopping-search` skill, its bundled CLI assets, and the `/v1/naver-shopping/search` proxy route. Naver announced that the Search shopping/book/specialist-document APIs end on 2026-07-31; the official endpoint now answers 404 `SE05` and the no-key BFF fallback answers HTTP 418. `/v1/naver-news/search` is unaffected.
+
 ## 0.11.1
 
 ### Patch Changes
