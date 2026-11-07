@@ -116,9 +116,10 @@ curl -fsS --get "${LOCAL_PROXY_BASE_URL}/v1/naver-news/search" \
 
 - `400 bad_request`: 검색어 누락, 2글자 미만, 혹은 `start + display - 1 > 1000` 조합(네이버 1000-item search window 초과). 메시지를 그대로 사용자에게 노출한다.
 - `503 upstream_not_configured`: 프록시 서버에 `NAVER_SEARCH_CLIENT_ID`/`NAVER_SEARCH_CLIENT_SECRET` 가 없는 경우. 운영자가 키를 등록해야 한다.
-- `401 upstream_error` (`errorCode: 024`): 프록시 서버의 Client ID/Secret 잘못됨. 운영자 재발급 필요.
-- `429 upstream_error` (`errorCode: 010`): 네이버 검색 API 일일 쿼터(25,000 호출/일) 초과. 재시도 루프 금지. 잠시 후 다시 시도.
-- `502 upstream_error`: 네이버 API 5xx 또는 JSON 파싱 실패.
+- `502 upstream_error`: 네이버 API 가 4xx/5xx 를 돌려준 경우 프록시가 자체 502 로 정규화한다(upstream 상태/오류 코드는 `upstream.status_code`, `upstream.error_code` 로 보존). 또는 JSON 파싱 실패.
+  - `upstream.status_code: 401` + `upstream.error_code: 024`: 프록시 서버의 Client ID/Secret 잘못됨. 운영자 재발급 필요.
+  - `upstream.status_code: 404` + `upstream.error_code: SE05`: 해당 검색 API 권한이 앱에 없음(또는 API 경로 변경). 운영자가 앱 권한 확인 필요.
+- `429 upstream_rate_limited` (`errorCode: 010`): 네이버 검색 API 호출 제한(25,000 호출/일) 초과. `retry-after` 헤더/`upstream.retry_after` 참고. 재시도 루프 금지. 잠시 후 다시 시도.
 - proxy 는 upstream 실패 응답을 **캐시하지 않는다**(failure-aware cache). 다음 요청이 온전히 upstream 을 한 번 더 탄다.
 
 ## 운영 팁

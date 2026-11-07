@@ -65,6 +65,53 @@ function buildCoupangAuthorization({
   );
 }
 
+// Coupang answers HTTP 200 even when the gateway rejects the call: the real
+// status lives in the JSON envelope (`rCode` for the Partners API, `code` for
+// the newer openapi error bodies). "0" means success; anything else is a
+// failure that must not be reported as an empty search.
+const COUPANG_SUCCESS_ENVELOPE_CODES = new Set(["0", "00", "000", "OK", "SUCCESS"]);
+
+function readCoupangEnvelope(body) {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+
+  const hasRCode = body.rCode !== undefined && body.rCode !== null;
+  const rawCode = hasRCode ? body.rCode : body.code;
+  if (rawCode === undefined || rawCode === null) {
+    return null;
+  }
+
+  const rawMessage = body.rMessage ?? body.message ?? null;
+
+  return {
+    codeKey: hasRCode ? "rCode" : "code",
+    code: String(rawCode).trim(),
+    messageKey: hasRCode ? "rMessage" : "message",
+    message: rawMessage == null ? null : String(rawMessage).trim() || null
+  };
+}
+
+function isCoupangSuccessCode(code) {
+  return COUPANG_SUCCESS_ENVELOPE_CODES.has(String(code).trim().toUpperCase());
+}
+
+function buildCoupangEnvelopeError(envelope, httpStatus) {
+  const numericCode = Number.parseInt(envelope.code, 10);
+  const hasNumericCode = Number.isFinite(numericCode);
+  const reason = `${envelope.codeKey}=${envelope.code}`;
+  const detail = `${reason}${envelope.message ? ` ${envelope.messageKey}=${envelope.message}` : ""}`;
+
+  const error = new Error(`Coupang upstream rejected the request (${detail}).`);
+  error.code = hasNumericCode && (numericCode === 401 || numericCode === 403)
+    ? "upstream_forbidden"
+    : "upstream_error";
+  error.statusCode = 502;
+  error.upstreamStatusCode = hasNumericCode ? numericCode : httpStatus;
+  error.upstreamBodySnippet = detail;
+  return error;
+}
+
 function normalizeCoupangProducts(payload) {
   const data = payload && typeof payload === "object" ? payload.data : null;
   const rawItems = Array.isArray(data)
@@ -163,11 +210,18 @@ async function searchCoupangProducts({
     throw error;
   }
 
+  const envelope = readCoupangEnvelope(body);
+  if (envelope && !isCoupangSuccessCode(envelope.code)) {
+    throw buildCoupangEnvelopeError(envelope, response.status);
+  }
+
+  const responseCode = body?.rCode ?? body?.code ?? null;
+
   return {
     items: normalizeCoupangProducts(body),
     upstream: {
       provider: "coupang-partners-api",
-      response_code: body?.rCode ?? body?.code ?? null
+      response_code: responseCode == null ? null : String(responseCode)
     }
   };
 }

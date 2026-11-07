@@ -323,7 +323,7 @@ test("fetchJson maps non-403 upstream HTTP errors to 502 with redacted metadata"
 });
 
 test("fetchJson redacts the service key out of the preserved cause chain", async () => {
-  const secret = "airkorea-secret+/=";
+  const secret = "airkorea-secret+/=-example";
   const rejection = new Error(`boom http://apis.data.go.kr/x?serviceKey=${encodeURIComponent(secret)}`);
 
   await assert.rejects(

@@ -47,15 +47,52 @@ KIND_ALIASES.set("all", null);
 KIND_ALIASES.set("전체", null);
 
 const AUTH_REASON_CODES = new Set(["20", "21", "30", "31", "32", "33"]);
-const DEFAULT_ORDER_MONTH_FROM = "200412";
-const DEFAULT_ORDER_MONTH_TO = "202501";
-const DEFAULT_POSTED_FROM = "200412010000";
-const DEFAULT_POSTED_TO = "202501312359";
+
+// The upstream answers a 20-year span slower than the 20s AbortSignal timeout
+// (kind=service with the old 200412..202501 default returned 504 upstream_timeout,
+// kind=all as well), and a fixed window goes stale every month. Default to the
+// current KST month +/- 1 instead: recent plans plus the upcoming month, and small
+// enough that one kind query answers in under a second. The default posted-date
+// window follows the effective order months instead of an unrelated fixed span.
+const DEFAULT_MONTH_BACK = 1;
+const DEFAULT_MONTH_FORWARD = 1;
 
 function trimOrUndefined(value) {
   if (value === undefined || value === null) return undefined;
   const text = String(value).trim();
   return text || undefined;
+}
+
+function currentKstYearMonth(now) {
+  const [year, month] = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit"
+  }).format(now).split("-").map((part) => Number.parseInt(part, 10));
+  return { year, month };
+}
+
+function shiftYearMonth({ year, month }, delta) {
+  const index = (year * 12) + (month - 1) + delta;
+  return { year: Math.floor(index / 12), month: (index % 12) + 1 };
+}
+
+function formatYearMonth({ year, month }) {
+  return `${String(year).padStart(4, "0")}${String(month).padStart(2, "0")}`;
+}
+
+function lastDayOfYearMonth(yearMonth) {
+  const year = Number.parseInt(yearMonth.slice(0, 4), 10);
+  const month = Number.parseInt(yearMonth.slice(4, 6), 10);
+  return String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, "0");
+}
+
+function defaultG2bOrderPlanMonths(now = new Date()) {
+  const current = currentKstYearMonth(now);
+  return {
+    orderBgnYm: formatYearMonth(shiftYearMonth(current, -DEFAULT_MONTH_BACK)),
+    orderEndYm: formatYearMonth(shiftYearMonth(current, DEFAULT_MONTH_FORWARD))
+  };
 }
 
 function parseGatewayAuthError(text) {
@@ -133,7 +170,7 @@ function copyOptionalString(target, source, outputName, inputNames) {
   }
 }
 
-function buildNormalizedQuery(query, kindConfig, useSearchOperation) {
+function buildNormalizedQuery(query, kindConfig, useSearchOperation, defaultMonths) {
   const normalized = {
     kind: kindConfig.key,
     operation: useSearchOperation ? kindConfig.searchOperation : kindConfig.listOperation,
@@ -141,14 +178,21 @@ function buildNormalizedQuery(query, kindConfig, useSearchOperation) {
     numOfRows: parsePositiveInteger(query.numOfRows ?? query.limit, { defaultValue: 10, min: 1, max: 100, label: "numOfRows" })
   };
 
-  const orderBgnYm = normalizeOrderMonth(query.orderBgnYm ?? query.orderFrom ?? query.order_from, "orderFrom", DEFAULT_ORDER_MONTH_FROM);
-  const orderEndYm = normalizeOrderMonth(query.orderEndYm ?? query.orderTo ?? query.order_to, "orderTo", DEFAULT_ORDER_MONTH_TO);
+  const orderBgnYm = normalizeOrderMonth(query.orderBgnYm ?? query.orderFrom ?? query.order_from, "orderFrom", defaultMonths.orderBgnYm);
+  const orderEndYm = normalizeOrderMonth(query.orderEndYm ?? query.orderTo ?? query.order_to, "orderTo", defaultMonths.orderEndYm);
   ensureRange(orderBgnYm, orderEndYm, "order month");
   normalized.orderBgnYm = orderBgnYm;
   normalized.orderEndYm = orderEndYm;
 
-  const inqryBgnDt = normalizePostedDate(query.inqryBgnDt ?? query.postedFrom ?? query.posted_from, "postedFrom", DEFAULT_POSTED_FROM);
-  const inqryEndDt = normalizePostedDate(query.inqryEndDt ?? query.postedTo ?? query.posted_to, "postedTo", DEFAULT_POSTED_TO, true);
+  // The posted-date window defaults to the effective 발주년월 span, so an explicit
+  // order range is never narrowed by a default that ignores it.
+  const inqryBgnDt = normalizePostedDate(query.inqryBgnDt ?? query.postedFrom ?? query.posted_from, "postedFrom", `${orderBgnYm}010000`);
+  const inqryEndDt = normalizePostedDate(
+    query.inqryEndDt ?? query.postedTo ?? query.posted_to,
+    "postedTo",
+    `${orderEndYm}${lastDayOfYearMonth(orderEndYm)}2359`,
+    true
+  );
   ensureRange(inqryBgnDt, inqryEndDt, "posted date");
   normalized.inqryBgnDt = inqryBgnDt;
   normalized.inqryEndDt = inqryEndDt;
@@ -181,19 +225,20 @@ function hasSearchOnlyFilter(query) {
   ].some((name) => trimOrUndefined(query[name]) !== undefined);
 }
 
-function normalizeG2bOrderPlanQuery(query = {}) {
+function normalizeG2bOrderPlanQuery(query = {}, now = new Date()) {
   const kind = normalizeKind(query.kind ?? query.type ?? query.category);
   const useSearchOperation = trimOrUndefined(query.search) !== "false" || hasSearchOnlyFilter(query);
+  const defaultMonths = defaultG2bOrderPlanMonths(now);
   if (kind === "all") {
     return {
       kind,
       operations: Object.fromEntries(Object.values(ORDER_PLAN_KINDS).map((config) => [
         config.key,
-        buildNormalizedQuery(query, config, useSearchOperation)
+        buildNormalizedQuery(query, config, useSearchOperation, defaultMonths)
       ]))
     };
   }
-  return buildNormalizedQuery(query, ORDER_PLAN_KINDS[kind], useSearchOperation);
+  return buildNormalizedQuery(query, ORDER_PLAN_KINDS[kind], useSearchOperation, defaultMonths);
 }
 
 function extractOrderPlanItems(payload) {

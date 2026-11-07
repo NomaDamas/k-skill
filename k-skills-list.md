@@ -1,10 +1,9 @@
 # k-skill 스킬 리스트
 
-한국 특화 검색·조회·자동화 에이전트 스킬 모음 (총 133개)
+한국 특화 검색·조회·자동화 에이전트 스킬 모음 (총 134개)
 
 ## 쇼핑 · 커머스
 - **coupang-product-search** — 쿠팡 Partners API로 상품 검색·로켓배송·가격 후보 비교
-- **naver-shopping-search** — 네이버 쇼핑 BFF로 상품 후보·최저가·판매처 가격비교
 - **danawa-price-search** — 다나와 가격비교로 실구매가·카드할인·무이자할부 비교
 - **market-kurly-search** — 마켓컬리 상품 후보·현재가·할인/품절 조회 (로그인 불필요)
 - **daiso-product-search** — 다이소몰 매장별 상품 재고 조회

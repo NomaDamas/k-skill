@@ -83,6 +83,13 @@ async function fetchWithRetry(url, options = {}) {
       }
     }
 
+    // A shared deadline (the caller's `AbortSignal.timeout`) that already fired
+    // cannot succeed on another attempt, and its backoff would push the total
+    // request time past the caller's timeout budget; stop retrying immediately.
+    if (fetchOptions.signal?.aborted) {
+      break;
+    }
+
     const baseDelay = backoffMs * (attempt + 1);
     const jitter = jitterRatio > 0 ? Math.floor(Math.random() * baseDelay * jitterRatio) : 0;
     await sleep(baseDelay + jitter);

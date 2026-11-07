@@ -98,8 +98,8 @@ test("EV charger payload extraction accepts direct and response envelopes", () =
   }).items, []);
 });
 
-test("EV charger upstream timeout covers slow data.go.kr responses", () => {
-  assert.equal(EV_CHARGER_UPSTREAM_TIMEOUT_MS, 90000);
+test("EV charger upstream timeout keeps the worst-case request bounded for slow data.go.kr responses", () => {
+  assert.equal(EV_CHARGER_UPSTREAM_TIMEOUT_MS, 20000);
 });
 
 test("EV charger payload extraction rejects flat semantic auth failures", () => {
@@ -151,7 +151,7 @@ test("EV charger info rejects unresolved locations before upstream fetch", async
     callCount += 1;
     return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "proxy-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "proxy-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -204,7 +204,7 @@ test("EV charger routes validate before fetch, report missing key, and cache suc
       items: { item: [{ statId: "ME000001", chgerId: "01", stat: "2" }] }
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "proxy-key" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "proxy-key-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -241,7 +241,7 @@ test("EV charger semantic errors return 502 and are not cached", async (t) => {
       response: { header: { resultCode: "30", resultMsg: "SERVICE KEY IS NOT REGISTERED" } }
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "must-not-leak" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "must-not-leak-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -251,7 +251,7 @@ test("EV charger semantic errors return 502 and are not cached", async (t) => {
     const response = await app.inject({ method: "GET", url: "/v1/ev-charger/info?zcode=11" });
     assert.equal(response.statusCode, 502);
     assert.equal(response.json().error, "upstream_forbidden");
-    assert.equal(response.body.includes("must-not-leak"), false);
+    assert.equal(response.body.includes("must-not-leak-example"), false);
   }
   assert.equal(callCount, 2);
 });

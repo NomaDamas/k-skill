@@ -1,4 +1,5 @@
 const { fetchWithRetry } = require("./fetch-with-retry");
+const { rethrowIfUpstreamNetworkFailure } = require("./upstream-errors");
 
 const BUILDING_REGISTER_URL = "https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo";
 const AUTH_RESULT_CODES = new Set(["20", "21", "22", "30", "31", "32", "33"]);
@@ -186,7 +187,11 @@ async function fetchBuildingRegisterTitle({ params, serviceKey, fetchImpl = glob
       fetchImpl,
       signal: AbortSignal.timeout(20000)
     });
-  } catch {
+  } catch (error) {
+    // Hand a classified network failure (with its socket cause) to the global
+    // error handler so the route answers 504/503 instead of an opaque 502, and
+    // redact the service key from the cause chain before it can be logged.
+    rethrowIfUpstreamNetworkFailure(error, serviceKey);
     return errorResult("upstream_unavailable", "Building register upstream request failed.");
   }
   const text = await response.text();

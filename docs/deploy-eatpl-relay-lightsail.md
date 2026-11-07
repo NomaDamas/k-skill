@@ -1,19 +1,22 @@
 # eat.pl relay on AWS Lightsail
 
-This is a deployment recipe for a small authenticated relay whose outbound
+This is a deployment recipe for the authenticated fallback relay whose outbound
 requests to the BC Card eat.pl API originate from one Lightsail static IPv4
-address. Direct public callers without the gpu01 proxy bearer token are rejected.
+address. Direct public callers without the relay bearer token are rejected.
 
 ## Target architecture
 
 ```text
-k-skill-proxy --HTTPS + Authorization: Bearer <token>--> Lightsail relay
-                                                                |
-                                                                +-- POST --> api.paybooc.ai
+Cloud Run k-skill-proxy --POST (primary)--> api.paybooc.ai
+                      |
+                      +--HTTPS + Authorization: Bearer <token> (fallback)
+                         --> Lightsail relay --POST--> api.paybooc.ai
 ```
 
-BC Card should whitelist the Lightsail static IPv4, not the home KT address and
-not the relay's private `127.0.0.1` address.
+BC Card should whitelist both the Cloud Run static egress IP (`34.84.103.178`,
+see `docs/deploy-k-skill-proxy.md`) for the primary path and the Lightsail
+static IPv4 for fallback. Keep the Lightsail address registered until the
+fallback is retired; never register the relay's private `127.0.0.1` address.
 
 ## Cost guardrail
 
@@ -94,9 +97,9 @@ The relay never accepts `instNm` or `trnsTrceNo` from the caller. It injects
 both values itself and fixes the upstream URL in code, preventing an open
 proxy or SSRF endpoint.
 
-Configure the existing k-skill-proxy on gpu01 with these values in its private
-runtime environment. Do not commit them. The proxy is the only caller that may
-hold this token; other clients hitting the relay without it are rejected.
+Configure the existing k-skill-proxy on Cloud Run with these values through
+Secret Manager. Do not commit them. The proxy is the only caller that may hold
+this token; other clients hitting the relay without it are rejected.
 
 ```dotenv
 BCCARD_EATPL_INST_NM=kskill

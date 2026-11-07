@@ -102,8 +102,8 @@ npx -y @nomadamas/k-skill@0 exec bccard-eatpl-search scripts/kakao-place-rating.
 
 - `BCCARD_EATPL_INST_NM`: 제휴 시 발급된 기관코드
 - `BCCARD_EATPL_API_BASE_URL`: 필수값, 기본값 없음 (미설정 시 503 `upstream_not_configured`). 운영 URL은 `https://api.paybooc.ai/api/mer`
-- `BCCARD_EATPL_RELAY_URL`: 선택값, 고정 outbound IP relay URL. 설정하면 proxy는 이 URL만 호출하고, 토큰 없이는 호출하지 않는다
-- `BCCARD_EATPL_RELAY_TOKEN`: 선택값, relay `Authorization: Bearer` 시크릿. gpu01 `k-skill-proxy` `.env`와 Lightsail relay env에만 저장한다. 사용자·클라이언트는 Lightsail을 직접 호출하지 않는다
+- `BCCARD_EATPL_RELAY_URL`: 선택값, 고정 outbound IP fallback relay URL. direct 호출이 실패하면 proxy가 이 URL을 호출하며, 토큰 없이는 호출하지 않는다
+- `BCCARD_EATPL_RELAY_TOKEN`: 선택값, relay `Authorization: Bearer` 시크릿. Cloud Run Secret Manager와 Lightsail relay env에만 저장한다. 사용자는 Lightsail을 직접 호출하지 않는다
 - `BCCARD_EATPL_API_TIMEOUT_MS`: 선택값, 기본 20000
 
 `trnsTrceNo`는 사용자가 입력하지 않는다. proxy가 기관코드 + 한국시간 기준 `YYYYMMDD` + 10자리 순번으로 매 요청 생성한다.

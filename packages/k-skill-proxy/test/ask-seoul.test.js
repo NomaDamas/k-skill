@@ -41,7 +41,7 @@ test("ASK Seoul weather-risk upstream call injects the service key only at the p
     operation: "data",
     params: { place_id: "seoul_admd_1171052000", limit: "25" },
     baseUrl: "https://ask-seoul.example.test",
-    apiKey: "proxy-only-key",
+    apiKey: "proxy-only-key-example",
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), init });
       return new Response(JSON.stringify({ rows: [] }), {
@@ -55,9 +55,9 @@ test("ASK Seoul weather-risk upstream call injects the service key only at the p
   assert.equal(upstream.body, '{"rows":[]}');
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "https://ask-seoul.example.test/skill/v1/products/weather_place_risk_window/data?place_id=seoul_admd_1171052000&limit=25");
-  assert.equal(calls[0].init.headers.authorization, "Bearer proxy-only-key");
+  assert.equal(calls[0].init.headers.authorization, "Bearer proxy-only-key-example");
   assert.equal(calls[0].init.redirect, "error");
-  assert.doesNotMatch(calls[0].url, /proxy-only-key/);
+  assert.doesNotMatch(calls[0].url, /proxy-only-key-example/);
 });
 
 test("ASK Seoul weather-risk route caches successful calls and rejects unexposed query fields", async (t) => {
@@ -78,7 +78,7 @@ test("ASK Seoul weather-risk route caches successful calls and rejects unexposed
 
   const app = buildServer({ env: {
     ASK_SEOUL_SKILL_API_BASE_URL: "https://ask-seoul.example.test",
-    ASK_SEOUL_KSKILL_API_KEY: "proxy-only-key"
+    ASK_SEOUL_KSKILL_API_KEY: "proxy-only-key-example"
   } });
   t.after(async () => {
     global.fetch = originalFetch;
@@ -97,7 +97,7 @@ test("ASK Seoul weather-risk route caches successful calls and rejects unexposed
     row_count: 0
   });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].init.headers.authorization, "Bearer proxy-only-key");
+  assert.equal(calls[0].init.headers.authorization, "Bearer proxy-only-key-example");
 
   const second = await app.inject({
     method: "GET",
@@ -128,7 +128,7 @@ test("ASK Seoul weather-risk proxy never caches a malformed successful response"
 
   const app = buildServer({ env: {
     ASK_SEOUL_SKILL_API_BASE_URL: "https://ask-seoul.example.test",
-    ASK_SEOUL_KSKILL_API_KEY: "proxy-only-key"
+    ASK_SEOUL_KSKILL_API_KEY: "proxy-only-key-example"
   } });
   t.after(async () => {
     global.fetch = originalFetch;
@@ -146,7 +146,7 @@ test("ASK Seoul weather-risk proxy never caches a malformed successful response"
 test("proxy health reveals ASK Seoul weather-risk readiness without revealing service credentials", async (t) => {
   const app = buildServer({ env: {
     ASK_SEOUL_SKILL_API_BASE_URL: "https://ask-seoul.example.test",
-    ASK_SEOUL_KSKILL_API_KEY: "proxy-only-key"
+    ASK_SEOUL_KSKILL_API_KEY: "proxy-only-key-example"
   } });
   t.after(async () => {
     await app.close();
@@ -155,5 +155,5 @@ test("proxy health reveals ASK Seoul weather-risk readiness without revealing se
   const health = await app.inject({ method: "GET", url: "/health" });
   assert.equal(health.statusCode, 200);
   assert.equal(health.json().upstreams.askSeoulWeatherRiskConfigured, true);
-  assert.doesNotMatch(health.body, /proxy-only-key|ask-seoul\.example\.test/);
+  assert.doesNotMatch(health.body, /proxy-only-key-example|ask-seoul\.example\.test/);
 });

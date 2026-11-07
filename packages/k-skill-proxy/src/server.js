@@ -13,7 +13,13 @@ const {
 } = require("./assembly");
 const { fetchFineDustReport } = require("./airkorea");
 const { fetchWaterLevelReport } = require("./hrfco");
-const { KRX_MARKETS, fetchBaseInfo, fetchTradeInfo, getCurrentKstDate, searchStocks } = require("./krx-stock");
+const {
+  KRX_MARKETS,
+  fetchBaseInfoItems,
+  fetchTradeInfoItems,
+  getCurrentKstDate,
+  searchStocks
+} = require("./krx-stock");
 const {
   fetchMfdsDrugLookup,
   fetchMfdsFoodSafetySearch,
@@ -39,7 +45,6 @@ const {
   normalizeKakaoMobilityDirectionsQuery
 } = require("./kakao-map");
 const { fetchNaverNewsSearch, normalizeNaverNewsSearchQuery } = require("./naver-news");
-const { fetchNaverShoppingSearch, normalizeNaverShoppingSearchQuery } = require("./naver-shopping");
 const {
   createTraceNumberFactory,
   fetchBccardEatplSearch,
@@ -70,7 +75,8 @@ const {
   isKamisConditionConsistent,
   isKamisFailureBody,
   normalizeKamisQuery,
-  proxyKamisRequest
+  proxyKamisRequest,
+  resolveKamisRegday
 } = require("./kamis");
 const {
   normalizeMofaTravelAlarmQuery,
@@ -82,7 +88,7 @@ const {
   searchCoupangProducts
 } = require("./coupang");
 const { searchRegionCode } = require("./region-lookup");
-const { classifyUpstreamFailure } = require("./upstream-errors");
+const { classifyUpstreamFailure, rethrowIfUpstreamNetworkFailure } = require("./upstream-errors");
 const { redactErrorChain, redactSecretValue } = require("./redaction");
 const { resolveEducationOfficeFromNaturalLanguage } = require("./neis-office-codes");
 const { normalizeNationalPensionQuery, fetchNationalPensionWorkplace } = require("./national-pension");
@@ -384,6 +390,27 @@ function buildRouteUsageFields({
 
 function getErrorLogLevel(statusCode) {
   return statusCode >= 500 ? "error" : "warn";
+}
+
+// Upstream HTTP failures are reported with the proxy's own status, so the real
+// upstream status, body snippet and provider error code must survive in the
+// `upstream` block for debugging (Naver: `errorCode` SE05/024/010).
+function buildUpstreamErrorDetails(error) {
+  if (!error.upstreamStatusCode) {
+    return null;
+  }
+
+  const details = {
+    status_code: error.upstreamStatusCode,
+    body_snippet: error.upstreamBodySnippet || null
+  };
+  if (error.upstreamErrorCode) {
+    details.error_code = error.upstreamErrorCode;
+  }
+  if (error.retryAfterSeconds != null) {
+    details.retry_after = error.retryAfterSeconds;
+  }
+  return details;
 }
 
 function isFailureResponse(value) {
@@ -744,6 +771,109 @@ function normalizeData4LibraryLibrarySearchQuery(query) {
   }
 
   return normalized;
+}
+
+// Data4Library answers HTTP 200 even when it rejects a request: the failure
+// arrives inside the payload (`response.errCode` / `response.error`, e.g.
+// `outOflimit` when the calling IP exceeds the daily allowance, or `authErr`
+// when the authKey is not accepted). Relaying that as 200 hides the failure
+// from clients and caches the error for the full TTL, so detect the envelope
+// and answer with the shared upstream_* failure codes instead.
+// The quota/auth split mirrors molit.js (`upstream_quota_exceeded` => 503 with
+// Retry-After, auth/config rejections => 502) so the keyed data.go.kr family
+// and this route fail the same way.
+function classifyData4LibraryErrorCode(errCode) {
+  const code = String(errCode || "").toLowerCase();
+
+  if (/limit|exceed|quota/.test(code)) {
+    return {
+      error: "upstream_quota_exceeded",
+      statusCode: 503,
+      retryAfterSeconds: 3600,
+      reason: "Data4Library daily quota exceeded; register the proxy egress IP at data4library.kr."
+    };
+  }
+
+  if (/auth|key/.test(code)) {
+    return {
+      error: "upstream_forbidden",
+      statusCode: 502,
+      reason: "Data4Library rejected the proxy authKey."
+    };
+  }
+
+  return {
+    error: "upstream_error",
+    statusCode: 502,
+    reason: "Data4Library returned an error envelope."
+  };
+}
+
+// Extracts the hidden error envelope from an upstream body, or null for a
+// normal result. JSON is the only format the proxy requests, but the XML/tag
+// shape is recognized too so a non-JSON error body can never be relayed as a
+// 200 success.
+function extractData4LibraryErrorEnvelope(body) {
+  const text = typeof body === "string" ? body.trim() : "";
+  if (!text) {
+    return null;
+  }
+
+  if (text.startsWith("{")) {
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return null;
+    }
+
+    const envelope = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed.response
+      : null;
+    if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) {
+      return null;
+    }
+
+    const errCode = trimOrNull(envelope.errCode ?? envelope.errorCode);
+    const message = trimOrNull(envelope.error ?? envelope.errorMessage);
+    if (!errCode && !message) {
+      return null;
+    }
+
+    return {
+      errCode: errCode || null,
+      message: message || null
+    };
+  }
+
+  const errCode = trimOrNull(text.match(/<errCode>\s*([^<]*?)\s*<\/errCode>/i)?.[1]);
+  const message = trimOrNull(text.match(/<error>\s*([^<]*?)\s*<\/error>/i)?.[1]);
+  if (!errCode && !message) {
+    return null;
+  }
+
+  return {
+    errCode: errCode || null,
+    message: message || null
+  };
+}
+
+// The upstream envelope plus the HTTP status/code the route must answer with,
+// carrying the upstream errCode and message so callers can act on them.
+function data4LibraryErrorResult(envelope) {
+  const classified = classifyData4LibraryErrorCode(envelope.errCode);
+  return {
+    statusCode: classified.statusCode,
+    contentType: "application/json; charset=utf-8",
+    body: JSON.stringify({
+      error: classified.error,
+      message: `${classified.reason} (${envelope.errCode || "unknown"}: ${envelope.message || "no message"})`,
+      status_code: classified.statusCode,
+      upstream_code: envelope.errCode || null,
+      upstream_message: envelope.message || null,
+      ...(classified.retryAfterSeconds ? { retry_after: classified.retryAfterSeconds } : {})
+    })
+  };
 }
 
 function normalizeSeoulSubwayQuery(query) {
@@ -1476,13 +1606,16 @@ function normalizeKrxMarket(value) {
   return normalized;
 }
 
-function normalizeKoreanStockDate(value) {
-  const normalized = trimOrNull(value) || getCurrentKstDate();
-  if (!/^\d{8}$/.test(normalized)) {
+// Returns whether the caller supplied bas_dd at all: an omitted date may fall
+// back to the most recent trading day, while an explicit one is honored as-is.
+function normalizeKoreanStockDateInput(value) {
+  const provided = trimOrNull(value);
+  const basDd = provided || getCurrentKstDate();
+  if (!/^\d{8}$/.test(basDd)) {
     throw new Error("Provide bas_dd/date as YYYYMMDD.");
   }
 
-  return normalized;
+  return { basDd, basDdExplicit: Boolean(provided) };
 }
 
 function normalizeKoreanStockCodes(value) {
@@ -1505,7 +1638,7 @@ function normalizeKoreanStockSearchQuery(query) {
     throw new Error("Provide q/query.");
   }
 
-  const basDd = normalizeKoreanStockDate(query.bas_dd ?? query.basDd ?? query.date);
+  const { basDd, basDdExplicit } = normalizeKoreanStockDateInput(query.bas_dd ?? query.basDd ?? query.date);
   const marketValue = trimOrNull(query.market);
   const limit = parseInteger(query.limit, 10);
 
@@ -1516,6 +1649,7 @@ function normalizeKoreanStockSearchQuery(query) {
   return {
     q,
     basDd,
+    basDdExplicit,
     market: marketValue ? normalizeKrxMarket(marketValue) : null,
     limit
   };
@@ -1525,7 +1659,7 @@ function normalizeKoreanStockLookupQuery(query) {
   return {
     market: normalizeKrxMarket(query.market),
     code: normalizeKoreanStockCodes(query.code ?? query.codes ?? query.codeList ?? query.stockCode ?? query.stock_code)[0],
-    basDd: normalizeKoreanStockDate(query.bas_dd ?? query.basDd ?? query.date)
+    ...normalizeKoreanStockDateInput(query.bas_dd ?? query.basDd ?? query.date)
   };
 }
 
@@ -1864,11 +1998,19 @@ async function proxyData4LibraryRequest({
   const response = await fetchImpl(url, {
     signal: AbortSignal.timeout(20000)
   });
+  const body = await response.text();
+
+  // A 200 carrying an error envelope must not be relayed as success (and must
+  // not be cached), so answer with the classified upstream_* failure instead.
+  const errorEnvelope = extractData4LibraryErrorEnvelope(body);
+  if (errorEnvelope) {
+    return data4LibraryErrorResult(errorEnvelope);
+  }
 
   return {
     statusCode: response.status,
     contentType: response.headers.get("content-type") || "application/json; charset=utf-8",
-    body: await response.text()
+    body
   };
 }
 
@@ -2003,24 +2145,87 @@ function isSuccessfulJsonResponse(upstream) {
   return upstream.statusCode >= 200 && upstream.statusCode < 300 && upstream.contentType.includes("json");
 }
 
-function isKosisErrorBody(body) {
+// KOSIS signals application errors with HTTP 200 and an error body, so the body
+// (not the status line) decides whether a response is a failure. Returns null when
+// the body is a success payload (KOSIS answers these routes with a JSON array).
+function parseKosisErrorBody(body) {
   const text = String(body || "").trim();
   if (!text) {
-    return true;
+    return { code: null, message: "KOSIS upstream returned an empty response body." };
   }
-  if (/<error>\s*<err>/i.test(text)) {
-    return true;
+  if (text.startsWith("<")) {
+    if (!/<error[\s>]/i.test(text)) {
+      return null;
+    }
+    const codeMatch = text.match(/<err>([^<]*)<\/err>/i);
+    const messageMatch = text.match(/<errMsg>([^<]*)<\/errMsg>/i) || text.match(/<message>([^<]*)<\/message>/i);
+    return {
+      code: codeMatch ? codeMatch[1] : null,
+      message: messageMatch ? messageMatch[1] : "KOSIS upstream returned an XML error response."
+    };
   }
   if (!(text.startsWith("{") || text.startsWith("["))) {
-    return false;
+    return null;
   }
 
+  let payload;
   try {
-    const payload = JSON.parse(text.replace(/([{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":'));
-    return Boolean(payload && !Array.isArray(payload) && typeof payload === "object" && (payload.err || payload.errCode || payload.error));
+    payload = JSON.parse(text.replace(/([{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":'));
   } catch {
-    return false;
+    return null;
   }
+  if (!payload || Array.isArray(payload) || typeof payload !== "object") {
+    return null;
+  }
+
+  const rawCode = payload.err ?? payload.errCode ?? payload.error;
+  if (rawCode === undefined || rawCode === null || rawCode === false || rawCode === "") {
+    return null;
+  }
+  const rawMessage = payload.errMsg ?? payload.errmsg ?? payload.message;
+  return {
+    code: String(rawCode),
+    message: rawMessage === undefined || rawMessage === null || rawMessage === ""
+      ? `KOSIS upstream returned error code ${rawCode}.`
+      : String(rawMessage)
+  };
+}
+
+// err 20/21/30/31 are caller-fixable input problems (missing/invalid request variable,
+// no result, result set too large) -> 400.
+// err 10/11/41/42 are non-transient auth/entitlement limits on the server-side key
+// (missing/expired key, row limit, per-user limit) that the caller cannot fix by
+// editing the request -> 502 upstream_forbidden. err 40 is the per-minute call quota,
+// which expires on its own -> 503 upstream_quota_exceeded (mirrors molit.js). Everything
+// else (50 server error, 99, unknown or empty bodies) -> 502 upstream_error.
+const KOSIS_ERROR_CLASSES = new Map([
+  ["10", { statusCode: 502, error: "upstream_forbidden" }],
+  ["11", { statusCode: 502, error: "upstream_forbidden" }],
+  ["20", { statusCode: 400, error: "bad_request" }],
+  ["21", { statusCode: 400, error: "bad_request" }],
+  ["30", { statusCode: 400, error: "bad_request" }],
+  ["31", { statusCode: 400, error: "bad_request" }],
+  ["40", { statusCode: 503, error: "upstream_quota_exceeded" }],
+  ["41", { statusCode: 502, error: "upstream_forbidden" }],
+  ["42", { statusCode: 502, error: "upstream_forbidden" }],
+  ["50", { statusCode: 502, error: "upstream_error" }],
+  ["99", { statusCode: 502, error: "upstream_error" }]
+]);
+
+function buildKosisErrorResponse(apiError) {
+  const classification = KOSIS_ERROR_CLASSES.get(String(apiError.code ?? "").trim()) || {
+    statusCode: 502,
+    error: "upstream_error"
+  };
+  return {
+    statusCode: classification.statusCode,
+    payload: {
+      error: classification.error,
+      message: apiError.message || "KOSIS upstream returned an error response.",
+      upstream: { err: apiError.code, errMsg: apiError.message },
+      ...(classification.error === "upstream_quota_exceeded" ? { retry_after: 60 } : {})
+    }
+  };
 }
 
 async function proxyOpinetRequest({ path, params, apiKey, fetchImpl = global.fetch }) {
@@ -2234,6 +2439,112 @@ function validateHouseholdWastePaginationQuery(query) {
   return { ok: true };
 }
 
+// Windows 한국어 로케일 클라이언트(CP949 콘솔 코드페이지)는 쿼리 값을 EUC-KR 바이트로 퍼센트
+// 인코딩해서 보낸다. Fastify 기본 파서는 UTF-8만 알기 때문에 이런 값은 원문 `%XX` 텍스트로
+// 남아 상류까지 그대로 전달된다. 키/값마다 raw 바이트를 엄격한 UTF-8로 먼저 디코딩하고,
+// 유효한 UTF-8이 아닐 때만 WHATWG `euc-kr`(CP949 상위집합) 디코더로 폴백한다. `%` 이스케이프
+// 자체가 깨진 컴포넌트는 기본 파서와 동일하게 받은 그대로(단, `+`는 공백) 둔다.
+const QUERY_COMPONENT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
+const QUERY_COMPONENT_EUC_KR_DECODER = new TextDecoder("euc-kr");
+
+function queryComponentHexDigit(byte) {
+  if (byte >= 0x30 && byte <= 0x39) {
+    return byte - 0x30;
+  }
+  if (byte >= 0x41 && byte <= 0x46) {
+    return byte - 0x37;
+  }
+  if (byte >= 0x61 && byte <= 0x66) {
+    return byte - 0x57;
+  }
+  return -1;
+}
+
+function decodeRawQueryComponent(rawBytes) {
+  const bytes = [];
+
+  for (let index = 0; index < rawBytes.length; index += 1) {
+    const byte = rawBytes[index];
+
+    if (byte === 0x2b) {
+      // '+'
+      bytes.push(0x20);
+      continue;
+    }
+
+    if (byte !== 0x25) {
+      // '%'
+      bytes.push(byte);
+      continue;
+    }
+
+    const high = queryComponentHexDigit(rawBytes[index + 1]);
+    const low = queryComponentHexDigit(rawBytes[index + 2]);
+    if (high < 0 || low < 0) {
+      // Malformed escape: keep the component as received ('+' already spaced),
+      // matching the default fast-querystring parser.
+      return rawBytes.toString("latin1").replace(/\+/g, " ");
+    }
+
+    bytes.push((high << 4) | low);
+    index += 2;
+  }
+
+  const decoded = Buffer.from(bytes);
+  try {
+    return QUERY_COMPONENT_UTF8_DECODER.decode(decoded);
+  } catch {
+    return QUERY_COMPONENT_EUC_KR_DECODER.decode(decoded);
+  }
+}
+
+// Fastify `querystringParser`: structurally identical to the default
+// fast-querystring parser (repeated keys become arrays, bracket keys stay
+// literal, '+' means space) but tolerant of EUC-KR percent-encoded components.
+function parseQueryStringWithEucKrFallback(rawQuery) {
+  const parsed = Object.create(null);
+
+  if (typeof rawQuery !== "string" || rawQuery.length === 0) {
+    return parsed;
+  }
+
+  // request.url is latin1-decoded by Node's HTTP parser, so a latin1 round-trip
+  // recovers the exact bytes the client sent.
+  const raw = Buffer.from(rawQuery, "latin1");
+  let pairStart = 0;
+
+  for (let index = 0; index <= raw.length; index += 1) {
+    if (index < raw.length && raw[index] !== 0x26) {
+      // '&'
+      continue;
+    }
+
+    const pair = raw.subarray(pairStart, index);
+    pairStart = index + 1;
+
+    const separator = pair.indexOf(0x3d); // '='
+    const hasValue = separator !== -1;
+    const key = decodeRawQueryComponent(hasValue ? pair.subarray(0, separator) : pair);
+
+    if (!hasValue && key.length === 0) {
+      continue;
+    }
+
+    const value = hasValue ? decodeRawQueryComponent(pair.subarray(separator + 1)) : "";
+    const existing = parsed[key];
+
+    if (existing === undefined) {
+      parsed[key] = value;
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      parsed[key] = [existing, value];
+    }
+  }
+
+  return parsed;
+}
+
 function buildServer({ env = process.env, provider = null, now = () => new Date(), loggerInstance = null } = {}) {
   const config = buildConfig(env);
   const cache = createMemoryCache({ maxEntries: config.cacheMaxEntries });
@@ -2250,6 +2561,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   const app = Fastify({
     ...(loggerInstance ? { loggerInstance } : { logger: true }),
     logController: new LogController({ disableRequestLogging: true }),
+    routerOptions: { querystringParser: parseQueryStringWithEucKrFallback },
     trustProxy: config.trustProxyHops || false
   });
 
@@ -2343,7 +2655,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         kakaoMapConfigured: Boolean(config.kakaoRestApiKey),
         kakaoMobilityConfigured: Boolean(config.kakaoRestApiKey),
         kosisConfigured: Boolean(config.kosisApiKey),
-        naverShoppingConfigured: true,
         naverSearchApiConfigured: naverSearchKeysPresent,
         naverNewsApiConfigured: naverSearchKeysPresent,
         bccardEatplConfigured: Boolean(config.bccardEatplInstNm),
@@ -2987,7 +3298,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       apiKey: config.kosisApiKey
     });
 
-    if (upstream.statusCode >= 200 && upstream.statusCode < 300 && !isKosisErrorBody(upstream.body)) {
+    if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
+      const apiError = parseKosisErrorBody(upstream.body);
+      if (apiError) {
+        // Never cache errors.
+        const { statusCode, payload } = buildKosisErrorResponse(apiError);
+        reply.code(statusCode);
+        return payload;
+      }
       cache.set(cacheKey, upstream, config.cacheTtlMs);
     }
 
@@ -3999,11 +4317,15 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         serviceKey: config.molitApiKey
       });
     } catch (error) {
+      // Preserve classified network failures (504 upstream_timeout / 503
+      // upstream_unreachable with the socket cause) for the global error
+      // handler instead of collapsing them into an opaque 502 proxy_error.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       request.log.warn({
-        route: "/v1/korean-stock/search",
+        route: "/v1/parking-lots/search",
         upstreamError: error.code || "proxy_error",
         upstreamMessage: error.message
-      }, "KRX upstream error");
+      }, "parking lots upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.upstreamCode ? "upstream_error" : "proxy_error",
@@ -4101,7 +4423,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     let upstreamData;
     try {
-      const res = await fetch(url.toString());
+      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(20000) });
       if (!res.ok) {
         reply.code(502);
         return {
@@ -4112,10 +4434,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       }
       upstreamData = await res.json();
     } catch (err) {
+      // A connect timeout / DNS failure must answer the documented 504/503 with
+      // its socket cause instead of this opaque 502; the global error handler
+      // classifies it, so rethrow (redacted) rather than swallow it.
+      rethrowIfUpstreamNetworkFailure(err, config.molitApiKey);
       reply.code(502);
       return {
         error: "upstream_fetch_failed",
-        message: err.message,
+        message: redactSecretValue(err.message, config.molitApiKey),
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
       };
     }
@@ -4187,11 +4513,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         filters: normalized
       });
     } catch (error) {
+      // Classified network failures keep their 504/503 contract (with cause) via
+      // the global error handler; the module already redacted the error chain.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       request.log.warn({
-        route: "/v1/korean-stock/base-info",
+        route: "/v1/lh-notice/search",
         upstreamError: error.code || "proxy_error",
         upstreamMessage: error.message
-      }, "KRX upstream error");
+      }, "LH upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -4273,11 +4602,14 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         filters: normalized
       });
     } catch (error) {
+      // Classified network failures keep their 504/503 contract (with cause) via
+      // the global error handler; the module already redacted the error chain.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       request.log.warn({
-        route: "/v1/korean-stock/trade-info",
+        route: "/v1/lh-notice/detail",
         upstreamError: error.code || "proxy_error",
         upstreamMessage: error.message
-      }, "KRX upstream error");
+      }, "LH upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -4504,11 +4836,13 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
   }));
 
   // Shared handler for keyed data.go.kr GET lookups that reuse the operator's
-  // DATA_GO_KR_API_KEY server-side (national pension, FSC corp, G2B sanctions).
+  // DATA_GO_KR_API_KEY server-side (national pension, FSC corp, G2B sanctions
+  // and order plans). Normalizers receive the injected clock so date defaults
+  // stay testable; normalizers that ignore it are unaffected.
   async function handleKeyedDataGoKrLookup({ route, normalizer, fetcher, request, reply }) {
     let normalized;
     try {
-      normalized = normalizer(request.query || {});
+      normalized = normalizer(request.query || {}, now());
     } catch (error) {
       reply.code(400);
       return { error: "bad_request", message: error.message };
@@ -4673,6 +5007,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         serviceKey: config.molitApiKey
       });
     } catch (error) {
+      // Network failures (connect timeout, DNS, reset) are classified by the
+      // global error handler as 504 upstream_timeout / 503 upstream_unreachable
+      // with the socket cause; only opaque failures keep this 502.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       reply.code(502);
       return {
         error: "proxy_error",
@@ -4852,12 +5190,25 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
+    // An explicit `p_regday` is honored exactly as given; only the omitted
+    // default walks back to the latest published survey day.
     let upstream;
+    let effectiveQuery = normalized;
     try {
-      upstream = await proxyKamisRequest({
-        query: normalized,
-        apiKey: config.kamisApiKey
-      });
+      if (normalized.p_regday) {
+        upstream = await proxyKamisRequest({
+          query: normalized,
+          apiKey: config.kamisApiKey
+        });
+      } else {
+        const resolved = await resolveKamisRegday({
+          query: normalized,
+          apiKey: config.kamisApiKey,
+          now
+        });
+        upstream = resolved.upstream;
+        effectiveQuery = resolved.query;
+      }
     } catch (error) {
       reply.code(502);
       return {
@@ -4897,7 +5248,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         error: errorCode === "900" ? "upstream_auth_error" : "upstream_error",
         message: `KAMIS returned error code ${errorCode || upstream.statusCode}.`,
         upstream: parsed,
-        query: normalized,
+        query: effectiveQuery,
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs }
         }
       };
@@ -4905,17 +5256,17 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
 
     const data = parsed?.data || {};
     const items = Array.isArray(data.item) ? data.item : [];
-    if (!isKamisConditionConsistent(parsed?.condition, normalized)) {
+    if (!isKamisConditionConsistent(parsed?.condition, effectiveQuery)) {
       reply.code(502);
       return {
         error: "upstream_category_mismatch",
         message: "KAMIS applied filters other than the ones requested.",
-        query: normalized,
+        query: effectiveQuery,
         proxy: { name: config.proxyName, cache: { hit: false, ttl_ms: config.cacheTtlMs } }
       };
     }
     const payload = {
-      query: normalized,
+      query: effectiveQuery,
       items,
       upstream: {
         error_code: data.error_code || "001",
@@ -5168,10 +5519,10 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         dataGoKrApiKey: config.molitApiKey
       });
     } catch (error) {
-      const upstreamError = error.cause || error;
-      if (classifyUpstreamFailure(upstreamError)) {
-        throw upstreamError;
-      }
+      // Classified network failures answer 504 upstream_timeout / 503
+      // upstream_unreachable with the socket cause; the service key is redacted
+      // first because the failure message can carry the credential-bearing URL.
+      rethrowIfUpstreamNetworkFailure(error, config.molitApiKey);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5234,6 +5585,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaApiKey: config.foodsafetyKoreaApiKey
       });
     } catch (error) {
+      // Every source failed on a network error -> 504/503 with the socket cause
+      // (see mfds.js); a single unavailable source still degrades to 200+ warnings.
+      rethrowIfUpstreamNetworkFailure(error, [config.molitApiKey, config.foodsafetyKoreaApiKey]);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5294,6 +5648,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaApiKey: config.foodsafetyKoreaApiKey
       });
     } catch (error) {
+      // Every source failed on a network error -> 504/503 with the socket cause
+      // (see mfds.js); a single unavailable source still degrades to 200+ warnings.
+      rethrowIfUpstreamNetworkFailure(error, config.foodsafetyKoreaApiKey);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5354,6 +5711,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaApiKey: config.foodsafetyKoreaApiKey
       });
     } catch (error) {
+      // Every source failed on a network error -> 504/503 with the socket cause
+      // (see mfds.js); a single unavailable source still degrades to 200+ warnings.
+      rethrowIfUpstreamNetworkFailure(error, config.foodsafetyKoreaApiKey);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5414,6 +5774,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         foodsafetyKoreaApiKey: config.foodsafetyKoreaApiKey
       });
     } catch (error) {
+      // Every source failed on a network error -> 504/503 with the socket cause
+      // (see mfds.js); a single unavailable source still degrades to 200+ warnings.
+      rethrowIfUpstreamNetworkFailure(error, config.foodsafetyKoreaApiKey);
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5451,6 +5814,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       route: "korean-stock-search",
       q: normalized.q.toLowerCase(),
       basDd: normalized.basDd,
+      // A default-date request may resolve to an older trading day, so it must
+      // never share a cache entry with an explicit request for today's date.
+      basDdExplicit: normalized.basDdExplicit,
       market: normalized.market,
       limit: normalized.limit
     });
@@ -5488,6 +5854,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       result = await searchStocks({
         query: normalized.q,
         basDd: normalized.basDd,
+        basDdExplicit: normalized.basDdExplicit,
         market: normalized.market,
         limit: normalized.limit,
         apiKey: config.krxApiKey,
@@ -5495,6 +5862,11 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         cacheTtlMs: config.cacheTtlMs
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/search",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -5506,7 +5878,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       items: result.items,
       query: {
         q: normalized.q,
-        bas_dd: normalized.basDd,
+        bas_dd: result.basDd,
         market: normalized.market,
         limit: normalized.limit
       },
@@ -5530,93 +5902,6 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     return payload;
   });
 
-
-  app.get("/v1/naver-shopping/search", async (request, reply) => {
-    let normalized;
-
-    try {
-      normalized = normalizeNaverShoppingSearchQuery(request.query || {});
-    } catch (error) {
-      reply.code(400);
-      return {
-        error: "bad_request",
-        message: error.message
-      };
-    }
-
-    const cacheKey = makeCacheKey({
-      route: "naver-shopping-search",
-      q: normalized.query.toLowerCase(),
-      limit: normalized.limit,
-      page: normalized.page,
-      sort: normalized.sort
-    });
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        proxy: {
-          ...cached.proxy,
-          cache: {
-            hit: true,
-            ttl_ms: config.cacheTtlMs
-          }
-        }
-      };
-    }
-
-    let result;
-    try {
-      result = await fetchNaverShoppingSearch({
-        ...normalized,
-        clientId: config.naverSearchClientId,
-        clientSecret: config.naverSearchClientSecret
-      });
-    } catch (error) {
-      reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
-      const payload = {
-        error: error.code || "proxy_error",
-        message: error.message,
-        proxy: {
-          name: config.proxyName,
-          cache: {
-            hit: false,
-            ttl_ms: config.cacheTtlMs
-          }
-        }
-      };
-      if (error.upstreamStatusCode) {
-        payload.upstream = {
-          status_code: error.upstreamStatusCode,
-          body_snippet: error.upstreamBodySnippet || null
-        };
-      }
-      return payload;
-    }
-
-    const payload = {
-      items: result.items,
-      query: {
-        q: normalized.query,
-        limit: normalized.limit,
-        page: normalized.page,
-        sort: normalized.sort
-      },
-      meta: result.meta,
-      upstream: result.upstream,
-      proxy: {
-        name: config.proxyName,
-        cache: {
-          hit: false,
-          ttl_ms: config.cacheTtlMs
-        },
-        requested_at: new Date().toISOString()
-      }
-    };
-
-    cache.set(cacheKey, payload, config.cacheTtlMs);
-    return payload;
-  });
 
   app.get("/v1/coupang/products/search", async (request, reply) => {
     let normalized;
@@ -5746,6 +6031,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         clientSecret: config.naverSearchClientSecret
       });
     } catch (error) {
+      if (error.retryAfterSeconds != null) {
+        reply.header("retry-after", String(error.retryAfterSeconds));
+      }
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       const payload = {
         error: error.code || "proxy_error",
@@ -5758,11 +6046,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
           }
         }
       };
-      if (error.upstreamStatusCode) {
-        payload.upstream = {
-          status_code: error.upstreamStatusCode,
-          body_snippet: error.upstreamBodySnippet || null
-        };
+      const upstream = buildUpstreamErrorDetails(error);
+      if (upstream) {
+        payload.upstream = upstream;
       }
       return payload;
     }
@@ -6121,8 +6407,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       requested_at: new Date().toISOString()
     };
 
+    // Only successful bodies are cached, so a hidden upstream error envelope is
+    // never replayed from cache.
     if (upstream.statusCode >= 200 && upstream.statusCode < 300) {
       cache.set(cacheKey, payload, config.cacheTtlMs);
+    } else if (payload.retry_after) {
+      reply.header("retry-after", String(payload.retry_after));
     }
 
     return payload;
@@ -6439,15 +6729,23 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    let items;
+    let lookup;
     try {
-      items = await fetchBaseInfo({
+      lookup = await fetchBaseInfoItems({
         market: normalized.market,
         basDd: normalized.basDd,
+        basDdExplicit: normalized.basDdExplicit,
         codeList: [normalized.code],
-        apiKey: config.krxApiKey
+        apiKey: config.krxApiKey,
+        cache,
+        cacheTtlMs: config.cacheTtlMs
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/base-info",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -6455,11 +6753,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
+    const items = lookup.items;
     if (items.length === 0) {
       reply.code(404);
       return {
         error: "not_found",
-        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 을(를) 찾지 못했습니다.`
+        message: `기준일 ${lookup.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 을(를) 찾지 못했습니다.`
       };
     }
 
@@ -6470,7 +6769,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         market: normalized.market,
         code: normalized.code,
         codes: [normalized.code],
-        bas_dd: normalized.basDd
+        bas_dd: lookup.basDd
       },
       proxy: {
         name: config.proxyName,
@@ -6532,15 +6831,21 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
-    let items;
+    let lookup;
     try {
-      items = await fetchTradeInfo({
+      lookup = await fetchTradeInfoItems({
         market: normalized.market,
         basDd: normalized.basDd,
+        basDdExplicit: normalized.basDdExplicit,
         codeList: [normalized.code],
         apiKey: config.krxApiKey
       });
     } catch (error) {
+      request.log.warn({
+        route: "/v1/korean-stock/trade-info",
+        upstreamError: error.code || "proxy_error",
+        upstreamMessage: error.message
+      }, "KRX upstream error");
       reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 502);
       return {
         error: error.code || "proxy_error",
@@ -6548,11 +6853,12 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
       };
     }
 
+    const items = lookup.items;
     if (items.length === 0) {
       reply.code(404);
       return {
         error: "not_found",
-        message: `기준일 ${normalized.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 의 일별 시세를 찾지 못했습니다. 휴장일이거나 데이터가 아직 없을 수 있습니다.`
+        message: `기준일 ${lookup.basDd} 에 ${normalized.market} 시장 종목 ${normalized.code} 의 일별 시세를 찾지 못했습니다. 휴장일이거나 데이터가 아직 없을 수 있습니다.`
       };
     }
 
@@ -6563,7 +6869,7 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
         market: normalized.market,
         code: normalized.code,
         codes: [normalized.code],
-        bas_dd: normalized.basDd
+        bas_dd: lookup.basDd
       },
       proxy: {
         name: config.proxyName,
@@ -6697,7 +7003,6 @@ module.exports = {
   normalizeOpinetDetailQuery,
   normalizeNeisSchoolMealQuery,
   normalizeNeisSchoolSearchQuery,
-  normalizeNaverShoppingSearchQuery,
   normalizeBccardEatplSearchQuery,
   normalizeNtsBusinessStatusQuery,
   normalizeNtsBusinessValidateQuery,
@@ -6711,6 +7016,7 @@ module.exports = {
   normalizeSeoulSubwayQuery,
   normalizeVWorldPriceQuery,
   normalizeVWorldSearchQuery,
+  parseQueryStringWithEucKrFallback,
   proxyAirKoreaRequest,
   proxyAssemblyRequest,
   proxyData4LibraryRequest,
@@ -6729,7 +7035,6 @@ module.exports = {
   proxyNhisLongTermCareRequest,
   fetchKakaoLocalEndpoint,
   fetchKakaoMobilityDirections,
-  fetchNaverShoppingSearch,
   fetchBccardEatplSearch,
   proxyOpinetRequest,
   proxySeoulBikeRealtimeRequest,

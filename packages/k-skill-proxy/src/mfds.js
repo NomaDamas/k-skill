@@ -1,3 +1,7 @@
+const { classifyUpstreamFailure } = require("./upstream-errors");
+
+const MFDS_UPSTREAM_TIMEOUT_MS = 20000;
+
 const DATA_GO_KR_UPSTREAM_BASE_URL = "https://apis.data.go.kr";
 const DRUG_EASY_ENDPOINT = `${DATA_GO_KR_UPSTREAM_BASE_URL}/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList`;
 const SAFE_STAD_ENDPOINT = `${DATA_GO_KR_UPSTREAM_BASE_URL}/1471000/SafeStadDrugService/getSafeStadDrugInq`;
@@ -16,6 +20,13 @@ const INSPECTION_FAIL_LIVE_URL = "https://openapi.foodsafetykorea.go.kr/api/{api
 
 const HEALTH_FOOD_PRODUCT_REPORT_SAMPLE_URL = "https://openapi.foodsafetykorea.go.kr/api/sample/I0030/json/{start}/{end}";
 const HEALTH_FOOD_PRODUCT_REPORT_LIVE_URL = "https://openapi.foodsafetykorea.go.kr/api/{apiKey}/I0030/json/{start}/{end}";
+
+// FoodSafetyKorea feeds paginate with {start}/{end} row indices and report `total_count` per
+// request. The public `sample` key always answers with its first 5 rows and ignores the range, so
+// only live-key requests are paged.
+const FOODSAFETYKOREA_CONTINUATION_PAGE_SIZE = 1000;
+const FOODSAFETYKOREA_MAX_ROWS = 5000;
+const FOODSAFETYKOREA_MAX_REQUESTS = 12;
 
 class ProxyError extends Error {
   constructor(message, { code = "proxy_error", statusCode = 502, cause } = {}) {
@@ -116,7 +127,10 @@ async function requestJson(url, { params, fetchImpl = global.fetch } = {}) {
       headers: {
         accept: "application/json",
         "user-agent": "k-skill-proxy/1.0"
-      }
+      },
+      // Without a deadline a blackholed upstream (data.go.kr / foodsafetykorea)
+      // left the route hanging past every client timeout.
+      signal: AbortSignal.timeout(MFDS_UPSTREAM_TIMEOUT_MS)
     });
   } catch (error) {
     throw new ProxyError(error.message, { cause: error });
@@ -143,6 +157,24 @@ async function requestJson(url, { params, fetchImpl = global.fetch } = {}) {
     throw new ProxyError(`Upstream response was not valid JSON (content-type: ${contentType}).`, {
       code: "upstream_invalid_response"
     });
+  }
+}
+
+// The food-safety adapters aggregate several upstream sources and deliberately
+// degrade to `warnings` when one source is unavailable, so the surviving sources
+// keep answering 200. When every source failed on a network error the route must
+// still surface the documented 503 upstream_unreachable / 504 upstream_timeout
+// contract, so keep the first classified network failure and rethrow it once the
+// aggregation has finished.
+function collectSourceFailure(error, failures) {
+  if (classifyUpstreamFailure(error)) {
+    failures.push(error);
+  }
+}
+
+function throwIfAllSourcesFailed({ failures, successes }) {
+  if (successes === 0 && failures.length > 0) {
+    throw failures[0];
   }
 }
 
@@ -188,17 +220,6 @@ function extractDataGoItems(payload) {
   return [];
 }
 
-function extractFoodRecallRows(payload) {
-  const raw = payload?.I0490?.row;
-  if (Array.isArray(raw)) {
-    return raw.filter((item) => item && typeof item === "object");
-  }
-  if (raw && typeof raw === "object") {
-    return [raw];
-  }
-  return [];
-}
-
 function extractFoodSafetyKoreaRows(payload, serviceCode) {
   const raw = payload?.[serviceCode]?.row;
   if (Array.isArray(raw)) {
@@ -208,6 +229,105 @@ function extractFoodSafetyKoreaRows(payload, serviceCode) {
     return [raw];
   }
   return [];
+}
+
+function readFoodSafetyKoreaTotalCount(payload, serviceCode) {
+  const parsed = Number.parseInt(String(payload?.[serviceCode]?.total_count ?? ""), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function buildFoodSafetyKoreaPageUrl(baseUrl, { start, end, filterParam, filterValue }) {
+  const url = baseUrl.replace("{start}", String(start)).replace("{end}", String(end));
+  if (!filterParam || !filterValue) {
+    return url;
+  }
+
+  return `${url}/${filterParam}=${encodeURIComponent(filterValue)}`;
+}
+
+// Walks the FoodSafetyKorea {start}/{end} range until total_count is exhausted (or a feed reports
+// no rows) instead of stopping at the first page, so matches beyond the first page are reachable.
+// Requests are bounded by FOODSAFETYKOREA_MAX_ROWS and FOODSAFETYKOREA_MAX_REQUESTS; a feed that
+// omits total_count is treated as a single page.
+async function fetchPagedFoodSafetyKoreaRows({
+  baseUrl,
+  serviceCode,
+  firstPageSize,
+  filterParam,
+  filterValue,
+  allowPaging,
+  fetchImpl
+}) {
+  const rows = [];
+  let start = 1;
+  let requests = 0;
+  let totalCount = null;
+
+  while (start <= FOODSAFETYKOREA_MAX_ROWS && requests < FOODSAFETYKOREA_MAX_REQUESTS) {
+    const pageSize =
+      requests === 0
+        ? firstPageSize
+        : Math.max(firstPageSize, FOODSAFETYKOREA_CONTINUATION_PAGE_SIZE);
+    let end = Math.min(start + pageSize - 1, FOODSAFETYKOREA_MAX_ROWS);
+    if (totalCount !== null) {
+      end = Math.min(end, totalCount);
+    }
+    if (end < start) {
+      break;
+    }
+
+    const pagePayload = await requestJson(
+      buildFoodSafetyKoreaPageUrl(baseUrl, { start, end, filterParam, filterValue }),
+      { fetchImpl }
+    );
+    const pageRows = extractFoodSafetyKoreaRows(pagePayload, serviceCode);
+
+    requests += 1;
+    rows.push(...pageRows);
+    totalCount = readFoodSafetyKoreaTotalCount(pagePayload, serviceCode);
+
+    if (!allowPaging || pageRows.length === 0) {
+      break;
+    }
+    if (totalCount === null || rows.length >= totalCount) {
+      break;
+    }
+
+    start = end + 1;
+  }
+
+  return rows;
+}
+
+// Uses the upstream filter parameter when the service exposes one for the queried field, and falls
+// back to walking the feed when that filter answers with nothing, so an ignored or narrower
+// upstream filter can never turn into a silent empty result.
+async function fetchFoodSafetyKoreaRowsForQuery({
+  baseUrl,
+  serviceCode,
+  firstPageSize,
+  query,
+  filterParam,
+  allowPaging,
+  fetchImpl
+}) {
+  if (filterParam) {
+    const filteredRows = await fetchPagedFoodSafetyKoreaRows({
+      baseUrl,
+      serviceCode,
+      firstPageSize,
+      filterParam,
+      filterValue: query,
+      allowPaging,
+      fetchImpl
+    });
+
+    if (filteredRows.length > 0) {
+      return filteredRows;
+    }
+  }
+
+  return fetchPagedFoodSafetyKoreaRows({ baseUrl, serviceCode, firstPageSize, allowPaging, fetchImpl });
 }
 
 function normalizeHealthFoodIngredientRow(item) {
@@ -407,45 +527,68 @@ async function fetchMfdsFoodSafetySearch({
   fetchImpl = global.fetch
 }) {
   const warnings = [];
-  const items = [];
-
-  if (dataGoKrApiKey) {
-    try {
-      const improperPayload = await requestJson(IMPROPER_FOOD_ENDPOINT, {
-        fetchImpl,
-        params: {
-          ServiceKey: dataGoKrApiKey,
-          pageNo: 1,
-          numOfRows: Math.max(limit * 5, 50),
-          type: "json"
-        }
-      });
-      items.push(...extractDataGoItems(improperPayload).map(normalizeImproperFoodItem));
-    } catch (error) {
-      warnings.push(error.message);
-    }
-  } else {
-    warnings.push("DATA_GO_KR_API_KEY is not configured on the proxy server, so improper-food live lookups were skipped.");
-  }
+  const failures = [];
+  let successes = 0;
+  const rowCount = Math.max(limit * 5, 50);
 
   const recallUrl = foodsafetyKoreaApiKey
     ? FOOD_RECALL_LIVE_URL.replace("{apiKey}", encodeURIComponent(foodsafetyKoreaApiKey))
     : FOOD_RECALL_SAMPLE_URL;
 
-  try {
-    const recallPayload = await requestJson(
-      recallUrl
-        .replace("{start}", "1")
-        .replace("{end}", String(Math.max(limit * 5, 50))),
-      { fetchImpl }
-    );
-    items.push(...extractFoodRecallRows(recallPayload).map(normalizeFoodRecallRow));
-    if (!foodsafetyKoreaApiKey) {
-      warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so recall results use the public sample feed.");
-    }
-  } catch (error) {
-    warnings.push(error.message);
-  }
+  // Both sources are independent, so they are queried concurrently: a sequential
+  // wait would add their deadlines together (~2x the proxy timeout budget) on top
+  // of what the caller is allowed to wait for.
+  const [improperItems, recallItems] = await Promise.all([
+    (async () => {
+      if (!dataGoKrApiKey) {
+        warnings.push("DATA_GO_KR_API_KEY is not configured on the proxy server, so improper-food live lookups were skipped.");
+        return [];
+      }
+      try {
+        const improperPayload = await requestJson(IMPROPER_FOOD_ENDPOINT, {
+          fetchImpl,
+          params: {
+            ServiceKey: dataGoKrApiKey,
+            pageNo: 1,
+            numOfRows: rowCount,
+            type: "json"
+          }
+        });
+        successes += 1;
+        return extractDataGoItems(improperPayload).map(normalizeImproperFoodItem);
+      } catch (error) {
+        collectSourceFailure(error, failures);
+        warnings.push(error.message);
+        return [];
+      }
+    })(),
+    (async () => {
+      try {
+        // I0490 exposes no product-name filter, so the whole recall feed has to be walked before the
+        // query can be matched locally.
+        const recallRows = await fetchPagedFoodSafetyKoreaRows({
+          baseUrl: recallUrl,
+          serviceCode: "I0490",
+          firstPageSize: rowCount,
+          allowPaging: Boolean(foodsafetyKoreaApiKey),
+          fetchImpl
+        });
+        successes += 1;
+        if (!foodsafetyKoreaApiKey) {
+          warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so recall results use the public sample feed.");
+        }
+        return recallRows.map(normalizeFoodRecallRow);
+      } catch (error) {
+        collectSourceFailure(error, failures);
+        warnings.push(error.message);
+        return [];
+      }
+    })()
+  ]);
+
+  const items = [...improperItems, ...recallItems];
+
+  throwIfAllSourcesFailed({ failures, successes });
 
   return {
     query,
@@ -468,28 +611,56 @@ async function fetchHealthFoodIngredient({ query, limit, foodsafetyKoreaApiKey, 
     : HEALTH_FOOD_PRODUCT_SAMPLE_URL;
 
   const items = [];
+  const failures = [];
+  let successes = 0;
 
-  const [ingredientPayload, productPayload] = await Promise.all([
-    requestJson(
-      ingredientUrl.replace("{start}", "1").replace("{end}", String(fetchCount)),
-      { fetchImpl }
-    ).catch((error) => { warnings.push(`I-0040: ${error.message}`); return null; }),
-    requestJson(
-      productUrl.replace("{start}", "1").replace("{end}", String(fetchCount)),
-      { fetchImpl }
-    ).catch((error) => { warnings.push(`I-0050: ${error.message}`); return null; })
+  // I-0040 filters on APLC_RAWMTRL_NM (the queried ingredient name); I-0050 only filters on CHNG_DT,
+  // so that feed is walked end to end (456 rows) and matched locally.
+  const [ingredientRows, productRows] = await Promise.all([
+    fetchFoodSafetyKoreaRowsForQuery({
+      baseUrl: ingredientUrl,
+      serviceCode: "I-0040",
+      firstPageSize: fetchCount,
+      query,
+      filterParam: "APLC_RAWMTRL_NM",
+      allowPaging: Boolean(foodsafetyKoreaApiKey),
+      fetchImpl
+    }).then((rows) => {
+      successes += 1;
+      return rows;
+    }).catch((error) => {
+      collectSourceFailure(error, failures);
+      warnings.push(`I-0040: ${error.message}`);
+      return null;
+    }),
+    fetchPagedFoodSafetyKoreaRows({
+      baseUrl: productUrl,
+      serviceCode: "I-0050",
+      firstPageSize: fetchCount,
+      allowPaging: Boolean(foodsafetyKoreaApiKey),
+      fetchImpl
+    }).then((rows) => {
+      successes += 1;
+      return rows;
+    }).catch((error) => {
+      collectSourceFailure(error, failures);
+      warnings.push(`I-0050: ${error.message}`);
+      return null;
+    })
   ]);
 
-  if (ingredientPayload) {
-    items.push(...extractFoodSafetyKoreaRows(ingredientPayload, "I-0040").map(normalizeHealthFoodIngredientRow));
+  if (ingredientRows) {
+    items.push(...ingredientRows.map(normalizeHealthFoodIngredientRow));
   }
-  if (productPayload) {
-    items.push(...extractFoodSafetyKoreaRows(productPayload, "I-0050").map(normalizeHealthFoodProductRow));
+  if (productRows) {
+    items.push(...productRows.map(normalizeHealthFoodProductRow));
   }
 
   if (!foodsafetyKoreaApiKey) {
     warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so results use the public sample feed.");
   }
+
+  throwIfAllSourcesFailed({ failures, successes });
 
   const filtered = filterByName(items, query, ["ingredient_name"]).slice(0, limit);
 
@@ -503,6 +674,8 @@ async function fetchHealthFoodIngredient({ query, limit, foodsafetyKoreaApiKey, 
 
 async function fetchInspectionFail({ query, limit, foodsafetyKoreaApiKey, fetchImpl = global.fetch }) {
   const warnings = [];
+  const failures = [];
+  let successes = 0;
   const fetchCount = Math.max(limit * 10, 100);
 
   const url = foodsafetyKoreaApiKey
@@ -511,14 +684,25 @@ async function fetchInspectionFail({ query, limit, foodsafetyKoreaApiKey, fetchI
 
   let items = [];
   try {
-    const payload = await requestJson(
-      url.replace("{start}", "1").replace("{end}", String(fetchCount)),
-      { fetchImpl }
-    );
-    items = extractFoodSafetyKoreaRows(payload, "I2620").map(normalizeInspectionFailRow);
+    // I2620 filters on PRDTNM; the local filter also matches company and test item, so a product
+    // name miss falls back to walking the full feed (559 rows).
+    const rows = await fetchFoodSafetyKoreaRowsForQuery({
+      baseUrl: url,
+      serviceCode: "I2620",
+      firstPageSize: fetchCount,
+      query,
+      filterParam: "PRDTNM",
+      allowPaging: Boolean(foodsafetyKoreaApiKey),
+      fetchImpl
+    });
+    items = rows.map(normalizeInspectionFailRow);
+    successes += 1;
   } catch (error) {
+    collectSourceFailure(error, failures);
     warnings.push(error.message);
   }
+
+  throwIfAllSourcesFailed({ failures, successes });
 
   if (!foodsafetyKoreaApiKey) {
     warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so results use the public sample feed.");
@@ -542,31 +726,74 @@ async function fetchHealthFoodProductReport({ query, limit, foodsafetyKoreaApiKe
     ? HEALTH_FOOD_PRODUCT_REPORT_LIVE_URL.replace("{apiKey}", encodeURIComponent(foodsafetyKoreaApiKey))
     : HEALTH_FOOD_PRODUCT_REPORT_SAMPLE_URL;
 
-  const items = [];
+  const failures = [];
+  let successes = 0;
 
-  const searchPaths = [
-    `/PRDLST_NM=${encodeURIComponent(query)}`,
-    `/RAWMTRL_NM=${encodeURIComponent(query)}`
+  // I0030 holds 46k+ rows, so it is queried with the only server-side filters it supports
+  // (PRDLST_NM, BSSH_NM) and the filtered totals are paged instead of walking the whole feed. A
+  // RAWMTRL_NM request used to be sent here as well, but I0030 reports that parameter as
+  // unsupported and answers with unfiltered rows, which silently returned unrelated products.
+  const searchFilters = [
+    { filterParam: "PRDLST_NM", filterValue: query },
+    { filterParam: "BSSH_NM", filterValue: query }
   ];
 
-  const fetches = searchPaths.map((path) =>
-    requestJson(
-      baseUrl.replace("{start}", "1").replace("{end}", String(fetchCount)) + path,
-      { fetchImpl }
-    ).catch((error) => { warnings.push(`I0030: ${error.message}`); return null; })
+  const fetches = searchFilters.map(({ filterParam, filterValue }) =>
+    fetchPagedFoodSafetyKoreaRows({
+      baseUrl,
+      serviceCode: "I0030",
+      firstPageSize: fetchCount,
+      filterParam,
+      filterValue,
+      allowPaging: Boolean(foodsafetyKoreaApiKey),
+      fetchImpl
+    }).then((rows) => {
+      successes += 1;
+      return rows;
+    }).catch((error) => {
+      collectSourceFailure(error, failures);
+      warnings.push(`I0030: ${error.message}`);
+      return null;
+    })
   );
 
   const results = await Promise.all(fetches);
   const seen = new Set();
+  const items = [];
 
-  for (const payload of results) {
-    if (!payload) continue;
-    for (const row of extractFoodSafetyKoreaRows(payload, "I0030")) {
+  const collect = (rows) => {
+    for (const row of rows) {
       const key = row.PRDLST_REPORT_NO || `${row.PRDLST_NM}-${row.BSSH_NM}`;
       if (!seen.has(key)) {
         seen.add(key);
         items.push(normalizeProductReportRow(row));
       }
+    }
+  };
+
+  results.forEach((rows) => {
+    if (rows) {
+      collect(rows);
+    }
+  });
+
+  const nameFields = ["product_name", "company_name", "raw_materials"];
+  let matched = filterByName(items, query, nameFields);
+
+  if (matched.length === 0) {
+    // I0030 exposes no filter for raw materials, so a query carried only by raw materials would
+    // otherwise come back empty; walk a bounded window of the feed and match it locally.
+    const fallbackRows = await fetchPagedFoodSafetyKoreaRows({
+      baseUrl,
+      serviceCode: "I0030",
+      firstPageSize: fetchCount,
+      allowPaging: Boolean(foodsafetyKoreaApiKey),
+      fetchImpl
+    }).catch((error) => { warnings.push(`I0030: ${error.message}`); return null; });
+
+    if (fallbackRows) {
+      collect(fallbackRows);
+      matched = filterByName(items, query, nameFields);
     }
   }
 
@@ -574,9 +801,11 @@ async function fetchHealthFoodProductReport({ query, limit, foodsafetyKoreaApiKe
     warnings.push("FOODSAFETYKOREA_API_KEY is not configured on the proxy server, so results use the public sample feed.");
   }
 
+  throwIfAllSourcesFailed({ failures, successes });
+
   return {
     query,
-    items: items.slice(0, limit),
+    items: matched.slice(0, limit),
     warnings: warnings.length > 0 ? warnings : undefined,
     note: "이 결과는 공식 건강기능식품 품목제조 신고사항 기반 참고 정보이며, 섭취 가능 여부의 최종 판단은 의료진 상담이 우선입니다."
   };

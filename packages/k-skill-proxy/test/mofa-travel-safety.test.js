@@ -42,7 +42,7 @@ test("MOFA route injects service key, normalizes success, and caches", async (t)
       }
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -56,7 +56,7 @@ test("MOFA route injects service key, normalizes success, and caches", async (t)
   assert.equal(first.json().proxy.cache.hit, false);
   assert.equal(second.json().proxy.cache.hit, true);
   assert.match(calls[0], /cond%5Bcountry_iso_alp2%3A%3AEQ%5D=RU/);
-  assert.doesNotMatch(JSON.stringify(first.json()), /mofa-secret/);
+  assert.doesNotMatch(JSON.stringify(first.json()), /mofa-secret-example/);
 });
 
 test("MOFA route reports missing key", async (t) => {
@@ -100,7 +100,7 @@ test("MOFA route surfaces upstream connect timeout as 504 upstream_timeout with 
   global.fetch = async () => {
     throw mofaFetchFailure("UND_ERR_CONNECT_TIMEOUT");
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -120,7 +120,7 @@ test("MOFA route surfaces DNS failures as 503 upstream_unreachable", async (t) =
   global.fetch = async () => {
     throw mofaFetchFailure("ENOTFOUND");
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -140,7 +140,7 @@ test("MOFA route keeps upstream HTTP error responses distinct from network failu
   global.fetch = async () => new Response(JSON.stringify({
     response: { header: { resultCode: "30", resultMsg: "SERVICE KEY IS NOT REGISTERED" }, body: {} }
   }), { status: 403, headers: { "content-type": "application/json" } });
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -161,7 +161,7 @@ test("MOFA route classifies a wrapped bare `fetch failed` as 503 upstream_unreac
     wrapper.cause = new TypeError("fetch failed");
     throw wrapper;
   };
-  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret" } });
+  const app = buildServer({ env: { DATA_GO_KR_API_KEY: "mofa-secret-example" } });
   t.after(async () => {
     global.fetch = originalFetch;
     await app.close();
@@ -173,5 +173,5 @@ test("MOFA route classifies a wrapped bare `fetch failed` as 503 upstream_unreac
   });
   assert.equal(response.statusCode, 503);
   assert.equal(response.json().error, "upstream_unreachable");
-  assert.doesNotMatch(response.body, /mofa-secret|serviceKey=/);
+  assert.doesNotMatch(response.body, /mofa-secret-example|serviceKey=/);
 });
