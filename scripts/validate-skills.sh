@@ -57,6 +57,7 @@ done < <(
     ! -name python-packages \
     ! -name scripts \
     ! -name examples \
+    ! -name hermes-plugin \
     ! -name infra \
     ! -name tools \
     -print0

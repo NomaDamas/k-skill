@@ -1,0 +1,1894 @@
+[
+  {
+    "name": "animal-pharmacy-search",
+    "description": "홍익메디케어 공개 MCP 서버로 지역별 동물약국 목록, 동물용의약품 검색, 최근 6개월 구매 이력 기반 취급 약국을 조회한다. 조회 전용.",
+    "category": "health",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "서울 강남구 동물약국 알려줘",
+      "목포시 동물약국 리스트 찾아줘",
+      "동물용 항생제 제품 뭐가 있어?",
+      "오리더밀 취급하는 서울 약국 찾아줘",
+      "피부 관련 동물약 파는 인천 약국 있어?"
+    ]
+  },
+  {
+    "name": "assembly-bill-vote-search",
+    "description": "열린국회정보 Open API를 k-skill-proxy 경유로 호출해 의안 검색·상세와 국회의원 본회의 표결정보를 조회한다. 조회 전용.",
+    "category": "civic",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "간호법 의안 검색해줘",
+      "BILL_ID로 의안 상세 보여줘",
+      "21대 국회 특정 의안 표결에서 의원별 찬반 알려줘"
+    ]
+  },
+  {
+    "name": "bccard-eatpl-search",
+    "description": "대한민국 맛집, 음식점, 식당, 밥집, 카페, 커피, 디저트, 고깃집, 회식 장소를 지역·역·동네 기준으로 찾아 준다. Use when the user asks for 맛집, 음식점, 좋은 식당, 근처 카페, 밥 먹을 곳, 회식하기 좋은 곳, 분위기 좋은 맛집, or Korean restaurant and cafe recommendations. 별점이 아니라 최근 결제 데이터 기반 매출 상위로 정리한다.",
+    "category": "food",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "맛집 추천해줘\", \"근처 음식점\", \"밥 먹을 곳\", \"분위기 좋은 식당",
+      "강남역 근처 고기집 중 매출 높은 곳",
+      "을지로입구역 주변 외국인이 많이 가는 카페",
+      "성수동에서 회식하기 좋은 맛집",
+      "이 동네 카페\", \"디저트 맛집\", \"회식 장소"
+    ]
+  },
+  {
+    "name": "biz-health-check",
+    "description": "사업자등록번호 하나로 \"이 사업자, 실제 문제 없나\"를 확인한다 — 국세청 사업자등록 상태·국민연금 가입 사업장·국세 체납 명단·금융위 법인개요·조달청 부정당제재·지방행정 인허가 영업상태를 무료 공공 데이터로 교차 조회해 사실만 병렬하는 실사 리포트(점수·등급·위험 판정 없음).",
+    "category": "business",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "이 사업자(거래처/의뢰인) 실제 문제 없는지 한 번에 확인해줘",
+      "○○○-○○-○○○○○ 살아있는 회사야? 직원은 좀 있고, 체납·입찰 제재 이력은 없어?"
+    ]
+  },
+  {
+    "name": "boim-business-search",
+    "description": "보임(BOIM, boim.io)의 무인증 공개 검색 주소로 한국 전국 전 업종 업체(지역×업종·상호), 공공 조달 실적이 있는 업체(품명·업종), 공공기관 진행 중 입찰 공고(나라장터·국방전자조달·LH·한국수자원공사·누리장터)를 한 번에 찾는다. '세종 보람동 미용실', '교통안전표지 납품 실적 업체', '학교 안전 입찰 공고'처럼 물을 때 사용한다. 결과는 관련도 순(평가·순위 아님)이고 출처 한 줄과 전체 목록 주소를 함께 준다. Use when the user wants to find businesses in Korea by region and industry, vendors with Korean public-procurement records, or open Korean public tenders.",
+    "category": "business",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "세종 보람동 미용실 찾아줘\", \"대전 유성구 인쇄 업체 어디 있어?",
+      "교통안전표지 공공기관 납품 실적 있는 업체 알려줘\", \"복사용지 조달 납품 업체",
+      "학교 안전 관련 입찰 공고 지금 뭐 있어?\", \"교통표지 입찰 마감 언제야?",
+      "Find hair salons in Boram-dong, Sejong\"처럼 영어로 물으면 질의어를 한국어 지역·업종명으로 바꿔 보낸다."
+    ]
+  },
+  {
+    "name": "bok-ecos-stats",
+    "description": "한국은행 ECOS Open API로 기준금리, 환율, 소비자물가지수, 통화량 등 중앙은행 경제통계 시계열과 100대 핵심지표를 조회한다. Use when the user asks 기준금리, 환율 추이, 물가지수, M2, 국고채 금리, 거시경제 통계. Not for 주식 시세(korean-stock-search) or KOSIS 일반 통계(kosis-stats).",
+    "category": "data",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "지금 한국은행 기준금리 몇 %야?",
+      "최근 원달러 환율 추이 보여줘",
+      "소비자물가지수 월별로 뽑아줘",
+      "M2 통화량 통계 찾아줘",
+      "ECOS에서 국고채 3년 금리 조회해줘"
+    ]
+  },
+  {
+    "name": "building-register-search",
+    "description": "Use when the user asks to look up a Korean building-register title record by address, PNU, legal-dong code, or parcel number.",
+    "category": "real-estate",
+    "profiles": [
+      "vault",
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "bunjang-search",
+    "description": "번개장터 검색, 상세조회, 찜, 채팅, 대량 수집, AI TOON export를 bunjang-cli로 안내한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "marketplace",
+    "profiles": [
+      "vault",
+      "browser",
+      "action:commerce"
+    ],
+    "triggers": [
+      "번개장터에서 아이폰 검색해줘",
+      "번장에서 이 상품 상세 봐줘",
+      "여러 페이지 모아서 JSON으로 저장해줘",
+      "AI 평가용으로 번개장터 결과를 chunk 로 만들어줘"
+    ]
+  },
+  {
+    "name": "cheap-gas-nearby",
+    "description": "Use when the user asks for nearby cheapest gas stations or 근처 가장 싼 주유소. Always ask the user's current location first, then use Kakao Map anchor resolution plus official Opinet fuel-price APIs.",
+    "category": "transport",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "근처 가장 싼 주유소 찾아줘",
+      "서울역 근처 휘발유 제일 싼 데 어디야?",
+      "강남에서 경유 싼 주유소 몇 군데만 보여줘",
+      "지금 여기 근처 셀프주유소 중 싼 순으로 알려줘"
+    ]
+  },
+  {
+    "name": "company-analysis",
+    "description": "국내·해외 상장기업의 공개 공시와 실적발표를 대조해 3대 재무제표의 변화, 사업·경쟁구도, 주요 일정과 조회 시점 주가를 여섯 섹션의 한국어 채팅 분석으로 정리한다. 기업분석·실적발표 정리·수치 검증에 사용하며 매매 추천이나 PDF 보고서는 만들지 않는다.",
+    "category": "finance",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "consumer-price-safety-search",
+    "description": "한국소비자원 참가격과 소비자24 물품·리콜정보를 공식 API로 조회한다. 현재는 서비스별 인증키·메뉴 매핑을 검증하는 draft scaffold다.",
+    "category": "consumer",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "corporate-registration-consulting",
+    "description": "법인등기소/인터넷등기소 상업등기 신청을 처음 하는 사용자를 위해 일반 영리 주식회사 발기설립 절차, 정관·첨부서류 실제 HWP 양식 작성, 등록면허세·과밀억제권역 중과 체크, rhwp 기반 순차 검토 흐름을 참고용으로 안내한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+    "category": "legal-documents",
+    "profiles": [
+      "vault",
+      "browser",
+      "legal"
+    ],
+    "triggers": [
+      "주식회사 법인 설립등기 처음 하는데 전체 절차 알려줘",
+      "법인명, 이사, 주소를 넣어 정관과 첨부서류 초안을 만들어줘",
+      "등록면허세, 과밀억제권역 중과, 소프트웨어 업종 감면/중과 제외 가능성을 체크해줘",
+      "등기 신청서류를 HWP로 만들어야 해서 rhwp-edit/k-skill-rhwp로 채울 수 있게 준비해줘"
+    ]
+  },
+  {
+    "name": "coupang-product-search",
+    "description": "k-skill-proxy의 공식 Coupang Partners API 경로로 쿠팡 상품을 검색하고 로켓배송·가격 후보를 비교한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "retail",
+    "profiles": [
+      "vault",
+      "browser",
+      "action:commerce"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "court-auction-notice-search",
+    "description": "Browse 대법원경매정보(courtauction.go.kr) 부동산 매각공고 by 매각기일·법원·기일/기간 입찰, expand each notice into 사건번호·용도·주소·감정평가액·최저매각가, search property items by free conditions(지역·용도·가격·면적·유찰횟수), and look up a case directly by 법원+사건번호. Read-only, slow-by-design (~2s/call) to avoid IP blocks. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+    "category": "real-estate",
+    "profiles": [
+      "vault",
+      "browser",
+      "legal"
+    ],
+    "triggers": [
+      "오늘/내일 어디서 부동산 경매 열려?",
+      "서울중앙지방법원 2026-04-27 매각공고 보여줘",
+      "기일입찰 vs 기간입찰만 나눠서 보여줘",
+      "이 매각공고 안의 사건번호/용도/주소/감정평가액 다 보여줘",
+      "사건번호 2024타경100001 진행 상황 알려줘",
+      "서울 강남구 아파트 최저가 5억 이하 유찰 1회 이상 물건 찾아줘",
+      "법원사무소 코드 표 줘"
+    ]
+  },
+  {
+    "name": "court-payment-order-assistant",
+    "description": "법원 전자소송 지급명령 신청을 위해 채권자·채무자·청구금액·청구원인·증빙 정보를 인터뷰하고, 신청서 초안과 공식 전자소송 브라우저 입력 handoff를 준비한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+    "category": "legal",
+    "profiles": [
+      "vault",
+      "browser",
+      "legal"
+    ],
+    "triggers": [
+      "떼인 돈 지급명령 신청 준비해줘",
+      "전자소송에서 지급명령 신청서 입력 도와줘",
+      "채무자 정보랑 증빙으로 지급명령 초안 만들어줘",
+      "로그인은 내가 할 테니 입력할 내용 정리해줘"
+    ]
+  },
+  {
+    "name": "d2b-notice-search",
+    "description": "국방전자조달시스템(D2B) 공개 입찰공고 검색 화면에서 공고건명·공고구분·공고/개찰일·G2B공고번호·발주기관 조건으로 공고를 조회한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+    "category": "procurement",
+    "profiles": [
+      "proxy",
+      "vault",
+      "browser",
+      "legal"
+    ],
+    "triggers": [
+      "국방전자조달 냉난방기 공고 찾아줘",
+      "D2B 긴급 물품 공고 조회",
+      "국방전자조달시스템에서 G2B공고번호로 찾아줘",
+      "방위사업청 입찰공고 최신 목록 보여줘"
+    ]
+  },
+  {
+    "name": "daangn-cars-search",
+    "description": "당근중고차 공개 웹 데이터로 차량을 검색하고, 돌쇠에서는 공식 계정 표면에서 문의·찜·거래 준비까지 진행한다.",
+    "category": "automotive",
+    "profiles": [
+      "proxy",
+      "action:commerce"
+    ],
+    "triggers": [
+      "당근중고차 합정동 레이 찾아봐",
+      "당근에서 천만원 이하 중고차 검색",
+      "이 당근 중고차 URL 상세 봐줘"
+    ]
+  },
+  {
+    "name": "daangn-jobs-search",
+    "description": "당근알바 공개 웹 데이터로 공고를 검색하고, 돌쇠에서는 공식 계정 표면에서 지원서 작성·채팅·승인 기반 전송까지 진행한다.",
+    "category": "jobs",
+    "profiles": [
+      "proxy",
+      "vault",
+      "browser",
+      "action:submission"
+    ],
+    "triggers": [
+      "당근알바 합정동 카페 찾아봐",
+      "홍대 근처 주말 알바 검색",
+      "이 당근알바 공고 상세 봐줘"
+    ]
+  },
+  {
+    "name": "daangn-realty-search",
+    "description": "당근부동산 공개 웹 데이터로 매물을 검색하고, 돌쇠에서는 공식 계정 표면에서 문의·방문예약·계약 준비까지 진행한다.",
+    "category": "real-estate",
+    "profiles": [
+      "action:commerce"
+    ],
+    "triggers": [
+      "당근부동산 매교동 월세 찾아봐",
+      "수원 팔달구 상가 매물 봐줘\" (`--expand`로 인접 동까지)",
+      "이 당근부동산 URL 상세 요약해줘"
+    ]
+  },
+  {
+    "name": "daangn-used-goods-search",
+    "description": "당근 중고거래 공개 웹 데이터로 매물을 검색하고, 돌쇠에서는 공식 계정 표면에서 찜·채팅·거래 준비까지 진행한다.",
+    "category": "marketplace",
+    "profiles": [
+      "proxy",
+      "action:commerce"
+    ],
+    "triggers": [
+      "당근에서 맥북 찾아봐",
+      "합정동 아이폰 매물 검색",
+      "이 당근 중고거래 URL 상세 봐줘"
+    ]
+  },
+  {
+    "name": "daishin-report-search",
+    "description": "대신증권 리포트 GitHub Pages 미러에서 최신 HTML 리포트 목록과 원문/설명 페이지를 조회한다.",
+    "category": "finance",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "대신증권 최신 리포트 보여줘",
+      "대신증권 반도체 리포트 찾아줘",
+      "20260511082352 리포트 원문과 설명 페이지를 읽어줘",
+      "대신증권 리포트 목록을 에이전트가 쓰기 좋은 JSON으로 줘"
+    ]
+  },
+  {
+    "name": "daiso-product-search",
+    "description": "Look up Daiso products by store name and product keyword using official Daiso Mall store/search/stock surfaces. Use when the user wants to know whether a product is available at a specific Daiso store. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "retail",
+    "profiles": [
+      "action:commerce"
+    ],
+    "triggers": [
+      "강남역2호점에 리들샷 있어?",
+      "다이소 특정 매장 재고 확인해줘",
+      "이 상품 어느 매장에 있는지 확인해줘",
+      "다이소 매장명 주면 그 매장 재고 봐줘"
+    ]
+  },
+  {
+    "name": "danawa-price-search",
+    "description": "다나와 공개 검색/가격비교 표면으로 상품 후보를 찾고, 쇼핑몰별 최저가·배송비 포함 실구매가·카드 할인가·무이자 할부 정보를 보수적으로 비교한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "retail",
+    "profiles": [
+      "action:commerce"
+    ],
+    "triggers": [
+      "다나와에서 에어팟 최저가 찾아줘",
+      "다나와 가격비교로 쇼핑몰별 가격 비교해줘",
+      "무료배송인지, 카드 할인까지 보면 어디가 제일 싸?",
+      "무이자 할부 붙은 최저가도 같이 봐줘"
+    ]
+  },
+  {
+    "name": "delivery-tracking",
+    "description": "Track CJ대한통운 and 우체국 parcels by invoice number with official carrier endpoints, and structure the workflow around a carrier adapter that can grow to more couriers later.",
+    "category": "logistics",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "CJ대한통운 송장 조회해줘",
+      "우체국 택배 지금 어디야",
+      "이 송장번호 배송완료인지 확인해줘",
+      "택배사별 조회 로직을 나중에 더 붙일 수 있게 정리해줘"
+    ]
+  },
+  {
+    "name": "donation-place-search",
+    "description": "Use when the user asks where to donate, 기부처 조회, or donation place recommendations by Korean location and category. Recommend recipients with best-effort 1365 verification-assist links and never execute donations. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "utility",
+    "profiles": [
+      "proxy",
+      "action:submission"
+    ],
+    "triggers": [
+      "기부처 조회해줘",
+      "서울 마포구에서 동물보호 기부할 만한 곳 추천해줘",
+      "부산 노인 복지 기부처 알려줘",
+      "아동/재난 분야 기부처 비교해줘",
+      "어디에 기부하는 곳이 좋을지 장소와 카테고리별로 추천해줘"
+    ]
+  },
+  {
+    "name": "emergency-room-beds",
+    "description": "Use when the user asks for nearby Korean emergency rooms, 응급실, ER, or emergency bed/병상 status near a location. Ask for the user's current location first unless a location was already provided.",
+    "category": "health",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "근처 응급실 찾아줘",
+      "응급실 병상 상태 확인해줘",
+      "광화문 주변 응급실 어디가 가까워?",
+      "현재 위치 근처 응급실 운영 여부 알려줘"
+    ]
+  },
+  {
+    "name": "ev-charger-nearby",
+    "description": "Use when the user asks for Korean EV charging-station locations, charger types, or current charger status by region, station, or location text. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "transit",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "ev-subsidy-status",
+    "description": "한국 지자체별 전기차 구매보조금 민간공고·접수·출고·출고잔여 대수와 공고 상태를 환경부 무공해차 통합누리집에서 조회한다. 사용자가 사는 지역의 전기승용·전기화물·전기승합 보조금 잔여 현황, 접수 가능 여부, 마감·소진·추경 예정, 특정 모델 기준 보조금 환산치를 물을 때 사용한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "local-info",
+    "profiles": [
+      "proxy",
+      "browser",
+      "action:submission"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "express-bus-booking",
+    "description": "Search and assist Korean 고속버스/KOBUS bookings using official HTTP/API-first flows; use for 고속버스 예매, 시간표, 좌석 조회, 임시 선점, and official checkout-entry handoff. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "travel",
+    "profiles": [
+      "vault",
+      "browser",
+      "action:booking"
+    ],
+    "triggers": [
+      "The user asks for `고속버스 예매`, `고속버스 시간표`, `고속버스 예약`, `프리미엄 고속버스`, or `우등 고속버스`.",
+      "The route is clearly a KOBUS 고속버스 route or the user names KOBUS/코버스/고속버스통합예매.",
+      "The user wants assisted reservation up to seat selection, temporary hold, or a payment-entry link.",
+      "시외버스/Tmoney routes — use `intercity-bus-booking`.",
+      "Final card submission or payment without explicit, narrowly scoped confirmation.",
+      "Blind browser automation before trying the official HTTP flow."
+    ]
+  },
+  {
+    "name": "fine-dust-location",
+    "description": "에어코리아 기반 미세먼지/초미세먼지를 지역명 또는 위치 힌트로 조회한다. 기본 경로는 k-skill-proxy의 report endpoint다.",
+    "category": "utility",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "지금 내 위치 미세먼지 어때?",
+      "강남 쪽 초미세먼지 수치 알려줘",
+      "여기 공기질 괜찮아?"
+    ]
+  },
+  {
+    "name": "flight-ticket-search",
+    "description": "Google Flights 공개 검색 표면을 무료로 조회해 항공권 후보, 예약 검색 링크, 날짜/월/연도별 최저가·평균가 비교를 보수적으로 제공한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "travel",
+    "profiles": [
+      "browser",
+      "action:booking"
+    ],
+    "triggers": [
+      "항공권 조회해줘",
+      "인천에서 나리타 다음 달 최저가",
+      "6월 ICN-NRT 월별 비교",
+      "올해랑 내년 6월 1일 항공권 가격 비교",
+      "서울에서 도쿄 왕복 예약 링크 줘",
+      "ICN-LAX 비즈니스 가격 대략 비교해줘"
+    ]
+  },
+  {
+    "name": "foresttrip-vacancy",
+    "description": "Look up available Korean national forest recreation lodging or camping slots on foresttrip.go.kr and, in Dolshoi, continue into the official booking flow with approval-gated payment.",
+    "category": "travel",
+    "profiles": [
+      "vault",
+      "browser",
+      "action:booking"
+    ],
+    "triggers": [
+      "이번 주말 자연휴양림 빈 객실 있어?",
+      "숲나들e 2026년 5월 4일 예약 가능한 곳 조회해줘",
+      "자연휴양림 빈자리 전체 조회해줘",
+      "관심 휴양림 중 예약 가능한 객실만 알려줘"
+    ]
+  },
+  {
+    "name": "fsc-corporate-info",
+    "description": "금융위원회 기업기본정보(법인 개요)를 공공데이터포털 API(k-skill-proxy 경유)로 조회한다. 법인명으로 대표자·설립일·업종 등 법인 개요를 확인하고, 응답에 사업자번호가 있으면 입력 번호와 교차검증한다.",
+    "category": "business",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "이 법인 대표자·설립일·업종 개요 확인해줘",
+      "법인명으로 기업 기본정보 조회해줘"
+    ]
+  },
+  {
+    "name": "g2b-order-plan-search",
+    "description": "조달청 나라장터 발주계획현황서비스로 물품·공사·용역·외자 발주계획 목록을 검색한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+    "category": "business",
+    "profiles": [
+      "proxy",
+      "vault",
+      "browser",
+      "legal"
+    ],
+    "triggers": [
+      "나라장터 발주목록에서 청소 용역 찾아줘",
+      "조달청 물품 발주계획 2025년 1월 목록 조회",
+      "서울 기관 공사 발주계획 검색",
+      "발주기관명으로 나라장터 발주계획 보여줘"
+    ]
+  },
+  {
+    "name": "g2b-sanctioned-supplier",
+    "description": "조달청 나라장터 부정당제재업체정보를 공공데이터포털 API(k-skill-proxy 경유)로 조회한다. 사업자등록번호 정확 일치로 조회시점 현재 유효한 입찰참가자격 제한(부정당제재)의 기간·제재기관·근거법률을 확인한다.",
+    "category": "business",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "이 회사 입찰 제재(부정당제재) 이력 있어?",
+      "거래/계약 전에 부정당업자 제재 여부 확인해줘"
+    ]
+  },
+  {
+    "name": "geeknews-search",
+    "description": "GeekNews public RSS/Atom feed로 긱뉴스 게시물을 조회, 검색, 상세 확인하는 읽기 전용 스킬.",
+    "category": "news",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "긱뉴스 오늘 뭐 올라왔어?",
+      "긱뉴스에서 Claude 관련 글 찾아줘",
+      "이 GeekNews 글 요약/링크 확인해줘"
+    ]
+  },
+  {
+    "name": "gongsijiga-search",
+    "description": "|",
+    "category": "real-estate",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "서울 강남구 역삼동 736 공시지가 알려줘",
+      "전라남도 무안군 청계면 청천리 100번지 개별공시지가",
+      "서초동 산 1-2 공시지가 추이",
+      "세무 계산에서 토지 공시 단가가 필요할 때"
+    ]
+  },
+  {
+    "name": "gov-overseas-trip-report",
+    "description": "선관위·권익위·정보공개포털·주요 지방의회 등 검증된 공개 표면에서 공무국외출장/국외훈련 보고서·현황을 조회하고, 첨부 원문이 있으면 kordoc으로 사실·공개성·검토 신호만 구조화한다. 부정부패 판정 도구가 아니다.",
+    "category": "civic",
+    "profiles": [
+      "browser",
+      "lookup"
+    ],
+    "triggers": [
+      "선관위 또는 다른 공개 기관의 공무국외출장/국외훈련 보고서를 찾을 때",
+      "기관명·키워드·국가명으로 후보 목록을 모을 때",
+      "공식 게시글 URL과 첨부 원문 URL을 남긴 참고용 요약이 필요할 때",
+      "표 밖 기관을 discover/open_portal로 능동 탐색해야 할 때"
+    ]
+  },
+  {
+    "name": "government-bond-analysis",
+    "description": "한국·미국 국채시장을 공식 금리 데이터로 분석하고 커브 변화, 한·미 금리차, 확인된 국채 입찰·통화정책 일정을 같은 형식으로 정리한다. 국고채·미국 국채 금리 비교, 최근 변화, 주요 일정 또는 출처 있는 보고서를 요청할 때 사용한다. 실시간 호가, 개별 채권 가격평가, 매매 추천은 다루지 않는다.",
+    "category": "finance",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "오늘 국고채 커브 보여줘.",
+      "한·미 국채 금리 변화와 앞으로의 주요 일정 정리해줘.",
+      "전일·1주·전월 말 대비를 한 번에 정리해줘.",
+      "최근 5일/20일 동안 어느 만기가 가장 많이 움직였어?",
+      "분기말 또는 연초 대비 커브 변화 보여줘.",
+      "국고채 3년이 기준금리보다 몇 bp 높아?",
+      "금통위 전후 커브를 검산해줘.",
+      "오늘 금리 움직임의 뉴스 배경과 출처까지 붙여 레포트로 줘."
+    ]
+  },
+  {
+    "name": "government-support-survey",
+    "description": "K-Startup·기업마당·NIPA·KOCCA·SMTECH의 공개 정부지원 공고를 k-skill-proxy로 전수조사하고 프로젝트 적합성을 보수적으로 분류한다. 사용자가 정부지원사업, 창업지원, 사업화·R&D·바우처·입주공간 공고를 한 번에 찾아달라고 할 때 사용한다.",
+    "category": null,
+    "profiles": [
+      "proxy",
+      "browser",
+      "action:submission"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "han-river-water-level",
+    "description": "한강홍수통제소 기반 현재 수위/유량을 관측소명 또는 관측소코드로 조회한다. 기본 경로는 k-skill-proxy의 han-river water-level endpoint다.",
+    "category": "utility",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "한강대교 지금 수위 어때?",
+      "잠수교 유량 알려줘",
+      "1018683 관측소 현재 값 보여줘"
+    ]
+  },
+  {
+    "name": "hankookilbo-news",
+    "description": "한국일보 공식 원격 MCP 서버(mcp.hankookilbo.com)를 인증 없이 직접 호출해 편집 헤드라인·많이 본·꼼꼼히 본·최신 기사·섹션별 편집 추천·주제 검색·오늘의 운세를 기사 메타데이터(제목·발행시각·원문 링크) 중심으로 조회한다.",
+    "category": "information",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "한국일보 헤드라인 보여줘",
+      "한국일보에서 많이 본 기사",
+      "오늘 한국일보 정치면 추천 기사",
+      "한국일보에 이 사건 기사 있어?",
+      "오늘의 운세\", \"MBTI 운세\" (한국일보 지면 기준)",
+      "한국일보가 무엇을 머리기사로 올렸는지, 즉 편집 판단 자체가 필요할 때"
+    ]
+  },
+  {
+    "name": "heyyumi",
+    "description": "헤이유미(HeyYumi)로 한국 식당·카페·바를 찾고, 그 자리에서 예약 요청을 보내 매장의 수락/거절까지 확인하는 스킬. 지역·역·랜드마크, 메뉴 이름(몸국, 소금빵 등), 분위기, 영업 시각, 주차, 채식·비건, 아이·반려동물 동반, 외국어 응대 같은 조건으로 맛집 찾기, 식당 예약, 테이블 예약, 카페 예약, 예약 가능 여부 확인, 지금 자리 있나·웨이팅 몇 분인지 매장에 물어보기가 필요할 때 사용한다. 한국어를 몰라도 되고, 외국어로 쓴 요리 이름과 지명도 알아듣는다. Use when the user wants to find a Korean restaurant, cafe, or bar by area, dish, or condition (parking, vegan, kids, pets, foreigner-friendly), book a table or send a reservation request via HeyYumi, or ask a venue about current wait time or seat availability, in any language.",
+    "category": "food",
+    "profiles": [
+      "vault",
+      "action:booking"
+    ],
+    "triggers": [
+      "을지로 힙한 카페 찾아서 예약해줘\", \"홍제동 저녁 2명 파스타집 예약 가능한 곳",
+      "이 식당 예약돼? 지금 10명 앉을 수 있어? 웨이팅 몇 분이야?",
+      "판교에서 주차되고 아이랑 가기 좋은 한식집\", \"제주시 몸국 파는 집\" 같은 조건·메뉴로 식당 찾기",
+      "Find a bibimbap place near Myeongdong\"처럼 외국어로 묻는 경우"
+    ]
+  },
+  {
+    "name": "highway-traffic-status",
+    "description": "한국도로공사·국가교통정보센터 공개 API로 고속도로 실시간 소통(구간별 속도/교통량/정체 등급)과 CCTV 스트림 메타데이터를 조회한다. Use when the user asks 고속도로 정체, 교통 상황, 노선/구간 소통, 고속도로 CCTV. Not for 대중교통 길찾기 or 자동차 경로 안내.",
+    "category": "transit",
+    "profiles": [
+      "proxy",
+      "browser",
+      "lookup"
+    ],
+    "triggers": [
+      "지금 경부고속도로 막혀?",
+      "서울 요금소 쪽 정체 상황 알려줘",
+      "서해안선 상행 소통 어때?",
+      "판교 근처 고속도로 CCTV 보여줘"
+    ]
+  },
+  {
+    "name": "hola-poke-yeoksam",
+    "description": "올라포케 역삼점의 메뉴·매장 정보·이벤트 참여 흐름을 remote MCP 서버 기준으로 안내한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "food",
+    "profiles": [
+      "action:commerce"
+    ],
+    "triggers": [
+      "올라포케 메뉴 뭐 있어?",
+      "역삼 포케 추천해줘",
+      "올라포케 역삼점 어디야?",
+      "올라포케 단체주문 링크 줘",
+      "올라포케 이벤트 참여해줘"
+    ]
+  },
+  {
+    "name": "household-waste-info",
+    "description": "Use when the user asks for 생활쓰레기 배출 요일/시간/장소 정보 by 지역명(시군구) and wants official data.go.kr household waste guidance.",
+    "category": "utility",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "강남구 쓰레기 배출 요일 알려줘",
+      "우리 동네 음식물쓰레기 언제 버려?",
+      "재활용품 배출 시간 확인해줘",
+      "생활쓰레기 배출 장소/방법 찾아줘"
+    ]
+  },
+  {
+    "name": "housing-official-price",
+    "description": "|",
+    "category": "real-estate",
+    "profiles": [
+      "proxy",
+      "browser",
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "housing-subscription-reference",
+    "description": "민영주택 일반공급 청약가점(무주택기간·부양가족수·청약통장 가입기간 합계 84점)과 지역·전용면적별 청약 예치금 기준을 「주택공급에 관한 규칙」 별표 1·별표 2 값으로 조회한다. 청약가점, 청약 예치금, 민영주택, 무주택기간, 부양가족 질문에 사용한다.",
+    "category": "real-estate",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "hwp",
+    "description": "Use kordoc for agent-native HWP/HWPX document parsing, JSON extraction, diffing, form-field extraction, and Markdown→HWPX reverse conversion (read/convert only — for binary editing use rhwp-edit).",
+    "category": "documents",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "이 HWP 파일을 Markdown으로 바꿔줘",
+      "공문서를 JSON 구조로 뽑아서 AI가 읽게 해줘",
+      "두 버전 문서 차이점을 보고 싶어",
+      "신청서 HWPX 안에 어떤 양식 필드가 있는지 뽑아줘",
+      "AI가 만든 Markdown을 다시 HWPX로 저장해줘",
+      "폴더 안 문서를 한 번에 변환해줘"
+    ]
+  },
+  {
+    "name": "intercity-bus-booking",
+    "description": "Search and assist Korean 시외버스/Tmoney bookings using official HTTP/API-first flows; use for 시외버스 예매, 시간표, 좌석/요금 조회, and official checkout-entry handoff. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "travel",
+    "profiles": [
+      "vault",
+      "browser",
+      "action:booking"
+    ],
+    "triggers": [
+      "The user asks for `시외버스 예매`, `시외버스 시간표`, `시외버스 예약`, or a known 시외버스 route.",
+      "The user names 티머니/Tmoney/시외버스 통합예매.",
+      "The task is to present timetable candidates, check remaining seats/fares, or assist up to the official card-information ",
+      "고속버스/KOBUS routes — use `express-bus-booking`.",
+      "Final card submission or payment unless the user explicitly confirms the exact action.",
+      "Browser automation as the first option when HTTP endpoints are available."
+    ]
+  },
+  {
+    "name": "iros-registry-automation",
+    "description": "인터넷등기소(IROS)에서 법인/부동산 등기부등본(등기사항증명서) 발급을 준비하고, 사용자가 직접 로그인·결제한 브라우저 흐름 안에서 장바구니·열람·저장을 안전하게 보조한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+    "category": "legal-documents",
+    "profiles": [
+      "vault",
+      "browser",
+      "legal"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "job-posting-match",
+    "description": "한국 구직자의 이력서·경력요약과 희망조건을 바탕으로 잡코리아·사람인 공개 채용공고를 검색하고 적합도와 지원 전략을 정리합니다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "recruiting",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "사용자가 “내 이력서에 맞는 공고를 찾아줘”, “지원할 만한 잡코리아/사람인 공고를 추천해줘”라고 요청한다.",
+      "이력서/경력기술서/자기소개서 요약에서 직무·스킬·산업 키워드를 뽑아 공개 채용공고를 검색해야 한다.",
+      "공고 링크 목록만이 아니라 적합도, 추천 이유, 주의점, 지원 전략이 필요하다."
+    ]
+  },
+  {
+    "name": "jobkorea-talent-search",
+    "description": "잡코리아 기업회원 로그인 세션으로 유료 열람 전 마스킹된 인재 이력서를 검색·비교해 채용 검토용 shortlist를 만듭니다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "recruiting",
+    "profiles": [
+      "vault",
+      "browser",
+      "action:recruiting"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "joseon-sillok-search",
+    "description": "Search Joseon Dynasty Annals records from the official sillok.history.go.kr site with keyword search plus optional king/year narrowing.",
+    "category": "history",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "조선왕조실록에서 훈민정음 찾아줘",
+      "세종 때 실록에서 측우기 관련 기사 검색해줘",
+      "1443년 조선왕조실록 기록 찾아줘",
+      "정조실록에서 수원 관련 기록 몇 개 보여줘"
+    ]
+  },
+  {
+    "name": "k-dart",
+    "description": "금융감독원 전자공시시스템(DART) OpenAPI로 공시검색, 기업개황, 재무제표, 주요사항보고서를 조회한다. 사용자의 API_K_DART 환경변수를 직접 사용한다.",
+    "category": "finance",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "삼성전자 최근 공시 보여줘",
+      "카카오 기업개황 알려줘",
+      "LG에너지솔루션 2024년 연간 재무제표",
+      "네이버 배당 현황",
+      "하이브 전환사채 발행 이력",
+      "셀트리온 소송 현황",
+      "SK하이닉스 감사의견",
+      "현대차 증자/감자 이력",
+      "삼성바이오 자기주식 취득/처분"
+    ]
+  },
+  {
+    "name": "k-schoollunch-menu",
+    "description": "Use when the user asks for Korean school meal menus (급식 식단) by natural-language education office and school name, via k-skill-proxy NEIS school-search and school-meal routes.",
+    "category": "utility",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "서울특별시교육청 미래초등학교 오늘 급식 뭐야?",
+      "○○초 급식 식단 알려줘",
+      "이번 주 화요일 중학교 급식 메뉴",
+      "급식 메뉴 조회해줘\" (교육청·학교·날짜 확인 후 진행)"
+    ]
+  },
+  {
+    "name": "k-skill-cleaner",
+    "description": "Interview the user and inspect coding-agent skill trigger counts to recommend unused K-skills for removal.",
+    "category": null,
+    "profiles": [
+      "local"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "k-skill-setup",
+    "description": "Install the k-skill bundle, use the unified CLI, resolve credentials, verify the runtime, and optionally configure update checks and GitHub starring.",
+    "category": "setup",
+    "profiles": [
+      "proxy",
+      "vault",
+      "browser",
+      "operations"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "kakao-bar-nearby",
+    "description": "Use when the user asks for nearby bars or 근처 술집. Ask for the user's location, search with the official Kakao Local API, then follow returned Kakao Map detail links for open-now, menu, and seating hints. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "food",
+    "profiles": [
+      "proxy",
+      "browser",
+      "action:booking"
+    ],
+    "triggers": [
+      "서울역 근처 술집 찾아줘",
+      "강남에서 지금 영업중인 와인바 뭐 있어?",
+      "논현 근처 4명 갈만한 술집 알려줘",
+      "사당에서 전화번호 있는 이자카야 몇 군데만 보여줘"
+    ]
+  },
+  {
+    "name": "kakao-map",
+    "description": "Kakao Local (장소 검색·주소-좌표 변환) + Kakao Mobility (자동차 길찾기) 를 k-skill-proxy 경유로 조회한다. 사용자 키 불필요. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "transit",
+    "profiles": [
+      "proxy",
+      "vault",
+      "action:booking"
+    ],
+    "triggers": [
+      "강남역 근처 스타벅스 찾아줘\" → keyword 검색 (x,y 중심)",
+      "역삼동 카페 카테고리로 보여줘\" → category 검색 (FD6/CE7 등)",
+      "이 좌표가 어느 동/도로명 주소야?\" → coord2address / coord2region",
+      "강남역에서 시청까지 자동차로 얼마나 걸려?\" → Kakao Mobility directions",
+      "통행료 회피 경로로 알려줘\" → avoid=toll (필요 시 priority=DISTANCE 병행)"
+    ]
+  },
+  {
+    "name": "kakaotalk-mac",
+    "description": "Search local KakaoTalk archives on Apple Silicon macOS through the katok CLI. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "messaging",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "카카오톡에서 특정 키워드 검색해줘",
+      "카톡에서 지난 회의/계약/약속 이야기 찾아줘",
+      "이 검색 결과 chunk를 열어줘",
+      "최근 대화가 반영됐는지 확인하고 검색해줘"
+    ]
+  },
+  {
+    "name": "kamis-food-price",
+    "description": "KAMIS 농수축산물 유통 Open API를 k-skill-proxy 경유로 호출해 부류별 도소매 가격과 전일·주간·월간·연간 비교값을 조회한다. 조회 전용.",
+    "category": "food",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "kbl-results",
+    "description": "KBL 한국프로농구 경기 결과와 현재 팀 순위를 날짜/팀 기준으로 조회한다. 공식 JSON 엔드포인트와 kbl-results npm 패키지를 사용한다.",
+    "category": "sports",
+    "profiles": [
+      "browser",
+      "lookup"
+    ],
+    "triggers": [
+      "오늘 KBL 경기 결과 알려줘",
+      "2026-04-01 서울 SK 경기 결과 보여줘",
+      "KBL 현재 팀 순위 알려줘"
+    ]
+  },
+  {
+    "name": "kbo-results",
+    "description": "Fetch KBO game schedules and results for a specific date with the kbo-game npm package. Use when the user asks for today's KBO games, yesterday's scores, or a date-specific scoreboard.",
+    "category": "sports",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "오늘 KBO 경기 결과 알려줘",
+      "어제 한화 경기 스코어 보여줘",
+      "2026-04-01 KBO 일정 정리해줘"
+    ]
+  },
+  {
+    "name": "keris-academic-search",
+    "description": "Use when the user asks to search Korean theses, academic articles, research reports, journals, or university-library catalog metadata through KERIS RISS. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "research",
+    "profiles": [
+      "proxy",
+      "vault",
+      "action:booking"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "kleague-results",
+    "description": "케이리그 경기 결과와 현재 순위를 날짜/팀 기준으로 조회한다. 공식 JSON 엔드포인트와 kleague-results npm 패키지를 사용한다.",
+    "category": "sports",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "오늘 K리그1 경기 결과 알려줘",
+      "2026-03-22 FC서울 경기 결과랑 현재 순위 보여줘",
+      "2026-03-22 K리그2 결과 정리해줘"
+    ]
+  },
+  {
+    "name": "komsa-ferry-info",
+    "description": "한국해양교통안전공단 KOMSA MTIS 공식 API로 연안여객선 운항 일정과 선박·항로 정보를 조회한다.",
+    "category": "transport",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "kopis-performance-search",
+    "description": "KOPIS 공연 목록·상세·시설을 조회한다. 조회 전용.",
+    "category": "culture",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "이번 달 서울 공연 KOPIS에서 찾아줘",
+      "공연 ID PF132236 상세 보여줘",
+      "세종문화회관 KOPIS 시설 정보 찾아줘"
+    ]
+  },
+  {
+    "name": "korea-weather",
+    "description": "한국 날씨를 기상청 단기예보 조회서비스(초단기예보·초단기실황 포함)와 프록시 경유로 조회해 요약한다.",
+    "category": "weather",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "서울 시청 근처 지금 날씨 어때?\" → `/v1/korea-weather/now` (초단기실황)",
+      "비 언제까지 오냐?\" 처럼 앞으로 6시간 이내의 시간별 흐름 → `/v1/korea-weather/vsrt` (초단기예보)",
+      "부산 날씨 알려줘\", \"위도/경도 기준으로 한국 단기예보 보고 싶어\" → `/v1/korea-weather/forecast` (단기예보)"
+    ]
+  },
+  {
+    "name": "korean-bond-search",
+    "description": "GS Quant의 Instrument/Data 구조화 방식에서 영감을 받아 한국 채권을 표준 Bond Instrument 필드로 정리하고, 종목명·발행사·ISIN으로 발행조건·잔액·CALL/PUT·CB/EB/BW를 출처와 함께 검색·비교한다. Use for Korean bond lookup or comparison. Not for live quotes, YTM, credit opinions, or investment advice.",
+    "category": "finance",
+    "profiles": [
+      "lookup",
+      "browser"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "korean-character-count",
+    "description": "Count Korean text deterministically with exact grapheme, line, and byte contracts for self-intros and form limits.",
+    "category": "writing",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "이 자기소개서 1000자 넘는지 정확히 세줘",
+      "이 텍스트를 UTF-8 byte 기준으로 계산해줘",
+      "줄 수랑 byte 수도 같이 알려줘",
+      "한글/영문/이모지 섞인 문장을 추정 말고 코드로 세줘"
+    ]
+  },
+  {
+    "name": "korean-cinema-search",
+    "description": "CGV, 메가박스, 롯데시네마 영화관 검색, 상영작, 시간표, 잔여석 조회가 필요할 때 사용한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "entertainment",
+    "profiles": [
+      "action:booking"
+    ],
+    "triggers": [
+      "강남 근처 CGV 찾아줘",
+      "오늘 메가박스 코엑스 상영작 알려줘",
+      "롯데시네마 월드타워 잔여석 확인해줘",
+      "주변 영화관 시간표 비교해줘"
+    ]
+  },
+  {
+    "name": "korean-heritage-search",
+    "description": "Search official Korean national heritage records, details, locations, and monthly heritage events from the Korea Heritage Service Open API.",
+    "category": "history",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "경복궁 관련 국가유산 찾아줘",
+      "서울 국보 목록 보여줘",
+      "숭례문 역사와 주소 알려줘",
+      "이번 달 국가유산 행사 알려줘",
+      "전주 지역 국가유산을 검색해줘"
+    ]
+  },
+  {
+    "name": "korean-holiday-calendar",
+    "description": "한국천문연구원 특일 정보 API를 k-skill-proxy 경유로 호출해 공휴일·국경일·기념일·24절기·잡절을 조회한다. 조회 전용.",
+    "category": "utility",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "2026년 8월 공휴일 알려줘",
+      "오늘이 공휴일인지 확인해줘",
+      "2026년 24절기 조회해줘",
+      "대체공휴일 있는지 확인해줘"
+    ]
+  },
+  {
+    "name": "korean-humanizer",
+    "description": "'AI가 쓴 티가 나는 한국어 글을 자연스러운 사람 글로 고친다. 번역체, AI 상투어, 과도한 명사화·피동, 3의 법칙, 과장된 의의 부여, 마무리 상투구, 챗봇 잔재, 줄표·곡선따옴표 같은 한국어 특유의 AI 흔적을 심각도(S1/S2/S3)로 분류해 잡아내고 의미는 보존하면서 다시 쓴다. 목표 글자수를 함께 주면(예: \"1000자로\", length=1000) 그 분량에 맞춰 늘리거나 줄인다. \"AI 티 안 나게\", \"사람이 쓴 것처럼\", \"자연스럽게 다듬어줘\", \"번역체 고쳐줘\", \"어색한 거 고쳐줘\", \"N자로 맞춰서\" 같은 요청에 사용.'",
+    "category": "writing",
+    "profiles": [
+      "local"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "korean-jangbu-for",
+    "description": "kimlawtech/korean-jangbu-for (Apache-2.0) 업스트림을 중심으로 한국 스타트업·1인 법인·프리랜서·개인사업자 장부 자동화와 사업자 세무 자료 정리, 원본 데이터 가져오기, 계정과목 태깅, 세무사 전달 CSV, 경영 리포트 생성을 안내하는 thin wrapper 스킬. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "finance",
+    "profiles": [
+      "action:submission"
+    ],
+    "triggers": [
+      "사업자 장부 자동화해줘",
+      "카드 명세서 PDF를 장부로 바꿔줘",
+      "은행 CSV랑 영수증으로 세무사 전달 자료 만들어줘",
+      "개인사업자/프리랜서 종소세 준비 체크리스트 만들어줘",
+      "장부 데이터를 계정과목으로 분류하고 경영 리포트 만들어줘",
+      "CODEF 키로 홈택스·은행·카드 내역 자동 수집 설정하고 싶어"
+    ]
+  },
+  {
+    "name": "korean-law-search",
+    "description": "Search Korean statutes, articles, precedents, interpretations, and local ordinances via k-skill-proxy, and draft 신･구조문대비표 (old/new article comparison tables, optional HWPX). Use when the user asks for Korean law/article/precedent lookups or an amendment comparison table.",
+    "category": "legal",
+    "profiles": [
+      "proxy",
+      "browser",
+      "lookup"
+    ],
+    "triggers": [
+      "산업안전보건법 찾아줘",
+      "관세법 제38조 보여줘",
+      "부당해고 판례 찾아줘",
+      "개인정보보호법 시행령 조문 확인해줘",
+      "한국 법령/판례/자치법규 검색해줘",
+      "건축법 제22조 개정안 신구조문대비표 만들어줘",
+      "이 개정안으로 신구조문대비표 한글 파일로 저장해줘"
+    ]
+  },
+  {
+    "name": "korean-marathon-schedule",
+    "description": "고러닝과 대한철인3종협회 공개 표면으로 한국 마라톤·철인3종 경기 일정, 장소, 신청 마감일, 종목을 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "sports",
+    "profiles": [
+      "proxy",
+      "action:booking"
+    ],
+    "triggers": [
+      "서울 마라톤 일정 찾아줘",
+      "10km 대회 접수 마감일 알려줘",
+      "가을 마라톤 일정과 장소 정리해줘",
+      "철인3종 경기 일정도 가능하면 같이 봐줘"
+    ]
+  },
+  {
+    "name": "korean-middle-korean",
+    "description": "Convert incoming Korean text into a deterministic Korean Middle Korean-style rewrite with archaic particles, endings, Hanja hints, and tone-mark flavor.",
+    "category": "writing",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "이 문장을 한국 중세 국어로 바꿔줘",
+      "훈민정음 느낌 나는 밈 문장으로 변환해줘",
+      "중세국어풍으로 농담을 써줘",
+      "아래 글을 옛 국어 말투로 바꿔줘"
+    ]
+  },
+  {
+    "name": "korean-patent-search",
+    "description": "Search Korean patent and utility-model publications through the official KIPRIS Plus Open API with keyword search plus application-number detail lookup.",
+    "category": "ip",
+    "profiles": [
+      "vault",
+      "lookup"
+    ],
+    "triggers": [
+      "배터리 관련 한국 특허 찾아줘",
+      "출원번호 1020240001234 특허 요약 보여줘",
+      "KIPRIS API로 특허 검색 결과를 JSON으로 받고 싶어",
+      "출원인/IPC/초록까지 포함한 한국 특허 검색 결과가 필요해"
+    ]
+  },
+  {
+    "name": "korean-privacy-terms",
+    "description": "kimlawtech/korean-privacy-terms (Apache-2.0) 업스트림을 경유해 Next.js 프로젝트에 한국 법령(개인정보보호법·약관규제법·전자상거래법) 기반 개인정보처리방침·이용약관·쿠키 배너·동의 모달을 생성하는 thin wrapper 스킬.",
+    "category": "legal",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "개인정보처리방침 만들어줘",
+      "이용약관 추가해줘",
+      "쿠키 배너 붙여줘",
+      "회원가입 동의 모달 필요해",
+      "행태정보 고지 추가해줘",
+      "개인정보 동의 UI 깎아줘"
+    ]
+  },
+  {
+    "name": "korean-scholarship-search",
+    "description": "Search Korean scholarship announcements across official KOSAF, university, foundation, company, and public-sector sources, extract amount and eligibility, and filter results by school, income band, student level, and organization type. Users may invoke it with the phrase 장학금 검색 및 조회. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "education",
+    "profiles": [
+      "action:submission"
+    ],
+    "triggers": [
+      "한국 장학금 전부 찾아줘",
+      "서울대 학부생이 지원 가능한 재단 장학금 찾아줘",
+      "생활비 200만원 이상 주는 장학금만 골라줘",
+      "학교 장학금 말고 민간재단 장학금만 보고 싶어",
+      "학자금 지원구간 5구간 이하 대상 장학금만 정리해줘",
+      "컴퓨터공학과 대학원생 장학금 링크까지 정리해줘",
+      "내 조건으로 지원 가능한지 같이 판정해줘"
+    ]
+  },
+  {
+    "name": "korean-slang-writing",
+    "description": "Use curated Korean trending-slang candidates plus best-effort Namu Wiki lookups to write witty Korean text with up-to-date slang, with conservative safety and freshness guardrails.",
+    "category": "writing",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "SNS 홍보 글 유행어 섞어서 써줘",
+      "댓글을 요즘 말투로 바꿔줘",
+      "밈스럽게 / MZ스럽게 / 재치있게 써줘",
+      "이 유행어가 무슨 뜻이야?\" (시드 인덱스 + 나무위키 lookup)",
+      "긍정적인 느낌의 유행어 3개 추천해줘",
+      "이 상품 카피에 어울리는 유행어 후보 뽑아줘"
+    ]
+  },
+  {
+    "name": "korean-spell-check",
+    "description": "Use Nara/PNU Korean spell-check surfaces conservatively to proofread Korean text, chunk long input, and return change-focused correction suggestions.",
+    "category": "writing",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "이 한국어 문장 맞춤법 검사해줘",
+      "README 한국어 문장 최종 검수해줘",
+      "마크다운 파일 전체에서 띄어쓰기/맞춤법 오류를 잡아줘",
+      "AI 교정보다 규칙 기반 한국어 검사기로 한 번 더 확인해줘"
+    ]
+  },
+  {
+    "name": "korean-stock-search",
+    "description": "Use k-skill-proxy to search Korean listed stocks, inspect KRX base information, and fetch daily trade snapshots without asking the user to issue a KRX API key.",
+    "category": "finance",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "삼성전자 종목코드랑 시장구분 찾아줘",
+      "005930 기본정보 보여줘",
+      "SK하이닉스 20260408 종가/거래량 알려줘",
+      "KOSDAQ 에서 알테오젠 시세 확인해줘"
+    ]
+  },
+  {
+    "name": "korean-transit-route",
+    "description": "Korean door-to-door public transit routing (subway + bus + walking) via ODsay LIVE API with Kakao geocoding for address-to-address queries. Use when the user asks for 지하철/버스/대중교통 길찾기, 환승 경로, 소요시간, or transit directions between two places in Korea.",
+    "category": "transit",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "강남에서 잠실 지하철로 어떻게 가?",
+      "서울역 → 인천공항 대중교통 경로",
+      "환승 가장 적은 경로\", \"최소 시간 경로"
+    ]
+  },
+  {
+    "name": "kosis-stats",
+    "description": "국가데이터처가 운영하는 KOSIS(국가통계포털, kosis.kr) Open API로 한국 공식 통계표를 검색하고 메타데이터·데이터·대용량 자료를 조회한다. Use when the user asks for 한국 공식 통계 (인구, 가구, 물가, 고용 등) 수치 조회, not for analysis or visualization.",
+    "category": "data",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "1인 가구 비율 통계 찾아줘",
+      "KOSIS에서 고령인구 비율 시도별 데이터 가져와",
+      "DT_1IN0001 표 메타데이터 보여줘",
+      "최근 5년치 소비자물가지수 KOSIS에서 뽑아줘",
+      "국내통계 주제별로 어떤 카테고리가 있어?\" (`list`)",
+      "인구총조사 조사목적·조사주기 알려줘\" (`explain`)",
+      "인구밀도 지표 산정방법 보여줘\" (`indicator`)"
+    ]
+  },
+  {
+    "name": "kpic-drug-search",
+    "description": "약학정보원(KPIC) 공개 정보에서 의약품 이름을 검색하고 약품 코드로 효능, 용법, 주의사항 등 상세 원문을 조회하는 읽기 전용 스킬입니다.",
+    "category": "public-health",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "타이레놀 제품을 찾아 주세요.",
+      "이 약품 코드의 효능과 용법, 주의사항 원문을 확인해 주세요.",
+      "검색된 제품의 성분과 제조사를 비교해 주세요."
+    ]
+  },
+  {
+    "name": "kr-whois-lookup",
+    "description": "공공데이터포털 WHOIS 도메인/IP 정보 API를 k-skill-proxy 경유로 호출해 .kr/.한국 도메인, IP 주소, AS 번호의 공개 등록정보를 조회한다. 조회 전용. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "security",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      ".kr 도메인 WHOIS 조회해줘",
+      "kisa.or.kr 등록기관과 만료일 확인해줘",
+      ".한국 도메인 네임서버 확인해줘",
+      "202.30.50.51 IP WHOIS 조회해줘",
+      "AS9700 할당 기관 확인해줘"
+    ]
+  },
+  {
+    "name": "kstartup-search",
+    "description": "공공데이터포털 창업진흥원 K-Startup Open API(15125364)로 통합 공고 사업 정보·지원사업 공고·창업 콘텐츠·통계보고서를 k-skill-proxy 경유로 조회한다. 검색 전용. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "business",
+    "profiles": [
+      "proxy",
+      "vault",
+      "browser",
+      "action:submission"
+    ],
+    "triggers": [
+      "이번 달 마감 예정인 청년 창업지원 공고 찾아줘",
+      "서울 소재 모집 진행 중인 1인 창조기업 지원사업 알려줘",
+      "K-Startup에서 사업화 단계 통합공고 사업 목록 뽑아줘",
+      "창업진흥원 최신 통계보고서 5건 보여줘"
+    ]
+  },
+  {
+    "name": "lck-analytics",
+    "description": "Riot 공식 LoL Esports 데이터와 Oracle's Elixir 스타일 historical 데이터로 LCK 경기 결과, 현재 순위, live turning point, 밴픽 matchup/synergy, patch meta, 팀 파워 레이팅을 조회한다.",
+    "category": "sports",
+    "profiles": [
+      "vault",
+      "lookup"
+    ],
+    "triggers": [
+      "오늘 LCK 경기 결과 알려줘",
+      "2026-04-01 한화 경기 결과랑 순위 보여줘",
+      "지금 T1 경기 킬/골드/오브젝트 요약해줘",
+      "이 경기 turning point가 뭐였어?",
+      "이 밴픽에서 어느 쪽 조합이 더 좋았는지 설명해줘",
+      "현재 패치에서 어떤 챔피언이 메타 픽인지 보여줘",
+      "LCK 팀 파워 레이팅 보여줘"
+    ]
+  },
+  {
+    "name": "lh-notice-search",
+    "description": "Search official LH 청약 (Korea Land & Housing Corporation lease/subscription) 공고 lists through k-skill-proxy. Use when a user asks about 청년/행복/영구/국민/매입/전세임대, 분양주택, 신혼희망타운 공고 marketed on apply.lh.or.kr. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "real-estate",
+    "profiles": [
+      "proxy",
+      "vault",
+      "action:submission"
+    ],
+    "triggers": [
+      "LH 영구임대 공고 지금 뭐 올라와 있어?",
+      "신혼희망타운 공고 요즘 나온 거 정리해줘",
+      "부산광역시 LH 임대주택 공고중인 것 보여줘",
+      "전세임대 공고 중 마감 임박한 거 찾아줘",
+      "공고번호 2015122300019828 상세 정보 보여줘",
+      "행복주택 청년 모집 공고 요약해줘"
+    ]
+  },
+  {
+    "name": "library-book-search",
+    "description": "Use when the user asks to search Korean library books, book details, library holdings, or whether a Korean public library owns a book via k-skill-proxy Data4Library routes. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "utility",
+    "profiles": [
+      "proxy",
+      "action:booking"
+    ],
+    "triggers": [
+      "역사 관련 책 도서관 정보나루에서 찾아줘",
+      "이 ISBN 소장한 서울 도서관 찾아줘",
+      "정독도서관에 이 책 있는지 확인해줘",
+      "도서관 도서 조회 가능해?"
+    ]
+  },
+  {
+    "name": "localdata-business-status",
+    "description": "지방행정 인허가데이터(LOCALDATA)로 동네 사업장(식당·카페·숙박·약국·미용실·학원 등 인허가 업종 208종)의 영업/휴업/폐업 상태, 인허가일자(업력), 폐업일자, 업태, 주소를 조회한다. 상호+시군구로 검색하며 인증키 불필요.",
+    "category": "business",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "제주시 ○○호텔 지금 영업 중이야? 오래된 곳이야?\" — 사업자번호를 몰라도 상호+시군구로 조회",
+      "이 동네 가게 폐업했어?\", \"이 식당 인허가가 언제야(업력)?"
+    ]
+  },
+  {
+    "name": "lotto-results",
+    "description": "Check Korean Lotto draw results, latest rounds, and ticket matches with the k-lotto npm package. Use when the user asks for winning numbers, payout details, or whether their numbers matched.",
+    "category": "utility",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "이번 주 로또 번호 뭐야",
+      "1210회 당첨번호 알려줘",
+      "내 번호가 몇 등인지 봐줘"
+    ]
+  },
+  {
+    "name": "market-event-impact",
+    "description": "GS Quant의 event_study·event_impact_analysis·CalendarAlignment 구조에서 영감을 받아, 정례 발표와 비정형 사건의 핵심 변화 및 시장 해석을 공식자료·당시 보도·검증 가격으로 정리한다. 교차자산 전달경로를 살피고 이벤트 스터디는 보조 증거로 제시하며, 유사사례와 다음 촉매를 한국어로 설명한다. Use for named market-moving events. Not for live quotes, forecasts, or investment advice.",
+    "category": "finance",
+    "profiles": [
+      "lookup",
+      "browser"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "market-kurly-search",
+    "description": "로그인 없이 접근 가능한 마켓컬리 검색/상품 상세 표면으로 상품 후보, 현재 가격, 할인 여부, 품절 여부를 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "retail",
+    "profiles": [
+      "action:commerce"
+    ],
+    "triggers": [
+      "마켓컬리에서 우유 얼마야?",
+      "컬리에서 딸기 검색해줘",
+      "이 상품 품절인지 보고 링크도 줘",
+      "지금 컬리 가격만 빠르게 보고 싶어"
+    ]
+  },
+  {
+    "name": "mfds-drug-safety",
+    "description": "식약처 공공 OpenAPI를 k-skill-proxy 경유로 조회하기 전에 증상·복용상황을 반드시 되묻는 인터뷰형 의약품 안전 체크 스킬.",
+    "category": "public-health",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "이 약이랑 이 약 같이 먹어도 되니?",
+      "타이레놀 먹는 중인데 판콜 같이 먹어도 돼?",
+      "두드러기가 있는데 이 약 계속 먹어도 되나?",
+      "식약처 공식 약 정보로 효능/주의사항 확인해줘"
+    ]
+  },
+  {
+    "name": "mfds-food-safety",
+    "description": "식약처/식품안전나라 공개 표면을 k-skill-proxy 경유로 조회하기 전에 증상·섭취상황을 반드시 되묻는 인터뷰형 식품 안전 체크 스킬.",
+    "category": "public-health",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "이 음식 먹어도 괜찮니?\" → 건강기능식품 원료 인정현황 + 검사부적합 조회",
+      "차전자피를 먹어도 되나?\" → 기능성 원료 인정현황에서 1일 섭취량·주의사항 확인",
+      "이 김밥 먹고 배가 아픈데 회수 이력 있나?\" → 회수·부적합 목록 조회",
+      "식약처 공식 부적합 식품 목록에서 제품명 확인해줘",
+      "식품안전나라 공개 회수 목록에서 업체명으로 찾아줘"
+    ]
+  },
+  {
+    "name": "mofa-travel-safety",
+    "description": "외교부 0404 국가·지역별 여행경보 Open API를 k-skill-proxy 경유로 조회해 국가별 공식 경보 단계와 원문 정보를 제공한다. 조회 전용.",
+    "category": "travel",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "multi-asset-morning-briefing",
+    "description": "글로벌 주식·금리·외환·원자재·변동성과 한국시장 전달 경로를 연결해 근거 링크가 있는 7개 섹션의 멀티에셋 모닝 브리핑을 작성한다. Use when the user asks 모닝 브리핑, Morning Call, 오버나이트 시황, 데일리 마켓 브리핑 또는 기존 브리핑 검수. Not for 실시간 호가, 국내 개별 종목 단독 조회(korean-stock-search), 투자 권유·매매 판단.",
+    "category": "finance",
+    "profiles": [
+      "lookup",
+      "browser"
+    ],
+    "triggers": [
+      "모닝 브리핑, Morning Call, 오버나이트 시황, 데일리 마켓 브리핑 작성",
+      "기존 브리핑의 숫자·세션·출처·인과관계 검수"
+    ]
+  },
+  {
+    "name": "myrealtrip-search",
+    "description": "마이리얼트립 공식 Streamable HTTP MCP 서버로 항공권, 숙소, 투어/티켓/액티비티를 검색하고 상세·가격·예약 링크를 확인한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "travel",
+    "profiles": [
+      "browser",
+      "action:booking"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "naming-house",
+    "description": "생년월일시와 성씨·후보 이름을 바탕으로 사주 오행과 성명학 점수를 참고해 어울리는 한국 이름을 추천한다.",
+    "category": "utility",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "아이 이름 추천해줘",
+      "사주에 맞는 이름 후보를 골라줘",
+      "성명학으로 이 이름들이 어떤지 비교해줘",
+      "한자 이름 후보의 획수와 오행 흐름을 보고 싶어"
+    ]
+  },
+  {
+    "name": "national-pension-workplace",
+    "description": "국민연금공단 국민연금 가입 사업장 내역을 공공데이터포털 API(k-skill-proxy 경유)로 조회한다. 사업장명으로 가입자수·당월 고지금액·월별 취득/상실 추이를 확인해 그 회사의 직원 규모와 변화를 본다.",
+    "category": "business",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "○○ 회사 직원 규모가 얼마나 돼? 국민연금 가입자수로 보자",
+      "이 사업장 당월 국민연금 고지금액이 얼마야?",
+      "최근 인원이 늘었는지 줄었는지 월별로 보자"
+    ]
+  },
+  {
+    "name": "naver-ad-performance",
+    "description": "네이버 검색광고(키워드광고)의 노출수·클릭수·광고비·CTR·CPC·전환수를 조회한다. 캠페인/광고그룹/키워드 목록, 기간별 성과, 연관키워드·월간 조회수 도구 포함. 읽기 전용, 로컬 실행 전용. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "marketing",
+    "profiles": [
+      "vault",
+      "action:account"
+    ],
+    "triggers": [
+      "네이버 광고 노출수/클릭수/광고비/CTR 보여줘",
+      "이번달 캠페인 성과 어때",
+      "이 키워드 CTR·CPC 얼마야",
+      "연관키워드랑 월간 조회수 뽑아줘",
+      "네이버 검색광고 키 셋업이 됐는지 확인해줘"
+    ]
+  },
+  {
+    "name": "naver-blog-research",
+    "description": "Search Naver blogs, read full post content, and download images using only python3 stdlib — no API key required.",
+    "category": "research",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "네이버 블로그에서 결혼식 체크리스트 검색해줘",
+      "네이버 블로그 리서치 해줘",
+      "한국 블로그에서 관련 정보 조사해줘",
+      "네이버 블로그 글 읽어줘",
+      "이 네이버 블로그 포스트에서 이미지 다운로드해줘",
+      "한국어 콘텐츠 리서치에서 구글 외 네이버 블로그 소스가 필요한 상황"
+    ]
+  },
+  {
+    "name": "naver-news-search",
+    "description": "네이버 검색 Open API 뉴스 검색(news.json)을 k-skill-proxy 경유로 조회해 최신 뉴스 기사 제목·발행시각·링크·요약을 보수적으로 정리한다. 사용자는 별도 API 키 발급 없이 호출한다.",
+    "category": "information",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "오늘 삼성전자 관련 뉴스 찾아줘",
+      "최근 AI 규제 관련 기사 최신순으로 5개만",
+      "네이버 뉴스에서 금리 인상 기사 요약해줘",
+      "이 사건 기사 링크 정리해줘"
+    ]
+  },
+  {
+    "name": "nhis-care-checkup-search",
+    "description": "국민건강보험공단 장기요양기관·건강검진기관을 조회하고, 돌쇠에서는 공식 연락·예약 가능 표면까지 이어간다.",
+    "category": "healthcare",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "서울 강남 장기요양기관 찾아줘",
+      "요양원 후보와 주소/전화번호 확인해줘",
+      "서울 강남 건강검진기관 찾아줘",
+      "주말 검진 가능한 검진기관 찾아줘"
+    ]
+  },
+  {
+    "name": "nts-business-registration",
+    "description": "국세청 사업자등록정보 진위확인 및 사업자등록 상태조회를 공공데이터포털 API(k-skill-proxy 경유)로 수행한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "business",
+    "profiles": [
+      "proxy",
+      "vault",
+      "action:submission"
+    ],
+    "triggers": [
+      "이 사업자등록번호가 계속사업자인지 확인해줘",
+      "사업자등록번호 상태조회해줘",
+      "사업자등록번호, 개업일, 대표자명으로 진위확인해줘",
+      "거래처 등록 전 공식 NTS/공공데이터포털 기준 확인이 필요할 때"
+    ]
+  },
+  {
+    "name": "nts-tax-delinquency",
+    "description": "국세청 고액·상습체납자 명단공개를 nts.go.kr 공개 검색으로 조회한다. 상호·법인명으로 법인 명단과 개인 명단을 대조해 공개된 체납 사실(총 체납액·세목·체납요지 등)을 나열한다. 인증키 불필요. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "business",
+    "profiles": [
+      "action:submission"
+    ],
+    "triggers": [
+      "이 회사(거래처/의뢰인) 국세 체납 명단공개에 올라 있어?",
+      "상호로 고액·상습체납자 명단 대조해줘"
+    ]
+  },
+  {
+    "name": "ohou-today-deal",
+    "description": "오늘의집 공개 오늘의딜 페이지에서 로그인 없이 특가 상품을 조회하고 할인율, 가격, 리뷰, 링크를 정리하는 읽기 전용 스킬. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "retail",
+    "profiles": [
+      "browser",
+      "action:commerce"
+    ],
+    "triggers": [
+      "오늘의집 오늘의딜 뭐 있어?",
+      "오늘의집에서 할인율 높은 특가 상품 3개 보여줘",
+      "오늘의집 무료배송 특가만 골라줘",
+      "오늘의집에서 러그 특가 찾아줘"
+    ]
+  },
+  {
+    "name": "olive-young-search",
+    "description": "upstream daiso CLI를 사용해 올리브영 매장 검색, 상품 검색, 재고 확인을 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "retail",
+    "profiles": [
+      "action:commerce"
+    ],
+    "triggers": [
+      "명동 근처 올리브영 매장 찾아줘",
+      "올리브영 선크림 어떤 거 있나 보여줘",
+      "명동 근처 올리브영에서 선크림 재고 확인해줘",
+      "올리브영 검색용 CLI 붙여줘"
+    ]
+  },
+  {
+    "name": "parking-lot-search",
+    "description": "Use when the user asks for nearby parking lots or 근처 주차장/공영주차장. Always ask the user's current location first, then use official Data.go.kr public parking data through k-skill-proxy or the parking-lot-search package.",
+    "category": "convenience",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "근처 주차장 찾아줘",
+      "광화문 주변 공영주차장 어디 있어?",
+      "서울역 근처 무료 주차장 있어?",
+      "지금 여기서 가까운 공영주차장 지도 링크 줘"
+    ]
+  },
+  {
+    "name": "popbill",
+    "description": "팝빌 전자세금계산서·전자명세서·현금영수증·문자·카카오톡·팩스·휴폐업/기업정보·계좌조회·홈택스 수집을 테스트/운영 환경에서 안전하게 호출한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "business",
+    "profiles": [
+      "vault",
+      "action:submission"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "public-restroom-nearby",
+    "description": "Use when the user asks for nearby public/open restrooms or 근처 화장실. Always ask the user's current location first, then use the official nationwide public-restroom standard dataset plus Kakao anchor resolution.",
+    "category": "convenience",
+    "profiles": [
+      "vault",
+      "lookup"
+    ],
+    "triggers": [
+      "근처 화장실 찾아줘",
+      "서울역 근처 공중화장실 있어?",
+      "광화문 주변 개방화장실 몇 군데만 보여줘",
+      "지금 여기서 가까운 화장실 지도 링크 줘"
+    ]
+  },
+  {
+    "name": "railway-timetable",
+    "description": "Read-only Korail integrated railway timetable lookup covering KTX-family trains. No reservation, payment, cancellation, or seat holding.",
+    "category": "travel",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "real-estate-search",
+    "description": "Korean apartment/officetel/villa/single-house real transaction price and rent lookups via k-skill-proxy. Based on tae0y's real-estate-mcp and MOLIT public data APIs.",
+    "category": "real-estate",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "잠실 리센츠 2024년 매매 실거래가 찾아줘",
+      "마포구 아파트 전세 실거래가 보여줘",
+      "성수동 오피스텔 월세 실거래 데이터 볼래",
+      "강남구 연립다세대 매매 실거래가",
+      "용산구 상업업무용 건물 거래 내역"
+    ]
+  },
+  {
+    "name": "religious-facility-search",
+    "description": "Use when the user asks 근처 교회 찾기, 성당 위치, 절·사찰 찾기, 종교시설 조회, or church/cathedral/temple lookup by Korean neighborhood, station, or landmark. 공식 Kakao Local API를 k-skill-proxy 경유로 호출해 종교시설을 거리순으로 조회하고 주소·전화·카카오맵 링크를 정리한다. 사용자 API 키가 필요 없는 조회 전용 스킬이다.",
+    "category": "religion",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "근처 교회 찾아줘",
+      "강남역 근처 교회 알려줘",
+      "명동 성당 위치가 어디야",
+      "경주에 절 어디 있어?",
+      "이 근처 종교시설 알려줘",
+      "온누리교회 주소 알려줘"
+    ]
+  },
+  {
+    "name": "rhwp-advanced",
+    "description": "Debug HWP layout, dump document IR, compare versions, extract thumbnails, and unlock read-only HWPs with the upstream rhwp Rust CLI (export-svg/dump/dump-pages/ir-diff/thumbnail/convert).",
+    "category": "documents",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "표/셀이 이상하게 잘려. 어디서 깨지는지 IR 덤프를 보고 싶어",
+      "두 HWP 파일 구조 차이를 줄 단위로 보고 싶어",
+      "SVG 렌더가 이상해. 문단/표 경계선을 시각적으로 확인하고 싶어",
+      "페이지가 몇 개이고 어느 문단이 몇 페이지에 걸쳐 있는지 보고 싶어",
+      "배포용(읽기전용) HWP 파일 잠금을 풀고 싶어",
+      "HWP 파일에서 PrvImage 썸네일을 꺼내고 싶어"
+    ]
+  },
+  {
+    "name": "rhwp-edit",
+    "description": "Edit HWP documents — insert/delete text, replace-all, create tables, set cell text — with the k-skill-rhwp CLI that wraps the @rhwp/core WASM engine (rhwp by Edward Kim).",
+    "category": "documents",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "HWP 본문에 한 줄 추가해줘",
+      "서식은 유지한 채로 2025를 2026으로 일괄 치환해줘",
+      "3행 4열짜리 표를 HWP에 넣어줘",
+      "표의 특정 셀 내용을 바꿔줘",
+      "빈 HWP 새 파일을 만들어줘"
+    ]
+  },
+  {
+    "name": "s2b-notice-search",
+    "description": "S2B 학교장터 공개 고객 공고/견적요청 목록을 브라우저 우선으로 조회하고 fixture HTML을 파싱해 공고 메타데이터를 정리한다. 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+    "category": "procurement",
+    "profiles": [
+      "vault",
+      "browser",
+      "legal"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "saju-fortune",
+    "description": "사주팔자 정보를 인터뷰로 확인한 뒤 saju-fortune npm package를 사용해 연애운, 재물운, 직업운, 건강운, 한해 운세, 궁합을 대화형으로 풀이한다.",
+    "category": "utility",
+    "profiles": [
+      "local"
+    ],
+    "triggers": [
+      "사주 봐줘",
+      "올해 운세 어때?",
+      "연애운/재물운/직업운/건강운 봐줘",
+      "우리 궁합 봐줘",
+      "생년월일시로 사주팔자 풀이해줘"
+    ]
+  },
+  {
+    "name": "saramin-talent-search",
+    "description": "사람인 기업회원 인재풀 로그인 세션에서 마스킹된 후보 정보를 검색·비교해 유료 열람 전 shortlist를 만듭니다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "recruiting",
+    "profiles": [
+      "vault",
+      "browser",
+      "action:recruiting"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "seoul-bike",
+    "description": "서울 따릉이 실시간 대여소의 대여 가능 자전거와 빈 거치대를 좌표 주변 또는 대여소 이름으로 조회한다.",
+    "category": "transit",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "지금 여기서 따릉이 빌릴 수 있어?",
+      "광화문 근처 빈 거치대 있어?",
+      "강남역 따릉이 대여소에 자전거 몇 대 남았어?"
+    ]
+  },
+  {
+    "name": "seoul-density",
+    "description": "서울 주요 121개 핫스팟 장소의 실시간 혼잡도와 인구 현황을 조회한다. 지금 강남역이 얼마나 붐비는지, 홍대 인파가 얼마나 되는지 물어볼 때 사용한다.",
+    "category": "utility",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "지금 강남역 얼마나 붐벼?",
+      "홍대 지금 인파 어때?",
+      "명동 지금 사람 많아?",
+      "여의도한강공원 지금 여유로워?"
+    ]
+  },
+  {
+    "name": "seoul-subway-arrival",
+    "description": "Look up Seoul real-time subway arrival information with the official Seoul Open Data API. Use when the user asks when a train arrives, which trains are approaching a station, or how crowded Seoul subway timing looks right now.",
+    "category": "transit",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": [
+      "강남역 지금 몇 분 뒤 도착해?",
+      "서울역 1호선 도착 정보 보여줘",
+      "잠실역 곧 들어오는 열차 정리해줘"
+    ]
+  },
+  {
+    "name": "seoul-weather-risk",
+    "description": "서울 행정동 이름을 정식명 우선·허용된 결정적 표기 별칭만으로 정규 place_id로 해석해 ASK 서울의 장소별 기상 위험 예상 시간대(weather_place_risk_window) 단일 제품을 hosted k-skill proxy에서 읽기 전용 조회한다. 사용자 API Key와 place_id 입력은 필요하지 않다.",
+    "category": "public-data",
+    "profiles": [
+      "proxy",
+      "lookup"
+    ],
+    "triggers": []
+  },
+  {
+    "name": "sh-notice-search",
+    "description": "서울주택도시개발공사(SH) 공개 공고/공지 게시판에서 청약·주택 공고 목록, 상세 본문, 첨부 미리보기 메타데이터를 직접 조회한다. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "housing",
+    "profiles": [
+      "proxy",
+      "action:submission"
+    ],
+    "triggers": [
+      "SH 행복주택 공고 찾아줘",
+      "서울주택도시개발공사 매입임대 공고 보여줘",
+      "SH 공고 seq 304371 상세와 첨부파일 알려줘",
+      "SH 분양 공고 최신 목록 조회"
+    ]
+  },
+  {
+    "name": "sharenuri-facility-search",
+    "description": "공유누리(eshare.go.kr) 공개 통합검색으로 전국 공공개방자원(회의실·체육시설·숙소·교육·물품 등)을 인증키·로그인 없이 검색하고, 상세정보(요금·정원·예약방법·문의처)와 공식 예약 경로를 안내한다. 조회 전용.",
+    "category": "civic",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "우리 동네 무료 회의실 예약 가능한 곳 찾아줘",
+      "서울 강남구에서 대관 가능한 공공 강의실 조회해줘",
+      "공유누리에서 캠핑장/체육관/주차장 검색해줘",
+      "이 시설 예약 문의 전화번호랑 요금 알려줘"
+    ]
+  },
+  {
+    "name": "store-longevity-radar",
+    "description": "소상공인시장진흥공단 상가(상권)정보 공개파일(무인증)로 업종·상호 키워드에 맞는 전국 점포 전수를 뽑고, 과거 스냅샷과 상호+좌표 매칭해 'N년 전에도 존재했고 지금도 영업 중'인 장수 점포 리스트를 추출한다. 사업자등록번호 없이 상호 기준이며 개업일이 아닌 최초 관측 시점 하한을 제공한다.",
+    "category": "business",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "지금도 영업 중인 오래된 문방구/철물점/레코드점 리스트 뽑아줘",
+      "이 업종 전국 점포 전수 데이터 줘 (주소·좌표 포함)",
+      "10년 전에도 있었고 아직 있는 가게 찾아줘\" (과거 스냅샷 CSV 필요)"
+    ]
+  },
+  {
+    "name": "subway-lost-property",
+    "description": "Use when the user asks how to look up 지하철 분실물 or 유실물 by 역명/물품명. v1 is an 안내형/하이브리드 skill that structures the official LOST112 + 서울교통공사 flow conservatively. 돌쇠에서는 공식 표면을 통한 후속 액션까지 진행한다.",
+    "category": "transit",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "강남역에서 지갑 잃어버렸는데 어디서 찾아?",
+      "2호선 지하철 분실물 조회 방법 알려줘",
+      "서울 지하철 유실물 공식 사이트로 바로 찾게 도와줘"
+    ]
+  },
+  {
+    "name": "ticket-availability",
+    "description": "YES24 / 인터파크 공연의 공개 일정 + 등급별 잔여석을 단일 HTTP 호출로 조회 (조회 전용, 예매·결제 없음). 돌쇠에서는 가능한 가장 가까운 합법적 공식 단계까지 준비한다.",
+    "category": "lifestyle",
+    "profiles": [
+      "vault",
+      "browser",
+      "action:booking"
+    ],
+    "triggers": [
+      "오늘 인터파크 ○○ 공연 잔여석 있어?",
+      "YES24 콘서트 ID 58026 일정 알려줘",
+      "이 공연 R석 몇 자리 남았어?",
+      "공연 URL 줄게, 회차별 잔여석 확인해줘"
+    ]
+  },
+  {
+    "name": "toss-investment",
+    "description": "토스증권 공식 Open API(OAuth2)로 계좌, 보유주식, 시세/종목/시장정보, 주문조회를 안전한 read-only 흐름으로 조회한다. 공식 credentials가 없거나 공식 API가 지원하지 않는 기능은 비공식 경로로 우회하지 않는다.",
+    "category": "finance",
+    "profiles": [
+      "vault",
+      "action:account"
+    ],
+    "triggers": [
+      "토스증권 삼성전자 현재가 확인해줘",
+      "내 보유 주식 보여줘",
+      "대기중 주문 조회해줘",
+      "원달러 환율 알려줘"
+    ]
+  },
+  {
+    "name": "zipcode-search",
+    "description": "Look up a Korean postcode and official English address from a known address with the official ePost integrated search page.",
+    "category": "utility",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "이 주소 우편번호랑 영문 주소 같이 알려줘",
+      "서울특별시 강남구 테헤란로 123 영문 주소로 바꿔줘",
+      "해외 결제용으로 한국 주소 영문 표기 필요해"
+    ]
+  }
+]
