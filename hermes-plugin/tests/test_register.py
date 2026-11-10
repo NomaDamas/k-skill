@@ -115,6 +115,40 @@ class RegisterTest(unittest.TestCase):
             self.assertIn(tool, text)
 
 
+class ContextTest(unittest.TestCase):
+    """What the model sees must let it route any Korean request to kskill_search."""
+
+    def setUp(self):
+        self.ctx = FakeCtx()
+        load_plugin().register(self.ctx)
+        self.catalog = submodule("catalog").load_catalog()
+        self.desc = self.ctx.tools["kskill_search"]["schema"]["description"]
+
+    def test_search_description_names_every_skill_from_the_catalog(self):
+        missing = [e["name"] for e in self.catalog if e["name"] not in self.desc]
+        self.assertEqual(missing, [])
+
+    def test_description_is_derived_from_catalog_not_hardcoded(self):
+        schemas = submodule("schemas")
+        fake = [{"name": "zz-new-skill", "description": "d", "category": None, "profiles": [], "triggers": []}]
+        self.assertIn("zz-new-skill", schemas.search_description(fake))
+        self.assertNotIn("cheap-gas-nearby", schemas.search_description(fake))
+
+    def test_total_tool_context_stays_small(self):
+        import json
+        total = sum(len(json.dumps(t["schema"], ensure_ascii=False)) for t in self.ctx.tools.values())
+        self.assertLess(total, 9000, "plugin tool schemas must stay far below a native skills index (~23k chars)")
+
+    def test_weather_and_other_everyday_topics_are_routable(self):
+        for must in ("korea-weather", "lotto-results", "emergency-room-beds", "railway-timetable"):
+            self.assertIn(must, self.desc)
+
+    def test_description_tells_model_to_search_before_generic_web_tools(self):
+        low = self.desc.lower()
+        self.assertIn("before", low)
+        self.assertTrue("web" in low or "browser" in low or "curl" in low)
+
+
 class CommandsTest(unittest.TestCase):
     def setUp(self):
         self.commands = submodule("commands")

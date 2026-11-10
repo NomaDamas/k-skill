@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import commands, schemas, tools
+from . import catalog, commands, schemas, tools
 from .cli_runner import cli_available
 
 TOOLSET = "k-skill"
@@ -12,7 +12,7 @@ SKILL_DESCRIPTION = "Workflow for finding and running k-skill Korean-service ski
 
 
 def register(ctx) -> None:
-    for name, schema in schemas.ALL.items():
+    for name, schema in schemas.build_all(catalog.load_catalog()).items():
         ctx.register_tool(
             name=name,
             toolset=TOOLSET,

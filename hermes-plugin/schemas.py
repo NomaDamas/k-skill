@@ -1,13 +1,23 @@
 """Tool schemas (OpenAI function format) — what the model reads."""
 
+_SEARCH_HEAD = (
+    "k-skill: {n} Korean everyday/work skills (transit, weather, fine dust, gas prices, lotto, e-sports/KBO results, "
+    "emergency rooms, pharmacies, real estate, laws, public data, stocks/disclosures, shopping, spell check, postcodes ...). "
+    "For ANY request about Korea-specific services or data, in Korean or English, call this BEFORE web search, browser, "
+    "curl or writing your own scraper, then call kskill_instructions with the best match. Offline and instant. "
+    "Available skills: "
+)
+
+
+def search_description(catalog) -> str:
+    """Tool description that lists every skill name, so the model can route without guessing."""
+    names = ", ".join(entry["name"] for entry in catalog)
+    return _SEARCH_HEAD.format(n=len(catalog)) + names + "."
+
+
 KSKILL_SEARCH = {
     "name": "kskill_search",
-    "description": (
-        "Search k-skill, a catalog of ~130 Korean everyday/work skills (KTX/SRT, 당근, 쿠팡, 다이소, "
-        "미세먼지, 주유소, 공시지가, 법령, 공공데이터, 병원/약국, 부동산, 주식/공시, 한글 맞춤법 …). "
-        "Use FIRST for any request about Korea-specific services or data, in Korean or English, "
-        "then call kskill_instructions with the best match. Offline and instant."
-    ),
+    "description": "",  # filled from catalog.json by build_all()
     "parameters": {
         "type": "object",
         "properties": {
@@ -71,9 +81,12 @@ KSKILL_READ = {
     },
 }
 
-ALL = {
-    "kskill_search": KSKILL_SEARCH,
-    "kskill_instructions": KSKILL_INSTRUCTIONS,
-    "kskill_exec": KSKILL_EXEC,
-    "kskill_read": KSKILL_READ,
-}
+def build_all(catalog) -> dict:
+    """All tool schemas, with the search description generated from the catalog."""
+    search = {**KSKILL_SEARCH, "description": search_description(catalog)}
+    return {
+        "kskill_search": search,
+        "kskill_instructions": KSKILL_INSTRUCTIONS,
+        "kskill_exec": KSKILL_EXEC,
+        "kskill_read": KSKILL_READ,
+    }
