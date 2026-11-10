@@ -24,24 +24,32 @@ NO_CLI_MESSAGE = (
 )
 
 
-def resolve_cli(env: Optional[Mapping[str, str]] = None) -> Optional[list]:
-    """Return argv prefix for the CLI, or None when it cannot be run.
+def resolve_cli_candidates(env: Optional[Mapping[str, str]] = None) -> list:
+    """Ordered argv prefixes to try.
 
-    Order: ``KSKILL_CLI`` override, an installed ``k-skill`` binary, then
-    ``npx -y @nomadamas/k-skill@0`` (the invocation the skills themselves use).
+    ``KSKILL_CLI`` is an explicit choice and is the only candidate. Otherwise an
+    installed ``k-skill`` binary comes first, then ``npx -y @nomadamas/k-skill@0``
+    (the invocation the skills themselves use, always current within major 0).
     """
     env = os.environ if env is None else env
     override = (env.get("KSKILL_CLI") or "").strip()
     if override:
-        return shlex.split(override)
+        return [shlex.split(override)]
     path = env.get("PATH")
+    candidates = []
     installed = shutil.which("k-skill", path=path)
     if installed:
-        return [installed]
+        candidates.append([installed])
     npx = shutil.which("npx", path=path)
     if npx:
-        return [npx, "-y", NPX_PACKAGE]
-    return None
+        candidates.append([npx, "-y", NPX_PACKAGE])
+    return candidates
+
+
+def resolve_cli(env: Optional[Mapping[str, str]] = None) -> Optional[list]:
+    """First candidate argv prefix, or None when the CLI cannot be run."""
+    candidates = resolve_cli_candidates(env)
+    return candidates[0] if candidates else None
 
 
 def cli_available() -> bool:
@@ -64,13 +72,7 @@ def _kill_group(proc: subprocess.Popen) -> None:
         pass
 
 
-def run_cli(args: Sequence[str], timeout: float = 60) -> dict:
-    """Run the CLI with ``args`` (argv list, never a shell string)."""
-    prefix = resolve_cli()
-    if prefix is None:
-        return {"ok": False, "exit_code": None, "stdout": "", "stderr": "",
-                "timed_out": False, "truncated": False, "error": NO_CLI_MESSAGE}
-
+def _run_once(prefix: list, args: Sequence[str], timeout: float) -> dict:
     try:
         proc = subprocess.Popen(
             [*prefix, *args],
@@ -107,4 +109,26 @@ def run_cli(args: Sequence[str], timeout: float = 60) -> dict:
     }
     if timed_out:
         result["error"] = f"k-skill CLI timed out after {timeout:g}s and was killed."
+    return result
+
+
+def _is_unknown_skill(result: dict) -> bool:
+    return result["exit_code"] == 1 and "unknown skill" in result["stderr"]
+
+
+def run_cli(args: Sequence[str], timeout: float = 60) -> dict:
+    """Run the CLI with ``args`` (argv list, never a shell string).
+
+    A stale installed ``k-skill`` that predates a skill answers ``unknown skill``;
+    in that case (and only that case) the next candidate (npx @0) is tried.
+    """
+    candidates = resolve_cli_candidates()
+    if not candidates:
+        return {"ok": False, "exit_code": None, "stdout": "", "stderr": "",
+                "timed_out": False, "truncated": False, "error": NO_CLI_MESSAGE}
+    result = _run_once(candidates[0], args, timeout)
+    for prefix in candidates[1:]:
+        if not _is_unknown_skill(result):
+            break
+        result = _run_once(prefix, args, timeout)
     return result

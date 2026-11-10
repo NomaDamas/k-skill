@@ -328,11 +328,23 @@ k-skill이 에이전트를 **한국 서비스**에 연결해 준다면, 아래 �
 4. Node/Python 패키지가 없으면 먼저 전역 설치를 기본으로 진행합니다.
 5. 각 기능 문서를 열어 입력값, 예시, 제한사항을 확인합니다.
 
+## Hermes Agent 플러그인으로 설치
+
+[Hermes Agent](https://hermes-agent.nousresearch.com)에서는 플러그인 하나로 130개 이상의 스킬 전체를 검색·실행할 수 있습니다.
+
+```bash
+hermes plugins install NomaDamas/k-skill/hermes-plugin --enable
+hermes k-skill doctor
+```
+
+에이전트에는 `kskill_search` / `kskill_instructions` / `kskill_exec` / `kskill_read` 도구가 추가되고, 채팅에서는 `/kskill <키워드>`로 검색할 수 있습니다. 자세한 내용은 [Hermes 플러그인 문서](docs/features/hermes-plugin.md)를 참고하세요.
+
 ## 문서
 
 | 문서 | 설명 |
 | --- | --- |
 | [설치 방법](docs/install.md) | 패키지 설치, 선택 설치, 로컬 테스트 방법 |
+| [Hermes Agent 플러그인](docs/features/hermes-plugin.md) | `hermes plugins install`로 설치하는 Hermes 플러그인의 구조, 도구, 개발·검증 방법 |
 | [기여 가이드](CONTRIBUTING.md) | 외부 기여자를 위한 소통, PR 대상 브랜치, 스킬 문서, Changesets, 프록시 정책 |
 | [Manus.ai 에서 가져오기](docs/install-manus.md) | Manus.ai 에서 개별 스킬 폴더 URL 가져오기 또는 `npm run build:manus-bundle` 로 빌드한 `.skill` 파일을 드래그-드롭으로 업로드하는 방법 |
 | [공통 설정 가이드](docs/setup.md) | credential resolution order, 기본 secrets 파일 준비 |

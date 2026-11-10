@@ -46,6 +46,55 @@ class ResolveCliTest(unittest.TestCase):
             self.assertIsNone(self.mod.resolve_cli({"KSKILL_CLI": "   ", "PATH": d}))
 
 
+def _script(path: Path, body: str) -> None:
+    path.write_text("#!/bin/sh\n" + body + "\n")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+
+
+class StaleCliFallbackTest(unittest.TestCase):
+    """An old global `k-skill` that lacks a newer skill must fall through to npx @0."""
+
+    def setUp(self):
+        self.mod = submodule("cli_runner")
+        self._old = dict(os.environ)
+        self.dir = tempfile.mkdtemp()
+        os.environ.pop("KSKILL_CLI", None)
+        os.environ["PATH"] = self.dir + os.pathsep + "/usr/bin:/bin"
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self._old)
+
+    def test_candidates_list_installed_binary_before_npx(self):
+        _script(Path(self.dir, "k-skill"), "exit 0")
+        _script(Path(self.dir, "npx"), "exit 0")
+        cands = self.mod.resolve_cli_candidates(os.environ)
+        self.assertEqual(cands, [[str(Path(self.dir, "k-skill"))],
+                                 [str(Path(self.dir, "npx")), "-y", "@nomadamas/k-skill@0"]])
+
+    def test_unknown_skill_on_installed_cli_retries_with_npx(self):
+        _script(Path(self.dir, "k-skill"), 'echo "error: unknown skill \"$2\"." >&2; exit 1')
+        _script(Path(self.dir, "npx"), 'echo "via-npx $*"')
+        out = self.mod.run_cli(["instruct", "newer-skill"])
+        self.assertTrue(out["ok"], out)
+        self.assertIn("via-npx -y @nomadamas/k-skill@0 instruct newer-skill", out["stdout"])
+
+    def test_other_failures_do_not_retry(self):
+        _script(Path(self.dir, "k-skill"), 'echo "boom" >&2; exit 3')
+        _script(Path(self.dir, "npx"), 'echo "should-not-run"')
+        out = self.mod.run_cli(["exec", "x", "scripts/a.py", "--"])
+        self.assertEqual(out["exit_code"], 3)
+        self.assertNotIn("should-not-run", out["stdout"])
+
+    def test_env_override_never_falls_back(self):
+        os.environ["KSKILL_CLI"] = f"{Path(self.dir, 'k-skill')}"
+        _script(Path(self.dir, "k-skill"), 'echo "error: unknown skill" >&2; exit 1')
+        _script(Path(self.dir, "npx"), 'echo "should-not-run"')
+        out = self.mod.run_cli(["instruct", "x"])
+        self.assertFalse(out["ok"])
+        self.assertNotIn("should-not-run", out["stdout"])
+
+
 class RunCliTest(unittest.TestCase):
     def setUp(self):
         self.mod = submodule("cli_runner")
