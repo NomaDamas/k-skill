@@ -54,6 +54,7 @@ const EXCLUDED_DIRS = new Set([
   "python-packages",
   "scripts",
   "examples",
+  "hermes-plugin",
   "tools",
 ]);
 

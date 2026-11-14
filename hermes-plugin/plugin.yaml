@@ -1,0 +1,16 @@
+name: k-skill
+version: 0.1.0
+description: 130+ Korean everyday/work skills (KTX, 당근, 쿠팡, 미세먼지, 주유소, 공시지가, 법령 ...) as Hermes tools. Searches the catalog and runs the official k-skill CLI.
+author: NomaDamas
+license: MIT
+homepage: https://github.com/NomaDamas/k-skill
+kind: standalone
+tags:
+  - korea
+  - ko-KR
+  - skills
+provides_tools:
+  - kskill_search
+  - kskill_instructions
+  - kskill_exec
+  - kskill_read

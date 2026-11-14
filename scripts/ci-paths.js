@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const repoRoot = path.resolve(__dirname, "..");
+const HERMES_PLUGIN_DIR = path.join(repoRoot, "hermes-plugin");
 const STORE_LONGEVITY_MIRROR_TEST = "test_store_longevity_mirror.py";
 
 const SKIP_DIR_NAMES = new Set([
@@ -76,6 +77,7 @@ function listPythonCompileFiles() {
   for (const skillDir of listSkillDirs()) {
     files.push(...walkFiles(skillDir, (_full, name) => name.endsWith(".py")));
   }
+  files.push(...walkFiles(HERMES_PLUGIN_DIR, (_full, name) => name.endsWith(".py")));
   return [...new Set(files)].sort();
 }
 
@@ -116,6 +118,15 @@ function listPythonTestJobs() {
       label: "scripts/test_*.py",
       pythonPath: [repoRoot, rootScripts],
       args: ["-m", "unittest", ...rootModules],
+    });
+  }
+
+  const hermesTests = path.join(HERMES_PLUGIN_DIR, "tests");
+  if (hasTestPy(hermesTests)) {
+    jobs.push({
+      label: "hermes-plugin/tests",
+      pythonPath: [repoRoot, hermesTests],
+      args: ["-m", "unittest", "discover", "-s", hermesTests, "-p", "test_*.py"],
     });
   }
 
