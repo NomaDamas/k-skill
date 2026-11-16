@@ -15,10 +15,10 @@ const workflowDir = path.join(repoRoot, ".github", "workflows");
 // listed action ref's GitHub `action.yml` metadata on the review date below.
 const actionRuntimeGuardScope = {
   coverage: "curated migration set; not exhaustive for every external workflow action",
-  reviewedAt: "2026-05-22",
+  reviewedAt: "2026-11-16",
   sourceUrls: new Map([
-    ["actions/checkout", "https://github.com/actions/checkout/blob/v5/action.yml"],
-    ["actions/setup-node", "https://github.com/actions/setup-node/blob/v5/action.yml"],
+    ["actions/checkout", "https://github.com/actions/checkout/blob/v7/action.yml"],
+    ["actions/setup-node", "https://github.com/actions/setup-node/blob/v7/action.yml"],
     [
       "google-github-actions/setup-gcloud",
       "https://github.com/google-github-actions/setup-gcloud/blob/v3/action.yml",
@@ -31,8 +31,8 @@ const actionRuntimeGuardScope = {
 };
 
 const expectedNode24ActionPins = new Map([
-  ["actions/checkout", "v5"],
-  ["actions/setup-node", "v5"],
+  ["actions/checkout", "v7.0.1"],
+  ["actions/setup-node", "v7.1.0"],
   ["google-github-actions/setup-gcloud", "v3"],
   ["googleapis/release-please-action", "v5"],
 ]);
