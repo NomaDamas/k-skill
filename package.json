@@ -26,8 +26,8 @@
     "migrate:cli-assets": "node scripts/migrate-cli-asset-instructions.js"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.5",
-    "@types/node": "^22.14.1",
-    "typescript": "^5.8.2"
+    "@changesets/cli": "^3.0.3",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
   }
 }

@@ -34,7 +34,7 @@
     "wasm"
   ],
   "dependencies": {
-    "@rhwp/core": "^0.7.3"
+    "@rhwp/core": "^0.8.7"
   },
   "scripts": {
     "lint": "node --check src/index.js && node --check src/cli.js && node --check src/wasm-init.js && node --check bin/k-skill-rhwp.js && node --check test/index.test.js && node --check test/cli.test.js",

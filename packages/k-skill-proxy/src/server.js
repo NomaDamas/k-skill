@@ -2562,7 +2562,9 @@ function buildServer({ env = process.env, provider = null, now = () => new Date(
     ...(loggerInstance ? { loggerInstance } : { logger: true }),
     logController: new LogController({ disableRequestLogging: true }),
     routerOptions: { querystringParser: parseQueryStringWithEucKrFallback },
-    trustProxy: config.trustProxyHops || false
+    // Fastify >=5.12 fails closed on numeric trustProxy (ignores X-Forwarded-For),
+    // so express the hop count as an explicit trust function.
+    trustProxy: config.trustProxyHops > 0 ? (_address, hop) => hop < config.trustProxyHops : false
   });
 
   app.decorate("configValues", config);
