@@ -1,9 +1,11 @@
 import json
 import re
 
+from daangn_detail_ld import floor_label
+
 DETAIL_BASE = "https://realty.daangn.com/articles/"
 PY_PER_SQM = 3.305785
-TRADE_LABEL = {"MONTH": "월세", "BUY": "매매", "BORROW": "전세"}
+TRADE_LABEL = {"MONTH": "월세", "BUY": "매매", "BORROW": "전세", "SHORT": "단기", "YEAR": "연세"}
 
 
 def extract_relay_store(html):
@@ -96,6 +98,8 @@ def parse_trade(trade):
         return ("BUY", None, None, trade.get("price"))
     if typename == "BorrowTrade":
         return ("BORROW", trade.get("deposit"), None, None)
+    if typename == "YearTrade":
+        return ("YEAR", trade.get("deposit"), None, None)
     return (
         trade.get("type"),
         trade.get("deposit"),
@@ -104,12 +108,14 @@ def parse_trade(trade):
     )
 
 
-def per_pyeong(kind, deposit, monthly, price, pyeong):
+def per_pyeong(kind, deposit, monthly, price, pyeong, yearly=None):
     if not pyeong or pyeong <= 0:
         return None
     base = None
-    if kind == "MONTH":
+    if kind in ("MONTH", "SHORT"):
         base = monthly
+    elif kind == "YEAR":
+        base = yearly
     elif kind == "BUY":
         base = price
     elif kind == "BORROW":
@@ -125,6 +131,7 @@ def per_pyeong(kind, deposit, monthly, price, pyeong):
 
 def extract_articles(store, max_items):
     items = []
+    seen = set()
     cards = [
         value
         for value in store.values()
@@ -134,40 +141,51 @@ def extract_articles(store, max_items):
         article = _deref(store, card.get("article"))
         if not article or article.get("__typename") != "Article":
             continue
-        area = _parse_area(article.get("area"))
+        article_id = article.get("originalId")
+        if article_id in seen:  # 같은 매물이 지도/목록 피드에 중복 카드로 들어온다
+            continue
+        seen.add(article_id)
+        area = parse_area(article.get("area"))
         pyeong = round(area / PY_PER_SQM, 2) if area else None
         trades = []
         for trade in _refs(store, article, "trades"):
             kind, deposit, monthly, price = parse_trade(trade)
-            trades.append(
-                {
-                    "type": kind,
-                    "label": TRADE_LABEL.get(kind, kind),
-                    "deposit_manwon": deposit,
-                    "monthly_manwon": monthly,
-                    "price_manwon": price,
-                    "per_pyeong_manwon": per_pyeong(
-                        kind, deposit, monthly, price, pyeong
-                    ),
-                }
-            )
-        article_id = article.get("originalId")
-        items.append(
-            {
-                "article_id": article_id,
-                "salesType": sales_type(store, article),
-                "area_sqm": area,
-                "area_pyeong": pyeong,
-                "trades": trades,
-                "url": DETAIL_BASE + str(article_id) if article_id else None,
+            yearly = trade.get("yearlyPay") if kind == "YEAR" else None
+            entry = {
+                "type": kind,
+                "label": TRADE_LABEL.get(kind, kind),
+                "deposit_manwon": deposit,
+                "monthly_manwon": monthly,
+                "price_manwon": price,
+                "per_pyeong_manwon": per_pyeong(
+                    kind, deposit, monthly, price, pyeong, yearly=yearly
+                ),
             }
-        )
+            if kind == "YEAR":
+                entry["yearly_manwon"] = yearly
+            trades.append(entry)
+        item = {
+            "article_id": article_id,
+            "salesType": sales_type(store, article),
+            "area_sqm": area,
+            "area_pyeong": pyeong,
+            "trades": trades,
+            "url": DETAIL_BASE + str(article_id) if article_id else None,
+        }
+        region = _deref(store, article.get("region"))
+        if isinstance(region, dict) and region.get("name3"):
+            item["region_name3"] = region["name3"]
+        if article.get("floor") is not None:
+            item["floor_label"] = floor_label(article["floor"], article.get("topFloor"))
+        if article.get("buildingName"):
+            item["building_name"] = article["buildingName"]
+        items.append(item)
         if len(items) >= max_items:
             break
     return items
 
 
-def _parse_area(value):
+def parse_area(value):
     try:
         return float(value) if value is not None and value != "" else None
     except (TypeError, ValueError):
