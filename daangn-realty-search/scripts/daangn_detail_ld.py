@@ -26,12 +26,26 @@ def parse_detail(url, fetch_text):
         out["json_ld"].append(document)
         for node in _json_ld_nodes(document):
             _apply_node(out, node)
-    if out["floor"] is not None:
-        floor = str(out["floor"]).replace(".0", "")
-        top = str(out["top_floor"]).replace(".0", "") if out["top_floor"] else "?"
-        out["floor_label"] = f"{floor}층/{top}층"
+    out["floor_label"] = floor_label(out["floor"], out["top_floor"])
     out["json_ld"] = out["json_ld"][:3]
     return out
+
+
+def floor_label(floor, top_floor):
+    """("8.0", "10") / ("8층", "10층") → "8층/10층". floor 가 없으면 None."""
+    if floor is None:
+        return None
+    top = _floor_text(top_floor) if top_floor else "?층"
+    return f"{_floor_text(floor)}/{top}"
+
+
+def _floor_text(value):
+    """"8.0" / "8" / "8층" → "8층". "반지하" 같은 비숫자 값은 그대로."""
+    text = str(value).strip()
+    number = text[:-1] if text.endswith("층") else text
+    if re.fullmatch(r"B?-?\d+(?:\.0+)?", number):
+        return f"{number.split('.')[0]}층"
+    return text
 
 
 def _json_ld_nodes(document):
