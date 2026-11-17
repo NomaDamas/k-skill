@@ -243,6 +243,7 @@ k-skill이 에이전트를 **한국 서비스**에 연결해 준다면, 아래 �
 | 할 수 있는 일 | 스킬 이름 | 설명 |
 | --- | --- | --- |
 | [장학금 검색 및 조회](docs/features/korean-scholarship-search.md) | `korean-scholarship-search` | 한국장학재단·전국 대학교·재단·기업 장학 공고를 검색해 금액·자격·지원구간·링크를 정리하고 KST 기준 현재 날짜 마감 상태와 조건별 필터링까지 제공 |
+| [공모아뷰 공모전·대외활동 조회](docs/features/gongmoaview-contests.md) | `gongmoaview-contests` | 공모아뷰 공식 원격 MCP 서버를 인증 없이 직접 호출해 접수 중인 공모전·대외활동·교육 공고를 유형·분야·대상·마감·지역·상금 조건으로 검색하고 공고 한 건의 접수 기간·대상·상금·주최를 조회 |
 | [학교 급식 식단 조회](docs/features/k-schoollunch-menu.md) | `k-schoollunch-menu` | 교육청·학교명으로 NEIS 학교 검색·급식 식단 조회 |
 | [도서관 도서 조회](docs/features/library-book-search.md) | `library-book-search` | 도서관 정보나루 기반 도서 검색, 상세, 소장 도서관, 도서관별 소장 여부 조회 |
 | [KERIS/RISS 학술자료 검색](docs/features/keris-academic-search.md) | `keris-academic-search` | 학위논문·국내외 학술논문·단행본·연구보고서·학술지 메타데이터와 원문 가능 표시 조회 |

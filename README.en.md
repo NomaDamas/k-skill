@@ -235,6 +235,7 @@ We've divided a total of 134 skills into categories by area of Korean daily life
 | What it can do | Skill name | Description |
 | --- | --- | --- |
 | [Scholarship search & lookup](docs/features/korean-scholarship-search.md) | `korean-scholarship-search` | Search scholarship announcements from the Korea Student Aid Foundation (한국장학재단), universities nationwide, foundations, and corporations, summarizing amount, eligibility, support tiers, and links, and providing current-date closure status based on KST and filtering by conditions |
+| [GongmoaView contest & activity lookup](docs/features/gongmoaview-contests.md) | `gongmoaview-contests` | Directly call the GongmoaView (공모아뷰) official remote MCP server without authentication to search open contests, extracurricular activities, and education listings by type, field, target, deadline, region, and prize, and read the application period, eligibility, prize, and host of a single listing |
 | [School meal menu lookup](docs/features/k-schoollunch-menu.md) | `k-schoollunch-menu` | Search schools and query meal menus by office of education/school name via NEIS |
 | [Library book lookup](docs/features/library-book-search.md) | `library-book-search` | Book search, details, holding libraries, and per-library hold status based on Library Information Naru (도서관 정보나루) |
 | [KERIS/RISS academic material search](docs/features/keris-academic-search.md) | `keris-academic-search` | Query metadata and full-text availability for theses, domestic and international academic papers, monographs, research reports, and journals |

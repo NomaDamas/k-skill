@@ -236,6 +236,7 @@ k-skill がエージェントを**韓国のサービス**につなぐのに対�
 | できること | スキル名 | 説明 |
 | --- | --- | --- |
 | [奨学金の検索および照会](docs/features/korean-scholarship-search.md) | `korean-scholarship-search` | 韓国奨学財団・全国の大学・財団・企業の奨学公告を検索し、金額・資格・支援区間・リンクを整理し、KST基準の現在日での締切状態と条件別フィルタリングまで提供します |
+| [公募アビュー 公募展・対外活動の照会](docs/features/gongmoaview-contests.md) | `gongmoaview-contests` | 公募アビュー(공모아뷰)公式リモートMCPサーバーを認証なしで直接呼び出し、受付中の公募展・対外活動・教育公告を種類・分野・対象・締切・地域・賞金の条件で検索し、公告1件の受付期間・対象・賞金・主催を照会します |
 | [学校給食の献立照会](docs/features/k-schoollunch-menu.md) | `k-schoollunch-menu` | 教育庁・学校名でNEISの学校検索・給食献立を照会します |
 | [図書館の図書照会](docs/features/library-book-search.md) | `library-book-search` | 図書館情報ナル（도서관 정보나루）ベースの図書検索、詳細、所蔵図書館、図書館別の所蔵有無照会です |
 | [KERIS/RISS学術資料検索](docs/features/keris-academic-search.md) | `keris-academic-search` | 学位論文・国内外の学術論文・単行本・研究報告書・学術誌のメタデータと原文可否表示を照会します |

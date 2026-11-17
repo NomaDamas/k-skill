@@ -4512,6 +4512,7 @@ const README_SKILL_NAME_COLUMN_MAPPING = [
   ["한국 주택 공시가격 조회", "housing-official-price"],
   ["LH 청약 공고문 조회", "lh-notice-search"],
   ["장학금 검색 및 조회", "korean-scholarship-search"],
+  ["공모아뷰 공모전·대외활동 조회", "gongmoaview-contests"],
   ["생활쓰레기 배출정보 조회", "household-waste-info"],
   ["학교 급식 식단 조회", "k-schoollunch-menu"],
   ["도서관 도서 조회", "library-book-search"],

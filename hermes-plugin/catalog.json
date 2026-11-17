@@ -513,6 +513,21 @@
     ]
   },
   {
+    "name": "gongmoaview-contests",
+    "description": "공모아뷰(gongmoaview.com)가 운영하는 읽기 전용 원격 MCP 서버를 인증 없이 직접 호출해 지금 접수 중인 공모전·대외활동·교육 공고를 유형·분야·대상·마감·지역·상금 조건으로 검색하고, 공고 한 건의 접수 기간·대상·상금·주최와 올라온 사이트를 조회한다.",
+    "category": "education",
+    "profiles": [
+      "lookup"
+    ],
+    "triggers": [
+      "이번 주 안에 마감되는 대학생 공모전 알려줘",
+      "상금이 큰 네이밍·슬로건 공모전 찾아줘",
+      "서울 지역 서포터즈 대외활동 보여줘",
+      "오늘 새로 올라온 공모전 있어?",
+      "이 공모전 접수 기간이랑 대상, 상금, 주최 알려줘"
+    ]
+  },
+  {
     "name": "gongsijiga-search",
     "description": "|",
     "category": "real-estate",

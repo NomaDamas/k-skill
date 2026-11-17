@@ -236,6 +236,7 @@ npx -y @nomadamas/k-skill@0 update
 | 能做的事 | 技能名称 | 说明 |
 | --- | --- | --- |
 | [奖学金搜索与查询](docs/features/korean-scholarship-search.md) | `korean-scholarship-search` | 检索韩国奖学财团·全国大学·财团·企业奖学金公告，整理金额·资格·资助区间·链接，并提供以韩国标准时间(KST)为基准的当前日期截止状态与按条件的筛选 |
+| [GongmoaView 竞赛·校外活动查询](docs/features/gongmoaview-contests.md) | `gongmoaview-contests` | 无需认证直接调用 GongmoaView(공모아뷰)官方远程 MCP 服务器,按类型·领域·对象·截止·地区·奖金条件检索受理中的竞赛·校外活动·教育公告,并查询单个公告的受理期间·对象·奖金·主办方 |
 | [学校供餐菜单查询](docs/features/k-schoollunch-menu.md) | `k-schoollunch-menu` | 按教育厅·学校名进行 NEIS 学校搜索·供餐菜单查询 |
 | [图书馆图书查询](docs/features/library-book-search.md) | `library-book-search` | 基于 Data4Library (정보나루) 的图书搜索、详情、馆藏图书馆、各图书馆馆藏与否查询 |
 | [KERIS/RISS 学术资料检索](docs/features/keris-academic-search.md) | `keris-academic-search` | 查询学位论文·国内外学术论文·专著·研究报告·学术期刊的元数据与是否可获取原文的标记 |

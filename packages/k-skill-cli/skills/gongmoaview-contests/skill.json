@@ -1,0 +1,8 @@
+{
+  "name": "gongmoaview-contests",
+  "description": "공모아뷰(gongmoaview.com)가 운영하는 읽기 전용 원격 MCP 서버를 인증 없이 직접 호출해 지금 접수 중인 공모전·대외활동·교육 공고를 유형·분야·대상·마감·지역·상금 조건으로 검색하고, 공고 한 건의 접수 기간·대상·상금·주최와 올라온 사이트를 조회한다.",
+  "profiles": [
+    "lookup"
+  ],
+  "frontmatter": "name: gongmoaview-contests\ndescription: 공모아뷰(gongmoaview.com)가 운영하는 읽기 전용 원격 MCP 서버를 인증 없이 직접 호출해 지금 접수 중인 공모전·대외활동·교육 공고를 유형·분야·대상·마감·지역·상금 조건으로 검색하고, 공고 한 건의 접수 기간·대상·상금·주최와 올라온 사이트를 조회한다.\nlicense: MIT\nmetadata:\n  category: education\n  locale: ko-KR\n  phase: v1"
+}
