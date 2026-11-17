@@ -54,6 +54,7 @@ top-level `SKILL.md` 전체를 돌쇠 우선 실행 계약으로 전수 검토�
 | `g2b-order-plan-search` | `legal` | 공식 조달 표면에서 로그인·공고/서류 준비를 진행하고 `clarify` 후 허용된 제출 |
 | `g2b-sanctioned-supplier` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `geeknews-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
+| `gongmoaview-contests` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `gongsijiga-search` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `gov-overseas-trip-report` | `lookup` | 요청한 조회를 완료하고, 별도 후속 행동 요청 시 지원되는 공식 표면으로 연결 |
 | `government-bond-analysis` | `lookup` | 한국·미국 국채 금리의 관측일·만기·단위를 검증해 변화와 공식 확인 일정을 출처와 함께 정리 |

@@ -119,6 +119,7 @@
 - **government-support-survey** — K-Startup·기업마당·NIPA·KOCCA·SMTECH 공고 전수조사·적합성 분류
 - **store-longevity-radar** — 상권정보 공개파일로 장수 점포(N년 이상 영업) 선별
 - **korean-scholarship-search** — 한국 장학금 공고 검색·금액/자격 추출·필터
+- **gongmoaview-contests** — 공모아뷰 공식 MCP로 접수 중 공모전·대외활동·교육 공고 검색·상세
 
 ## 문서 · 한국어 텍스트
 - **hwp** — kordoc 기반 HWP/HWPX 파싱·JSON 추출·diff·양식 채우기
