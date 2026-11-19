@@ -264,6 +264,7 @@ k-skill이 에이전트를 **한국 서비스**에 연결해 준다면, 아래 �
 | [한국어 AI 윤문](docs/features/korean-humanizer.md) | `korean-humanizer` | AI가 쓴 티 나는 한국어 글을 번역체·AI 상투어·과장된 의의·줄표/이모지 등 흔적을 심각도(S1/S2/S3)로 분류해 의미는 보존하며 사람 글로 윤문, 목표 글자수도 맞춤 |
 | [한국어 유행어 글쓰기](docs/features/korean-slang-writing.md) | `korean-slang-writing` | 나무위키 유행어 기반 큐레이션 시드로 한국 유행어 후보 조회, 무드/문맥/safety 필터 및 나무위키 best-effort 요약으로 한국어 글을 유행어 느낌으로 작성 |
 | [한국 중세 국어풍 변환](docs/features/korean-middle-korean.md) | `korean-middle-korean` | 한국어 입력문을 중세국어풍 조사·어미·Hanja 힌트·성조점이 섞인 창작용 문체로 결정론적 변환 |
+| [네이버 블로그 글쓰기](docs/features/naver-blog.md) | `naver-blog` | ego lite로 네이버 블로그 SmartEditor ONE에 글을 작성하고 원형 숫자 서식·비공개 발행까지 진행 (로그인은 사용자가 직접, 최종 발행 전 승인) |
 | [한국어 글자 수 세기](docs/features/korean-character-count.md) | `korean-character-count` | 한국어 텍스트의 글자 수·줄 수·UTF-8/NEIS byte 수를 결정론적으로 계산 |
 
 ### 🌤️ 날씨·환경
