@@ -1,0 +1,10 @@
+{
+  "name": "naver-blog",
+  "description": "Use when the user asks to write a Naver Blog post, 네이버 블로그 글쓰기, or publish a post privately (비공개 발행) via SmartEditor ONE using ego lite. 로그인은 사용자가 직접 하고 개인 자격증명은 저장하지 않으며, 최종 발행 직전에는 승인을 받는다.",
+  "profiles": [
+    "browser",
+    "vault",
+    "action:submission"
+  ],
+  "frontmatter": "name: naver-blog\ndescription: Use when the user asks to write a Naver Blog post, 네이버 블로그 글쓰기, or publish a post privately (비공개 발행) via SmartEditor ONE using ego lite. 로그인은 사용자가 직접 하고 개인 자격증명은 저장하지 않으며, 최종 발행 직전에는 승인을 받는다.\nlicense: MIT\nmetadata:\n  category: writing\n  locale: ko-KR\n  phase: v1"
+}

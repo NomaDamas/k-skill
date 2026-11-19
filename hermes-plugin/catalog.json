@@ -1487,6 +1487,21 @@
     ]
   },
   {
+    "name": "naver-blog",
+    "description": "Use when the user asks to write a Naver Blog post, 네이버 블로그 글쓰기, or publish a post privately (비공개 발행) via SmartEditor ONE using ego lite. 로그인은 사용자가 직접 하고 개인 자격증명은 저장하지 않으며, 최종 발행 직전에는 승인을 받는다.",
+    "category": "writing",
+    "profiles": [
+      "browser",
+      "vault",
+      "action:submission"
+    ],
+    "triggers": [
+      "네이버 블로그에 글 써줘",
+      "이 내용으로 블로그 글 작성해서 비공개로 발행해줘",
+      "블로그 초안 SmartEditor에 입력해줘"
+    ]
+  },
+  {
     "name": "naver-blog-research",
     "description": "Search Naver blogs, read full post content, and download images using only python3 stdlib — no API key required.",
     "category": "research",
