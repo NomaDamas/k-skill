@@ -18,6 +18,8 @@ KTX, KBO, 로또, 당근, 쿠팡, 카톡, 정부24, 홈택스 등등 귀찮은 �
 
 Claude Code, Codex, OpenCode, OpenClaw/ClawHub 등 각종 코딩 에이전트 지원합니다.
 
+처음이라면 [k-skill 소개 글](https://blog.nomadamas.org/posts/k-skill-intro/)에서 무엇을 맡길 수 있는지 먼저 보세요.
+
 추가 클라이언트 API 레이어는 불필요합니다. 필요한 경우 `k-skill-proxy` 같은 프록시 서버에 HTTP 요청만 넣으면 됩니다.
 
 공개 API 프록시를 사용하는 스킬의 개인정보 처리 기준은
