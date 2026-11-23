@@ -88,6 +88,12 @@ function getSolarTermMonthIndex(month, day) {
     [12, 7],
     [1, 6]
   ];
+
+  // 1월은 입춘(2월) 이전이므로 소한(1월 6일) 전후로 子월/丑월만 가른다.
+  if (month === 1) {
+    return day >= 6 ? 11 : 10;
+  }
+
   const value = month * 100 + day;
 
   for (let index = 10; index >= 0; index -= 1) {
