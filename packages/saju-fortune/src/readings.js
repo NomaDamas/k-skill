@@ -144,12 +144,15 @@ function buildSchoolComparison(result) {
 function buildDaeUn(result, args) {
   const limit = clamp(Number(args.limit || 10), 1, 12);
   const startAge = result.input.gender === "male" ? 7 : 8;
+  // 양남음녀는 순행, 음남양녀는 역행한다.
+  const isYangYear = result.pillars.year.yinYang === "yang";
+  const step = (result.input.gender === "male") === isYangYear ? 1 : -1;
   const cycles = [];
 
   for (let index = 0; index < limit; index += 1) {
     const age = startAge + index * 10;
-    const stem = STEMS[mod(result.pillars.month.stemIndex + index + 1, 10)];
-    const branch = BRANCHES[mod(result.pillars.month.branchIndex + index + 1, 12)];
+    const stem = STEMS[mod(result.pillars.month.stemIndex + step * (index + 1), 10)];
+    const branch = BRANCHES[mod(result.pillars.month.branchIndex + step * (index + 1), 12)];
     cycles.push({ age, label: `${stem.korean}${branch.korean}`, hanja: `${stem.hanja}${branch.hanja}` });
   }
 
