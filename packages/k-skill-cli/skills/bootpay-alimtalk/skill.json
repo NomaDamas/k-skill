@@ -1,0 +1,9 @@
+{
+  "name": "bootpay-alimtalk",
+  "description": "부트페이 알림톡 API로 카카오 채널·공식/자체 템플릿을 조회하고, 필수 변수·발송 제외·예약 시각을 검사한 미리보기 뒤 사용자 승인을 받아 단건·벌크 알림톡을 발송하고 결과를 조회한다.",
+  "profiles": [
+    "vault",
+    "action:submission"
+  ],
+  "frontmatter": "name: bootpay-alimtalk\ndescription: 부트페이 알림톡 API로 카카오 채널·공식/자체 템플릿을 조회하고, 필수 변수·발송 제외·예약 시각을 검사한 미리보기 뒤 사용자 승인을 받아 단건·벌크 알림톡을 발송하고 결과를 조회한다.\nlicense: MIT\nmetadata:\n  category: business\n  locale: ko-KR\n  phase: v1"
+}

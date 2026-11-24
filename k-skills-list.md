@@ -1,6 +1,6 @@
 # k-skill 스킬 리스트
 
-한국 특화 검색·조회·자동화 에이전트 스킬 모음 (총 134개)
+한국 특화 검색·조회·자동화 에이전트 스킬 모음 (총 135개)
 
 ## 쇼핑 · 커머스
 - **coupang-product-search** — 쿠팡 Partners API로 상품 검색·로켓배송·가격 후보 비교
@@ -82,6 +82,7 @@
 - **kosis-stats** — KOSIS 국가통계포털 통계표 검색·메타데이터·데이터 조회
 - **kamis-food-price** — KAMIS 농수축산물 도소매 가격·기간별 비교
 - **consumer-price-safety-search** — 소비자원 참가격·소비자24 물품/리콜 정보 (draft)
+- **bootpay-alimtalk** — 부트페이 알림톡 템플릿 조회·미리보기·승인 후 발송·결과 조회
 - **popbill** — 팝빌 전자세금계산서·현금영수증·문자·팩스·휴폐업 조회
 - **korean-jangbu-for** — 1인 법인·프리랜서·개인사업자 장부 자동화
 
