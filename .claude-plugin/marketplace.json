@@ -1,5 +1,6 @@
 {
   "name": "k-skill",
+  "description": "Korean workflows and a separate Korean writing plugin.",
   "owner": {
     "name": "NomaDamas"
   },
@@ -8,6 +9,11 @@
       "name": "k-skill",
       "source": "./",
       "description": "한국인을 위한 90+ Agent Skill 번들 — 철도 통합/당근/쿠팡/카톡/정부24 등 한국 일상·업무 자동화"
+    },
+    {
+      "name": "k-skill-korean-writing",
+      "source": "./packages/k-skill-directory",
+      "description": "실행 코드와 외부 연동 없이 한국어 문장을 윤문하는 공개 디렉터리용 번들"
     }
   ]
 }
