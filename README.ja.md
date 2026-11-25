@@ -126,7 +126,7 @@ k-skill がエージェントを**韓国のサービス**につなぐのに対�
 | [認許可営業状態の照会](docs/features/localdata-business-status.md) | `localdata-business-status` | 商号+市郡区で町の事業所（208業種）の営業/休業/廃業・業歴・住所を照会します（LOCALDATA、認証不要） |
 | [長寿店舗レーダー](docs/features/store-longevity-radar.md) | `store-longevity-radar` | 商店（商圏）情報の公開ファイル（認証不要）で業種・商号キーワードの店舗を全件抽出し、過去のスナップショットと商号+座標をマッチングして長寿店舗を抽出します |
 | [韓国の事業者帳簿の自動化](docs/features/korean-jangbu-for.md) | `korean-jangbu-for` | `kimlawtech/korean-jangbu-for` ベースで、カード・銀行・レシート・税金計算書を入力 → 標準取引履歴・勘定科目・税理士提出用CSV・経営レポートを生成するthin wrapperです |
-| [Bootpay（부트페이）アリムトーク送信](docs/features/bootpay-alimtalk.md) | `bootpay-alimtalk` | Bootpayアリムトーク APIで公式・独自テンプレートを照会し、必須変数・送信除外・予約時刻を検査したプレビューの後、承認を得て単件・一括送信と結果照会をローカルBYOK方式で行います |
+| [Bootpay（부트페이）アリムトーク送信](docs/features/bootpay-alimtalk.md) | `bootpay-alimtalk` | Bootpayアリムトーク API（1件6.5ウォン・月額基本料なし）でカカオチャンネル連携から公式・独自テンプレートの照会まで行い、必須変数・送信除外・予約時刻を検査したプレビューの後、承認を得て単件・一括送信と結果照会をローカルBYOK方式で行います |
 | [Popbill（팝빌）業務API](docs/features/popbill.md) | `popbill` | Popbillの電子税金計算書・電子明細書・現金領収証・SMS・KakaoTalk・FAX・休廃業/企業情報・口座照会・Hometax（홈택스）収集をローカルBYOK方式で呼び出します |
 | [Naver検索広告のパフォーマンス照会](docs/features/naver-ad-performance.md) | `naver-ad-performance` | Naver検索広告のキャンペーン/広告グループ/キーワードのインプレッション数・クリック数・広告費・CTR・CPC・コンバージョン数を照会し、関連キーワード・月間検索ボリュームのツールを提供します（読み取り専用、ローカル実行専用） |
 

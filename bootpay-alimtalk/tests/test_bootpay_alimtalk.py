@@ -57,6 +57,10 @@ class FakeServer:
                     return self._reply(200, {"receipt_id": "r1", "ref_id": body["ref_id"], "status": "requested"})
                 if path == "/alimtalk/send/bulk":
                     return self._reply(200, {"count": len(body["recipients"]), "requested": len(body["recipients"])})
+                if path == "/alimtalk/senders/otp":
+                    return self._reply(200, {"sent": True})
+                if path == "/alimtalk/senders" and self.command == "POST":
+                    return self._reply(200, {"ksp_id": "k1", "verified": True, "group_key_registered": True})
                 if path == "/alimtalk/messages":
                     return self._reply(200, {"list": [], "count": 0})
                 return self._reply(404, {"error_code": "NOT_FOUND", "message": path})
@@ -205,6 +209,25 @@ class BootpayAlimtalkTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertFalse(out["data"]["canceled"])
         self.assertEqual(self.server.calls, [])
+
+    def test_sender_otp_requires_approval_and_normalizes(self):
+        code, out = self.run_cli("sender-otp", "--yellow-id", "mychannel", "--phone", "010-1111-2222")
+        self.assertEqual(code, 0)
+        self.assertFalse(out["data"]["requested"])
+        self.assertEqual(self.server.calls, [])
+        self.run_cli("sender-otp", "--yellow-id", "mychannel", "--phone", "010-1111-2222", "--yes-i-understand")
+        (_, path, body, _), = self.server.calls
+        self.assertEqual(path, "/alimtalk/senders/otp")
+        self.assertEqual(body, {"yellow_id": "@mychannel", "phone": "01011112222"})
+
+    def test_sender_register(self):
+        code, out = self.run_cli("sender-register", "--otp", "123456", "--yellow-id", "@mychannel", "--phone", "01011112222")
+        self.assertEqual(out["data"]["request"]["otp"], "***")
+        self.assertEqual(self.server.calls, [])
+        code, out = self.run_cli("sender-register", "--otp", "123456", "--yellow-id", "@mychannel", "--phone", "01011112222", "--yes-i-understand")
+        self.assertEqual(code, 0)
+        self.assertTrue(out["data"]["registered"])
+        self.assertEqual(self.server.calls[0][2]["otp"], "123456")
 
     def test_reserved_at_rules(self):
         now = dt.datetime(2026, 8, 27, tzinfo=dt.timezone.utc)

@@ -126,7 +126,7 @@ npx -y @nomadamas/k-skill@0 update
 | [许可营业状态查询](docs/features/localdata-business-status.md) | `localdata-business-status` | 按商号+市郡区查询社区商户（208 个行业）的营业/停业/歇业·经营年限·地址（LOCALDATA 无需认证） |
 | [长寿店铺雷达](docs/features/store-longevity-radar.md) | `store-longevity-radar` | 利用商圈（商业圈）信息公开文件（无需认证）抽取行业·商号关键词的全部店铺，并与历史快照通过商号+坐标匹配，提取长寿店铺 |
 | [韩国企业账簿自动化](docs/features/korean-jangbu-for.md) | `korean-jangbu-for` | 基于 `kimlawtech/korean-jangbu-for` 的银行卡·银行·收据·税务发票输入 → 生成标准交易明细·会计科目·交付税务师的 CSV·经营报告的薄封装 |
-| [Bootpay (부트페이) 알림톡发送](docs/features/bootpay-alimtalk.md) | `bootpay-alimtalk` | 通过 Bootpay 알림톡 API 查询官方·自定义模板，检查必填变量·退订名单·预约时间并预览，经批准后以本地 BYOK 方式单发·群发并查询结果 |
+| [Bootpay (부트페이) 알림톡发送](docs/features/bootpay-alimtalk.md) | `bootpay-alimtalk` | 通过 Bootpay 알림톡 API（每条 6.5 韩元、无月费）从 Kakao 频道对接到查询官方·自定义模板，检查必填变量·退订名单·预约时间并预览，经批准后以本地 BYOK 方式单发·群发并查询结果 |
 | [Popbill (팝빌) 业务 API](docs/features/popbill.md) | `popbill` | 以本地 BYOK 方式调用 Popbill 电子税务发票·电子明细单·现金收据·短信·KakaoTalk·传真·停歇业/企业信息·账户查询·Hometax 采集 |
 | [Naver 搜索广告成效查询](docs/features/naver-ad-performance.md) | `naver-ad-performance` | 查询 Naver 搜索广告系列/广告组/关键词的展示数·点击数·广告费·CTR·CPC·转化数，以及相关关键词·月搜索量工具（只读，仅限本地运行） |
 

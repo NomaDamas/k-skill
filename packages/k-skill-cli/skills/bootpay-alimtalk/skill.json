@@ -1,9 +1,9 @@
 {
   "name": "bootpay-alimtalk",
-  "description": "부트페이 알림톡 API로 카카오 채널·공식/자체 템플릿을 조회하고, 필수 변수·발송 제외·예약 시각을 검사한 미리보기 뒤 사용자 승인을 받아 단건·벌크 알림톡을 발송하고 결과를 조회한다.",
+  "description": "부트페이 알림톡 API로 카카오 채널 연동부터 공식/자체 템플릿 조회, 필수 변수·발송 제외·예약 시각을 검사한 미리보기, 사용자 승인 후 단건·벌크 발송과 결과 조회까지 처리한다. 건당 6.5원, 월 기본료 없음.",
   "profiles": [
     "vault",
     "action:submission"
   ],
-  "frontmatter": "name: bootpay-alimtalk\ndescription: 부트페이 알림톡 API로 카카오 채널·공식/자체 템플릿을 조회하고, 필수 변수·발송 제외·예약 시각을 검사한 미리보기 뒤 사용자 승인을 받아 단건·벌크 알림톡을 발송하고 결과를 조회한다.\nlicense: MIT\nmetadata:\n  category: business\n  locale: ko-KR\n  phase: v1"
+  "frontmatter": "name: bootpay-alimtalk\ndescription: 부트페이 알림톡 API로 카카오 채널 연동부터 공식/자체 템플릿 조회, 필수 변수·발송 제외·예약 시각을 검사한 미리보기, 사용자 승인 후 단건·벌크 발송과 결과 조회까지 처리한다. 건당 6.5원, 월 기본료 없음.\nlicense: MIT\nmetadata:\n  category: business\n  locale: ko-KR\n  phase: v1"
 }

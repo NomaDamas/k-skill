@@ -45,7 +45,7 @@ HINTS = {
     "PROJECT_CLIENT_KEY_EXPIRED": "연동키가 만료됐습니다. 새로 발급하세요.",
     "API_SCOPE_INVALID": "이 키에 알림톡 스코프(user:alimtalk_*)가 없습니다. 전체 권한(supervisor) 키를 쓰거나 스코프를 추가하세요.",
     "PROJECT_FIREWALL_BLOCKED": "프로젝트 방화벽이 지금 IP 를 막았습니다. 관리자에서 허용 IP 를 확인하세요.",
-    "SENDER_NOT_LINKED": f"연동된 카카오 채널이 없거나 sender_key 가 맞지 않습니다. `senders` 로 확인하고, 연동 전이면 부트페이 관리자에서 채널을 먼저 연결하세요(채널 준비: {KAKAO_CONSOLE}).",
+    "SENDER_NOT_LINKED": f"연동된 카카오 채널이 없거나 sender_key 가 맞지 않습니다. `senders` 로 확인하고, 연동 전이면 `sender-otp` → `sender-register` 로 채널을 먼저 연결하세요(채널 준비: {KAKAO_CONSOLE}).",
     "SENDER_BLOCKED": "부트페이 발송 제어가 이 프로젝트의 발송을 보류·차단했습니다. 부트페이에 문의하세요.",
     "TEMPLATE_NOT_FOUND": "템플릿이 없습니다. 공식은 `official-search`, 자체는 `templates` 로 코드를 확인하세요.",
     "TEMPLATE_NOT_APPROVED": "승인(APR)되지 않은 자체 템플릿이거나, 그룹키가 없는 채널로 공식 템플릿을 보내려 했거나, 노출이 중단된 공식 템플릿입니다.",
@@ -59,6 +59,8 @@ HINTS = {
     "MESSAGE_PREPAID_NOT_CHARGED": f"선불 요금제인데 아직 충전하지 않아 발송이 막혔습니다. {BILLING_URL} 에서 먼저 충전하세요.",
     "SERVICE_PAYMENT_BLOCKED": f"정산이 차단된 상태(이용료 미납 등)라 발송이 막혔습니다. {BILLING_URL} 에서 상태를 확인하세요.",
     "SERVICE_CHARGE_BALANCE_INSUFFICIENT": f"선불 잔액이 부족합니다. {BILLING_URL} 에서 충전한 뒤 거부된 건만 다시 보내세요.",
+    "SENDER_NOT_VERIFIED": f"대행사가 발신 프로필 키를 내주지 않았습니다. 인증번호가 틀렸거나 만료됐으면 `sender-otp` 로 새로 받으세요. 아니면 {KAKAO_CONSOLE} → [채널] → [비즈니스 심사] 가 승인 완료인지 확인하세요(영업일 3~7일).",
+    "KAKAO_SENDER_REQUEST_FAILED": "대행사가 채널 요청을 거부했습니다. 카카오톡 앱에서 그 채널이 검색되는지(채널 공개·검색 허용 ON), 검색용 아이디가 맞는지, 비즈니스 심사가 승인됐는지, 휴대폰이 채널 관리자 번호인지 순서대로 확인하세요. 같은 오류가 두 번이면 재시도하지 마세요.",
     "INVALID_PARAMETER": "파라미터가 잘못됐거나 지금 상태에서 할 수 없는 호출입니다. message 를 확인하세요.",
 }
 
@@ -314,7 +316,7 @@ def cmd_status(_: argparse.Namespace) -> dict[str, Any]:
     active = [c for c in channel_list or [] if c.get("status") in (None, "active")]
     next_steps = []
     if not active:
-        next_steps.append(f"연동된 카카오 채널이 없습니다. 카카오비즈니스({KAKAO_CONSOLE})에서 비즈니스 채널 전환·채널 공개·검색 허용을 마친 뒤 부트페이 관리자에서 채널을 연결하세요.")
+        next_steps.append(f"연동된 카카오 채널이 없습니다. 카카오비즈니스({KAKAO_CONSOLE})에서 비즈니스 채널 전환·채널 공개·검색 허용·고객센터 정보를 마친 뒤 `sender-otp` → `sender-register` 로 연결하세요.")
     elif len(active) > 1 and not env_value("sender_key"):
         next_steps.append("연동 채널이 둘 이상입니다. 사용자가 KSKILL_BOOTPAY_ALIMTALK_SENDER_KEY 로 보낼 채널을 정해야 합니다.")
     return {
@@ -376,6 +378,37 @@ def cmd_cancel(args: argparse.Namespace) -> dict[str, Any]:
     return {"canceled": True, "result": request("DELETE", f"/send/{urllib.parse.quote(args.receipt_id, safe='')}")}
 
 
+def normalize_yellow_id(value: str) -> str:
+    value = (value or "").strip()
+    return value if value.startswith("@") else f"@{value}"
+
+
+def cmd_sender_otp(args: argparse.Namespace) -> dict[str, Any]:
+    body = {"yellow_id": normalize_yellow_id(args.yellow_id), "phone": normalize_phone(args.phone)}
+    if not args.yes_i_understand:
+        return {"requested": False, "request": body, "next_step": "채널 관리자 휴대폰으로 인증번호가 실제로 나갑니다. 사용자 승인 후 --yes-i-understand 를 붙이세요."}
+    result = request("POST", "/senders/otp", body=body)
+    return {"requested": True, "result": result, "next_step": "사용자에게 받은 인증번호로 `sender-register --otp <번호>` 를 부르세요. 만료되면 다시 요청합니다."}
+
+
+def cmd_sender_register(args: argparse.Namespace) -> dict[str, Any]:
+    body = {k: v for k, v in {
+        "otp": args.otp,
+        "yellow_id": normalize_yellow_id(args.yellow_id),
+        "phone": normalize_phone(args.phone),
+        "category_code": args.category_code,
+    }.items() if v}
+    if not args.yes_i_understand:
+        return {"registered": False, "request": {**body, "otp": "***"}, "next_step": "카카오에 발신프로필로 실제 등록됩니다. 사용자 승인 후 --yes-i-understand 를 붙이세요."}
+    result = request("POST", "/senders", body=body)
+    out: dict[str, Any] = {"registered": True, "result": result}
+    if isinstance(result, dict) and result.get("group_key_registered") is False:
+        out["warning"] = "채널은 등록됐지만 그룹키 등록이 거절됐습니다. 이 상태로는 공식 템플릿 발송이 막힙니다. 부트페이에 문의하세요."
+    else:
+        out["next_step"] = "공식 템플릿을 바로 쓸 수 있습니다. `recommend --text ...` 로 문구에 맞는 템플릿을 찾으세요."
+    return out
+
+
 def simple(method: str, path_fn, params_fn=None, body_fn=None):
     def run(args: argparse.Namespace) -> Any:
         return request(method, path_fn(args), params_fn(args) if params_fn else None, body_fn(args) if body_fn else None)
@@ -392,6 +425,17 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("config-check", help="키 존재 여부만 확인 (값은 출력하지 않음)").set_defaults(func=cmd_config_check)
     sub.add_parser("status", help="연동 채널과 승인 템플릿 수").set_defaults(func=cmd_status)
     sub.add_parser("senders", help="연동된 카카오 채널 목록").set_defaults(func=simple("GET", lambda a: "/senders"))
+    sub.add_parser("categories", help="채널 등록용 업종 코드 목록").set_defaults(func=simple("GET", lambda a: "/categories"))
+
+    p = sub.add_parser("sender-otp", help="채널 연동 인증번호 요청 (--yes-i-understand 필요)")
+    p.add_argument("--yellow-id", required=True, help="카카오 채널 검색용 아이디 (@ 는 없어도 붙여 보낸다)")
+    p.add_argument("--phone", required=True, help="채널 관리자 휴대폰 번호")
+    p.add_argument("--yes-i-understand", action="store_true"); p.set_defaults(func=cmd_sender_otp)
+
+    p = sub.add_parser("sender-register", help="인증번호로 채널을 발신프로필로 등록 (--yes-i-understand 필요)")
+    p.add_argument("--otp", required=True); p.add_argument("--yellow-id", required=True); p.add_argument("--phone", required=True)
+    p.add_argument("--category-code", help="업종 코드 11자리. 생략하면 서버 기본값")
+    p.add_argument("--yes-i-understand", action="store_true"); p.set_defaults(func=cmd_sender_register)
 
     p = sub.add_parser("official-search", help="공식 템플릿 검색 (검수 없이 바로 쓰는 공용 템플릿)")
     p.add_argument("--q"); p.add_argument("--category"); p.add_argument("--msg-type", choices=["BA", "EX"])

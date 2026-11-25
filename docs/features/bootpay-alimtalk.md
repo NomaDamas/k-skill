@@ -4,16 +4,27 @@
 
 이 스킬은 부트페이 팀이 기여했다.
 
+## 왜 부트페이 알림톡인가
+
+- 건당 6.5원(부가세 별도), 전달에 성공한 건만 과금
+- 월 기본료·발송량 약정·별도 API 이용료·채널 등록비 없음. 선불 충전 10,000원부터
+- PG 가맹이나 쇼핑몰 없이 알림톡만 단독으로 사용
+- 공용 템플릿 93종은 카카오 검수 없이 바로 발송
+- 채널 연동부터 발송·결과 확인까지 이 스킬로 에이전트가 진행. 템플릿 등록·검수 요청까지 에이전트로 하려면 MCP 서버 [`@bootpay/mcp`](https://github.com/bootpay/bootpay-mcp)를 함께 쓴다
+
+사용자 매뉴얼: <https://blog.bootpay.ai/alimtalk> · 개발 매뉴얼: <https://commerce.bootpay.ai/alimtalk/overview>
+
 ## 제공 기능
 
 - 연동 카카오 채널·승인 템플릿 상태 확인 (`status`, `senders`)
+- 카카오 채널 연동 (`sender-otp` → `sender-register`, 업종 코드 `categories`)
 - 공식 템플릿 검색·상세·문구 추천 (`official-search`, `official`, `recommend`)
 - 자체 템플릿 목록·상세 (`templates`, `template`)
 - 발송 미리보기 (`preview`) — 필수 변수, 휴대폰 번호 형식, 발송 제외 목록, `ref_id` 중복, 인원 상한 검사와 치환된 본문
 - 단건·벌크 발송 (`send`), 예약 취소 (`cancel`) — `--yes-i-understand` 가 있어야 실제로 나간다
 - 발송내역·결과·기간 집계 (`messages`, `message`, `stats`), 발송 제외 대조 (`optout-check`)
 
-채널 연결·템플릿 등록·검수 요청은 범위 밖이다. 부트페이 관리자에서 한다.
+카카오 채널 개설과 비즈니스 심사는 카카오비즈니스에서 사람이 한다. 템플릿 등록·검수 요청은 부트페이 관리자나 `@bootpay/mcp` 로 한다.
 
 ## 시크릿
 
@@ -44,5 +55,6 @@ npx -y @nomadamas/k-skill@0 exec bootpay-alimtalk scripts/bootpay_alimtalk.py --
 
 ## 공식 문서
 
+- 사용자 매뉴얼: <https://blog.bootpay.ai/alimtalk>
 - 알림톡 개요: <https://commerce.bootpay.ai/alimtalk/overview>
 - 발송·운영 개요: <https://commerce.bootpay.ai/alimtalk-ops/overview>
