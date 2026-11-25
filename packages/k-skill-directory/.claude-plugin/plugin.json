@@ -1,0 +1,17 @@
+{
+  "name": "k-skill-korean-writing",
+  "displayName": "K-Skill Korean Writing",
+  "version": "0.1.0",
+  "description": "Edit Korean text for clarity while preserving facts, quotations, and tone.",
+  "author": {
+    "name": "NomaDamas"
+  },
+  "homepage": "https://github.com/NomaDamas/k-skill/tree/main/packages/k-skill-directory",
+  "repository": "https://github.com/NomaDamas/k-skill",
+  "license": "MIT",
+  "supportUrl": "https://github.com/NomaDamas/k-skill/issues",
+  "documentationUrl": "https://github.com/NomaDamas/k-skill/blob/main/packages/k-skill-directory/README.md",
+  "privacyPolicyUrl": "https://github.com/NomaDamas/k-skill/blob/main/docs/official-plugin-privacy.md",
+  "termsOfServiceUrl": "https://github.com/NomaDamas/k-skill/blob/main/docs/official-plugin-terms.md",
+  "icon": "./assets/logo.png"
+}

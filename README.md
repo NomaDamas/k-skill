@@ -369,3 +369,6 @@ hermes k-skill doctor
 
 [![k-skill 컨트리뷰터](https://contrib.rocks/image?repo=NomaDamas/k-skill)](https://github.com/NomaDamas/k-skill/graphs/contributors)
 
+## 공식 플러그인 디렉터리용 번들
+
+전체 K-Skill은 자체 마켓플레이스용으로 유지하고, 공개 디렉터리에는 실행 코드와 외부 연동이 없는 `packages/k-skill-directory/`를 사용합니다. 범위와 데이터 처리는 [공식 플러그인 문서](docs/official-plugins.md)를 참고하세요.

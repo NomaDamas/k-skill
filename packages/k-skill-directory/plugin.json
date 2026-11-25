@@ -1,0 +1,37 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "k-skill-korean-writing",
+  "version": "0.1.0",
+  "description": "Edit Korean text for clarity while preserving facts, quotations, and tone.",
+  "author": {
+    "name": "NomaDamas",
+    "url": "https://github.com/NomaDamas"
+  },
+  "homepage": "https://github.com/NomaDamas/k-skill/tree/main/packages/k-skill-directory",
+  "repository": "https://github.com/NomaDamas/k-skill",
+  "license": "MIT",
+  "keywords": ["korean", "writing", "editing"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "K-Skill Korean Writing",
+        "shortDescription": "Polish Korean writing",
+        "longDescription": "Edit Korean text that you provide in the current conversation. The skill improves awkward phrasing and translationese while preserving names, dates, figures, quotations, claims, and level of formality. It has no file access, external service, login flow, executable helper, proxy, or background job.",
+        "developerName": "NomaDamas",
+        "category": "Productivity",
+        "capabilities": ["Polish Korean text", "Review awkward Korean phrasing"],
+        "websiteURL": "https://github.com/NomaDamas/k-skill/tree/main/packages/k-skill-directory",
+        "supportURL": "https://github.com/NomaDamas/k-skill/issues",
+        "privacyPolicyURL": "https://github.com/NomaDamas/k-skill/blob/main/docs/official-plugin-privacy.md",
+        "termsOfServiceURL": "https://github.com/NomaDamas/k-skill/blob/main/docs/official-plugin-terms.md",
+        "defaultPrompt": [
+          "이 보고서 문장을 자연스럽게 고쳐 주세요. 수치와 날짜는 유지해 주세요.",
+          "이 업무 메일에서 어색한 번역투만 고쳐 주세요.",
+          "고치지 말고 반복되는 표현과 그 이유만 알려 주세요."
+        ],
+        "composerIcon": "./assets/logo.png",
+        "logo": "./assets/logo.png"
+      }
+    }
+  }
+}
