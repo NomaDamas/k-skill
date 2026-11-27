@@ -81,6 +81,8 @@
 - korean-law-mcp: https://github.com/chrisryugj/korean-law-mcp — `korean-law-search` 의 신･구조문대비표 엔진(`korean-law-search/scripts/amendment/`)을 upstream 의 `amendment_table` 구현(MIT, Copyright (c) 2025 Chris, 커밋 `dcb866b`)에서 이식했다. 라이선스 전문은 `korean-law-search/scripts/amendment/LICENSE-korean-law-mcp`.
 - korean-privacy-terms upstream: https://github.com/kimlawtech/korean-privacy-terms (Apache-2.0)
 - korean-jangbu-for upstream: https://github.com/kimlawtech/korean-jangbu-for (Apache-2.0; original author @kimlawtech, SpeciAI)
+- Bootpay 알림톡 API 개요: https://commerce.bootpay.ai/alimtalk/overview
+- Bootpay 알림톡 발송·운영: https://commerce.bootpay.ai/alimtalk-ops/overview
 - Popbill developer center: https://developers.popbill.com
 - Popbill Python SDK: https://pypi.org/project/popbill/
 - Popbill 전자세금계산서 환경설정: https://developers.popbill.com/guide/taxinvoice/getting-started/environment-set-up

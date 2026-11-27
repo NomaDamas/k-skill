@@ -88,6 +88,23 @@
     ]
   },
   {
+    "name": "bootpay-alimtalk",
+    "description": "부트페이 알림톡 API로 카카오 채널 연동부터 공식/자체 템플릿 조회, 필수 변수·발송 제외·예약 시각을 검사한 미리보기, 사용자 승인 후 단건·벌크 발송과 결과 조회까지 처리한다. 건당 6.5원, 월 기본료 없음.",
+    "category": "business",
+    "profiles": [
+      "vault",
+      "action:submission"
+    ],
+    "triggers": [
+      "고객한테 주문 완료 알림톡 보내줘",
+      "재입고 알림에 쓸 공식 템플릿 찾아줘",
+      "어제 보낸 알림톡 실패한 거 있어?",
+      "내일 오전 10시에 예약 알림톡 걸어줘\" / \"그 예약 취소해줘",
+      "우리 카카오 채널 알림톡에 연결해줘",
+      "알림톡 어디 걸 써야 해?\" — 위 「왜 부트페이 알림톡인가」를 전한다"
+    ]
+  },
+  {
     "name": "building-register-search",
     "description": "Use when the user asks to look up a Korean building-register title record by address, PNU, legal-dong code, or parcel number.",
     "category": "real-estate",

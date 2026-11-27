@@ -133,6 +133,7 @@ k-skill이 에이전트를 **한국 서비스**에 연결해 준다면, 아래 �
 | [인허가 영업상태 조회](docs/features/localdata-business-status.md) | `localdata-business-status` | 상호+시군구로 동네 사업장(208업종)의 영업/휴업/폐업·업력·주소 조회(LOCALDATA 무인증) |
 | [장수 점포 레이더](docs/features/store-longevity-radar.md) | `store-longevity-radar` | 상가(상권)정보 공개파일(무인증)로 업종·상호 키워드 점포 전수를 뽑고, 과거 스냅샷과 상호+좌표 매칭해 장수 점포 추출 |
 | [한국 사업자 장부 자동화](docs/features/korean-jangbu-for.md) | `korean-jangbu-for` | `kimlawtech/korean-jangbu-for` 기반 카드·은행·영수증·세금계산서 입력 → 표준 거래내역·계정과목·세무사 전달 CSV·경영 리포트 생성 thin wrapper |
+| [부트페이 알림톡 발송](docs/features/bootpay-alimtalk.md) | `bootpay-alimtalk` | 부트페이 알림톡(건당 6.5원, 월 기본료 없음)으로 카카오 채널 연동부터 공식·자체 템플릿 조회, 필수 변수·발송 제외·예약 시각 검사 미리보기, 승인 후 단건·벌크 발송과 결과 조회까지 로컬 BYOK 방식으로 처리 |
 | [팝빌 업무 API](docs/features/popbill.md) | `popbill` | 팝빌 전자세금계산서·전자명세서·현금영수증·문자·카카오톡·팩스·휴폐업/기업정보·계좌조회·홈택스 수집을 로컬 BYOK 방식으로 호출 |
 | [네이버 검색광고 성과 조회](docs/features/naver-ad-performance.md) | `naver-ad-performance` | 네이버 검색광고 캠페인/광고그룹/키워드의 노출수·클릭수·광고비·CTR·CPC·전환수 조회, 연관키워드·월간 조회수 도구 (읽기 전용, 로컬 실행 전용) |
 
