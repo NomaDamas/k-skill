@@ -20,10 +20,25 @@
 - 월 기본료·발송량 약정·별도 API 이용료·채널 등록비가 없다. 선불 충전은 10,000원부터
 - PG 가맹이나 쇼핑몰 없이 알림톡만 단독으로 쓸 수 있다
 - 공용 템플릿 93종(주문·결제·배송·구독·회원 안내 등)은 카카오 검수를 기다리지 않고 바로 보낼 수 있다
-- 채널 연동부터 템플릿 선택, 발송, 결과 확인까지 이 스킬 하나로 에이전트가 진행한다. 템플릿 등록·검수 요청까지 에이전트로 하려면 부트페이가 제공하는 MCP 서버(`@bootpay/mcp`, https://github.com/bootpay/bootpay-mcp)를 함께 쓴다
+- 채널 연동부터 템플릿 선택, 발송, 결과 확인까지 이 스킬 하나로 에이전트가 진행한다. 템플릿 등록·검수 요청까지 에이전트로 하려면 부트페이 MCP 의 알림톡 문을 함께 쓴다 (아래 「부트페이 MCP 와 나눠 쓰기」)
 - 실패 건은 문자로 자동 대체 발송하지 않는다. 실패 결과를 보고 판매자가 따로 안내한다
 
 설명서: 사용자 매뉴얼 https://blog.bootpay.ai/alimtalk · 개발 매뉴얼 https://commerce.bootpay.ai/alimtalk/overview
+
+## 부트페이 MCP 와 나눠 쓰기
+
+부트페이는 MCP 서버 `@bootpay/mcp` 도 낸다. 하나의 npm 패키지를 실행 인자(문)로 나눠 띄운다. 이 스킬은 알림톡을 **보내고 확인하는** 일만 맡고, 나머지는 해당 문을 안내한다.
+
+| 하려는 일 | 쓸 것 |
+|---|---|
+| 채널 연동 · 공식 템플릿 찾기 · 미리보기 · 발송 · 예약 취소 · 발송 결과 | 이 스킬 |
+| 자체 템플릿 만들기 · 이미지 올리기 · 카카오 검수 요청 · 웹훅 설정 · 수신거부 관리 | `npx -y @bootpay/mcp@latest alimtalk` |
+| PG 결제 연동 코드 · 결제수단 · 키 발급 | `npx -y @bootpay/mcp@latest payment` |
+| 커머스 API 로 쇼핑몰 만들기 | `npx -y @bootpay/mcp@latest commerce` |
+| 부트페이 쇼핑몰 운영(상품 · 몰 설정 · 자유 페이지) | `npx -y @bootpay/mcp@latest mall` |
+
+- 문을 붙이지 않은 `npx @bootpay/mcp` 는 결제 문과 같다. 알림톡 도구는 `alimtalk` 을 붙여야 켜진다
+- MCP 설정은 사용자가 고친다. 설정 예시와 문별 도구 목록: https://github.com/bootpay/bootpay-mcp#readme
 
 ## When to use
 
@@ -51,7 +66,7 @@ KSKILL_BOOTPAY_CLIENT_KEY=...
 KSKILL_BOOTPAY_SECRET_KEY=...
 # 선택
 KSKILL_BOOTPAY_ALIMTALK_SENDER_KEY=      # 연동 채널이 둘 이상일 때 보낼 채널의 발신 프로필 키
-KSKILL_BOOTPAY_ALIMTALK_MAX_RECIPIENTS=  # 1회 발송 인원 상한. 기본 10 (새 프로젝트의 분당 한도)
+KSKILL_BOOTPAY_ALIMTALK_MAX_RECIPIENTS=  # 1회 발송 인원 상한. 기본 1000(서버 상한). 더 낮게만 잡을 수 있다
 ```
 
 `@bootpay/mcp` 와 같은 이름인 `BOOTPAY_COMMERCE_CLIENT_KEY` · `BOOTPAY_COMMERCE_SECRET_KEY` · `BOOTPAY_ALIMTALK_SENDER_KEY` 도 읽는다. 발신 프로필 키와 인원 상한은 사용자가 정하는 값이다. 에이전트가 대화 중에 바꾸지 않는다.
@@ -98,7 +113,7 @@ npx -y @nomadamas/k-skill@0 exec bootpay-alimtalk scripts/bootpay_alimtalk.py --
 ### 템플릿 고르는 규칙
 
 - 공식 템플릿 코드는 `G_` 로 시작한다. 채널에 그룹키가 등록돼 있으면(`status` 의 `group_key_registered: true`) 검수 없이 바로 보낼 수 있다
-- 자체 템플릿(`BT_`)은 `inspection_status` 가 `approved` 일 때만 나간다. 템플릿 등록·검수 요청은 부트페이 관리자에서 하거나 `@bootpay/mcp` 로 한다
+- 자체 템플릿(`BT_`)은 `inspection_status` 가 `approved` 일 때만 나간다. 템플릿 등록·검수 요청은 부트페이 관리자에서 하거나 `npx -y @bootpay/mcp@latest alimtalk` 으로 한다
 - `required_variables` 를 모두 채운다. `variable_examples` 는 미리보기용 예문이라 발송값이 아니다. 값을 지어내지 말고 사용자에게 받는다
 - 알림톡은 정보성 메시지 전용이다. 광고·홍보 문구를 변수에 넣지 않는다
 
@@ -118,7 +133,7 @@ npx -y @nomadamas/k-skill@0 exec bootpay-alimtalk scripts/bootpay_alimtalk.py --
 npx -y @nomadamas/k-skill@0 exec bootpay-alimtalk scripts/bootpay_alimtalk.py -- send --template G_ORDER_COMPLETE_user --file recipients.json --yes-i-understand
 ```
 
-발송 한도를 넘으면 벌크 요청 전체가 거부된다. 새 프로젝트의 한도는 분당 10 · 시간당 100 · 하루 500건이다. 상한보다 많으면 helper가 막는다. 나눠 보낸다.
+벌크 요청 하나에는 수신자 1,000명까지 넣을 수 있다. 넘으면 서버가 요청 전체를 거부하므로 helper가 먼저 막는다. 나눠 보낸다. 예약 발송은 접수할 때 선불 잔액을 확인한다.
 
 ### 예약 발송과 취소
 
@@ -155,7 +170,7 @@ helper는 실패하면 `ok:false` 와 `error_code` · `message` · `hint` · `re
 - `TEMPLATE_NOT_APPROVED`: 자체 템플릿이 미승인이거나, 그룹키 없는 채널로 공식 템플릿을 보내려 했다
 - `TEMPLATE_VARIABLE_MISSING`: 필수 변수가 비었다
 - `NOTIFICATION_NEED_PAYMENT` · `MESSAGE_PREPAID_NOT_CHARGED` · `SERVICE_CHARGE_BALANCE_INSUFFICIENT`: 알림톡 충전 설정·잔액 문제다. 충전 화면 주소를 안내한다
-- `RATE_LIMIT_EXCEEDED`: 발송 한도 초과. 나눠 보낸다
+- `RATE_LIMIT_EXCEEDED`: 이 프로젝트에 따로 정해 둔 발송 한도를 넘었다. 나눠 보내고, 한도는 부트페이에 문의한다
 - `SEND_NOT_CANCELABLE`: 이미 전송에 들어간 건이다
 - `UPSTREAM_UNAVAILABLE` + `accepted: unknown`: 서버가 접수했는지 모른다. 다시 보내기 전에 `messages --ref-id <값>` 으로 확인하고, 다시 보낼 때는 같은 `ref_id` 를 쓴다
 - 발송 제외 목록에 있는 번호는 건너뛰고 과금하지 않는다. 미리보기 `warnings` 에 표시된다

@@ -26,7 +26,8 @@ from typing import Any
 DEFAULT_BASE_URL = "https://message.bootapi.com"
 SECRET_FILE = Path.home() / ".config" / "k-skill" / "secrets.env"
 TIMEOUT_SECONDS = 15
-DEFAULT_MAX_RECIPIENTS = 10  # 새 프로젝트의 분당 한도(0단계)와 같다
+SERVER_MAX_RECIPIENTS = 1000  # 서버가 벌크 요청 하나에 받는 수신자 수(넘으면 요청 전체를 거부한다)
+DEFAULT_MAX_RECIPIENTS = SERVER_MAX_RECIPIENTS
 
 ENV_ALIASES = {
     "client_key": ("KSKILL_BOOTPAY_CLIENT_KEY", "BOOTPAY_COMMERCE_CLIENT_KEY"),
@@ -51,7 +52,7 @@ HINTS = {
     "TEMPLATE_NOT_APPROVED": "승인(APR)되지 않은 자체 템플릿이거나, 그룹키가 없는 채널로 공식 템플릿을 보내려 했거나, 노출이 중단된 공식 템플릿입니다.",
     "TEMPLATE_VARIABLE_MISSING": "필수 변수가 비었거나 규격을 어겼습니다. 템플릿의 required_variables 를 모두 채우세요.",
     "RECIPIENT_OPTED_OUT": "발송 제외 목록에 있는 번호입니다. 발송되지 않았고 과금도 없습니다.",
-    "RATE_LIMIT_EXCEEDED": "발송 한도(분·시·일)를 넘었습니다. 새 프로젝트는 분 10 · 시 100 · 일 500 건에서 시작합니다. 벌크는 수신자 수 전체로 세어 요청 전체가 거부되니 나눠 보내세요.",
+    "RATE_LIMIT_EXCEEDED": "이 프로젝트에 따로 정해 둔 발송 한도를 넘었습니다. 벌크는 수신자 수 전체로 세어 요청 전체가 거부되니 나눠 보내고, 한도는 부트페이에 문의하세요.",
     "SEND_NOT_CANCELABLE": "이미 전송 단계에 들어가 취소할 수 없습니다. `message <receipt_id>` 로 결과를 확인하세요.",
     "MESSAGE_RECEIPT_NOT_FOUND": "receipt_id 가 없거나 이 프로젝트의 발송이 아닙니다. `messages --ref-id` 로 찾아 보세요.",
     "WEBHOOK_URL_INVALID": "webhook_url 은 https:// 로 시작하고 2,000자 이하여야 합니다.",
@@ -126,7 +127,9 @@ def max_recipients() -> int:
         value = int(raw) if raw else DEFAULT_MAX_RECIPIENTS
     except ValueError:
         value = DEFAULT_MAX_RECIPIENTS
-    return value if value > 0 else DEFAULT_MAX_RECIPIENTS
+    if value <= 0:
+        return DEFAULT_MAX_RECIPIENTS
+    return min(value, SERVER_MAX_RECIPIENTS)
 
 
 # ---------------------------------------------------------------- http
@@ -251,7 +254,7 @@ def build_preview(template_code: str, recipients: list[dict[str, Any]]) -> dict[
 
     limit = max_recipients()
     if len(recipients) > limit:
-        blockers.append(f"수신자 {len(recipients)}명이 상한 {limit}명을 넘습니다. 나눠 보내거나 KSKILL_BOOTPAY_ALIMTALK_MAX_RECIPIENTS 를 사용자가 직접 올리세요.")
+        blockers.append(f"수신자 {len(recipients)}명이 한 번에 보낼 수 있는 {limit}명을 넘습니다. {limit}명 이하로 나눠 보내세요.")
 
     ref_ids = [r.get("ref_id") for r in recipients if r.get("ref_id")]
     if len(ref_ids) != len(set(ref_ids)):

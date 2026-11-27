@@ -155,13 +155,21 @@ class BootpayAlimtalkTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(self.sends(), [])
 
+    def test_max_recipients_defaults_to_server_cap_and_only_lowers(self):
+        self.assertEqual(cli.max_recipients(), 1000)
+        os.environ["KSKILL_BOOTPAY_ALIMTALK_MAX_RECIPIENTS"] = "5000"
+        self.assertEqual(cli.max_recipients(), 1000)
+        os.environ["KSKILL_BOOTPAY_ALIMTALK_MAX_RECIPIENTS"] = "3"
+        self.assertEqual(cli.max_recipients(), 3)
+
     def test_bulk_over_limit_blocks(self):
+        os.environ["KSKILL_BOOTPAY_ALIMTALK_MAX_RECIPIENTS"] = "10"
         recipients = [{"to": f"0101234{i:04d}", "variables": {"company_name": "a", "user_name": "b"}, "ref_id": f"r{i}"} for i in range(11)]
         path = Path(self.tmp.name) / "r.json"
         path.write_text(json.dumps(recipients))
         code, out = self.run_cli("send", "--template", "G_ORDER_COMPLETE_user", "--file", str(path), "--yes-i-understand")
         self.assertEqual(code, 1)
-        self.assertTrue(any("상한" in b for b in out["blockers"]))
+        self.assertTrue(any("나눠 보내세요" in b for b in out["blockers"]))
         self.assertEqual(self.sends(), [])
 
     def test_bulk_within_limit_uses_bulk_endpoint(self):
